@@ -6,8 +6,6 @@ import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <div className="bg-background min-h-screen">
-      <RouterProvider router={router} />
-    </div>
+    <RouterProvider router={router} />
   </StrictMode>,
 );

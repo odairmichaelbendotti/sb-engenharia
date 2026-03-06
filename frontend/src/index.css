@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+* {
+  font-family: helvetica, sans-serif;
+}
+
 @theme {
   /* Remover as cores padrões do tailwindcss */
   --color-*: initial;
@@ -12,7 +16,7 @@
   --color-border-strong: #cfccc1;
 
   /* Texto */
-  --color-text-primary: #262420;
+  --color-text-primary: #2d3748;
   --color-text-secondary: #68655c;
   --color-text-muted: #a19e94;
   --color-text-inverse: #faf9f5;
