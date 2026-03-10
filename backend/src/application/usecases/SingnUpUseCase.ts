@@ -1,4 +1,5 @@
 import type { IHashGenerator } from "../../domain/cryptography/HashGenerator.js";
+import type { ITokenGenerator } from "../../domain/cryptography/TokenGenerator.js";
 import { User } from "../../domain/entities/User.js";
 import { DomainError } from "../../domain/errors/DomainError.js";
 import type { IUserRepository } from "../../domain/repositories/IUserRepository.js";
@@ -7,6 +8,7 @@ export class SignUpUseCase {
   constructor(
     private repository: IUserRepository,
     private hashGenerator: IHashGenerator,
+    private tokenGenerator: ITokenGenerator,
   ) {}
 
   async execute(name: string, email: string, password: string) {
@@ -18,6 +20,13 @@ export class SignUpUseCase {
 
     const hashedPassword = await this.hashGenerator.generate(password);
     const user = new User({ name, email, password: hashedPassword });
-    return await this.repository.create(user);
+
+    await this.repository.create(user);
+    const token = this.tokenGenerator.generate({
+      name: user.name,
+      email: user.email,
+    });
+
+    return { user, token };
   }
 }

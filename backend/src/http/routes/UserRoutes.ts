@@ -10,8 +10,9 @@ export const UserRoutes = Router();
 
 const repository = new PrismaUserRepository();
 const hash = new HashGenerator();
-const signUp = new SignUpUseCase(repository, hash);
-const signIn = new SignInUseCase(repository, hash);
+const token = new TokenGenerator();
+const signUp = new SignUpUseCase(repository, hash, token);
+const signIn = new SignInUseCase(repository, hash, token);
 const userController = new UserController(signUp, signIn);
 
 UserRoutes.post("/signup", (req: Request, res: Response) => {
