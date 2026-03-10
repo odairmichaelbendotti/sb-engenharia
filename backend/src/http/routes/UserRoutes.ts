@@ -5,6 +5,7 @@ import { PrismaUserRepository } from "../../infrastructure/database/prisma/Prism
 import { HashGenerator } from "../../infrastructure/cryptography/HashGenerator.js";
 import { SignInUseCase } from "../../application/usecases/SignInUseCase.js";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
+import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
 
 export const UserRoutes = Router();
 
@@ -14,6 +15,7 @@ const token = new TokenGenerator();
 const signUp = new SignUpUseCase(repository, hash, token);
 const signIn = new SignInUseCase(repository, hash, token);
 const userController = new UserController(signUp, signIn);
+const middleware = new AuthMiddleware(token);
 
 UserRoutes.post("/signup", (req: Request, res: Response) => {
   userController.signup(req, res);
@@ -21,4 +23,8 @@ UserRoutes.post("/signup", (req: Request, res: Response) => {
 
 UserRoutes.post("/signin", (req: Request, res: Response) => {
   userController.signin(req, res);
+});
+
+UserRoutes.get("/me", middleware.handle, (req: Request, res: Response) => {
+  res.json(req.user);
 });
