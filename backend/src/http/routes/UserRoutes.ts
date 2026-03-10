@@ -4,6 +4,7 @@ import { SignUpUseCase } from "../../application/usecases/SingnUpUseCase.js";
 import { PrismaUserRepository } from "../../infrastructure/database/prisma/PrismaUserRepository.js";
 import { HashGenerator } from "../../infrastructure/cryptography/HashGenerator.js";
 import { SignInUseCase } from "../../application/usecases/SignInUseCase.js";
+import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
 
 export const UserRoutes = Router();
 
