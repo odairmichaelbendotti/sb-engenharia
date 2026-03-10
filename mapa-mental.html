@@ -1,0 +1,905 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DDD · SOLID · POO — Exemplo Prático</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Syne:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #080d1a;
+        --bg2: #0d1424;
+        --surface: rgba(255, 255, 255, 0.03);
+        --border: rgba(255, 255, 255, 0.07);
+        --muted: #475569;
+        --subtle: #1e293b;
+        --text: #e2e8f0;
+        --green: #10b981;
+        --yellow: #eab308;
+        --purple: #7c3aed;
+        --blue: #2563eb;
+        --orange: #f97316;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Fira Code", monospace;
+        min-height: 100vh;
+        padding: 32px 20px 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      /* ── HEADER ── */
+      .header {
+        text-align: center;
+        margin-bottom: 28px;
+      }
+      .header-tag {
+        color: var(--green);
+        font-size: 10px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .header h1 {
+        font-family: "Syne", sans-serif;
+        font-size: 24px;
+        color: #f8fafc;
+        letter-spacing: 0.04em;
+      }
+      .header p {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 6px;
+      }
+
+      /* ── NODE BUTTONS ── */
+      .nodes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+        max-width: 880px;
+        margin-bottom: 22px;
+      }
+      .node-btn {
+        background: var(--surface);
+        border: 2px solid var(--border);
+        border-radius: 10px;
+        padding: 7px 14px;
+        cursor: pointer;
+        color: #94a3b8;
+        font-family: "Fira Code", monospace;
+        font-size: 12px;
+        font-weight: 700;
+        transition: all 0.2s;
+        white-space: nowrap;
+      }
+      .node-btn:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+        color: #fff;
+      }
+      .node-btn.active {
+        transform: translateY(-2px);
+      }
+
+      /* ── MAIN PANEL ── */
+      .panel {
+        width: 100%;
+        max-width: 880px;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        transition:
+          border-color 0.3s,
+          box-shadow 0.3s;
+        margin-bottom: 28px;
+      }
+      .panel-head {
+        padding: 13px 20px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        transition: background 0.3s;
+      }
+      .layer-badge {
+        border-radius: 6px;
+        padding: 2px 10px;
+        font-size: 11px;
+        font-weight: 800;
+        color: #000;
+      }
+      .file-name {
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .tab-group {
+        margin-left: auto;
+        display: flex;
+        gap: 6px;
+      }
+      .tab-btn {
+        border-radius: 6px;
+        padding: 4px 13px;
+        cursor: pointer;
+        font-family: "Fira Code", monospace;
+        font-size: 11px;
+        font-weight: 700;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: transparent;
+        color: #94a3b8;
+        transition: all 0.15s;
+      }
+      .tab-btn.active {
+        color: #000;
+      }
+
+      /* ── CODE VIEW ── */
+      .panel-body {
+        padding: 20px;
+      }
+      .code-wrap {
+        background: #0d1117;
+        border-radius: 10px;
+        padding: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        overflow: auto;
+        max-height: 370px;
+      }
+      table.code-table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      .ln {
+        color: #2d3748;
+        font-size: 11px;
+        text-align: right;
+        padding: 1px 12px 1px 4px;
+        user-select: none;
+        font-family: "Fira Code", monospace;
+        white-space: nowrap;
+        vertical-align: top;
+      }
+      .lc {
+        font-family: "Fira Code", monospace;
+        font-size: 12px;
+        color: #e2e8f0;
+        white-space: pre;
+        line-height: 1.7;
+        vertical-align: top;
+      }
+      /* syntax */
+      .tk-kw {
+        color: #c084fc;
+      }
+      .tk-str {
+        color: #86efac;
+      }
+      .tk-type {
+        color: #67e8f9;
+      }
+      .tk-cmt {
+        color: #4b5563;
+        font-style: italic;
+      }
+
+      /* ── EXPLAIN VIEW ── */
+      .explain-box {
+        padding: 10px 4px;
+        color: #cbd5e1;
+        font-size: 14px;
+        line-height: 1.9;
+        display: none;
+      }
+
+      /* ── STEPS ── */
+      .steps-label {
+        color: var(--muted);
+        font-size: 10px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+        max-width: 880px;
+        width: 100%;
+      }
+      .steps {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        width: 100%;
+        max-width: 880px;
+      }
+      .step-row {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        transition: all 0.15s;
+        text-align: left;
+      }
+      .step-row:hover {
+        border-color: rgba(255, 255, 255, 0.18);
+      }
+      .step-row.active {
+      }
+      .step-num {
+        font-size: 16px;
+        font-weight: 800;
+        min-width: 24px;
+      }
+      .step-from {
+        color: #94a3b8;
+        font-size: 12px;
+      }
+      .step-arrow {
+        color: #334155;
+        margin: 0 6px;
+      }
+      .step-to {
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .step-action {
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .step-here {
+        margin-left: auto;
+        font-size: 10px;
+        font-style: italic;
+      }
+
+      /* scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #1e293b;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="header-tag">Caso de uso: Criar Usuário</div>
+      <h1>DDD · SOLID · POO — Exemplo Prático</h1>
+      <p>Clique em cada camada para ver o código real</p>
+    </div>
+
+    <div class="nodes" id="nodes"></div>
+
+    <div class="panel" id="panel">
+      <div class="panel-head" id="panel-head">
+        <span class="layer-badge" id="badge"></span>
+        <span class="file-name" id="filename"></span>
+        <div class="tab-group">
+          <button class="tab-btn active" id="btn-code" onclick="setTab('code')">
+            código
+          </button>
+          <button class="tab-btn" id="btn-exp" onclick="setTab('explain')">
+            explicação
+          </button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="code-wrap" id="code-view">
+          <table class="code-table" id="code-table"></table>
+        </div>
+        <div class="explain-box" id="explain-view"></div>
+      </div>
+    </div>
+
+    <div class="steps-label">Fluxo passo a passo</div>
+    <div class="steps" id="steps"></div>
+
+    <script>
+      const DATA = {
+        request: {
+          title: "Request",
+          file: "POST /users",
+          layer: "Entrada",
+          color: "#10B981",
+          explain:
+            "O cliente (browser, app, Postman) dispara uma requisição HTTP. Ela ainda não entrou em nenhuma camada da aplicação — é só dados brutos chegando na porta do servidor.",
+          code: `// Chamada HTTP que chega na aplicação
+POST /users
+Content-Type: application/json
+
+{
+  "name": "João Silva",
+  "email": "joao@email.com",
+  "password": "senha123"
+}`,
+        },
+        route: {
+          title: "route",
+          file: "userRoutes.ts",
+          layer: "Http",
+          color: "#EAB308",
+          explain:
+            "A rota é só um mapeamento: 'quando chegar POST /users, chama o UserController'. Ela não toma nenhuma decisão, não acessa banco, não valida nada. Zero regra de negócio.",
+          code: `// src/infrastructure/http/routes/userRoutes.ts
+import { Router } from "express";
+import { makeCreateUserController } from "../../factories/makeCreateUserController";
+
+const router = Router();
+const userController = makeCreateUserController();
+
+// A rota apenas aponta para o controller
+// Ela não sabe NADA sobre regra de negócio
+router.post("/users", (req, res) => {
+  return userController.handle(req, res);
+});
+
+export { router };`,
+        },
+        controller: {
+          title: "controller",
+          file: "UserController.ts",
+          layer: "Http",
+          color: "#EAB308",
+          explain:
+            "O controller extrai os dados do HTTP (req.body) e passa para o use case. Ele só sabe sobre HTTP — status codes, request e response. Regra de negócio: zero aqui.",
+          code: `// src/infrastructure/http/controllers/UserController.ts
+import { Request, Response } from "express";
+import { CreateUserUseCase } from "../../../application/use-cases/CreateUser/CreateUserUseCase";
+
+export class UserController {
+  constructor(
+    // Recebe o usecase via injeção de dependência
+    private readonly createUserUseCase: CreateUserUseCase
+  ) {}
+
+  async handle(req: Request, res: Response): Promise<Response> {
+    const { name, email, password } = req.body;
+
+    // Passa os dados para o use case e aguarda
+    const result = await this.createUserUseCase.execute({
+      name,
+      email,
+      password,
+    });
+
+    // Controller só cuida do HTTP: status code + response
+    return res.status(201).json(result);
+  }
+}`,
+        },
+        usecase: {
+          title: "usecase",
+          file: "CreateUserUseCase.ts",
+          layer: "Application",
+          color: "#7C3AED",
+          explain:
+            "O use case orquestra a lógica de negócio. Ele sabe O QUE fazer (verificar e-mail duplicado, criar usuário, salvar), mas não sabe COMO salvar — delega para a interface IUserRepository.",
+          code: `// src/application/use-cases/CreateUser/CreateUserUseCase.ts
+import { IUserRepository } from "../../../domain/repositories/IUserRepository";
+import { User } from "../../../domain/entities/User";
+
+interface CreateUserDTO {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export class CreateUserUseCase {
+  constructor(
+    // Depende da INTERFACE, nunca do Prisma diretamente
+    private readonly userRepository: IUserRepository
+  ) {}
+
+  async execute({ name, email, password }: CreateUserDTO) {
+    // Regra de negócio: e-mail já existe?
+    const emailInUse = await this.userRepository.findByEmail(email);
+    if (emailInUse) {
+      throw new Error("E-mail já está em uso.");
+    }
+
+    // Cria a entidade de domínio
+    const user = User.create({ name, email, password });
+
+    // Persiste via contrato (não sabe se é Prisma, Mongo...)
+    await this.userRepository.save(user);
+
+    return { id: user.id, name: user.name, email: user.email };
+  }
+}`,
+        },
+        irepository: {
+          title: "IRepository",
+          file: "IUserRepository.ts",
+          layer: "Domain",
+          color: "#2563EB",
+          explain:
+            "A interface é o contrato do domínio. Ela diz: 'preciso de alguém que saiba buscar e salvar usuários'. Não importa se vai ser Prisma, TypeORM, MongoDB ou um array em memória — quem implementar esse contrato serve.",
+          code: `// src/domain/repositories/IUserRepository.ts
+
+// Contrato puro — só TypeScript, zero dependência externa
+// O Domain diz O QUE precisa, sem saber COMO será feito
+export interface IUserRepository {
+  findById(id: string): Promise<User | null>;
+  findByEmail(email: string): Promise<User | null>;
+  save(user: User): Promise<void>;
+  delete(id: string): Promise<void>;
+}`,
+        },
+        entity: {
+          title: "entity",
+          file: "User.ts",
+          layer: "Domain",
+          color: "#2563EB",
+          explain:
+            "A entidade carrega identidade (id) e regras de negócio intrínsecas. Ela se valida sozinha — qualquer User criado com dados inválidos lança erro na hora, sem precisar de validação externa.",
+          code: `// src/domain/entities/User.ts
+import { randomUUID } from "crypto";
+
+interface UserProps {
+  name: string;
+  email: string;
+  password: string;
+}
+
+// Entidade com regras de negócio puras
+// Não conhece banco, HTTP, nada externo
+export class User {
+  public readonly id: string;
+  public name: string;
+  public email: string;
+  public password: string;
+
+  private constructor(props: UserProps, id?: string) {
+    this.id = id ?? randomUUID();
+    this.name = props.name;
+    this.email = props.email;
+    this.password = props.password;
+    this.validate();
+  }
+
+  // Factory method — garante que todo User nasce válido
+  static create(props: UserProps, id?: string): User {
+    return new User(props, id);
+  }
+
+  // Regra de domínio: e-mail deve ter @
+  private validate() {
+    if (!this.email.includes("@")) {
+      throw new Error("E-mail inválido.");
+    }
+    if (this.name.trim().length < 2) {
+      throw new Error("Nome muito curto.");
+    }
+  }
+}`,
+        },
+        dbrepository: {
+          title: "PrismaRepo",
+          file: "PrismaUserRepository.ts",
+          layer: "Infrastructure",
+          color: "#CA8A04",
+          explain:
+            "A implementação concreta. Aqui SIM aparece o Prisma, o SQL, o banco. Se amanhã você trocar o Prisma pelo TypeORM, reescreve só esse arquivo — use case, entidade, rota: nada muda.",
+          code: `// src/infrastructure/repositories/PrismaUserRepository.ts
+import { PrismaClient } from "@prisma/client";
+import { IUserRepository } from "../../domain/repositories/IUserRepository";
+import { User } from "../../domain/entities/User";
+
+// Implementa o contrato do Domain usando Prisma
+// É a ÚNICA classe que sabe que existe um banco de dados
+export class PrismaUserRepository implements IUserRepository {
+  constructor(private readonly prisma: PrismaClient) {}
+
+  async findById(id: string): Promise<User | null> {
+    const data = await this.prisma.user.findUnique({ where: { id } });
+    if (!data) return null;
+    return User.create(data, data.id);
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    const data = await this.prisma.user.findUnique({ where: { email } });
+    if (!data) return null;
+    return User.create(data, data.id);
+  }
+
+  async save(user: User): Promise<void> {
+    await this.prisma.user.create({
+      data: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        password: user.password,
+      },
+    });
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.prisma.user.delete({ where: { id } });
+  }
+}`,
+        },
+        factory: {
+          title: "factory (IoC)",
+          file: "makeCreateUserController.ts",
+          layer: "Infrastructure",
+          color: "#F97316",
+          explain:
+            "A factory é o 'montador'. É aqui que acontece a inversão de controle: ela instancia o PrismaUserRepository e injeta no use case, que injeta no controller. Cada camada recebe o que precisa sem saber de onde veio.",
+          code: `// src/infrastructure/factories/makeCreateUserController.ts
+import { PrismaClient } from "@prisma/client";
+import { PrismaUserRepository } from "../repositories/PrismaUserRepository";
+import { CreateUserUseCase } from "../../application/use-cases/CreateUser/CreateUserUseCase";
+import { UserController } from "../http/controllers/UserController";
+
+// Factory = quem monta o quebra-cabeça inteiro
+// Cria as dependências na ordem certa e injeta
+export function makeCreateUserController(): UserController {
+  const prisma = new PrismaClient();
+
+  // 1. Infra: implementação concreta do repositório
+  const userRepository = new PrismaUserRepository(prisma);
+
+  // 2. Application: recebe a interface (mas passa a impl concreta)
+  const createUserUseCase = new CreateUserUseCase(userRepository);
+
+  // 3. Http: recebe o use case
+  const userController = new UserController(createUserUseCase);
+
+  return userController;
+}`,
+        },
+      };
+
+      const STEPS = [
+        {
+          key: "request",
+          num: "①",
+          from: "Cliente",
+          to: "route",
+          action: "POST /users chega",
+        },
+        {
+          key: "route",
+          num: "②",
+          from: "route",
+          to: "controller",
+          action: "despacha a requisição",
+        },
+        {
+          key: "controller",
+          num: "③",
+          from: "controller",
+          to: "usecase",
+          action: "extrai body e chama",
+        },
+        {
+          key: "usecase",
+          num: "④",
+          from: "usecase",
+          to: "IUserRepository",
+          action: "usa o contrato (interface)",
+        },
+        {
+          key: "irepository",
+          num: "⑤",
+          from: "IUserRepository",
+          to: "PrismaRepository",
+          action: "contrato implementado por",
+        },
+        {
+          key: "entity",
+          num: "⑥",
+          from: "usecase",
+          to: "User (entity)",
+          action: "cria a entidade de domínio",
+        },
+        {
+          key: "dbrepository",
+          num: "⑦",
+          from: "PrismaRepository",
+          to: "Banco de dados",
+          action: "persiste no banco",
+        },
+        {
+          key: "factory",
+          num: "⑧",
+          from: "factory (IoC)",
+          to: "toda a cadeia",
+          action: "monta e injeta tudo",
+        },
+      ];
+
+      // ── state ──
+      let active = "request";
+      let tab = "code";
+
+      // ── syntax highlight ──
+      function esc(s) {
+        return s
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+
+      function highlightLine(line) {
+        // 1. Split off trailing comment (// outside strings)
+        let code = line,
+          comment = "";
+        let inStr = null,
+          i = 0;
+        for (; i < line.length - 1; i++) {
+          const c = line[i];
+          if (!inStr && (c === '"' || c === "'" || c === "`")) {
+            inStr = c;
+            continue;
+          }
+          if (inStr && c === "\\") {
+            i++;
+            continue;
+          }
+          if (inStr && c === inStr) {
+            inStr = null;
+            continue;
+          }
+          if (!inStr && c === "/" && line[i + 1] === "/") {
+            code = line.slice(0, i);
+            comment = line.slice(i);
+            break;
+          }
+        }
+
+        // 2. Tokenize code part into: strings | words | rest
+        const tokens = [];
+        let j = 0;
+        while (j < code.length) {
+          const ch = code[j];
+          // string literal
+          if (ch === '"' || ch === "'" || ch === "`") {
+            let s = ch,
+              k = j + 1;
+            while (k < code.length) {
+              if (code[k] === "\\") {
+                s += code[k] + (code[k + 1] || "");
+                k += 2;
+                continue;
+              }
+              s += code[k];
+              if (code[k] === ch) {
+                k++;
+                break;
+              }
+              k++;
+            }
+            tokens.push({ type: "str", val: s });
+            j = k;
+            continue;
+          }
+          // word (identifier / keyword)
+          if (/[a-zA-Z_$]/.test(ch)) {
+            let w = "",
+              k = j;
+            while (k < code.length && /[\w$]/.test(code[k])) w += code[k++];
+            tokens.push({ type: "word", val: w });
+            j = k;
+            continue;
+          }
+          // everything else — accumulate into "other"
+          if (tokens.length && tokens[tokens.length - 1].type === "other") {
+            tokens[tokens.length - 1].val += ch;
+          } else {
+            tokens.push({ type: "other", val: ch });
+          }
+          j++;
+        }
+
+        const KEYWORDS = new Set([
+          "import",
+          "export",
+          "from",
+          "const",
+          "let",
+          "var",
+          "async",
+          "await",
+          "return",
+          "new",
+          "if",
+          "else",
+          "class",
+          "interface",
+          "extends",
+          "implements",
+          "private",
+          "public",
+          "readonly",
+          "static",
+          "throw",
+          "null",
+          "undefined",
+          "typeof",
+          "void",
+          "true",
+          "false",
+          "for",
+          "of",
+          "in",
+          "function",
+          "type",
+        ]);
+        const TYPES = new Set([
+          "string",
+          "number",
+          "boolean",
+          "Promise",
+          "Request",
+          "Response",
+          "Router",
+          "PrismaClient",
+        ]);
+
+        let out = tokens
+          .map((t) => {
+            if (t.type === "str")
+              return `<span class="tk-str">${esc(t.val)}</span>`;
+            if (t.type === "word") {
+              if (KEYWORDS.has(t.val))
+                return `<span class="tk-kw">${esc(t.val)}</span>`;
+              if (TYPES.has(t.val))
+                return `<span class="tk-type">${esc(t.val)}</span>`;
+            }
+            return esc(t.val);
+          })
+          .join("");
+
+        if (comment) out += `<span class="tk-cmt">${esc(comment)}</span>`;
+        return out;
+      }
+
+      function highlight(code) {
+        return code.split("\n").map(highlightLine).join("\n");
+      }
+
+      // ── render helpers ──
+      function renderCode(key) {
+        const highlighted = highlight(DATA[key].code).split("\n");
+        const tbl = document.getElementById("code-table");
+        tbl.innerHTML = highlighted
+          .map(
+            (l, i) =>
+              `<tr>
+      <td class="ln">${i + 1}</td>
+      <td class="lc">${l}</td>
+    </tr>`,
+          )
+          .join("");
+      }
+
+      function renderPanel() {
+        const d = DATA[active];
+        const panel = document.getElementById("panel");
+        const head = document.getElementById("panel-head");
+        const badge = document.getElementById("badge");
+        const fname = document.getElementById("filename");
+
+        panel.style.borderColor = d.color + "55";
+        panel.style.boxShadow = `0 0 40px ${d.color}15`;
+        head.style.background = d.color + "18";
+        head.style.borderBottom = `1px solid ${d.color}33`;
+        badge.textContent = d.layer;
+        badge.style.background = d.color;
+        fname.textContent = d.file;
+        fname.style.color = d.color;
+
+        document.getElementById("btn-code").style.background =
+          tab === "code" ? d.color : "transparent";
+        document.getElementById("btn-code").style.color =
+          tab === "code" ? "#000" : "#94A3B8";
+        document.getElementById("btn-exp").style.background =
+          tab === "explain" ? d.color : "transparent";
+        document.getElementById("btn-exp").style.color =
+          tab === "explain" ? "#000" : "#94A3B8";
+        document.getElementById("btn-code").style.borderColor =
+          tab === "code" ? d.color : "rgba(255,255,255,.15)";
+        document.getElementById("btn-exp").style.borderColor =
+          tab === "explain" ? d.color : "rgba(255,255,255,.15)";
+
+        const codeView = document.getElementById("code-view");
+        const expView = document.getElementById("explain-view");
+
+        if (tab === "code") {
+          codeView.style.display = "block";
+          expView.style.display = "none";
+          renderCode(active);
+        } else {
+          codeView.style.display = "none";
+          expView.style.display = "block";
+          expView.textContent = d.explain;
+        }
+      }
+
+      function renderNodeBtns() {
+        const container = document.getElementById("nodes");
+        container.innerHTML = "";
+        Object.keys(DATA).forEach((key) => {
+          const d = DATA[key];
+          const btn = document.createElement("button");
+          btn.className = "node-btn" + (active === key ? " active" : "");
+          btn.textContent = d.title;
+          if (active === key) {
+            btn.style.borderColor = d.color;
+            btn.style.color = d.color;
+            btn.style.background = d.color + "18";
+            btn.style.boxShadow = `0 4px 16px ${d.color}33`;
+          }
+          btn.onclick = () => {
+            active = key;
+            tab = "code";
+            render();
+          };
+          container.appendChild(btn);
+        });
+      }
+
+      function renderSteps() {
+        const container = document.getElementById("steps");
+        container.innerHTML = "";
+        STEPS.forEach((s) => {
+          const d = DATA[s.key];
+          const row = document.createElement("button");
+          row.className = "step-row" + (active === s.key ? " active" : "");
+          if (active === s.key) {
+            row.style.borderColor = d.color + "66";
+            row.style.background = d.color + "10";
+          }
+          row.innerHTML = `
+      <span class="step-num" style="color:${d.color}">${s.num}</span>
+      <span class="step-from">${s.from}<span class="step-arrow">→</span><span class="step-to" style="color:${d.color}">${s.to}</span></span>
+      <span class="step-action">${s.action}</span>
+      ${active === s.key ? `<span class="step-here" style="color:${d.color}">← você está aqui</span>` : ""}
+    `;
+          row.onclick = () => {
+            active = s.key;
+            tab = "code";
+            render();
+          };
+          container.appendChild(row);
+        });
+      }
+
+      function render() {
+        renderNodeBtns();
+        renderPanel();
+        renderSteps();
+      }
+
+      function setTab(t) {
+        tab = t;
+        renderPanel();
+      }
+
+      render();
+    </script>
+  </body>
+</html>
