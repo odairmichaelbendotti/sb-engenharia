@@ -6,6 +6,8 @@ import NotasFiscais from "./pages/NotasFiscais";
 import Empenhos from "./pages/Empenhos";
 import Medicoes from "./pages/Medicoes";
 import Obras from "./pages/Obras";
+import SignIn from "./pages/auth/SignIn";
+import SignUp from "./pages/auth/SignUp";
 
 export const router = createBrowserRouter([
   {
@@ -36,5 +38,13 @@ export const router = createBrowserRouter([
         element: <Obras />,
       },
     ],
+  },
+  {
+    path: "/signin",
+    element: <SignIn />,
+  },
+  {
+    path: "/signup",
+    element: <SignUp />,
   },
 ]);

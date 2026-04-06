@@ -335,9 +335,9 @@ export default function NotaFiscal() {
     }).format(value);
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("pt-BR");
-  };
+  // const formatDate = (date: string) => {
+  //   return new Date(date).toLocaleDateString("pt-BR");
+  // };
 
   return (
     <div className="min-h-screen bg-[color:var(--color-background)] w-full">
