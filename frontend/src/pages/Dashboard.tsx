@@ -1,8 +1,6 @@
 import { useState, useMemo } from "react";
 import {
   Home,
-  TrendingUp,
-  TrendingDown,
   DollarSign,
   Building2,
   FileText,
@@ -15,7 +13,6 @@ import {
   ArrowDownRight,
   MoreHorizontal,
   ChevronRight,
-  Briefcase,
 } from "lucide-react";
 
 interface StatCardProps {
