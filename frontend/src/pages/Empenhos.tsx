@@ -493,9 +493,7 @@ export default function Empenhos() {
                       </div>
                     </td>
                     <td className="py-3 px-4 text-sm text-text-secondary hidden lg:table-cell">
-                      <p className="truncate max-w-[200px]">
-                        {empenho.descricao}
-                      </p>
+                      <p className="truncate max-w-50">{empenho.descricao}</p>
                     </td>
                     <td className="py-3 px-4 hidden md:table-cell">
                       <div className="text-sm">

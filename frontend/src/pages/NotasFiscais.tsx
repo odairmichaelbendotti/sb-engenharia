@@ -426,9 +426,7 @@ export default function NotasFiscais() {
                       {invoice.client}
                     </td>
                     <td className="py-3 px-4 text-sm text-text-secondary hidden md:table-cell">
-                      <p className="truncate max-w-[200px]">
-                        {invoice.description}
-                      </p>
+                      <p className="truncate max-w-50">{invoice.description}</p>
                     </td>
                     <td className="py-3 px-4 hidden sm:table-cell">
                       <div className="text-sm">

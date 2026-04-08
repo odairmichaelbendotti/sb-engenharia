@@ -570,7 +570,7 @@ export default function Dashboard() {
                 Atividades Recentes
               </h3>
             </div>
-            <div className="p-4 space-y-4 max-h-[400px] overflow-y-auto">
+            <div className="p-4 space-y-4 max-h-100 overflow-y-auto">
               {mockData.atividades.map((atividade) => (
                 <div key={atividade.id} className="flex gap-3">
                   <div className="w-8 h-8 bg-surface-muted rounded-lg flex items-center justify-center shrink-0">
