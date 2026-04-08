@@ -9,55 +9,10 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
-  ArrowUpRight,
-  ArrowDownRight,
   MoreHorizontal,
   ChevronRight,
 } from "lucide-react";
-
-interface StatCardProps {
-  title: string;
-  value: string;
-  change?: string;
-  changeType?: "positive" | "negative" | "neutral";
-  icon: React.ReactNode;
-  color: string;
-}
-
-const StatCard = ({
-  title,
-  value,
-  change,
-  changeType,
-  icon,
-  color,
-}: StatCardProps) => (
-  <div className="bg-surface border border-border rounded-xl p-5 hover:shadow-lg transition-shadow">
-    <div className="flex items-start justify-between">
-      <div>
-        <p className="text-text-secondary text-sm font-medium">{title}</p>
-        <p className="text-2xl font-bold text-text-primary mt-2">{value}</p>
-        {change && (
-          <div
-            className={`flex items-center gap-1 mt-2 text-sm ${changeType === "positive" ? "text-success-text" : changeType === "negative" ? "text-danger-text" : "text-text-secondary"}`}
-          >
-            {changeType === "positive" ? (
-              <ArrowUpRight size={16} />
-            ) : changeType === "negative" ? (
-              <ArrowDownRight size={16} />
-            ) : null}
-            <span>{change}</span>
-          </div>
-        )}
-      </div>
-      <div
-        className={`w-12 h-12 ${color} rounded-xl flex items-center justify-center`}
-      >
-        {icon}
-      </div>
-    </div>
-  </div>
-);
+import { StatCard } from "../components/StatCard";
 
 // Mock data
 const mockData = {
@@ -368,6 +323,7 @@ export default function Dashboard() {
         <StatCard
           title="Empresas Cadastradas"
           value={metrics.totalEmpresas.toString()}
+          subtitle="Cadastros ativos"
           change="+2 este mês"
           changeType="positive"
           icon={<Building2 size={24} className="text-primary-500" />}
@@ -376,6 +332,7 @@ export default function Dashboard() {
         <StatCard
           title="Empenhos Ativos"
           value={metrics.totalEmpenhos.toString()}
+          subtitle="Em andamento"
           change="3 concluídos"
           changeType="neutral"
           icon={<Layers2 size={24} className="text-success-text" />}
@@ -384,6 +341,7 @@ export default function Dashboard() {
         <StatCard
           title="Valor em Empenhos"
           value={formatCurrency(metrics.valorEmpenhosAtivos)}
+          subtitle="Total empenhado"
           change="+12% vs mês anterior"
           changeType="positive"
           icon={<DollarSign size={24} className="text-accent-500" />}
@@ -392,6 +350,7 @@ export default function Dashboard() {
         <StatCard
           title="Notas Fiscais"
           value={metrics.totalNF.toString()}
+          subtitle="Emitidas"
           change="2 pendentes"
           changeType="negative"
           icon={<FileText size={24} className="text-warning-text" />}

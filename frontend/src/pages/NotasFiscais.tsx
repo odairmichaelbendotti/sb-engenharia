@@ -16,6 +16,7 @@ import {
   AlertCircle,
   XCircle,
 } from "lucide-react";
+import { StatCard } from "../components/StatCard";
 
 interface Invoice {
   id: number;
@@ -313,64 +314,34 @@ export default function NotasFiscais() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-surface border border-border rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-text-secondary text-xs">Total de NFs</p>
-              <p className="text-2xl font-bold text-text-primary mt-1">
-                {metrics.total}
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-              <FileText size={20} className="text-primary-500" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-surface border border-border rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-text-secondary text-xs">Valor Total</p>
-              <p className="text-lg font-bold text-text-primary mt-1">
-                {formatCurrency(metrics.totalValue)}
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-accent-100 rounded-full flex items-center justify-center">
-              <DollarSign size={20} className="text-accent-500" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-surface border border-border rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-text-secondary text-xs">Pagas</p>
-              <p className="text-2xl font-bold text-success-text mt-1">
-                {metrics.paid}
-              </p>
-              <p className="text-xs text-success-text/70">
-                {formatCurrency(metrics.paidValue)}
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-success-bg rounded-full flex items-center justify-center">
-              <CheckCircle2 size={20} className="text-success-text" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-surface border border-border rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-text-secondary text-xs">Pendentes/Vencidas</p>
-              <p className="text-2xl font-bold text-warning-text mt-1">
-                {metrics.pending + metrics.overdue}
-              </p>
-              <p className="text-xs text-warning-text/70">
-                {formatCurrency(metrics.pendingValue + metrics.overdueValue)}
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-warning-bg rounded-full flex items-center justify-center">
-              <Clock size={20} className="text-warning-text" />
-            </div>
-          </div>
-        </div>
+        <StatCard
+          title="Total de NFs"
+          value={metrics.total.toString()}
+          subtitle="Emitidas"
+          icon={<FileText size={24} className="text-primary-500" />}
+          color="bg-primary-100"
+        />
+        <StatCard
+          title="Valor Total"
+          value={formatCurrency(metrics.totalValue)}
+          subtitle="Soma de todas"
+          icon={<DollarSign size={24} className="text-accent-500" />}
+          color="bg-accent-100"
+        />
+        <StatCard
+          title="Pagas"
+          value={metrics.paid.toString()}
+          subtitle={formatCurrency(metrics.paidValue)}
+          icon={<CheckCircle2 size={24} className="text-success-text" />}
+          color="bg-success-bg"
+        />
+        <StatCard
+          title="Pendentes/Vencidas"
+          value={(metrics.pending + metrics.overdue).toString()}
+          subtitle={formatCurrency(metrics.pendingValue + metrics.overdueValue)}
+          icon={<Clock size={24} className="text-warning-text" />}
+          color="bg-warning-bg"
+        />
       </div>
 
       {/* Filters */}

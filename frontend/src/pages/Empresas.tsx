@@ -15,6 +15,7 @@ import {
   Mail,
   MapPin,
 } from "lucide-react";
+import { StatCard } from "../components/StatCard";
 
 interface Empenho {
   id: number;
@@ -380,69 +381,48 @@ export default function Empresas() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-surface border border-border rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-text-secondary text-xs">Total de Empresas</p>
-              <p className="text-2xl font-bold text-text-primary mt-1">
-                {empresas.length}
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-              <Building2 size={20} className="text-primary-500" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-surface border border-border rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-text-secondary text-xs">Total de Empenhos</p>
-              <p className="text-2xl font-bold text-text-primary mt-1">
-                {empresas.reduce((acc, emp) => acc + emp.empenhos.length, 0)}
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-secondary-100 rounded-full flex items-center justify-center">
-              <Layers2 size={20} className="text-secondary-500" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-surface border border-border rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-text-secondary text-xs">Empenhos Ativos</p>
-              <p className="text-2xl font-bold text-success-text mt-1">
-                {empresas.reduce(
-                  (acc, emp) =>
-                    acc +
-                    emp.empenhos.filter((e) => e.status === "ativo").length,
-                  0,
-                )}
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-success-bg rounded-full flex items-center justify-center">
-              <Layers2 size={20} className="text-success-text" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-surface border border-border rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-text-secondary text-xs">Valor Total</p>
-              <p className="text-lg font-bold text-text-primary mt-1">
-                {formatCurrency(
-                  empresas.reduce(
-                    (acc, emp) =>
-                      acc + emp.empenhos.reduce((sum, e) => sum + e.valor, 0),
-                    0,
-                  ),
-                )}
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-accent-100 rounded-full flex items-center justify-center">
-              <span className="text-accent-500 font-bold">R$</span>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          title="Total de Empresas"
+          value={empresas.length.toString()}
+          subtitle="Cadastradas"
+          icon={<Building2 size={24} className="text-primary-500" />}
+          color="bg-primary-100"
+        />
+        <StatCard
+          title="Total de Empenhos"
+          value={empresas
+            .reduce((acc, emp) => acc + emp.empenhos.length, 0)
+            .toString()}
+          subtitle="Vinculados"
+          icon={<Layers2 size={24} className="text-secondary-500" />}
+          color="bg-secondary-100"
+        />
+        <StatCard
+          title="Empenhos Ativos"
+          value={empresas
+            .reduce(
+              (acc, emp) =>
+                acc + emp.empenhos.filter((e) => e.status === "ativo").length,
+              0,
+            )
+            .toString()}
+          subtitle="Em andamento"
+          icon={<Layers2 size={24} className="text-success-text" />}
+          color="bg-success-bg"
+        />
+        <StatCard
+          title="Valor Total"
+          value={formatCurrency(
+            empresas.reduce(
+              (acc, emp) =>
+                acc + emp.empenhos.reduce((sum, e) => sum + e.valor, 0),
+              0,
+            ),
+          )}
+          subtitle="Empenhado"
+          icon={<span className="text-accent-500 font-bold text-lg">R$</span>}
+          color="bg-accent-100"
+        />
       </div>
 
       {/* Filters */}

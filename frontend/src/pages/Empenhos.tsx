@@ -16,6 +16,7 @@ import {
   XCircle,
   DollarSign,
 } from "lucide-react";
+import { StatCard } from "../components/StatCard";
 
 interface Empenho {
   id: number;
@@ -375,64 +376,34 @@ export default function Empenhos() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-surface border border-border rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-text-secondary text-xs">Total de Empenhos</p>
-              <p className="text-2xl font-bold text-text-primary mt-1">
-                {metrics.total}
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-              <Layers2 size={20} className="text-primary-500" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-surface border border-border rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-text-secondary text-xs">Valor Total</p>
-              <p className="text-lg font-bold text-text-primary mt-1">
-                {formatCurrency(metrics.totalValue)}
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-accent-100 rounded-full flex items-center justify-center">
-              <DollarSign size={20} className="text-accent-500" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-surface border border-border rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-text-secondary text-xs">Ativos</p>
-              <p className="text-2xl font-bold text-success-text mt-1">
-                {metrics.ativo}
-              </p>
-              <p className="text-xs text-success-text/70">
-                {formatCurrency(metrics.ativoValue)}
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-success-bg rounded-full flex items-center justify-center">
-              <CheckCircle2 size={20} className="text-success-text" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-surface border border-border rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-text-secondary text-xs">Concluídos</p>
-              <p className="text-2xl font-bold text-accent-600 mt-1">
-                {metrics.concluido}
-              </p>
-              <p className="text-xs text-accent-600/70">
-                {formatCurrency(metrics.concluidoValue)}
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-accent-100 rounded-full flex items-center justify-center">
-              <Clock size={20} className="text-accent-600" />
-            </div>
-          </div>
-        </div>
+        <StatCard
+          title="Total de Empenhos"
+          value={metrics.total.toString()}
+          subtitle="Todos os empenhos"
+          icon={<Layers2 size={24} className="text-primary-500" />}
+          color="bg-primary-100"
+        />
+        <StatCard
+          title="Valor Total"
+          value={formatCurrency(metrics.totalValue)}
+          subtitle="Soma de todos"
+          icon={<DollarSign size={24} className="text-accent-500" />}
+          color="bg-accent-100"
+        />
+        <StatCard
+          title="Ativos"
+          value={metrics.ativo.toString()}
+          subtitle={formatCurrency(metrics.ativoValue)}
+          icon={<CheckCircle2 size={24} className="text-success-text" />}
+          color="bg-success-bg"
+        />
+        <StatCard
+          title="Concluídos"
+          value={metrics.concluido.toString()}
+          subtitle={formatCurrency(metrics.concluidoValue)}
+          icon={<Clock size={24} className="text-accent-600" />}
+          color="bg-accent-100"
+        />
       </div>
 
       {/* Filters */}
