@@ -16,3 +16,39 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 }
+
+model Company {
+  id String @id @default(uuid())
+  name String
+  cnpj String @unique
+  city String
+  state String
+  address String
+  phone String
+  email String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  empenhos Empenho[]
+}
+
+enum EmpenhoStatus {
+  PENDENTE
+  ATIVO
+  CONCLUÍDO
+  CANCELADO
+}
+
+model Empenho {
+  id String @id @default(uuid())
+  description String
+  startAt DateTime
+  endAt DateTime
+  value Int
+  status EmpenhoStatus @default(PENDENTE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  company_id String
+  company Company @relation(fields: [company_id], references: [id])
+}
