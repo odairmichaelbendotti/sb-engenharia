@@ -14,85 +14,37 @@ import {
   Phone,
   Mail,
   MapPin,
+  Loader2,
 } from "lucide-react";
 import { StatCard } from "../components/StatCard";
-
-interface Empenho {
-  id: number;
-  numero: string;
-  valor: number;
-  data: string;
-  status: "ativo" | "concluido" | "cancelado";
-}
-
-interface Empresa {
-  id: number;
-  nome: string;
-  cnpj: string;
-  endereco: string;
-  cidade: string;
-  estado: string;
-  telefone: string;
-  email: string;
-  responsavel: string;
-  empenhos: Empenho[];
-}
+import type { Empenho } from "../../types/empenho";
+import type { Empresa } from "../../types/empresa";
+import { estadosBrasil } from "../utils/estados-brasil";
+import { toast } from "sonner";
 
 interface FormData {
-  nome: string;
+  name: string;
   cnpj: string;
-  endereco: string;
-  cidade: string;
-  estado: string;
-  telefone: string;
+  city: string;
+  state: string;
+  address: string;
+  phone: string;
   email: string;
-  responsavel: string;
 }
 
 const ITEMS_PER_PAGE = 10;
-
-const estadosBrasil = [
-  "AC",
-  "AL",
-  "AP",
-  "AM",
-  "BA",
-  "CE",
-  "DF",
-  "ES",
-  "GO",
-  "MA",
-  "MT",
-  "MS",
-  "MG",
-  "PA",
-  "PB",
-  "PR",
-  "PE",
-  "PI",
-  "RJ",
-  "RN",
-  "RS",
-  "RO",
-  "RR",
-  "SC",
-  "SP",
-  "SE",
-  "TO",
-];
 
 export default function Empresas() {
   const [empresas, setEmpresas] = useState<Empresa[]>([
     {
       id: 1,
-      nome: "Construtora Silva Ltda",
+      name: "Construtora Silva Ltda",
       cnpj: "12.345.678/0001-90",
-      endereco: "Rua das Obras, 123",
-      cidade: "São Paulo",
-      estado: "SP",
-      telefone: "(11) 98765-4321",
+      address: "Rua das Obras, 123",
+      city: "São Paulo",
+      state: "SP",
+      phone: "(11) 98765-4321",
       email: "contato@silvaobra.com.br",
-      responsavel: "João Silva",
       empenhos: [
         {
           id: 1,
@@ -110,87 +62,7 @@ export default function Empresas() {
         },
       ],
     },
-    {
-      id: 2,
-      nome: "Engenharia Santos S.A.",
-      cnpj: "98.765.432/0001-10",
-      endereco: "Av. Engenharia, 456",
-      cidade: "Rio de Janeiro",
-      estado: "RJ",
-      telefone: "(21) 97654-3210",
-      email: "sac@santoseng.com.br",
-      responsavel: "Maria Santos",
-      empenhos: [
-        {
-          id: 3,
-          numero: "EMP-2024-008",
-          valor: 230000,
-          data: "2024-02-10",
-          status: "ativo",
-        },
-      ],
-    },
-    {
-      id: 3,
-      nome: "Obras Rápidas ME",
-      cnpj: "45.678.901/0001-23",
-      endereco: "Rua Veloz, 789",
-      cidade: "Belo Horizonte",
-      estado: "MG",
-      telefone: "(31) 96543-2109",
-      email: "obra@obrasrapidas.com.br",
-      responsavel: "Pedro Rápido",
-      empenhos: [],
-    },
-    {
-      id: 4,
-      nome: "Fundação Forte EPP",
-      cnpj: "67.890.123/0001-45",
-      endereco: "Alameda Concreto, 321",
-      cidade: "Curitiba",
-      estado: "PR",
-      telefone: "(41) 95432-1098",
-      email: "forte@fundacaoforte.com.br",
-      responsavel: "Ana Forte",
-      empenhos: [
-        {
-          id: 4,
-          numero: "EMP-2024-022",
-          valor: 89000,
-          data: "2024-04-05",
-          status: "ativo",
-        },
-        {
-          id: 5,
-          numero: "EMP-2024-030",
-          valor: 45000,
-          data: "2024-05-12",
-          status: "cancelado",
-        },
-      ],
-    },
-    {
-      id: 5,
-      nome: "Estrutura Primavera",
-      cnpj: "34.567.890/0001-67",
-      endereco: "Rua Primavera, 555",
-      cidade: "Florianópolis",
-      estado: "SC",
-      telefone: "(48) 94321-0987",
-      email: "primavera@estrutura.com.br",
-      responsavel: "Carlos Primavera",
-      empenhos: [
-        {
-          id: 6,
-          numero: "EMP-2024-045",
-          valor: 320000,
-          data: "2024-06-01",
-          status: "concluido",
-        },
-      ],
-    },
   ]);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isEmpenhosModalOpen, setIsEmpenhosModalOpen] = useState(false);
@@ -203,22 +75,22 @@ export default function Empresas() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState<FormData>({
-    nome: "",
+    name: "",
     cnpj: "",
-    endereco: "",
-    cidade: "",
-    estado: "",
-    telefone: "",
+    city: "",
+    state: "",
+    address: "",
+    phone: "",
     email: "",
-    responsavel: "",
   });
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const filteredEmpresas = useMemo(() => {
     return empresas.filter(
       (empresa) =>
-        empresa.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        empresa.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         empresa.cnpj.includes(searchTerm) ||
-        empresa.cidade.toLowerCase().includes(searchTerm.toLowerCase()),
+        empresa.city.toLowerCase().includes(searchTerm.toLowerCase()),
     );
   }, [empresas, searchTerm]);
 
@@ -228,6 +100,8 @@ export default function Empresas() {
     startIndex,
     startIndex + ITEMS_PER_PAGE,
   );
+
+  const api_url = import.meta.env.VITE_HOST;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -270,26 +144,24 @@ export default function Empresas() {
     if (empresa) {
       setEmpresaSelecionada(empresa);
       setFormData({
-        nome: empresa.nome,
+        name: empresa.name,
         cnpj: empresa.cnpj,
-        endereco: empresa.endereco,
-        cidade: empresa.cidade,
-        estado: empresa.estado,
-        telefone: empresa.telefone,
+        address: empresa.address,
+        city: empresa.city,
+        state: empresa.state,
+        phone: empresa.phone,
         email: empresa.email,
-        responsavel: empresa.responsavel,
       });
     } else {
       setEmpresaSelecionada(null);
       setFormData({
-        nome: "",
+        name: "",
         cnpj: "",
-        endereco: "",
-        cidade: "",
-        estado: "",
-        telefone: "",
+        address: "",
+        city: "",
+        state: "",
+        phone: "",
         email: "",
-        responsavel: "",
       });
     }
     setIsModalOpen(true);
@@ -320,22 +192,30 @@ export default function Empresas() {
     setEmpresaSelecionada(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (empresaSelecionada) {
-      setEmpresas(
-        empresas.map((emp) =>
-          emp.id === empresaSelecionada.id ? { ...emp, ...formData } : emp,
-        ),
-      );
-    } else {
-      const newEmpresa: Empresa = {
-        id: Math.max(...empresas.map((e) => e.id), 0) + 1,
-        ...formData,
-        empenhos: [],
-      };
-      setEmpresas([...empresas, newEmpresa]);
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${api_url}/company/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        console.log("Erro ao cadastrar empresa");
+        throw new Error("Erro ao cadastrar empresa");
+      }
+
+      toast.success("Empresa cadastrada com sucesso");
+    } catch (error) {
+      console.log(error);
+      toast.error("Erro ao cadastrar empresa");
+    } finally {
+      setIsLoading(false);
     }
 
     closeModal();
@@ -485,7 +365,7 @@ export default function Empresas() {
                       </div>
                       <div>
                         <p className="font-medium text-text-primary text-sm">
-                          {empresa.nome}
+                          {empresa.name}
                         </p>
                         <p className="text-xs text-text-secondary md:hidden">
                           {empresa.cnpj}
@@ -500,7 +380,7 @@ export default function Empresas() {
                     <div className="flex items-center gap-1 text-sm text-text-secondary">
                       <MapPin size={14} />
                       <span>
-                        {empresa.cidade}, {empresa.estado}
+                        {empresa.city}, {empresa.state}
                       </span>
                     </div>
                   </td>
@@ -508,7 +388,7 @@ export default function Empresas() {
                     <div className="text-sm text-text-secondary">
                       <p className="flex items-center gap-1">
                         <Phone size={12} />
-                        {empresa.telefone}
+                        {empresa.phone}
                       </p>
                       <p className="flex items-center gap-1 text-xs mt-1">
                         <Mail size={12} />
@@ -616,7 +496,7 @@ export default function Empresas() {
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-4 overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-text-secondary mb-1">
                     Nome da Empresa *
@@ -624,9 +504,9 @@ export default function Empresas() {
                   <input
                     type="text"
                     required
-                    value={formData.nome}
+                    value={formData.name}
                     onChange={(e) =>
-                      setFormData({ ...formData, nome: e.target.value })
+                      setFormData({ ...formData, name: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
                     placeholder="Ex: Construtora Silva Ltda"
@@ -649,16 +529,16 @@ export default function Empresas() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-text-secondary mb-1">
-                    Responsável
+                    E-mail
                   </label>
                   <input
-                    type="text"
-                    value={formData.responsavel}
+                    type="email"
+                    value={formData.email}
                     onChange={(e) =>
-                      setFormData({ ...formData, responsavel: e.target.value })
+                      setFormData({ ...formData, email: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
-                    placeholder="Nome do responsável"
+                    placeholder="E-mail do responsável"
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -667,9 +547,9 @@ export default function Empresas() {
                   </label>
                   <input
                     type="text"
-                    value={formData.endereco}
+                    value={formData.address}
                     onChange={(e) =>
-                      setFormData({ ...formData, endereco: e.target.value })
+                      setFormData({ ...formData, address: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
                     placeholder="Rua, número, bairro"
@@ -681,9 +561,9 @@ export default function Empresas() {
                   </label>
                   <input
                     type="text"
-                    value={formData.cidade}
+                    value={formData.city}
                     onChange={(e) =>
-                      setFormData({ ...formData, cidade: e.target.value })
+                      setFormData({ ...formData, city: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
                     placeholder="Ex: São Paulo"
@@ -694,9 +574,9 @@ export default function Empresas() {
                     Estado
                   </label>
                   <select
-                    value={formData.estado}
+                    value={formData.state}
                     onChange={(e) =>
-                      setFormData({ ...formData, estado: e.target.value })
+                      setFormData({ ...formData, state: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
                   >
@@ -714,26 +594,12 @@ export default function Empresas() {
                   </label>
                   <input
                     type="text"
-                    value={formData.telefone}
+                    value={formData.phone}
                     onChange={(e) =>
-                      setFormData({ ...formData, telefone: e.target.value })
+                      setFormData({ ...formData, phone: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
                     placeholder="(00) 00000-0000"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">
-                    E-mail
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
-                    placeholder="email@empresa.com.br"
                   />
                 </div>
               </div>
@@ -747,11 +613,15 @@ export default function Empresas() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors"
+                  className="py-2 w-44 flex justify-center items-center bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors"
                 >
-                  {empresaSelecionada
-                    ? "Salvar Alterações"
-                    : "Cadastrar Empresa"}
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : empresaSelecionada ? (
+                    "Salvar Alterações"
+                  ) : (
+                    "Cadastrar Empresa"
+                  )}
                 </button>
               </div>
             </form>
@@ -766,7 +636,7 @@ export default function Empresas() {
             <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
               <div>
                 <h2 className="text-lg font-semibold text-text-primary">
-                  Empenhos - {empresaSelecionada.nome}
+                  Empenhos - {empresaSelecionada.name}
                 </h2>
                 <p className="text-sm text-text-secondary">
                   {empresaSelecionada.empenhos.length} empenho
@@ -872,7 +742,7 @@ export default function Empresas() {
                 Tem certeza que deseja excluir a empresa
               </p>
               <p className="font-medium text-text-primary mb-6">
-                "{empresaParaDeletar.nome}"?
+                "{empresaParaDeletar.name}"?
               </p>
               {empresaParaDeletar.empenhos.length > 0 && (
                 <div className="bg-warning-bg border border-warning-border rounded-md p-3 mb-6">

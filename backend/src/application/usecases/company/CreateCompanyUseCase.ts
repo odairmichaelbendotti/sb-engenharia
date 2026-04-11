@@ -1,8 +1,8 @@
-import type { CompanyType } from "../../domain/entities/Company";
-import { DomainError } from "../../domain/errors/DomainError";
-import type { ICompanyRepository } from "../../domain/repositories/ICompanyRepository";
+import type { CompanyType } from "../../../domain/entities/Company";
+import { DomainError } from "../../../domain/errors/DomainError";
+import type { ICompanyRepository } from "../../../domain/repositories/ICompanyRepository";
 
-export class CompanyUseCase {
+export class CreateCompanyUseCase {
   constructor(private repository: ICompanyRepository) {}
 
   async execute({
@@ -18,6 +18,12 @@ export class CompanyUseCase {
       throw new DomainError("All fields are required");
     }
 
+    const cnpjAlreadyExists = await this.repository.verifyCnpj(cnpj);
+
+    if (cnpjAlreadyExists) {
+      throw new DomainError("CNPJ already exists");
+    }
+
     const company = await this.repository.create({
       name,
       cnpj,
@@ -28,7 +34,6 @@ export class CompanyUseCase {
       email,
     });
     if (!company) throw new Error("Company not created");
-    console.log(company);
     return company;
   }
 }
