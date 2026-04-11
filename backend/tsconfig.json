@@ -7,8 +7,9 @@
 
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
-    "module": "nodenext",
+    "module": "esnext",
     "target": "esnext",
+    "moduleResolution": "bundler",
     "types": ["node"],
     // For nodejs:
     // "lib": ["esnext"],
@@ -41,5 +42,5 @@
     "moduleDetection": "force",
     "skipLibCheck": true
   },
-  "include": ["src/**/*", "*.d.ts"]
+  "include": ["src/**/*", "prisma.config.ts", "*.d.ts"]
 }

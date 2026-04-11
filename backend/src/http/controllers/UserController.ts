@@ -29,17 +29,14 @@ export class UserController {
   }
   async signin(req: Request, res: Response) {
     const { email, password } = req.body;
-    console.log("etapa 1");
+
     try {
       const { token, user } = await this.signInUseCase.execute({
         email,
         password,
       });
 
-      console.log("etapa 2");
-
       res.cookie("auth", token);
-      console.log("etapa 3");
       res.status(200).json(user);
     } catch (err) {
       console.log(err);

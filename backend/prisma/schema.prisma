@@ -8,28 +8,30 @@ datasource db {
 }
 
 model User {
-  id String @id @default(uuid())
-  name String
-  email String @unique
-  password String
-  role Boolean @default(false)
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 }
 
 model Company {
-  id String @id @default(uuid())
-  name String
-  cnpj String @unique
-  city String
-  state String
-  address String
-  phone String
-  email String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  id                String   @id @default(uuid())
+  name              String
+  cnpj              String   @unique
+  city              String
+  state             String
+  address           String
+  phone             String
+  email             String
+  hasActiveContract Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @default(now())
 
-  empenhos Empenho[]
+  empenhos    Empenho[]
+  notasFicais NotaFiscal[]
 }
 
 enum EmpenhoStatus {
@@ -40,15 +42,41 @@ enum EmpenhoStatus {
 }
 
 model Empenho {
-  id String @id @default(uuid())
+  id          String        @id @default(uuid())
+  numero      String        @unique
   description String
-  startAt DateTime
-  endAt DateTime
-  value Int
-  status EmpenhoStatus @default(PENDENTE)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  startAt     DateTime
+  endAt       DateTime
+  value       Int
+  status      EmpenhoStatus @default(PENDENTE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @default(now())
+
+  company_id  String
+  company     Company      @relation(fields: [company_id], references: [id])
+  notaFiscals NotaFiscal[]
+}
+
+enum NotaFiscalStatus {
+  PENDENTE
+  PAGO
+  VENCIDO
+  CANCELADO
+}
+
+model NotaFiscal {
+  id          String           @id @default(uuid())
+  numero      String
+  description String
+  vencimento  DateTime
+  value       Int
+  status      NotaFiscalStatus @default(PENDENTE)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @default(now())
+
+  empenho_id String
+  empenho    Empenho @relation(fields: [empenho_id], references: [id])
 
   company_id String
-  company Company @relation(fields: [company_id], references: [id])
+  company    Company @relation(fields: [company_id], references: [id])
 }
