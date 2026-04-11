@@ -43,7 +43,9 @@ export class PrismaCompanyRepository implements ICompanyRepository {
   }
   async list(): Promise<Company[]> {
     try {
-      const companies = await prisma.company.findMany();
+      const companies = await prisma.company.findMany({
+        include: { empenhos: true },
+      });
       return companies;
     } catch (error) {
       throw new DomainError("Method not implemented." + error);

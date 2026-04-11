@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Plus,
   Edit2,
@@ -21,6 +21,7 @@ import type { Empenho } from "../../types/empenho";
 import type { Empresa } from "../../types/empresa";
 import { estadosBrasil } from "../utils/estados-brasil";
 import { toast } from "sonner";
+import { useCompanies } from "../store/companies";
 
 interface FormData {
   name: string;
@@ -35,34 +36,7 @@ interface FormData {
 const ITEMS_PER_PAGE = 10;
 
 export default function Empresas() {
-  const [empresas, setEmpresas] = useState<Empresa[]>([
-    {
-      id: 1,
-      name: "Construtora Silva Ltda",
-      cnpj: "12.345.678/0001-90",
-      address: "Rua das Obras, 123",
-      city: "São Paulo",
-      state: "SP",
-      phone: "(11) 98765-4321",
-      email: "contato@silvaobra.com.br",
-      empenhos: [
-        {
-          id: 1,
-          numero: "EMP-2024-001",
-          valor: 150000,
-          data: "2024-01-15",
-          status: "ativo",
-        },
-        {
-          id: 2,
-          numero: "EMP-2024-015",
-          valor: 75000,
-          data: "2024-03-20",
-          status: "concluido",
-        },
-      ],
-    },
-  ]);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isEmpenhosModalOpen, setIsEmpenhosModalOpen] = useState(false);
@@ -102,6 +76,12 @@ export default function Empresas() {
   );
 
   const api_url = import.meta.env.VITE_HOST;
+  const { companies, listCompanies } = useCompanies();
+
+  useEffect(() => {
+    listCompanies();
+    setEmpresas(companies);
+  }, [listCompanies, companies]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
