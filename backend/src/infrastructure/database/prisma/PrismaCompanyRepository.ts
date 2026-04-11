@@ -37,11 +37,16 @@ export class PrismaCompanyRepository implements ICompanyRepository {
       });
 
       return company !== null;
-    } catch (err) {
-      throw new DomainError("Error verifying cnpj: " + err);
+    } catch (error) {
+      throw new DomainError("Error verifying cnpj: " + error);
     }
   }
   async list(): Promise<Company[]> {
-    throw new DomainError("Method not implemented.");
+    try {
+      const companies = await prisma.company.findMany();
+      return companies;
+    } catch (error) {
+      throw new DomainError("Method not implemented." + error);
+    }
   }
 }
