@@ -7,7 +7,6 @@ import {
   ChevronLeft,
   ChevronRight,
   DollarSign,
-  Home,
   Search,
   Filter,
   FileText,
@@ -17,6 +16,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { StatCard } from "../components/StatCard";
+import Breadcrumb from "../components/Breadcrumb";
 
 interface Invoice {
   id: number;
@@ -284,13 +284,7 @@ export default function NotasFiscais() {
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-text-secondary mb-4">
-        <Home size={16} />
-        <span>/</span>
-        <span>Administrativo</span>
-        <span>/</span>
-        <span className="text-text-primary font-medium">Notas Fiscais</span>
-      </nav>
+      <Breadcrumb current="Notas Fiscais" />
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">

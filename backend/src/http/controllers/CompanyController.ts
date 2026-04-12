@@ -12,7 +12,7 @@ export class CompanyController {
   async create(req: Request, res: Response) {
     const { name, cnpj, city, state, address, phone, email } = req.body;
     try {
-      await this.createCompany.execute({
+      const company = await this.createCompany.execute({
         name,
         cnpj,
         city,
@@ -21,7 +21,7 @@ export class CompanyController {
         phone,
         email,
       });
-      res.status(201).json({ message: "Company created successfully" });
+      res.status(201).json(company);
     } catch (error) {
       if (error instanceof DomainError) {
         res.status(400).json({ message: error.message });
@@ -32,14 +32,14 @@ export class CompanyController {
   }
   async list(req: Request, res: Response) {
     try {
-      const companies = await this.listCompanies.execute();
+      const data = await this.listCompanies.execute();
 
-      if (companies.length === 0)
+      if (data.companies.length === 0)
         return res
           .status(204)
           .json({ message: "No companies registered in the system" });
 
-      res.status(200).json(companies);
+      res.status(200).json(data);
     } catch (error) {
       if (error instanceof DomainError) {
         res.status(400).json({ message: error.message });

@@ -1,6 +1,9 @@
 import type { CompanyEntity } from "../../../domain/entities/Company";
 import { DomainError } from "../../../domain/errors/DomainError";
-import type { ICompanyRepository } from "../../../domain/repositories/ICompanyRepository";
+import type {
+  ICompanyRepository,
+  ListCompaniesResponse,
+} from "../../../domain/repositories/ICompanyRepository";
 import type { Company } from "../../../generated/prisma/client";
 import { prisma } from "../../prisma/prisma";
 
@@ -41,12 +44,32 @@ export class PrismaCompanyRepository implements ICompanyRepository {
       throw new DomainError("Error verifying cnpj: " + error);
     }
   }
-  async list(): Promise<Company[]> {
+  async list(): Promise<ListCompaniesResponse> {
     try {
-      const companies = await prisma.company.findMany({
-        include: { empenhos: true },
-      });
-      return companies;
+      const [
+        companies,
+        totalCompanies,
+        totalEmpenhos,
+        totalEmpenhosActive,
+        totalEmpenhosValue,
+      ] = await Promise.all([
+        prisma.company.findMany({ include: { empenhos: true } }),
+        prisma.company.count(),
+        prisma.empenho.count(),
+        prisma.empenho.count({ where: { status: "ATIVO" } }),
+        prisma.empenho.aggregate({ _sum: { value: true } }),
+      ]);
+      return {
+        companies,
+        stats: {
+          totalCompanies,
+          totalEmpenhos,
+          totalEmpenhosActive,
+          totalEmpenhosValue: totalEmpenhosValue._sum.value
+            ? totalEmpenhosValue._sum.value / 100
+            : 0,
+        },
+      };
     } catch (error) {
       throw new DomainError("Method not implemented." + error);
     }

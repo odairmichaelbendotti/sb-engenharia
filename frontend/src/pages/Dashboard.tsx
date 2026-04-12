@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import {
-  Home,
   DollarSign,
   Building2,
   FileText,
@@ -13,6 +12,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { StatCard } from "../components/StatCard";
+import Breadcrumb from "../components/Breadcrumb";
 
 // Mock data
 const mockData = {
@@ -283,11 +283,7 @@ export default function Dashboard() {
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-text-secondary mb-4">
-        <Home size={16} />
-        <span>/</span>
-        <span className="text-text-primary font-medium">Dashboard</span>
-      </nav>
+      <Breadcrumb current="Dashboard" />
 
       {/* Header com seletor de período */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">

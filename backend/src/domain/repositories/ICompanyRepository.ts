@@ -1,8 +1,18 @@
 import type { Company } from "../../generated/prisma/client";
 import { CompanyEntity } from "../entities/Company.js";
 
+export type ListCompaniesResponse = {
+  companies: Company[];
+  stats: {
+    totalCompanies: number;
+    totalEmpenhos: number;
+    totalEmpenhosActive: number;
+    totalEmpenhosValue: number;
+  };
+};
+
 export interface ICompanyRepository {
   create(company: CompanyEntity): Promise<Company>;
   verifyCnpj(cnpj: string): Promise<boolean>;
-  list(): Promise<Company[]>;
+  list(): Promise<ListCompaniesResponse>;
 }

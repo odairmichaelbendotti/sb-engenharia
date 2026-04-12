@@ -1,7 +1,4 @@
-import type { Empenho } from "./empenho";
-
-export interface Empresa {
-  id: string;
+export interface CreateCompanyType {
   name: string;
   cnpj: string;
   city: string;
@@ -9,5 +6,4 @@ export interface Empresa {
   address: string;
   phone: string;
   email: string;
-  empenhos: Empenho[];
 }

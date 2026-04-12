@@ -5,10 +5,8 @@
 }
 
 @theme {
-  /* Remover as cores padrões do tailwindcss */
-  --color-*: initial;
-
   /* Base */
+  --color-white: #ffffff;
   --color-background: #faf9f5;
   --color-surface: #ffffff;
   --color-surface-muted: #f5f4f0;
