@@ -10,6 +10,7 @@ type CompaniesStore = {
   stats: StatsCompany | null;
   listCompanies: () => void;
   createCompany: (empresa: CreateCompanyType) => Promise<Empresa>;
+  deleteCompany: (id: string) => Promise<void>;
 };
 
 export const useCompanies = create<CompaniesStore>((set) => ({
@@ -41,6 +42,34 @@ export const useCompanies = create<CompaniesStore>((set) => ({
     const data = await response.json();
     const companyWithEmpenhos = { ...data, empenhos: [] };
     set((state) => ({ companies: [...state.companies, companyWithEmpenhos] }));
+    set((state) => ({
+      stats: state.stats
+        ? { ...state.stats, totalCompanies: state.stats.totalCompanies + 1 }
+        : null,
+    }));
     return companyWithEmpenhos;
+  },
+  deleteCompany: async (id: string) => {
+    try {
+      const response = await defaultFetch(`/company/delete/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao deletar empresa");
+      }
+
+      set((state) => ({
+        companies: state.companies.filter((company) => company.id !== id),
+      }));
+      set((state) => ({
+        stats: state.stats
+          ? { ...state.stats, totalCompanies: state.stats.totalCompanies - 1 }
+          : null,
+      }));
+    } catch (error) {
+      console.log(error);
+      throw new Error("Erro ao deletar empresa");
+    }
   },
 }));

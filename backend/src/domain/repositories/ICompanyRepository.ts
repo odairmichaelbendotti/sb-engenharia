@@ -15,4 +15,5 @@ export interface ICompanyRepository {
   create(company: CompanyEntity): Promise<Company>;
   verifyCnpj(cnpj: string): Promise<boolean>;
   list(): Promise<ListCompaniesResponse>;
+  delete(id: string): Promise<void>;
 }

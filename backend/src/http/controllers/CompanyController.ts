@@ -2,11 +2,13 @@ import type { Request, Response } from "express";
 import { CreateCompanyUseCase } from "../../application/usecases/company/CreateCompanyUseCase.js";
 import { DomainError } from "../../domain/errors/DomainError.js";
 import type { ListCompaniesUseCase } from "../../application/usecases/company/ListCompaniesUseCase.js";
+import type { DeleteCompanyUseCase } from "../../application/usecases/company/DeleteCompanyUseCase.js";
 
 export class CompanyController {
   constructor(
     private createCompany: CreateCompanyUseCase,
     private listCompanies: ListCompaniesUseCase,
+    private deleteCompany: DeleteCompanyUseCase,
   ) {}
 
   async create(req: Request, res: Response) {
@@ -46,6 +48,24 @@ export class CompanyController {
       } else {
         res.status(500).json({ message: "Internal server error" });
       }
+    }
+  }
+  async delete(req: Request, res: Response) {
+    const { id } = req.params;
+
+    if (Array.isArray(id) || !id) {
+      return res.status(400).json({ message: "Invalid ID" });
+    }
+
+    try {
+      await this.deleteCompany.execute(id);
+      return res.status(200).json({ message: "Company successfully deleted" });
+    } catch (error) {
+      console.log(error);
+      if (error instanceof DomainError) {
+        return res.status(400).json({ message: error.message });
+      }
+      return res.status(500).json({ message: "Internal server error" });
     }
   }
 }

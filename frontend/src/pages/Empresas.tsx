@@ -11,6 +11,7 @@ import RegisterOrEditCompany from "./Company/RegisterOrEditCompany";
 import TableCompanies from "./Company/TableCompanies";
 import FilterCompany from "./Company/FilterCompany";
 import Breadcrumb from "../components/Breadcrumb";
+import { toast } from "sonner";
 
 export default function Empresas() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -34,7 +35,7 @@ export default function Empresas() {
   );
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { companies, listCompanies, stats } = useCompanies();
+  const { companies, listCompanies, stats, deleteCompany } = useCompanies();
 
   useEffect(() => {
     console.log("componente carregado (empresa.tsx)");
@@ -97,8 +98,14 @@ export default function Empresas() {
     setEmpresaSelecionada(null);
   };
 
-  const handleDelete = (id: string) => {
-    alert(id);
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteCompany(id);
+      toast.success("Empresa deletada com sucesso");
+    } catch (error) {
+      toast.error("Erro ao deletar empresa");
+      console.log(error);
+    }
     closeDeleteModal();
   };
 

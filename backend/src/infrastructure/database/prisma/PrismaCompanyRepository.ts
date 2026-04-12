@@ -74,4 +74,16 @@ export class PrismaCompanyRepository implements ICompanyRepository {
       throw new DomainError("Method not implemented." + error);
     }
   }
+  async delete(id: string): Promise<void> {
+    try {
+      await prisma.company.delete({
+        where: { id },
+      });
+    } catch (error: any) {
+      if (error.code === "P2025") {
+        throw new DomainError("Company not found");
+      }
+      throw new DomainError("Error deleting company: " + error);
+    }
+  }
 }
