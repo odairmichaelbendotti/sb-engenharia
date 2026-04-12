@@ -86,4 +86,32 @@ export class PrismaCompanyRepository implements ICompanyRepository {
       throw new DomainError("Error deleting company: " + error);
     }
   }
+  async findById(id: string): Promise<Company | null> {
+    try {
+      const company = await prisma.company.findUnique({
+        where: { id },
+      });
+
+      return company;
+    } catch (error) {
+      throw new DomainError("Error finding company: " + error);
+    }
+  }
+  async update(id: string, company: Company): Promise<Company> {
+    try {
+      return await prisma.company.update({
+        where: { id },
+        data: {
+          cnpj: company.cnpj,
+          email: company.email,
+          phone: company.phone,
+          address: company.address,
+          city: company.city,
+          state: company.state,
+        },
+      });
+    } catch (error) {
+      throw new DomainError("Error editing company: " + error);
+    }
+  }
 }

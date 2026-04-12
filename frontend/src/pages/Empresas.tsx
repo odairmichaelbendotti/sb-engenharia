@@ -12,6 +12,7 @@ import TableCompanies from "./Company/TableCompanies";
 import FilterCompany from "./Company/FilterCompany";
 import Breadcrumb from "../components/Breadcrumb";
 import { toast } from "sonner";
+import { useUser } from "../store/user";
 
 export default function Empresas() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -36,6 +37,7 @@ export default function Empresas() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const { companies, listCompanies, stats, deleteCompany } = useCompanies();
+  const { user } = useUser();
 
   useEffect(() => {
     console.log("componente carregado (empresa.tsx)");
@@ -125,13 +127,15 @@ export default function Empresas() {
             Gerencie as empresas cadastradas e seus empenhos
           </p>
         </div>
-        <button
-          onClick={() => openModal()}
-          className="flex items-center cursor-pointer text-white justify-center gap-2 px-4 py-2 bg-primary-500 rounded-md hover:bg-primary-600 transition-colors text-sm font-medium"
-        >
-          <Plus size={18} />
-          Nova Empresa
-        </button>
+        {(user?.role === "EDITOR" || user?.role === "MASTER") && (
+          <button
+            onClick={() => openModal()}
+            className="flex items-center cursor-pointer text-white justify-center gap-2 px-4 py-2 bg-primary-500 rounded-md hover:bg-primary-600 transition-colors text-sm font-medium"
+          >
+            <Plus size={18} />
+            Nova Empresa
+          </button>
+        )}
       </div>
 
       {/* Stats Cards */}

@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import {
   Building2,
   ChevronLeft,
@@ -9,8 +10,8 @@ import {
   Phone,
   Trash2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
 import type { Empresa } from "../../../types/empresa";
+import { useUser } from "../../store/user";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -40,6 +41,8 @@ const TableCompanies = ({
     );
   }, [empresas, searchTerm]);
 
+  const { user } = useUser();
+
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const totalPages = Math.ceil(filteredEmpresas.length / ITEMS_PER_PAGE);
   const paginatedEmpresas = filteredEmpresas.slice(
@@ -68,9 +71,11 @@ const TableCompanies = ({
               <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Empenhos
               </th>
-              <th className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
-                Ações
-              </th>
+              {(user?.role === "EDITOR" || user?.role === "MASTER") && (
+                <th className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+                  Ações
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -131,24 +136,26 @@ const TableCompanies = ({
                     {empresa.empenhos.length !== 1 ? "s" : ""}
                   </button>
                 </td>
-                <td className="py-3 px-4">
-                  <div className="flex items-center justify-end gap-1">
-                    <button
-                      onClick={() => openModal(empresa)}
-                      className="p-2 cursor-pointer hover:bg-primary-100 text-text-secondary hover:text-primary-500 rounded-md transition-colors"
-                      title="Editar"
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button
-                      onClick={() => openDeleteModal(empresa)}
-                      className="p-2 cursor-pointer hover:bg-danger-bg text-text-secondary hover:text-danger-text rounded-md transition-colors"
-                      title="Excluir"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </td>
+                {(user?.role === "EDITOR" || user?.role === "MASTER") && (
+                  <td className="py-3 px-4">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => openModal(empresa)}
+                        className="p-2 cursor-pointer hover:bg-primary-100 text-text-secondary hover:text-primary-500 rounded-md transition-colors"
+                        title="Editar"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => openDeleteModal(empresa)}
+                        className="p-2 cursor-pointer hover:bg-danger-bg text-text-secondary hover:text-danger-text rounded-md transition-colors"
+                        title="Excluir"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
