@@ -52,4 +52,8 @@ export class UserController {
       }
     }
   }
+  logout(req: Request, res: Response) {
+    res.clearCookie("auth");
+    res.status(200).json({ message: "Logout successful" });
+  }
 }

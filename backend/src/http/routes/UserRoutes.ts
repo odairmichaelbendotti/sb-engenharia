@@ -25,6 +25,10 @@ UserRoutes.post("/signin", (req: Request, res: Response) => {
   userController.signin(req, res);
 });
 
+UserRoutes.post("/logout", (req: Request, res: Response) => {
+  userController.logout(req, res);
+});
+
 UserRoutes.get("/me", middleware.handle, (req: Request, res: Response) => {
   res.json(req.user);
 });
