@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Mail, Lock, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router";
+import { useUser } from "../../store/user";
 
 export default function SignUp() {
   const [email, setEmail] = useState("odair@teste.com.br");
   const [password, setPassword] = useState("odair1234");
   const [isLoading, setIsLoading] = useState(false);
 
+  const { signin } = useUser();
   const navigate = useNavigate();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -14,24 +16,11 @@ export default function SignUp() {
     console.log({ email, password });
     e.preventDefault();
     try {
-      const response = await fetch(`http://localhost:4000/api/signin`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await signin(email, password);
 
-      if (!response.ok) {
-        alert("Usuário não encontrado");
-        console.log("erro ao realizar requisição");
-        return;
+      if (response) {
+        navigate("/");
       }
-
-      const data = await response.json();
-      console.log(data);
-      navigate("/notasfiscais");
     } catch (err) {
       console.log(err);
     } finally {

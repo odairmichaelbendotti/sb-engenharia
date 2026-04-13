@@ -1,6 +1,5 @@
 export function getInitials(name: string) {
   const nameSplit = name.split(" ");
-  console.log(nameSplit);
 
   if (nameSplit.length > 1) {
     return (
