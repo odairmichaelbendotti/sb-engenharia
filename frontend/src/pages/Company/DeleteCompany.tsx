@@ -1,16 +1,18 @@
-import { Trash2 } from "lucide-react";
+import { Loader, Trash2 } from "lucide-react";
 import type { Empresa } from "../../../types/empresa";
 
 type DeleteCompanyProps = {
   empresaParaDeletar: Empresa;
   closeDeleteModal: () => void;
   handleDelete: (id: string) => void;
+  isLoading: boolean;
 };
 
 const DeleteCompany = ({
   empresaParaDeletar,
   closeDeleteModal,
   handleDelete,
+  isLoading,
 }: DeleteCompanyProps) => {
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -47,9 +49,13 @@ const DeleteCompany = ({
             </button>
             <button
               onClick={() => handleDelete(empresaParaDeletar.id)}
-              className="w-full cursor-pointer py-2 bg-danger-text hover:bg-red-700 text-white rounded-md transition-colors"
+              className="flex items-center justify-center w-full cursor-pointer py-2 bg-danger-text hover:bg-red-700 text-white rounded-md transition-colors"
             >
-              Excluir Empresa
+              {isLoading ? (
+                <Loader className="animate-spin" />
+              ) : (
+                "Excluir Empresa"
+              )}
             </button>
           </div>
         </div>

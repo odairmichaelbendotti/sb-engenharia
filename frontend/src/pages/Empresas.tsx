@@ -35,6 +35,7 @@ export default function Empresas() {
     null,
   );
   const [searchTerm, setSearchTerm] = useState("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const { companies, listCompanies, stats, deleteCompany } = useCompanies();
   const { user } = useUser();
@@ -102,11 +103,14 @@ export default function Empresas() {
 
   const handleDelete = async (id: string) => {
     try {
+      setIsLoading(true);
       await deleteCompany(id);
       toast.success("Empresa deletada com sucesso");
     } catch (error) {
       toast.error("Erro ao deletar empresa");
       console.log(error);
+    } finally {
+      setIsLoading(false);
     }
     closeDeleteModal();
   };
@@ -206,6 +210,7 @@ export default function Empresas() {
           empresaParaDeletar={empresaParaDeletar}
           closeDeleteModal={closeDeleteModal}
           handleDelete={handleDelete}
+          isLoading={isLoading}
         />
       )}
     </div>
