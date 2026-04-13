@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Mail, Lock, User, ArrowRight } from "lucide-react";
+import { Mail, Lock, User, Loader } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useUser } from "../../store/user";
+import { toast } from "sonner";
 
 export default function SignUp() {
   const [name, setName] = useState("");
@@ -24,12 +25,12 @@ export default function SignUp() {
     e.preventDefault();
 
     if (!name || !email || !password || !confirmPassword) {
-      alert("Preencha todos os campos");
+      toast.error("Preencha todos os campos");
       return;
     }
 
     if (password !== confirmPassword) {
-      alert("As senhas não coincidem");
+      toast.error("As senhas não coincidem");
       return;
     }
 
@@ -37,7 +38,7 @@ export default function SignUp() {
     // TODO: Implementar lógica de signup
     setTimeout(() => {
       setIsLoading(false);
-      alert("Conta criada com sucesso!");
+      toast.success("Conta criada com sucesso!");
     }, 1000);
   }
 
@@ -129,24 +130,25 @@ export default function SignUp() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full mt-6 bg-primary-500 hover:bg-primary-600 active:bg-primary-700 disabled:bg-border text-text-inverse font-medium py-2.5 px-4 rounded-lg transition flex items-center justify-center gap-2"
+            className="w-full mt-6 cursor-pointer bg-primary-500 hover:bg-primary-600 active:bg-primary-700 disabled:bg-border text-text-inverse font-medium py-2.5 px-4 rounded-lg transition flex items-center justify-center gap-2"
           >
-            {isLoading ? "Criando conta..." : "Criar conta"}
-            {!isLoading && <ArrowRight size={16} />}
+            {isLoading ? <Loader className="animate-spin" /> : "Cadastrar"}
           </button>
         </form>
 
         {/* Footer */}
-        <p className="text-text-secondary text-sm text-center mt-6">
-          Já tem uma conta?{" "}
-          <button
-            type="button"
-            onClick={() => navigate("/signin")}
-            className="text-primary-600 hover:underline font-medium"
-          >
-            Entrar
-          </button>
-        </p>
+        <div className="mt-6 pt-4 border-t border-border">
+          <p className="text-text-secondary text-sm text-center">
+            Já possui uma conta?{" "}
+            <button
+              type="button"
+              onClick={() => navigate("/signin")}
+              className="text-primary-600 font-medium hover:text-primary-500 transition-colors"
+            >
+              Fazer login
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   );

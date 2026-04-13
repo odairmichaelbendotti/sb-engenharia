@@ -13,7 +13,6 @@ export default function SignUp() {
 
   async function handleSubmit(e: React.FormEvent) {
     setIsLoading(true);
-    console.log({ email, password });
     e.preventDefault();
     try {
       const response = await signin(email, password);
@@ -89,16 +88,18 @@ export default function SignUp() {
         </form>
 
         {/* Footer */}
-        <p className="text-text-secondary text-sm text-center mt-2 font-bold justify-end flex items-center gap-1">
-          <p>Não possui uma conta?</p>
-          <button
-            type="button"
-            onClick={() => navigate("/signup")}
-            className="text-primary-600 font-bold cursor-pointer hover:text-primary-400"
-          >
-            Cadastre-se
-          </button>
-        </p>
+        <div className="mt-6 pt-4 border-t border-border">
+          <p className="text-text-secondary text-sm text-center">
+            Não possui uma conta?{" "}
+            <button
+              type="button"
+              onClick={() => navigate("/signup")}
+              className="text-primary-600 font-medium hover:text-primary-500 transition-colors"
+            >
+              Criar conta
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   );
