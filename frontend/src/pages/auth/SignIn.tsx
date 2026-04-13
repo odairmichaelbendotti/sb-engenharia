@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail, Lock, ArrowRight } from "lucide-react";
+import { Mail, Lock, Loader } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useUser } from "../../store/user";
 
@@ -82,22 +82,21 @@ export default function SignUp() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full mt-6 bg-primary-500 hover:bg-primary-600 active:bg-primary-700 disabled:bg-border text-text-inverse font-medium py-2.5 px-4 rounded-lg transition flex items-center justify-center gap-2"
+            className="w-full mt-6 cursor-pointer bg-primary-500 hover:bg-primary-600 active:bg-primary-700 disabled:bg-border text-text-inverse font-medium py-2.5 px-4 rounded-lg transition flex items-center justify-center gap-2"
           >
-            {isLoading ? "Criando conta..." : "Criar conta"}
-            {!isLoading && <ArrowRight size={16} />}
+            {isLoading ? <Loader className="animate-spin" /> : "Entrar"}
           </button>
         </form>
 
         {/* Footer */}
-        <p className="text-text-secondary text-sm text-center mt-6">
-          Não possui uma conta?
+        <p className="text-text-secondary text-sm text-center mt-2 font-bold justify-end flex items-center gap-1">
+          <p>Não possui uma conta?</p>
           <button
             type="button"
             onClick={() => navigate("/signup")}
-            className="text-primary-600 hover:underline font-medium"
+            className="text-primary-600 font-bold cursor-pointer hover:text-primary-400"
           >
-            Entrar
+            Cadastre-se
           </button>
         </p>
       </div>
