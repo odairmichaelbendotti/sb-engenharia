@@ -4,7 +4,7 @@ import type {
   ICompanyRepository,
   ListCompaniesResponse,
 } from "../../../domain/repositories/ICompanyRepository";
-import type { Company } from "../../../generated/prisma/client";
+import type { Company, Empenho } from "../../../generated/prisma/client";
 import { prisma } from "../../prisma/prisma";
 
 export class PrismaCompanyRepository implements ICompanyRepository {
@@ -97,7 +97,7 @@ export class PrismaCompanyRepository implements ICompanyRepository {
       throw new DomainError("Error finding company: " + error);
     }
   }
-  async update(id: string, company: Company): Promise<Company> {
+  async update(id: string, company: Company & Empenho[]): Promise<Company> {
     try {
       return await prisma.company.update({
         where: { id },
@@ -108,7 +108,10 @@ export class PrismaCompanyRepository implements ICompanyRepository {
           address: company.address,
           city: company.city,
           state: company.state,
+          name: company.name,
+          updatedAt: new Date(),
         },
+        include: { empenhos: true },
       });
     } catch (error) {
       throw new DomainError("Error editing company: " + error);

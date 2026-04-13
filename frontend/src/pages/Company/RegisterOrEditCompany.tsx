@@ -21,27 +21,26 @@ const RegisterOrEditCompany = ({
 }: RegisterOrEditCompanyProps) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const { createCompany } = useCompanies();
+  const { createCompany, updateCompany } = useCompanies();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
       setIsLoading(true);
-      //   const response = await defaultFetch("/company/create", {
-      //     method: "POST",
-      //     body: JSON.stringify(formData),
-      //   });
 
-      //   if (!response.ok) {
-      //     console.log("Erro ao cadastrar empresa");
-      //     throw new Error("Erro ao cadastrar empresa");
-      //   }
-
-      const newCompany = await createCompany(formData);
-      console.log(newCompany);
-
-      toast.success("Empresa cadastrada com sucesso");
+      if (empresaSelecionada) {
+        const updatedCompany = await updateCompany(
+          empresaSelecionada.id,
+          formData,
+        );
+        console.log(updatedCompany);
+        toast.success("Empresa editada com sucesso");
+      } else {
+        const newCompany = await createCompany(formData);
+        console.log(newCompany);
+        toast.success("Empresa cadastrada com sucesso");
+      }
     } catch (error) {
       console.log(error);
       toast.error("Erro ao cadastrar empresa");

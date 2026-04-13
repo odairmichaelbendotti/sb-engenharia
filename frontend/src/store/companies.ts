@@ -11,6 +11,7 @@ type CompaniesStore = {
   listCompanies: () => void;
   createCompany: (empresa: CreateCompanyType) => Promise<Empresa>;
   deleteCompany: (id: string) => Promise<void>;
+  updateCompany: (id: string, empresa: CreateCompanyType) => Promise<void>;
 };
 
 export const useCompanies = create<CompaniesStore>((set) => ({
@@ -70,6 +71,29 @@ export const useCompanies = create<CompaniesStore>((set) => ({
     } catch (error) {
       console.log(error);
       throw new Error("Erro ao deletar empresa");
+    }
+  },
+  updateCompany: async (id: string, company: Partial<Empresa>) => {
+    try {
+      const response = await defaultFetch(`/company/update/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(company),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao atualizar empresa");
+      }
+
+      const data = (await response.json()) as Empresa;
+
+      set((state) => ({
+        companies: state.companies.map((company) =>
+          company.id === id ? data : company,
+        ),
+      }));
+    } catch (error) {
+      console.log(error);
+      throw new Error("Erro ao atualizar empresa");
     }
   },
 }));

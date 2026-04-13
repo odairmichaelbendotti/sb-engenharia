@@ -12,16 +12,18 @@ export class UpdateCompanyUseCase {
 
   async execute({ id, company }: UpdateCompanyUseCaseRequest) {
     try {
-      const verifyCnpj = await this.repository.verifyCnpj(company.cnpj);
-
-      if (verifyCnpj) {
-        throw new DomainError("CNPJ already exists");
-      }
-
       const companyExists = await this.repository.findById(id);
 
       if (!companyExists) {
         throw new DomainError("Company not found");
+      }
+
+      if (company.cnpj && company.cnpj !== companyExists.cnpj) {
+        const cnpjInUse = await this.repository.verifyCnpj(company.cnpj);
+
+        if (cnpjInUse) {
+          throw new DomainError("CNPJ already exists");
+        }
       }
 
       const updatedCompany = await this.repository.update(id, {
