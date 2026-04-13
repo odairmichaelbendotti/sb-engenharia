@@ -23,7 +23,7 @@ export class UserController {
         id: user.id,
         name: user.name,
         email: user.email,
-        admin: user.admin,
+        role: user.role,
       };
 
       res.cookie("auth", token);

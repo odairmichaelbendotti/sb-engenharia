@@ -23,8 +23,10 @@ export class SignInUseCase {
     if (!isHashValid) throw new DomainError("Invalid credentials");
 
     const token = this.tokenGenerate.generate({
+      id: user.id,
       name: user.name,
       email: user.email,
+      role: user.role,
     });
 
     return { user, token };

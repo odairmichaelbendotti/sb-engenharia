@@ -14,11 +14,14 @@ export class PrismaUserRepository implements IUserRepository {
         return null;
       }
 
+      console.log(user);
+
       return new User({
         id: user.id,
         name: user.name,
         email: user.email,
         password: user.password,
+        role: user.role,
       });
     } catch (err) {
       throw new DomainError("Server error");

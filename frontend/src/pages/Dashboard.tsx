@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   DollarSign,
   Building2,
@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { StatCard } from "../components/StatCard";
 import Breadcrumb from "../components/Breadcrumb";
+import { useUser } from "../store/user";
+import { useNavigate } from "react-router";
 
 // Mock data
 const mockData = {
@@ -190,6 +192,15 @@ const formatDateTime = (date: string) => {
 
 export default function Dashboard() {
   const [periodoSelecionado, setPeriodoSelecionado] = useState("mes");
+  const navigate = useNavigate();
+
+  const { user } = useUser();
+
+  useEffect(() => {
+    if (!user) {
+      navigate("/signin");
+    }
+  }, [user, navigate]);
 
   // Métricas calculadas
   const metrics = useMemo(() => {
