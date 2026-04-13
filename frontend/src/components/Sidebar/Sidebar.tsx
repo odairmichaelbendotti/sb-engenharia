@@ -1,5 +1,5 @@
 import { SquareDashedMousePointer, LogOut } from "lucide-react";
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { aminItems } from "./adm-items";
 import { engItems } from "./eng-items";
 import { useUser } from "../../store/user";
@@ -7,6 +7,7 @@ import { getInitials } from "../../utils/get-initial";
 
 const Sidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   function isActive(path: string) {
     return location.pathname === path;
@@ -18,7 +19,16 @@ const Sidebar = () => {
       : "group flex items-center gap-3 hover:bg-surface-muted text-text-secondary py-2 px-2 rounded-md cursor-pointer";
   }
 
-  const { user } = useUser();
+  const { user, logout } = useUser();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/signin");
+    } catch (error) {
+      console.error("Failed to logout:", error);
+    }
+  };
 
   return (
     <div className="hidden md:flex max-w-64 w-full p-4 border-r border-border h-full">
@@ -85,7 +95,10 @@ const Sidebar = () => {
                 </p>
               </div>
             </div>
-            <button className="p-2 cursor-pointer hover:bg-surface-muted rounded-md transition-colors shrink-0">
+            <button
+              className="p-2 cursor-pointer hover:bg-surface-muted rounded-md transition-colors shrink-0"
+              onClick={handleLogout}
+            >
               <LogOut size={18} className="text-text-secondary" />
             </button>
           </div>

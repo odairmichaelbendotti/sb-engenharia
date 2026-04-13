@@ -8,6 +8,7 @@ type UserStore = {
   auth: User | null;
   fetchUser: () => void;
   signin: (email: string, password: string) => Promise<User>;
+  logout: () => Promise<boolean>;
 };
 
 // const mockUser: User = {
@@ -40,6 +41,25 @@ export const useUser = create<UserStore>((set) => ({
     } catch (error) {
       console.error("Failed to sign in:", error);
       throw new Error("Failed to sign in" + error);
+    }
+  },
+  logout: async () => {
+    try {
+      const response = await defaultFetch("/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to logout");
+      }
+
+      set({ auth: null });
+      toast.info("Logout realizado com sucesso");
+      return true;
+    } catch (error) {
+      console.error("Failed to logout:", error);
+      throw new Error("Failed to logout" + error);
     }
   },
   fetchUser: async () => {
