@@ -1,7 +1,6 @@
 import type { NotaFiscalType } from "../../domain/entities/NotaFiscal";
 import { DomainError } from "../../domain/errors/DomainError";
 import type { INotaFiscalRepository } from "../../domain/repositories/INotaFiscalRepository";
-import { formatDate } from "../../utils/formatDateToInsertDb";
 
 export class NotaFiscalUseCase {
   constructor(private repository: INotaFiscalRepository) {}

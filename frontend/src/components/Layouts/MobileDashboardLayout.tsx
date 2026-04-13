@@ -7,10 +7,10 @@ const MobileDashboardLayout = () => {
     <main className="flex h-screen overflow-hidden bg-background">
       {/* Desktop Sidebar */}
       <Sidebar />
-      
+
       {/* Mobile Sidebar */}
       <MobileSidebar />
-      
+
       {/* Main Content - with top padding on mobile for header */}
       <div className="flex-1 h-full overflow-auto md:pt-0 pt-16">
         <Outlet />

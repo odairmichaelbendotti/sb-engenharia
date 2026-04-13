@@ -1,9 +1,9 @@
 import { Router, type Response, type Request } from "express";
 import { UserController } from "../controllers/UserController.js";
-import { SignUpUseCase } from "../../application/usecases/SingnUpUseCase.js";
+import { SignUpUseCase } from "../../application/usecases/user/SingnUpUseCase.js";
 import { PrismaUserRepository } from "../../infrastructure/database/prisma/PrismaUserRepository.js";
 import { HashGenerator } from "../../infrastructure/cryptography/HashGenerator.js";
-import { SignInUseCase } from "../../application/usecases/SignInUseCase.js";
+import { SignInUseCase } from "../../application/usecases/user/SignInUseCase.js";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
 import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
 

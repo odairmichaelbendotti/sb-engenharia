@@ -1,5 +1,5 @@
-import type { SignInUseCase } from "../../application/usecases/SignInUseCase.js";
-import { SignUpUseCase } from "../../application/usecases/SingnUpUseCase.js";
+import type { SignInUseCase } from "../../application/usecases/user/SignInUseCase.js";
+import { SignUpUseCase } from "../../application/usecases/user/SingnUpUseCase.js";
 import { DomainError } from "../../domain/errors/DomainError.js";
 import { type Request, type Response } from "express";
 
@@ -13,14 +13,21 @@ export class UserController {
     try {
       const { name, email, password } = req.body;
 
-      const { token, user } = await this.signUpUseCase.execute(
+      const { token, createdUser: user } = await this.signUpUseCase.execute(
         name,
         email,
         password,
       );
 
+      const userResponse = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        admin: user.admin,
+      };
+
       res.cookie("auth", token);
-      res.status(201).json(user);
+      res.status(201).json(userResponse);
     } catch (err) {
       if (err instanceof DomainError) {
         return res.status(409).json({ message: err.message });

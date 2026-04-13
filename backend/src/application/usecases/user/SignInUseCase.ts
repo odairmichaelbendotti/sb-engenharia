@@ -1,8 +1,7 @@
-import type { IHashComparer } from "../../domain/cryptography/HashComparer.js";
-import type { ITokenGenerator } from "../../domain/cryptography/TokenGenerator.js";
-import type { User } from "../../domain/entities/User.js";
-import { DomainError } from "../../domain/errors/DomainError.js";
-import type { IUserRepository } from "../../domain/repositories/IUserRepository.js";
+import type { IHashComparer } from "../../../domain/cryptography/HashComparer.js";
+import type { ITokenGenerator } from "../../../domain/cryptography/TokenGenerator.js";
+import { DomainError } from "../../../domain/errors/DomainError.js";
+import type { IUserRepository } from "../../../domain/repositories/IUserRepository.js";
 
 export class SignInUseCase {
   constructor(

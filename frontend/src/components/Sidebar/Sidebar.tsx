@@ -2,6 +2,8 @@ import { SquareDashedMousePointer, LogOut } from "lucide-react";
 import { Link, useLocation } from "react-router";
 import { aminItems } from "./adm-items";
 import { engItems } from "./eng-items";
+import { useUser } from "../../store/user";
+import { getInitials } from "../../utils/get-initial";
 
 const Sidebar = () => {
   const location = useLocation();
@@ -15,6 +17,8 @@ const Sidebar = () => {
       ? "group flex items-center gap-3 bg-primary-100 text-primary-500 py-2 px-2 rounded-md cursor-pointer"
       : "group flex items-center gap-3 hover:bg-surface-muted text-text-secondary py-2 px-2 rounded-md cursor-pointer";
   }
+
+  const { user } = useUser();
 
   return (
     <div className="hidden md:flex max-w-64 w-full p-4 border-r border-border h-full">
@@ -70,14 +74,14 @@ const Sidebar = () => {
           <div className="border-t border-border flex items-center justify-between pt-3 gap-3">
             <div className="flex items-center gap-3 flex-1">
               <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
-                OD
+                {getInitials(user?.name || "Usuário")}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-text-primary truncate">
-                  Odair
+                  {user?.name || "Usuário"}
                 </p>
                 <p className="text-xs text-text-secondary truncate">
-                  odair@email.com
+                  {user?.email || "email@email.com"}
                 </p>
               </div>
             </div>
