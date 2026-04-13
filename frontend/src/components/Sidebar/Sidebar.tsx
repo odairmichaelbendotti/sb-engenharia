@@ -72,11 +72,11 @@ const Sidebar = () => {
 
           {/* Footer here */}
           <div className="border-t border-border flex items-center justify-between pt-3 gap-3">
-            <div className="flex items-center gap-3 flex-1">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
                 {getInitials(user?.name || "Usuário")}
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 overflow-hidden">
                 <p className="text-sm font-semibold text-text-primary truncate">
                   {user?.name || "Usuário"}
                 </p>

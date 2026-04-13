@@ -4,8 +4,8 @@ import { useNavigate } from "react-router";
 import { useUser } from "../../store/user";
 
 export default function SignUp() {
-  const [email, setEmail] = useState("odair@teste.com.br");
-  const [password, setPassword] = useState("odair1234");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const { signin } = useUser();
