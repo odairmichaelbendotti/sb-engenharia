@@ -41,9 +41,8 @@ model Company {
 }
 
 enum EmpenhoStatus {
-  PENDENTE
   ATIVO
-  CONCLUÍDO
+  FINALIZADO
   CANCELADO
 }
 
@@ -54,7 +53,7 @@ model Empenho {
   startAt     DateTime
   endAt       DateTime
   value       Int
-  status      EmpenhoStatus @default(PENDENTE)
+  status      EmpenhoStatus @default(ATIVO)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @default(now())
 
@@ -81,7 +80,7 @@ model NotaFiscal {
   updatedAt   DateTime         @default(now())
 
   empenho_id String
-  empenho    Empenho @relation(fields: [empenho_id], references: [id])
+  empenho    Empenho @relation(fields: [empenho_id], references: [id], onDelete: Cascade)
 
   company_id String
   company    Company @relation(fields: [company_id], references: [id])

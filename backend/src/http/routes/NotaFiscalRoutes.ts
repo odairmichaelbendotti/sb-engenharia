@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { PrismaNotaFiscalRepository } from "../../infrastructure/database/prisma/PrismaNotaFiscalRepository";
-import { NotaFiscalUseCase } from "../../application/usecases/NotaFiscalUseCase";
+import { NotaFiscalUseCase } from "../../application/usecases/notaFiscal/NotaFiscalUseCase";
 import { NotaFiscalController } from "../controllers/NotaFiscalController";
 
 export const NotaFiscalRoutes = Router();

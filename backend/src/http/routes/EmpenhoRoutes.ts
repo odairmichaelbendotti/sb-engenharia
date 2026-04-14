@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { PrismaEmpenhoRepository } from "../../infrastructure/database/prisma/PrismaEmpenhoRepository";
-import { EmpenhoUseCase } from "../../application/usecases/EmpenhoUseCase";
+import { EmpenhoUseCase } from "../../application/usecases/empenho/EmpenhoUseCase";
 import { EmpenhoController } from "../controllers/EmpenhoController";
 
 export const EmpenhoRoutes = Router();

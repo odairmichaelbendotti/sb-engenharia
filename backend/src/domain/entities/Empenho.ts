@@ -1,8 +1,8 @@
 export type EmpenhoType = {
   numero: string;
   description: string;
-  startAt: Date;
-  endAt: Date;
+  startAt: string;
+  endAt: string;
   value: number;
   company_id: string;
 };
@@ -10,8 +10,8 @@ export type EmpenhoType = {
 export class EmpenhoEntity {
   public readonly numero: string;
   public readonly description: string;
-  public readonly startAt: Date;
-  public readonly endAt: Date;
+  public readonly startAt: string;
+  public readonly endAt: string;
   public readonly value: number;
   public readonly company_id: string;
 

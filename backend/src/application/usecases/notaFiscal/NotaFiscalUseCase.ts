@@ -1,6 +1,6 @@
-import type { NotaFiscalType } from "../../domain/entities/NotaFiscal";
-import { DomainError } from "../../domain/errors/DomainError";
-import type { INotaFiscalRepository } from "../../domain/repositories/INotaFiscalRepository";
+import type { NotaFiscalType } from "../../../domain/entities/NotaFiscal";
+import { DomainError } from "../../../domain/errors/DomainError";
+import type { INotaFiscalRepository } from "../../../domain/repositories/INotaFiscalRepository";
 
 export class NotaFiscalUseCase {
   constructor(private repository: INotaFiscalRepository) {}

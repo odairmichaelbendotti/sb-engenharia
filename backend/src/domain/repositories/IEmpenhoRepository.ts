@@ -3,5 +3,5 @@ import type { EmpenhoType } from "../entities/Empenho";
 
 export interface IEmpenhoRepository {
   create(empenho: EmpenhoType): Promise<Empenho>;
-  findByNumber(number: string): Promise<Empenho | null>;
+  findByEmpenhoId(empenhoId: string): Promise<Empenho | null>;
 }

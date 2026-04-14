@@ -3,6 +3,7 @@ import type { EmpenhoType } from "../../../domain/entities/Empenho";
 import type { Empenho } from "../../../generated/prisma/client";
 import { prisma } from "../../prisma/prisma";
 import { DomainError } from "../../../domain/errors/DomainError";
+import { formatDate } from "../../../utils/formatDateToInsertDb";
 
 export class PrismaEmpenhoRepository implements IEmpenhoRepository {
   async create(empenho: EmpenhoType): Promise<Empenho> {
@@ -11,8 +12,8 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
         data: {
           numero: empenho.numero,
           description: empenho.description,
-          startAt: empenho.startAt,
-          endAt: empenho.endAt,
+          startAt: new Date(formatDate(empenho.startAt)),
+          endAt: new Date(formatDate(empenho.endAt)),
           value: empenho.value,
           company_id: empenho.company_id,
         },
@@ -20,13 +21,14 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
 
       return empenhoCreated;
     } catch (error) {
+      console.log(error);
       throw new DomainError("Error creating empenho");
     }
   }
-  async findByNumber(number: string): Promise<Empenho | null> {
+  async findByEmpenhoId(empenhoId: string): Promise<Empenho | null> {
     try {
-      const empenho = await prisma.empenho.findFirst({
-        where: { numero: number },
+      const empenho = await prisma.empenho.findUnique({
+        where: { numero: empenhoId },
       });
 
       return empenho;

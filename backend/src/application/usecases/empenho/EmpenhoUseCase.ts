@@ -1,6 +1,6 @@
-import type { EmpenhoType } from "../../domain/entities/Empenho";
-import { DomainError } from "../../domain/errors/DomainError";
-import type { IEmpenhoRepository } from "../../domain/repositories/IEmpenhoRepository";
+import type { EmpenhoType } from "../../../domain/entities/Empenho";
+import { DomainError } from "../../../domain/errors/DomainError";
+import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository";
 
 export class EmpenhoUseCase {
   constructor(private repository: IEmpenhoRepository) {}
@@ -24,7 +24,7 @@ export class EmpenhoUseCase {
       throw new DomainError("All fields are required");
     }
 
-    const existingEmpenho = await this.repository.findByNumber(numero);
+    const existingEmpenho = await this.repository.findByEmpenhoId(numero);
 
     if (existingEmpenho) {
       throw new DomainError("Empenho already exists");
