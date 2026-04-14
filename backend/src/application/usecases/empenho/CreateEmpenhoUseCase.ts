@@ -2,7 +2,7 @@ import type { EmpenhoType } from "../../../domain/entities/Empenho";
 import { DomainError } from "../../../domain/errors/DomainError";
 import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository";
 
-export class EmpenhoUseCase {
+export class CreateEmpenhoUseCase {
   constructor(private repository: IEmpenhoRepository) {}
 
   async execute({

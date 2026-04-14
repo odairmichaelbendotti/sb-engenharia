@@ -11,7 +11,7 @@ import {
   Layers2,
   Building2,
   CheckCircle2,
-  Clock,
+  TrendingUp,
   XCircle,
   DollarSign,
 } from "lucide-react";
@@ -355,9 +355,21 @@ export default function Empenhos() {
             <Layers2 className="text-primary-500" />
             Empenhos
           </h1>
-          <p className="text-text-secondary text-sm mt-1">
-            Gerencie os empenhos e acompanhe o vínculo com empresas
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-text-secondary text-sm">
+              Gerencie os empenhos e acompanhe o vínculo com empresas
+            </p>
+            <span className="text-text-muted">|</span>
+            <div className="flex items-center gap-1.5 text-sm">
+              <DollarSign size={14} className="text-accent-500" />
+              <span className="text-text-secondary">
+                Valor total empenhado:
+              </span>
+              <span className="font-semibold text-text-primary">
+                {formatCurrency(metrics.totalValue)}
+              </span>
+            </div>
+          </div>
         </div>
         <button
           onClick={() => openModal()}
@@ -368,7 +380,7 @@ export default function Empenhos() {
         </button>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - Status dos Empenhos */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
           title="Total de Empenhos"
@@ -378,25 +390,25 @@ export default function Empenhos() {
           color="bg-primary-100"
         />
         <StatCard
-          title="Valor Total"
-          value={formatCurrency(metrics.totalValue)}
-          subtitle="Soma de todos"
-          icon={<DollarSign size={24} className="text-accent-500" />}
-          color="bg-accent-100"
-        />
-        <StatCard
           title="Ativos"
           value={metrics.ativo.toString()}
           subtitle={formatCurrency(metrics.ativoValue)}
-          icon={<CheckCircle2 size={24} className="text-success-text" />}
-          color="bg-success-bg"
+          icon={<TrendingUp size={24} className="text-warning-text" />}
+          color="bg-warning-bg"
         />
         <StatCard
           title="Concluídos"
           value={metrics.concluido.toString()}
           subtitle={formatCurrency(metrics.concluidoValue)}
-          icon={<Clock size={24} className="text-accent-600" />}
-          color="bg-accent-100"
+          icon={<CheckCircle2 size={24} className="text-success-text" />}
+          color="bg-success-bg"
+        />
+        <StatCard
+          title="Cancelados"
+          value={metrics.cancelado.toString()}
+          subtitle={formatCurrency(metrics.canceladoValue)}
+          icon={<XCircle size={24} className="text-danger-text" />}
+          color="bg-danger-bg"
         />
       </div>
 

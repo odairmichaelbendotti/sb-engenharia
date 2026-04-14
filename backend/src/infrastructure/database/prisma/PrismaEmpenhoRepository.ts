@@ -1,4 +1,7 @@
-import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository";
+import type {
+  empenhosDTO,
+  IEmpenhoRepository,
+} from "../../../domain/repositories/IEmpenhoRepository";
 import type { EmpenhoType } from "../../../domain/entities/Empenho";
 import type { Empenho } from "../../../generated/prisma/client";
 import { prisma } from "../../prisma/prisma";
@@ -34,6 +37,48 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
       return empenho;
     } catch (error) {
       throw new DomainError("Error finding empenho");
+    }
+  }
+  async list(): Promise<empenhosDTO> {
+    try {
+      const [
+        empenhos,
+        totalEmpenhos,
+        totalEmpenhosAmount,
+        activeEmpenhos,
+        activeEmpenhosAmount,
+        completedEmpenhos,
+        completedEmpenhosAmount,
+      ] = await Promise.all([
+        prisma.empenho.findMany(),
+        prisma.empenho.count(),
+        prisma.empenho.aggregate({ _sum: { value: true } }),
+        prisma.empenho.count({ where: { status: "ATIVO" } }),
+        prisma.empenho.aggregate({
+          where: { status: "ATIVO" },
+          _sum: { value: true },
+        }),
+        prisma.empenho.count({ where: { status: "FINALIZADO" } }),
+        prisma.empenho.aggregate({
+          where: { status: "FINALIZADO" },
+          _sum: { value: true },
+        }),
+      ]);
+
+      const mergedData = {
+        empenhos,
+        totalEmpenhos,
+        totalEmpenhosAmount: (totalEmpenhosAmount._sum.value || 0) / 100,
+        activeEmpenhos,
+        activeEmpenhosAmount: (activeEmpenhosAmount._sum.value || 0) / 100,
+        completedEmpenhos,
+        completedEmpenhosAmount:
+          (completedEmpenhosAmount._sum.value || 0) / 100,
+      };
+
+      return mergedData;
+    } catch (error) {
+      throw new DomainError("");
     }
   }
 }

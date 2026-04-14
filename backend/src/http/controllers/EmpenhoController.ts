@@ -1,9 +1,13 @@
 import type { Request, Response } from "express";
-import type { EmpenhoUseCase } from "../../application/usecases/empenho/EmpenhoUseCase";
+import type { CreateEmpenhoUseCase } from "../../application/usecases/empenho/CreateEmpenhoUseCase";
 import { DomainError } from "../../domain/errors/DomainError";
+import type { ListEmpenhosUseCase } from "../../application/usecases/empenho/ListEmpenhosUseCase";
 
 export class EmpenhoController {
-  constructor(private createEmpenho: EmpenhoUseCase) {}
+  constructor(
+    private createEmpenho: CreateEmpenhoUseCase,
+    private listEmpenhos: ListEmpenhosUseCase,
+  ) {}
 
   async create(req: Request, res: Response) {
     try {
@@ -20,6 +24,17 @@ export class EmpenhoController {
       });
 
       res.status(201).json(empenho);
+    } catch (error) {
+      if (error instanceof DomainError) {
+        return res.status(400).json({ message: error.message });
+      }
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  }
+  async list(req: Request, res: Response) {
+    try {
+      const empenhos = await this.listEmpenhos.execute();
+      res.status(200).json(empenhos);
     } catch (error) {
       if (error instanceof DomainError) {
         return res.status(400).json({ message: error.message });
