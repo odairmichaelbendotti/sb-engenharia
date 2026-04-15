@@ -50,7 +50,17 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
         completedEmpenhos,
         completedEmpenhosAmount,
       ] = await Promise.all([
-        prisma.empenho.findMany(),
+        prisma.empenho.findMany({
+          include: {
+            company: {
+              select: {
+                id: true,
+                name: true,
+                cnpj: true,
+              },
+            },
+          },
+        }),
         prisma.empenho.count(),
         prisma.empenho.aggregate({ _sum: { value: true } }),
         prisma.empenho.count({ where: { status: "ATIVO" } }),
@@ -78,7 +88,7 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
 
       return mergedData;
     } catch (error) {
-      throw new DomainError("");
+      throw new DomainError("Error listing empenhos");
     }
   }
 }

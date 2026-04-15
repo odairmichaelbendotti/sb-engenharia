@@ -2,7 +2,13 @@ import type { Empenho } from "../../generated/prisma/client";
 import type { EmpenhoType } from "../entities/Empenho";
 
 export type empenhosDTO = {
-  empenhos: Empenho[];
+  empenhos: (Empenho & {
+    company: {
+      id: string;
+      name: string;
+      cnpj: string;
+    };
+  })[];
   totalEmpenhos: number;
   totalEmpenhosAmount: number;
   activeEmpenhos: number;
