@@ -8,7 +8,7 @@ import {
   EmpenhoTable,
   EmpenhoModal,
   EmpenhoDeleteModal,
-} from "./Company/Empenho";
+} from "./Empenho";
 import { useUser } from "../store/user";
 
 interface FormData {

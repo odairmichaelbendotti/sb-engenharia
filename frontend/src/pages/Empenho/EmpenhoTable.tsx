@@ -6,8 +6,8 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
-import type { EmpenhoList } from "../../../../types/empenho";
-import type { User } from "../../../../types/user";
+import type { EmpenhoList } from "../../../types/empenho";
+import type { User } from "../../../types/user";
 
 interface EmpenhoTableProps {
   empenhos: EmpenhoList[];
