@@ -91,4 +91,13 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
       throw new DomainError("Error listing empenhos");
     }
   }
+  async delete(empenhoId: string): Promise<void> {
+    try {
+      await prisma.empenho.delete({
+        where: { id: empenhoId },
+      });
+    } catch (error) {
+      throw new DomainError("Error deleting empenho");
+    }
+  }
 }

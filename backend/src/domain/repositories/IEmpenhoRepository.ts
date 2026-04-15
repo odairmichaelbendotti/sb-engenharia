@@ -21,4 +21,5 @@ export interface IEmpenhoRepository {
   create(empenho: EmpenhoType): Promise<Empenho>;
   findByEmpenhoId(empenhoId: string): Promise<Empenho | null>;
   list(): Promise<empenhosDTO>;
+  delete(id: string): Promise<void>;
 }

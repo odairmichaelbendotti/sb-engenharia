@@ -14,8 +14,6 @@ export class PrismaUserRepository implements IUserRepository {
         return null;
       }
 
-      console.log(user);
-
       return new User({
         id: user.id,
         name: user.name,

@@ -8,13 +8,14 @@ export class TokenGenerator implements ITokenGenerator, ITokenValidator {
 
   constructor() {
     const secret = process.env.JWT_SECRET;
+
     if (!secret) throw new DomainError("JWT_SECRET is not defined");
     this.secret = secret;
   }
 
   generate(payload: object): string {
     return jwt.sign(payload, this.secret, {
-      expiresIn: "5d",
+      expiresIn: "30d",
     });
   }
 

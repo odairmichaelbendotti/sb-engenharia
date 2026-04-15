@@ -10,6 +10,7 @@ export class AuthMiddleware {
     if (!token) return res.status(401).json({ message: "Token not provided" });
 
     const payload = this.tokenValidator.validate(token);
+    console.log("Payload here", payload);
 
     if (!payload) {
       return res.status(401).json({ message: "Invalid token" });
