@@ -17,7 +17,6 @@ export default function Empenhos() {
   const [empenhoToDelete, setEmpenhoToDelete] = useState<EmpenhoList | null>(
     null,
   );
-
   const { fetchListEmpenhos, data } = useEmpenhos();
   const { user } = useUser();
 
@@ -97,18 +96,9 @@ export default function Empenhos() {
     setEmpenhoToDelete(empenho);
   };
 
-  const closeDeleteModal = () => {
-    setEmpenhoToDelete(null);
-  };
-
   const handleSave = () => {
     console.log("Salvar empenho:", editingId);
     closeModal();
-  };
-
-  const handleDelete = () => {
-    console.log("Excluir empenho:", empenhoToDelete);
-    closeDeleteModal();
   };
 
   return (
@@ -174,8 +164,7 @@ export default function Empenhos() {
       {empenhoToDelete && (
         <EmpenhoDeleteModal
           empenho={empenhoToDelete}
-          onClose={closeDeleteModal}
-          onConfirm={handleDelete}
+          setEmpenhoToDelete={setEmpenhoToDelete}
         />
       )}
     </div>

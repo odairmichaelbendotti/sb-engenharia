@@ -5,6 +5,7 @@ import { defaultFetch } from "../services/api";
 type EmpenhosState = {
   data: ListEmpenhos | null;
   fetchListEmpenhos: () => Promise<void>;
+  deleteEmpenho: (id: string) => Promise<void>;
 };
 
 export const useEmpenhos = create<EmpenhosState>((set) => ({
@@ -25,7 +26,7 @@ export const useEmpenhos = create<EmpenhosState>((set) => ({
       throw new Error("Erro ao buscar empenhos");
     }
   },
-  delete: async (id: string) => {
+  deleteEmpenho: async (id: string) => {
     try {
       if (!id) {
         throw new Error("ID do empenho é obrigatório");
@@ -33,24 +34,14 @@ export const useEmpenhos = create<EmpenhosState>((set) => ({
 
       const response = await defaultFetch(`/empenho/delete/${id}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
       if (!response.ok) {
         throw new Error("Erro ao deletar empenho");
       }
-
-      // Atualizar a lista de empenhos após deletar
-      const currentState = useEmpenhos.getState();
-      if (currentState.data) {
-        const updatedData = {
-          ...currentState.data,
-          empenhos: currentState.data.empenhos.filter(
-            (empenho) => empenho.id !== id,
-          ),
-        };
-        set({ data: updatedData });
-      }
     } catch (error) {
+      console.log(error);
       throw new Error("Erro ao deletar empenho");
     }
   },

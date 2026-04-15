@@ -1,17 +1,31 @@
 import { Trash2 } from "lucide-react";
 import type { EmpenhoList } from "../../../types/empenho";
+import { useEmpenhos } from "../../store/empenhos";
+import { toast } from "sonner";
 
 interface EmpenhoDeleteModalProps {
   empenho: EmpenhoList | null;
-  onClose: () => void;
-  onConfirm: () => void;
+  setEmpenhoToDelete: React.Dispatch<React.SetStateAction<EmpenhoList | null>>;
 }
 
 export function EmpenhoDeleteModal({
   empenho,
-  onClose,
-  onConfirm,
+  setEmpenhoToDelete,
 }: EmpenhoDeleteModalProps) {
+  async function handleDeleteEmpenho(id: string) {
+    try {
+      await deleteEmpenho(id);
+      toast.success("Empenho excluído com sucesso");
+      setEmpenhoToDelete(null);
+    } catch (error) {
+      console.log(error);
+      toast.error("Erro ao excluir empenho");
+      throw new Error("Erro ao excluir empenho");
+    }
+  }
+
+  const { deleteEmpenho } = useEmpenhos();
+
   if (!empenho) return null;
 
   return (
@@ -28,18 +42,18 @@ export function EmpenhoDeleteModal({
             Tem certeza que deseja excluir o empenho
           </p>
           <p className="font-medium text-text-primary mb-6">
-            &quot;{empenho.numero}&quot; - {empenho.company.name}?
+            &quot;{empenho.numero}&quot; - {empenho.company.name}
           </p>
           <div className="flex justify-center gap-3 shrink-0">
             <button
-              onClick={onClose}
-              className="px-4 py-2 text-text-secondary hover:bg-surface-muted rounded-md transition-colors"
+              onClick={() => setEmpenhoToDelete(null)}
+              className="cursor-pointer w-full px-4 py-2 text-text-secondary hover:bg-surface-muted rounded-md transition-colors"
             >
               Cancelar
             </button>
             <button
-              onClick={onConfirm}
-              className="px-4 py-2 bg-danger-text text-white rounded-md hover:bg-red-700 transition-colors"
+              onClick={() => handleDeleteEmpenho(empenho.id)}
+              className="cursor-pointer w-full px-4 py-2 bg-danger-text text-white rounded-md hover:bg-red-700 transition-colors"
             >
               Excluir Empenho
             </button>
