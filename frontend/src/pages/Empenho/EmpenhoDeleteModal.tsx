@@ -1,5 +1,5 @@
 import { Trash2 } from "lucide-react";
-import type { EmpenhoList } from "../../../../types/empenho";
+import type { EmpenhoList } from "../../../types/empenho";
 
 interface EmpenhoDeleteModalProps {
   empenho: EmpenhoList | null;

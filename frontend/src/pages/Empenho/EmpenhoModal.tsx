@@ -1,41 +1,107 @@
-import { X } from "lucide-react";
+import { Loader, X } from "lucide-react";
+import { useCompanies } from "../../store/companies";
+import { useState } from "react";
+import { toast } from "sonner";
+import { defaultFetch } from "../../services/api";
+import { useEmpenhos } from "../../store/empenhos";
 
 interface FormData {
   numero: string;
-  empresaId: string;
-  empresaNome: string;
-  valor: string;
-  data: string;
-  dataLimite: string;
-  status: "ativo" | "concluido" | "cancelado";
-  descricao: string;
+  description: string;
+  startAt: string;
+  endAt: string;
+  value: number;
+  company_id: string;
 }
 
 interface EmpenhoModalProps {
   isOpen: boolean;
   editingId: string | null;
-  formData: FormData;
-  empresasMock: { id: number; nome: string; cnpj: string }[];
   onClose: () => void;
   onSubmit: () => void;
-  onChange: (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >,
-  ) => void;
 }
 
 export function EmpenhoModal({
   isOpen,
   editingId,
-  formData,
-  empresasMock,
   onClose,
-  onSubmit,
-  onChange,
 }: EmpenhoModalProps) {
-  if (!isOpen) return null;
+  const { companies } = useCompanies();
+  const [isLoading, setIsLoading] = useState(false);
+  const [formState, setFormState] = useState<FormData>({
+    numero: "",
+    description: "",
+    startAt: "",
+    endAt: "",
+    value: 0,
+    company_id: "",
+  });
 
+  const { fetchListEmpenhos } = useEmpenhos();
+
+  function handleChange(
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) {
+    const { name, value } = e.target;
+    setFormState((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    if (!formState.numero || !formState.description || !formState.value) {
+      toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
+    if (!formState.company_id) {
+      toast.error("Selecione uma empresa");
+      return;
+    }
+
+    const numericValue = parseFloat(
+      String(formState.value).replace(/\./g, "").replace(",", "."),
+    );
+    if (isNaN(numericValue) || numericValue <= 0) {
+      toast.error("Valor deve ser um número válido maior que zero");
+      return;
+    }
+
+    if (new Date(formState.startAt) > new Date(formState.endAt)) {
+      toast.error("Data de início deve ser menor que a data de término");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await defaultFetch("/empenho/create", {
+        method: "POST",
+        body: JSON.stringify(formState),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error(data.message || "Erro ao criar empenho");
+        throw new Error("Erro ao criar empenho");
+      }
+
+      await fetchListEmpenhos();
+      toast.success(`Empenho ${data.numero} criado com sucesso!`);
+      onClose();
+    } catch (error) {
+      throw new Error("Erro ao criar empenho" + error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  if (!isOpen) return null;
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-surface rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]">
@@ -50,13 +116,7 @@ export function EmpenhoModal({
             <X size={20} />
           </button>
         </div>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            onSubmit();
-          }}
-          className="p-4 overflow-y-auto"
-        >
+        <form className="p-4 overflow-y-auto" onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-1">
@@ -65,10 +125,9 @@ export function EmpenhoModal({
               <input
                 type="text"
                 name="numero"
-                required
-                value={formData.numero}
-                onChange={onChange}
-                placeholder="EMP-2024-001"
+                value={formState.numero}
+                onChange={handleChange}
+                placeholder="NE2028003"
                 className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
               />
             </div>
@@ -77,11 +136,10 @@ export function EmpenhoModal({
                 Valor *
               </label>
               <input
-                type="number"
-                name="valor"
-                required
-                value={formData.valor}
-                onChange={onChange}
+                type="text"
+                name="value"
+                value={formState.value}
+                onChange={handleChange}
                 placeholder="0.00"
                 step="0.01"
                 className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
@@ -92,16 +150,15 @@ export function EmpenhoModal({
                 Empresa *
               </label>
               <select
-                name="empresaId"
-                required
-                value={formData.empresaId}
-                onChange={onChange}
+                name="company_id"
+                value={formState.company_id}
+                onChange={handleChange}
                 className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
               >
                 <option value="">Selecione uma empresa</option>
-                {empresasMock.map((empresa) => (
+                {companies.map((empresa) => (
                   <option key={empresa.id} value={empresa.id}>
-                    {empresa.nome} - {empresa.cnpj}
+                    {empresa.name} - {empresa.cnpj}
                   </option>
                 ))}
               </select>
@@ -111,9 +168,9 @@ export function EmpenhoModal({
                 Descrição
               </label>
               <textarea
-                name="descricao"
-                value={formData.descricao}
-                onChange={onChange}
+                name="description"
+                value={formState.description}
+                onChange={handleChange}
                 placeholder="Descrição do empenho e serviços contratados"
                 rows={3}
                 className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 resize-none"
@@ -125,9 +182,9 @@ export function EmpenhoModal({
               </label>
               <input
                 type="date"
-                name="data"
-                value={formData.data}
-                onChange={onChange}
+                name="startAt"
+                value={formState.startAt}
+                onChange={handleChange}
                 className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
               />
             </div>
@@ -137,41 +194,48 @@ export function EmpenhoModal({
               </label>
               <input
                 type="date"
-                name="dataLimite"
-                value={formData.dataLimite}
-                onChange={onChange}
+                name="endAt"
+                value={formState.endAt}
+                onChange={handleChange}
                 className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
               />
             </div>
-            <div className="md:col-span-2">
+            {/* <div className="md:col-span-2">
               <label className="block text-sm font-medium text-text-secondary mb-1">
                 Status
               </label>
               <select
                 name="status"
                 value={formData.status}
-                onChange={onChange}
+                onChange={handleChange}
                 className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
               >
                 <option value="ativo">Ativo</option>
                 <option value="concluido">Concluído</option>
                 <option value="cancelado">Cancelado</option>
               </select>
-            </div>
+            </div> */}
           </div>
-          <div className="flex justify-end gap-3 pt-4 border-t border-border shrink-0">
+          <div className="flex justify-end gap-3 pt-4 border-t mt-5 border-border shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-text-secondary hover:bg-surface-muted rounded-md transition-colors"
+              className="px-4 cursor-pointer py-2 text-text-secondary hover:bg-surface-muted rounded-md transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors"
+              disabled={isLoading}
+              className="flex items-center justify-center w-40 py-2 cursor-pointer bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors"
             >
-              {editingId ? "Salvar Alterações" : "Criar Empenho"}
+              {isLoading ? (
+                <Loader className="animate-spin" />
+              ) : editingId ? (
+                "Salvar Alterações"
+              ) : (
+                "Criar Empenho"
+              )}
             </button>
           </div>
         </form>

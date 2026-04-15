@@ -1,5 +1,5 @@
 import { Layers2, TrendingUp, CheckCircle2, XCircle } from "lucide-react";
-import { StatCard } from "../../../components/StatCard";
+import { StatCard } from "../../components/StatCard";
 
 interface EmpenhoStatsProps {
   metrics: {

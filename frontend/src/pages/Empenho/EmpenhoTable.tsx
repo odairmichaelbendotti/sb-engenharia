@@ -98,7 +98,7 @@ export function EmpenhoTable({
             <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
               Prazo
             </th>
-            <th className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+            <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
               Valor
             </th>
             <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
