@@ -21,7 +21,7 @@ const empenhoController = new EmpenhoController(
 const token = new TokenGenerator();
 const authMiddleware = new AuthMiddleware(token);
 
-EmpenhoRoutes.post("/empenho/create", (req, res) =>
+EmpenhoRoutes.post("/empenho/create", authMiddleware.handle, (req, res) =>
   empenhoController.create(req, res),
 );
 

@@ -15,8 +15,13 @@ export class EmpenhoController {
     try {
       const { numero, description, startAt, endAt, value, company_id } =
         req.body;
+      const { user } = req;
 
-      const empenho = await this.createEmpenho.execute({
+      if (!user) {
+        throw new DomainError("User not found");
+      }
+
+      const empenho = await this.createEmpenho.execute(user, {
         numero,
         description,
         startAt,
