@@ -75,8 +75,15 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
         }),
       ]);
 
+      const formattedEmpenhos = empenhos.map((empenho) => {
+        return {
+          ...empenho,
+          value: empenho.value / 100,
+        };
+      });
+
       const mergedData = {
-        empenhos,
+        empenhos: formattedEmpenhos,
         totalEmpenhos,
         totalEmpenhosAmount: (totalEmpenhosAmount._sum.value || 0) / 100,
         activeEmpenhos,

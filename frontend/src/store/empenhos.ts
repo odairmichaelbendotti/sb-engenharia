@@ -38,8 +38,12 @@ export const useEmpenhos = create<EmpenhosState>((set) => ({
       });
 
       if (!response.ok) {
+        const errorData = await response.json();
+        console.log("Erro:", errorData);
         throw new Error("Erro ao deletar empenho");
       }
+
+      console.log("Deletado com sucesso - status:", response.status);
     } catch (error) {
       console.log(error);
       throw new Error("Erro ao deletar empenho");

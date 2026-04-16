@@ -67,7 +67,7 @@ export class EmpenhoController {
         empenhoId,
       });
 
-      res.status(204);
+      res.status(204).send();
     } catch (error) {
       if (error instanceof DomainError) {
         return res.status(400).json({ message: error.message });
