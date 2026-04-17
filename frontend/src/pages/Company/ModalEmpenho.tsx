@@ -80,7 +80,7 @@ const ModalEmpenho = ({
                         {empenho.numero}
                       </p>
                       <p className="text-xs text-text-secondary">
-                        {formatDate(empenho.data)}
+                        {formatDate(empenho.endAt)}{" "}
                       </p>
                     </div>
                   </div>

@@ -137,16 +137,16 @@ const RegisterOrEditCompany = ({
 
             <div className="w-full">
               <label className="block text-sm font-medium text-text-secondary mb-1">
-                E-mail
+                Telefone
               </label>
               <input
-                type="email"
-                value={formData.email}
+                type="tel"
+                value={formData.phone}
                 onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
+                  setFormData({ ...formData, phone: e.target.value })
                 }
                 className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
-                placeholder="E-mail do responsável"
+                placeholder="(00) 00000-0000"
               />
             </div>
 
