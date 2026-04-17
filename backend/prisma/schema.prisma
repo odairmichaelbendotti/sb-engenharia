@@ -27,6 +27,7 @@ model Company {
   id                String   @id @default(uuid())
   name              String
   cnpj              String   @unique
+  cep               String
   city              String
   state             String
   address           String

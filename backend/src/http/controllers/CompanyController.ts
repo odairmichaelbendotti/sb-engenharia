@@ -14,11 +14,12 @@ export class CompanyController {
   ) {}
 
   async create(req: Request, res: Response) {
-    const { name, cnpj, city, state, address, phone, email } = req.body;
+    const { name, cnpj, cep, city, state, address, phone, email } = req.body;
     try {
       const company = await this.createCompany.execute({
         name,
         cnpj,
+        cep,
         city,
         state,
         address,
@@ -72,19 +73,29 @@ export class CompanyController {
   }
   async update(req: Request, res: Response) {
     const { id } = req.params;
-    const { name, cnpj, city, state, address, phone, email } = req.body;
+    const { name, cnpj, cep, city, state, address, phone, email } = req.body;
 
     if (!id) {
       return res.status(400).json({ message: "Invalid ID" });
     }
 
-    if (!name || !cnpj || !city || !state || !address || !phone || !email) {
+    if (
+      !name ||
+      !cnpj ||
+      !cep ||
+      !city ||
+      !state ||
+      !address ||
+      !phone ||
+      !email
+    ) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
     const company = {
       name,
       cnpj,
+      cep,
       city,
       state,
       address,

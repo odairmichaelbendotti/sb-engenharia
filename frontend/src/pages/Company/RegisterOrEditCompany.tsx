@@ -111,6 +111,41 @@ const RegisterOrEditCompany = ({
                 placeholder="E-mail do responsável"
               />
             </div>
+
+            <div className="w-full">
+              <label className="block text-sm font-medium text-text-secondary mb-1">
+                E-mail
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
+                placeholder="E-mail do responsável"
+              />
+            </div>
+
+            <div className="w-full">
+              <label
+                className="block text-sm font-medium text-text-secondary mb-1"
+                htmlFor="cep"
+              >
+                CEP
+              </label>
+              <input
+                type="text"
+                id="cep"
+                value={formData.cep}
+                onChange={(e) =>
+                  setFormData({ ...formData, cep: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
+                placeholder="00000-000"
+              />
+            </div>
+
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-text-secondary mb-1">
                 Endereço
@@ -157,20 +192,6 @@ const RegisterOrEditCompany = ({
                   </option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1">
-                Telefone
-              </label>
-              <input
-                type="text"
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
-                placeholder="(00) 00000-0000"
-              />
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-border shrink-0">

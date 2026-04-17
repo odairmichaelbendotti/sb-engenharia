@@ -14,6 +14,7 @@ export class PrismaCompanyRepository implements ICompanyRepository {
         data: {
           name: company.name,
           cnpj: company.cnpj,
+          cep: company.cep,
           city: company.city,
           state: company.state,
           address: company.address,

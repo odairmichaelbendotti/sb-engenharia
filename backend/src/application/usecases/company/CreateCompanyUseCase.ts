@@ -8,13 +8,23 @@ export class CreateCompanyUseCase {
   async execute({
     name,
     cnpj,
+    cep,
     city,
     state,
     address,
     phone,
     email,
   }: CompanyType) {
-    if (!name || !cnpj || !city || !state || !address || !phone || !email) {
+    if (
+      !name ||
+      !cnpj ||
+      !cep ||
+      !city ||
+      !state ||
+      !address ||
+      !phone ||
+      !email
+    ) {
       throw new DomainError("All fields are required");
     }
 
@@ -27,6 +37,7 @@ export class CreateCompanyUseCase {
     const company = await this.repository.create({
       name,
       cnpj,
+      cep,
       city,
       state,
       address,

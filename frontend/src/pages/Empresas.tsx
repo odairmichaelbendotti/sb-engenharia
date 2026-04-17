@@ -19,6 +19,7 @@ export default function Empresas() {
   const [formData, setFormData] = useState<CreateCompanyType>({
     name: "",
     cnpj: "",
+    cep: "",
     city: "",
     state: "",
     address: "",
@@ -55,6 +56,7 @@ export default function Empresas() {
       setFormData({
         name: empresa.name,
         cnpj: empresa.cnpj,
+        cep: empresa.cep,
         address: empresa.address,
         city: empresa.city,
         state: empresa.state,
@@ -66,6 +68,7 @@ export default function Empresas() {
       setFormData({
         name: "",
         cnpj: "",
+        cep: "",
         address: "",
         city: "",
         state: "",
