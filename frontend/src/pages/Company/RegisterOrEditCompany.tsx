@@ -21,7 +21,30 @@ const RegisterOrEditCompany = ({
 }: RegisterOrEditCompanyProps) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const { createCompany, updateCompany } = useCompanies();
+  const { createCompany, updateCompany, findCep } = useCompanies();
+
+  async function handleFindCep() {
+    try {
+      const response = await findCep(formData.cep);
+      if (response) {
+        setFormData({
+          ...formData,
+          address: response.logradouro,
+          city: response.localidade,
+          state: response.uf,
+        });
+        return;
+      }
+      setFormData({
+        ...formData,
+        address: "",
+        city: "",
+        state: "",
+      });
+    } catch (error) {
+      console.error("Erro ao buscar CEP:", error);
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,6 +161,7 @@ const RegisterOrEditCompany = ({
                 type="text"
                 id="cep"
                 value={formData.cep}
+                onBlur={handleFindCep}
                 onChange={(e) =>
                   setFormData({ ...formData, cep: e.target.value })
                 }

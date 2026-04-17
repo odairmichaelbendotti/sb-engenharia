@@ -5,6 +5,22 @@ import type { CreateCompanyType } from "../../types/create-company";
 import type { ListCompanies } from "../../types/list-companies";
 import type { StatsCompany } from "../../types/list-companies";
 
+type findCepType = {
+  bairro: string;
+  cep: string;
+  complemento: string;
+  ddd: string;
+  estado: string;
+  gia: string;
+  ibge: string;
+  localidade: string;
+  logradouro: string;
+  regiao: string;
+  siafi: string;
+  uf: string;
+  unidade: string;
+};
+
 type CompaniesStore = {
   companies: Empresa[];
   stats: StatsCompany | null;
@@ -12,6 +28,7 @@ type CompaniesStore = {
   createCompany: (empresa: CreateCompanyType) => Promise<Empresa>;
   deleteCompany: (id: string) => Promise<void>;
   updateCompany: (id: string, empresa: CreateCompanyType) => Promise<void>;
+  findCep: (cep: string) => Promise<findCepType>;
 };
 
 export const useCompanies = create<CompaniesStore>((set) => ({
@@ -28,6 +45,21 @@ export const useCompanies = create<CompaniesStore>((set) => ({
     const data = (await response.json()) as ListCompanies;
     set({ stats: data.stats });
     set({ companies: data.companies.length > 0 ? data.companies : [] });
+  },
+  findCep: async (cep: string): Promise<findCepType> => {
+    if (!cep || cep.length < 8) throw new Error("CEP inválido");
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+
+      if (!response.ok) throw new Error("CEP não encontrado");
+
+      const data = await response.json();
+      return data as findCepType;
+    } catch (error) {
+      console.error(error);
+      throw new Error("Erro ao buscar CEP");
+    }
   },
   createCompany: async (empresa: CreateCompanyType) => {
     const response = await defaultFetch("/company/create", {
