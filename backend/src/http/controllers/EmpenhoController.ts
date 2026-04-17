@@ -3,12 +3,14 @@ import type { CreateEmpenhoUseCase } from "../../application/usecases/empenho/Cr
 import { DomainError } from "../../domain/errors/DomainError";
 import type { ListEmpenhosUseCase } from "../../application/usecases/empenho/ListEmpenhosUseCase";
 import type { DeleteEmpenhoUseCase } from "../../application/usecases/empenho/DeleteEmpenhoUseCase";
+import type { UpdateEmpenhoUseCase } from "../../application/usecases/empenho/UpdateEmpenhoUseCase";
 
 export class EmpenhoController {
   constructor(
     private createEmpenho: CreateEmpenhoUseCase,
     private listEmpenhos: ListEmpenhosUseCase,
     private deleteEmpenho: DeleteEmpenhoUseCase,
+    private updateEmpenho: UpdateEmpenhoUseCase,
   ) {}
 
   async create(req: Request, res: Response) {
@@ -68,6 +70,46 @@ export class EmpenhoController {
       });
 
       res.status(204).send();
+    } catch (error) {
+      if (error instanceof DomainError) {
+        return res.status(400).json({ message: error.message });
+      }
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  }
+  async update(req: Request, res: Response) {
+    const { empenhoId } = req.params;
+    const { numero, description, startAt, endAt, value, company_id } = req.body;
+    const { user } = req;
+
+    if (Array.isArray(empenhoId) || !empenhoId) {
+      throw new DomainError("Empenho ID is required");
+    }
+
+    if (!user) {
+      throw new DomainError("User not found");
+    }
+
+    if (
+      !numero ||
+      !description ||
+      !startAt ||
+      !endAt ||
+      !value ||
+      !company_id
+    ) {
+      throw new DomainError("All fields are required");
+    }
+
+    const editedEmpenho = await this.updateEmpenho.execute(
+      empenhoId,
+      req.body,
+      user,
+    );
+
+    res.status(200).json(editedEmpenho);
+
+    try {
     } catch (error) {
       if (error instanceof DomainError) {
         return res.status(400).json({ message: error.message });

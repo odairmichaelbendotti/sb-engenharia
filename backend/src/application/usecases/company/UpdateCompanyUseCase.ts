@@ -29,6 +29,7 @@ export class UpdateCompanyUseCase {
       const updatedCompany = await this.repository.update(id, {
         name: company.name,
         cnpj: company.cnpj,
+        cep: company.cep,
         city: company.city,
         state: company.state,
         address: company.address,

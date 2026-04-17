@@ -107,4 +107,22 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
       throw new DomainError("Error deleting empenho");
     }
   }
+  async update(empenhoId: string, empenho: EmpenhoType): Promise<Empenho> {
+    try {
+      return await prisma.empenho.update({
+        where: { id: empenhoId },
+        data: {
+          numero: empenho.numero,
+          value: empenho.value * 100,
+          company_id: empenho.company_id,
+          description: empenho.description,
+          startAt: new Date(formatDate(empenho.startAt)),
+          endAt: new Date(formatDate(empenho.endAt)),
+        },
+      });
+    } catch (error) {
+      console.log(error);
+      throw new DomainError("Error updating empenho");
+    }
+  }
 }

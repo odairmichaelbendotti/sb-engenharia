@@ -50,15 +50,6 @@ export default function Empresas() {
     setEmpresas(companies);
   }, [companies]);
 
-  async function handleFindCep() {
-    try {
-      const response = await findCep(formData.cep);
-      console.log(response);
-    } catch (error) {
-      console.error("Erro ao buscar CEP:", error);
-    }
-  }
-
   const openModal = (empresa?: Empresa) => {
     if (empresa) {
       setEmpresaSelecionada(empresa);
