@@ -43,6 +43,18 @@ export const useEmpenhos = create<EmpenhosState>((set) => ({
         throw new Error("Erro ao deletar empenho");
       }
 
+      set((state) => {
+        if (!state.data) return state;
+        return {
+          data: {
+            ...state.data,
+            empenhos: state.data.empenhos.filter(
+              (empenho) => empenho.id !== id,
+            ),
+          },
+        };
+      });
+
       console.log("Deletado com sucesso - status:", response.status);
     } catch (error) {
       console.log(error);

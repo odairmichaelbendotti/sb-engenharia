@@ -1,7 +1,8 @@
-import { Trash2 } from "lucide-react";
+import { Loader, Trash2 } from "lucide-react";
 import type { EmpenhoList } from "../../../types/empenho";
 import { useEmpenhos } from "../../store/empenhos";
 import { toast } from "sonner";
+import { useState } from "react";
 
 interface EmpenhoDeleteModalProps {
   empenho: EmpenhoList | null;
@@ -12,8 +13,11 @@ export function EmpenhoDeleteModal({
   empenho,
   setEmpenhoToDelete,
 }: EmpenhoDeleteModalProps) {
+  const [isLoading, setIsLoading] = useState(false);
+
   async function handleDeleteEmpenho(id: string) {
     try {
+      setIsLoading(true);
       await deleteEmpenho(id);
       toast.success("Empenho excluído com sucesso");
       setEmpenhoToDelete(null);
@@ -21,6 +25,8 @@ export function EmpenhoDeleteModal({
       console.log(error);
       toast.error("Erro ao excluir empenho");
       throw new Error("Erro ao excluir empenho");
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -53,9 +59,13 @@ export function EmpenhoDeleteModal({
             </button>
             <button
               onClick={() => handleDeleteEmpenho(empenho.id)}
-              className="cursor-pointer w-full px-4 py-2 bg-danger-text text-white rounded-md hover:bg-red-700 transition-colors"
+              className="flex justify-center items-center cursor-pointer w-full px-4 py-2 bg-danger-text text-white rounded-md hover:bg-red-700 transition-colors"
             >
-              Excluir Empenho
+              {isLoading ? (
+                <Loader className="animate-spin" />
+              ) : (
+                "Excluir Empenho"
+              )}
             </button>
           </div>
         </div>

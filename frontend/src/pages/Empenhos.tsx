@@ -13,10 +13,13 @@ import { useUser } from "../store/user";
 
 export default function Empenhos() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingEmpenho, setEditingEmpenho] = useState<EmpenhoList | null>(
+    null,
+  );
   const [empenhoToDelete, setEmpenhoToDelete] = useState<EmpenhoList | null>(
     null,
   );
+
   const { fetchListEmpenhos, data } = useEmpenhos();
   const { user } = useUser();
 
@@ -54,50 +57,20 @@ export default function Empenhos() {
     }).format(value);
   };
 
-  // Handlers
   const openModal = (empenho?: EmpenhoList) => {
-    if (empenho) {
-      setEditingId(empenho.id);
-      // setFormData({
-      //   numero: empenho.numero,
-      //   empresaId: empenho.company_id,
-      //   empresaNome: empenho.company.name,
-      //   valor: empenho.value.toString(),
-      //   data: toInputDate(empenho.startAt),
-      //   dataLimite: toInputDate(empenho.endAt),
-      //   status: empenho.status.toLowerCase() as
-      //     | "ativo"
-      //     | "concluido"
-      //     | "cancelado",
-      //   descricao: empenho.description,
-      // });
-    } else {
-      setEditingId(null);
-      // setFormData({
-      //   numero: "",
-      //   empresaId: "",
-      //   empresaNome: "",
-      //   valor: "",
-      //   data: "",
-      //   dataLimite: "",
-      //   status: "ativo",
-      //   descricao: "",
-      // });
-    }
+    setEditingEmpenho(empenho || null);
     setIsModalOpen(true);
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
-    setEditingId(null);
+    setEditingEmpenho(null);
   };
 
-  const openDeleteModal = (empenho: EmpenhoList) => {
-    setEmpenhoToDelete(empenho);
-  };
+  const openDeleteModal = (empenho: EmpenhoList) => setEmpenhoToDelete(empenho);
 
   const handleSave = () => {
-    console.log("Salvar empenho:", editingId);
+    console.log("Salvar empenho:", editingEmpenho?.id);
     closeModal();
   };
 
@@ -155,7 +128,7 @@ export default function Empenhos() {
       {isModalOpen && (
         <EmpenhoModal
           isOpen={isModalOpen}
-          editingId={editingId}
+          empenho={editingEmpenho}
           onClose={closeModal}
           onSubmit={handleSave}
         />

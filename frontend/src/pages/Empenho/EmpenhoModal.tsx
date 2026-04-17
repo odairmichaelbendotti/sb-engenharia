@@ -1,43 +1,71 @@
 import { Loader, X } from "lucide-react";
 import { useCompanies } from "../../store/companies";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { defaultFetch } from "../../services/api";
 import { useEmpenhos } from "../../store/empenhos";
-
-interface FormData {
-  numero: string;
-  description: string;
-  startAt: string;
-  endAt: string;
-  value: number;
-  company_id: string;
-}
+import type { EmpenhoList } from "../../../types/empenho";
 
 interface EmpenhoModalProps {
   isOpen: boolean;
-  editingId: string | null;
+  empenho: EmpenhoList | null;
   onClose: () => void;
   onSubmit: () => void;
 }
 
-export function EmpenhoModal({
-  isOpen,
-  editingId,
-  onClose,
-}: EmpenhoModalProps) {
-  const { companies } = useCompanies();
+interface FormState {
+  numero: string;
+  description: string;
+  startAt: string;
+  endAt: string;
+  value: string;
+  company_id: string;
+}
+
+export function EmpenhoModal({ isOpen, empenho, onClose }: EmpenhoModalProps) {
+  const { companies, listCompanies } = useCompanies();
   const [isLoading, setIsLoading] = useState(false);
-  const [formState, setFormState] = useState<FormData>({
+  const [formState, setFormState] = useState<FormState>({
     numero: "",
     description: "",
     startAt: "",
     endAt: "",
-    value: 0,
+    value: "",
     company_id: "",
   });
 
   const { fetchListEmpenhos } = useEmpenhos();
+
+  useEffect(() => {
+    if (isOpen && companies.length === 0) {
+      listCompanies();
+    }
+  }, [isOpen, companies.length, listCompanies]);
+
+  useEffect(() => {
+    if (empenho) {
+      const formatDate = (d: Date | string) =>
+        (d instanceof Date ? d : new Date(d)).toISOString().split("T")[0];
+
+      setFormState({
+        numero: empenho.numero.toString(),
+        description: empenho.description,
+        startAt: formatDate(empenho.startAt),
+        endAt: formatDate(empenho.endAt),
+        value: empenho.value.toString(),
+        company_id: empenho.company_id,
+      });
+    } else {
+      setFormState({
+        numero: "",
+        description: "",
+        startAt: "",
+        endAt: "",
+        value: "",
+        company_id: "",
+      });
+    }
+  }, [empenho]);
 
   function handleChange(
     e: React.ChangeEvent<
@@ -82,6 +110,7 @@ export function EmpenhoModal({
       const response = await defaultFetch("/empenho/create", {
         method: "POST",
         body: JSON.stringify(formState),
+        credentials: "include",
       });
 
       const data = await response.json();
@@ -107,7 +136,7 @@ export function EmpenhoModal({
       <div className="bg-surface rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]">
         <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
           <h2 className="text-lg font-semibold text-text-primary">
-            {editingId ? "Editar Empenho" : "Novo Empenho"}
+            {empenho ? "Editar Empenho" : "Novo Empenho"}
           </h2>
           <button
             onClick={onClose}
@@ -231,7 +260,7 @@ export function EmpenhoModal({
             >
               {isLoading ? (
                 <Loader className="animate-spin" />
-              ) : editingId ? (
+              ) : empenho ? (
                 "Salvar Alterações"
               ) : (
                 "Criar Empenho"
