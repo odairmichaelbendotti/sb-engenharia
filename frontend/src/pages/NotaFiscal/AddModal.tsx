@@ -8,8 +8,13 @@ import {
   AlignLeft,
   CalendarDays,
   Wallet,
+  Loader,
 } from "lucide-react";
 import type { NotaFiscal } from "../../../types/notaFiscal";
+import { useCompanies } from "../../store/companies";
+import type { Empenho } from "../../../types/empenho";
+import { toast } from "sonner";
+import { defaultFetch } from "../../services/api";
 
 interface AddModalProps {
   isOpen: boolean;
@@ -27,16 +32,30 @@ const initialFormData = {
   status: "pending" as NotaFiscal["status"],
 };
 
-export function AddModal({ isOpen, onClose, onSave }: AddModalProps) {
+export function AddModal({ isOpen, onClose }: AddModalProps) {
   const [formData, setFormData] = useState(initialFormData);
+  const [empenhosByCompany, setEmpenhosByCompany] = useState<Empenho[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { companies } = useCompanies();
+
+  function handleChangeCompany(companyId: string) {
+    setFormData((f) => ({ ...f, company_id: companyId, empenho_id: "" }));
+    const company = companies.find((c) => c.id === companyId);
+    if (company) {
+      setEmpenhosByCompany(company.empenhos);
+    } else {
+      setEmpenhosByCompany([]);
+    }
+  }
 
   if (!isOpen) return null;
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!formData.numero || !formData.value || !formData.vencimento) return;
 
-    onSave({
+    const nf = {
       numero: formData.numero,
       description: formData.description,
       vencimento: formData.vencimento,
@@ -44,10 +63,38 @@ export function AddModal({ isOpen, onClose, onSave }: AddModalProps) {
       empenho_id: formData.empenho_id,
       company_id: formData.company_id,
       status: formData.status,
-    });
+    };
+
+    try {
+      setIsLoading(true);
+      const response = await defaultFetch("/nota-fiscal/create", {
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify(nf),
+      });
+
+      if (!response.ok) {
+        toast.error("Erro ao criar nota fiscal");
+        return;
+      }
+
+      const data = await response.json();
+      console.log(data);
+
+      toast.success("Nota fiscal criada com sucesso");
+      onClose();
+    } catch (error) {
+      console.log(error);
+      toast.error("Erro ao criar nota fiscal");
+      return;
+    } finally {
+      setIsLoading(false);
+    }
+
+    console.log(nf);
 
     setFormData(initialFormData);
-    onClose();
+    // onClose();
   }
 
   return (
@@ -147,15 +194,18 @@ export function AddModal({ isOpen, onClose, onSave }: AddModalProps) {
                     size={16}
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
                   />
-                  <input
-                    type="text"
+                  <select
                     value={formData.company_id}
-                    onChange={(e) =>
-                      setFormData((f) => ({ ...f, company_id: e.target.value }))
-                    }
-                    placeholder="Nome da empresa"
-                    className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
-                  />
+                    onChange={(e) => handleChangeCompany(e.target.value)}
+                    className={`w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer ${empenhosByCompany.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    <option value="">Selecione a empresa</option>
+                    {companies.map((company) => (
+                      <option key={company.id} value={company.id}>
+                        {company.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="md:col-span-2">
@@ -167,16 +217,23 @@ export function AddModal({ isOpen, onClose, onSave }: AddModalProps) {
                 </label>
                 <div className="relative">
                   <select
+                    disabled={!formData.company_id && true}
                     value={formData.empenho_id}
                     onChange={(e) =>
                       setFormData((f) => ({ ...f, empenho_id: e.target.value }))
                     }
-                    className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer"
+                    className={`w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer ${empenhosByCompany.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
-                    <option value="">Selecione um empenho...</option>
-                    <option value="EMP-2024-001">EMP-2024-001</option>
-                    <option value="EMP-2024-002">EMP-2024-002</option>
-                    <option value="EMP-2024-003">EMP-2024-003</option>
+                    <option value="">
+                      {!formData.company_id
+                        ? "Selecione a empresa"
+                        : "Selecione um empenho..."}
+                    </option>
+                    {empenhosByCompany.map((empenho) => (
+                      <option key={empenho.id} value={empenho.id}>
+                        {empenho.numero} - {empenho.description}
+                      </option>
+                    ))}
                   </select>
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                     <svg
@@ -294,9 +351,13 @@ export function AddModal({ isOpen, onClose, onSave }: AddModalProps) {
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium shadow-sm"
+              className="cursor-pointer flex justify-center items-center gap-2 px-5 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium shadow-sm"
             >
-              Criar Nota Fiscal
+              {isLoading ? (
+                <Loader className="animate-spin" />
+              ) : (
+                "Criar Nota Fiscal"
+              )}
             </button>
           </div>
         </form>
