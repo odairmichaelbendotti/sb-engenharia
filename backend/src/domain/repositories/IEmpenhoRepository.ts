@@ -23,4 +23,8 @@ export interface IEmpenhoRepository {
   list(): Promise<empenhosDTO>;
   delete(id: string): Promise<void>;
   update(empenhoId: string, empenho: EmpenhoType): Promise<Empenho>;
+  updateStatus(
+    empenhoId: string,
+    status: "ATIVO" | "FINALIZADO" | "CANCELADO",
+  ): Promise<Empenho>;
 }

@@ -75,12 +75,18 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
         }),
       ]);
 
-      const formattedEmpenhos = empenhos.map((empenho) => {
-        return {
-          ...empenho,
-          value: empenho.value / 100,
-        };
-      });
+      const formattedEmpenhos = empenhos.map(
+        (
+          empenho: Empenho & {
+            company: { id: string; name: string; cnpj: string };
+          },
+        ) => {
+          return {
+            ...empenho,
+            value: Number(empenho.value) / 100,
+          };
+        },
+      );
 
       const mergedData = {
         empenhos: formattedEmpenhos,
@@ -123,6 +129,24 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
     } catch (error) {
       console.log(error);
       throw new DomainError("Error updating empenho");
+    }
+  }
+  async updateStatus(
+    empenhoId: string,
+    status: "ATIVO" | "FINALIZADO" | "CANCELADO",
+  ): Promise<Empenho> {
+    try {
+      console.log(status);
+      const empenho = await prisma.empenho.update({
+        where: { id: empenhoId },
+        data: {
+          status: status,
+        },
+      });
+      return empenho;
+    } catch (error) {
+      console.log(error);
+      throw new DomainError("Error updating empenho status");
     }
   }
 }

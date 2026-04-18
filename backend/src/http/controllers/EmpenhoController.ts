@@ -4,6 +4,7 @@ import { DomainError } from "../../domain/errors/DomainError";
 import type { ListEmpenhosUseCase } from "../../application/usecases/empenho/ListEmpenhosUseCase";
 import type { DeleteEmpenhoUseCase } from "../../application/usecases/empenho/DeleteEmpenhoUseCase";
 import type { UpdateEmpenhoUseCase } from "../../application/usecases/empenho/UpdateEmpenhoUseCase";
+import type { UpdateStatusEmpenhoUseCase } from "../../application/usecases/empenho/UpdateEmpenhoStatusUseCase";
 
 export class EmpenhoController {
   constructor(
@@ -11,6 +12,7 @@ export class EmpenhoController {
     private listEmpenhos: ListEmpenhosUseCase,
     private deleteEmpenho: DeleteEmpenhoUseCase,
     private updateEmpenho: UpdateEmpenhoUseCase,
+    private updateStatusEmpenho: UpdateStatusEmpenhoUseCase,
   ) {}
 
   async create(req: Request, res: Response) {
@@ -116,5 +118,31 @@ export class EmpenhoController {
       }
       return res.status(500).json({ message: "Internal server error" });
     }
+  }
+  async updateStatus(req: Request, res: Response) {
+    const { empenhoId } = req.params;
+    const { status } = req.body;
+    const { user } = req;
+    console.log(empenhoId);
+
+    if (!user) {
+      throw new DomainError("User not found");
+    }
+
+    if (!empenhoId || Array.isArray(empenhoId)) {
+      throw new DomainError("Empenho ID is required");
+    }
+
+    if (!status) {
+      throw new DomainError("Status is required");
+    }
+
+    const updatedEmpenho = await this.updateStatusEmpenho.execute(
+      empenhoId,
+      status,
+      user,
+    );
+
+    res.status(200).json(updatedEmpenho);
   }
 }

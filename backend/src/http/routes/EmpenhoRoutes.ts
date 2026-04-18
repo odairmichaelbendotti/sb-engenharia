@@ -8,6 +8,7 @@ import { AuthMiddleware } from "../middleware/AuthMiddleware";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator";
 import { UpdateEmpenhoUseCase } from "../../application/usecases/empenho/UpdateEmpenhoUseCase";
 import { PrismaCompanyRepository } from "../../infrastructure/database/prisma/PrismaCompanyRepository";
+import { UpdateStatusEmpenhoUseCase } from "../../application/usecases/empenho/UpdateEmpenhoStatusUseCase";
 
 export const EmpenhoRoutes = Router();
 
@@ -20,11 +21,13 @@ const updateEmpenhoUseCase = new UpdateEmpenhoUseCase(
   repository,
   findCompanyById,
 );
+const updateStatusEmpenhoUseCase = new UpdateStatusEmpenhoUseCase(repository);
 const empenhoController = new EmpenhoController(
   createEmpenhoUseCase,
   listEmpenhosUseCase,
   deleteEmpenhoUseCase,
   updateEmpenhoUseCase,
+  updateStatusEmpenhoUseCase,
 );
 const token = new TokenGenerator();
 const authMiddleware = new AuthMiddleware(token);
@@ -47,4 +50,10 @@ EmpenhoRoutes.put(
   "/empenho/update/:empenhoId",
   authMiddleware.handle,
   (req, res) => empenhoController.update(req, res),
+);
+
+EmpenhoRoutes.put(
+  "/empenho/update-status/:empenhoId",
+  authMiddleware.handle,
+  (req, res) => empenhoController.updateStatus(req, res),
 );
