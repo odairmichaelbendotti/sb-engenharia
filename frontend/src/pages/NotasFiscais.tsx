@@ -14,6 +14,13 @@ import {
   Clock,
   AlertCircle,
   XCircle,
+  Hash,
+  Building2,
+  AlignLeft,
+  CalendarDays,
+  Receipt,
+  Link2,
+  Wallet,
 } from "lucide-react";
 import { StatCard } from "../components/StatCard";
 import Breadcrumb from "../components/Breadcrumb";
@@ -520,137 +527,282 @@ export default function NotasFiscais() {
 
       {/* Modal - Cadastrar/Editar */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-surface rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]">
-            <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
-              <h2 className="text-lg font-semibold text-text-primary">
-                {editingId ? "Editar Nota Fiscal" : "Nova Nota Fiscal"}
-              </h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-surface rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl border border-border">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-primary-50/50 to-transparent shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
+                  <Receipt size={20} className="text-primary-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-text-primary">
+                    {editingId ? "Editar Nota Fiscal" : "Nova Nota Fiscal"}
+                  </h2>
+                  <p className="text-sm text-text-secondary">
+                    {editingId
+                      ? "Atualize os dados da NF"
+                      : "Preencha os dados para emitir uma nova NF"}
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={handleClose}
-                className="p-2 hover:bg-surface-muted rounded-md transition-colors"
+                className="p-2 hover:bg-surface-muted rounded-lg transition-colors"
               >
-                <X size={20} />
+                <X size={20} className="text-text-secondary" />
               </button>
             </div>
+
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 handleSave();
               }}
-              className="p-4 overflow-y-auto"
+              className="p-6 overflow-y-auto space-y-6"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">
-                    Número da NF *
-                  </label>
-                  <input
-                    type="text"
-                    name="number"
-                    required
-                    value={formData.number}
-                    onChange={handleInputChange}
-                    placeholder="NF-2024-001"
-                    className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
-                  />
+              {/* Seção: Identificação */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+                  <Hash size={16} className="text-primary-500" />
+                  <span>Identificação</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                      Número da NF <span className="text-danger-text">*</span>
+                    </label>
+                    <div className="relative">
+                      <Hash
+                        size={16}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+                      />
+                      <input
+                        type="text"
+                        name="number"
+                        required
+                        value={formData.number}
+                        onChange={handleInputChange}
+                        placeholder="NF-2024-001"
+                        className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                      Valor <span className="text-danger-text">*</span>
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-medium">
+                        R$
+                      </span>
+                      <input
+                        type="number"
+                        name="value"
+                        required
+                        value={formData.value}
+                        onChange={handleInputChange}
+                        placeholder="0,00"
+                        step="0.01"
+                        className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Seção: Cliente e Empenho */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+                  <Building2 size={16} className="text-primary-500" />
+                  <span>Cliente e Empenho</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                      Cliente <span className="text-danger-text">*</span>
+                    </label>
+                    <div className="relative">
+                      <Building2
+                        size={16}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+                      />
+                      <input
+                        type="text"
+                        name="client"
+                        required
+                        value={formData.client}
+                        onChange={handleInputChange}
+                        placeholder="Nome da empresa contratante"
+                        className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                      <span className="flex items-center gap-1.5">
+                        <Link2 size={14} />
+                        Relação de Empenhos
+                      </span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        name="empenho"
+                        className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all appearance-none cursor-pointer"
+                      >
+                        <option value="">Selecione um empenho...</option>
+                        <option value="EMP-2024-001">
+                          EMP-2024-001 - Construtora Silva Ltda - R$ 25.000,00
+                        </option>
+                        <option value="EMP-2024-002">
+                          EMP-2024-002 - Engenharia Santos S.A. - R$ 18.500,00
+                        </option>
+                        <option value="EMP-2024-003">
+                          EMP-2024-003 - Obras Rápidas ME - R$ 32.000,00
+                        </option>
+                        <option value="EMP-2024-004">
+                          EMP-2024-004 - Fundação Forte EPP - R$ 12.000,00
+                        </option>
+                        <option value="EMP-2024-005">
+                          EMP-2024-005 - Estrutura Primavera - R$ 45.000,00
+                        </option>
+                        <option value="EMP-2024-006">
+                          EMP-2024-006 - Construtora Horizonte - R$ 28.750,00
+                        </option>
+                      </select>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <svg
+                          className="w-4 h-4 text-text-muted"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                    <p className="text-xs text-text-muted mt-1.5">
+                      Selecione o empenho vinculado a esta nota fiscal
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Seção: Descrição */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+                  <AlignLeft size={16} className="text-primary-500" />
+                  <span>Descrição</span>
+                  <div className="flex-1 h-px bg-border" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">
-                    Valor *
-                  </label>
-                  <input
-                    type="number"
-                    name="value"
-                    required
-                    value={formData.value}
-                    onChange={handleInputChange}
-                    placeholder="0.00"
-                    step="0.01"
-                    className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-text-secondary mb-1">
-                    Cliente *
-                  </label>
-                  <input
-                    type="text"
-                    name="client"
-                    required
-                    value={formData.client}
-                    onChange={handleInputChange}
-                    placeholder="Nome da empresa"
-                    className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-text-secondary mb-1">
-                    Descrição
-                  </label>
                   <textarea
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
-                    placeholder="Descrição dos serviços/produtos"
+                    placeholder="Descreva os serviços ou produtos referentes a esta nota fiscal..."
                     rows={3}
-                    className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 resize-none"
+                    className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all resize-none"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">
-                    Data de Emissão
-                  </label>
-                  <input
-                    type="date"
-                    name="date"
-                    value={formData.date}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">
-                    Data de Vencimento
-                  </label>
-                  <input
-                    type="date"
-                    name="dueDate"
-                    value={formData.dueDate}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-text-secondary mb-1">
-                    Status
-                  </label>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
-                  >
-                    <option value="pending">Pendente</option>
-                    <option value="paid">Pago</option>
-                    <option value="overdue">Vencido</option>
-                    <option value="cancelled">Cancelado</option>
-                  </select>
                 </div>
               </div>
+
+              {/* Seção: Datas e Status */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+                  <CalendarDays size={16} className="text-primary-500" />
+                  <span>Datas e Status</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                      Data de Emissão
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="date"
+                        name="date"
+                        value={formData.date}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                      Data de Vencimento
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="date"
+                        name="dueDate"
+                        value={formData.dueDate}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                      <span className="flex items-center gap-1.5">
+                        <Wallet size={14} />
+                        Status
+                      </span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        name="status"
+                        value={formData.status}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all appearance-none cursor-pointer"
+                      >
+                        <option value="pending">Pendente</option>
+                        <option value="paid">Pago</option>
+                        <option value="overdue">Vencido</option>
+                        <option value="cancelled">Cancelado</option>
+                      </select>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <svg
+                          className="w-4 h-4 text-text-muted"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Actions */}
               <div className="flex justify-end gap-3 pt-4 border-t border-border shrink-0">
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="px-4 py-2 text-text-secondary hover:bg-surface-muted rounded-md transition-colors"
+                  className="px-5 py-2.5 text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors"
+                  className="px-5 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium shadow-sm hover:shadow-md"
                 >
-                  {editingId ? "Salvar Alterações" : "Criar NF"}
+                  {editingId ? "Salvar Alterações" : "Criar Nota Fiscal"}
                 </button>
               </div>
             </form>

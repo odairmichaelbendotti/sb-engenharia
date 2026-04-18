@@ -1,4 +1,12 @@
-import { Loader, X } from "lucide-react";
+import {
+  Loader,
+  X,
+  Receipt,
+  Hash,
+  Building2,
+  AlignLeft,
+  CalendarDays,
+} from "lucide-react";
 import { useCompanies } from "../../store/companies";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -156,134 +164,201 @@ export function EmpenhoModal({
 
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]">
-        <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
-          <h2 className="text-lg font-semibold text-text-primary">
-            {empenho ? "Editar Empenho" : "Novo Empenho"}
-          </h2>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-surface rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl border border-border">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-primary-50/50 to-transparent shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
+              <Receipt size={20} className="text-primary-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-text-primary">
+                {empenho ? "Editar Empenho" : "Novo Empenho"}
+              </h2>
+              <p className="text-sm text-text-secondary">
+                {empenho
+                  ? "Atualize os dados do empenho"
+                  : "Preencha os dados para criar um novo empenho"}
+              </p>
+            </div>
+          </div>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-surface-muted rounded-md transition-colors"
+            className="p-2 hover:bg-surface-muted rounded-lg transition-colors"
           >
-            <X size={20} />
+            <X size={20} className="text-text-secondary" />
           </button>
         </div>
-        <form className="p-4 overflow-y-auto" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1">
-                Número do Empenho *
-              </label>
-              <input
-                type="text"
-                name="numero"
-                value={formState.numero}
-                onChange={handleChange}
-                placeholder="NE2028003"
-                className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
-              />
+
+        <form className="p-6 overflow-y-auto space-y-6" onSubmit={handleSubmit}>
+          {/* Seção: Identificação */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+              <Hash size={16} className="text-primary-500" />
+              <span>Identificação</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  Número do Empenho <span className="text-danger-text">*</span>
+                </label>
+                <div className="relative">
+                  <Hash
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+                  />
+                  <input
+                    type="text"
+                    name="numero"
+                    value={formState.numero}
+                    onChange={handleChange}
+                    placeholder="NE2028003"
+                    className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  Valor <span className="text-danger-text">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-medium">
+                    R$
+                  </span>
+                  <input
+                    type="text"
+                    name="value"
+                    value={formState.value}
+                    onChange={handleChange}
+                    placeholder="0,00"
+                    step="0.01"
+                    className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Seção: Empresa */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+              <Building2 size={16} className="text-primary-500" />
+              <span>Empresa</span>
+              <div className="flex-1 h-px bg-border" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1">
-                Valor *
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                Empresa <span className="text-danger-text">*</span>
               </label>
-              <input
-                type="text"
-                name="value"
-                value={formState.value}
-                onChange={handleChange}
-                placeholder="0.00"
-                step="0.01"
-                className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
-              />
+              <div className="relative">
+                <Building2
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+                />
+                <select
+                  name="company_id"
+                  value={formState.company_id}
+                  onChange={handleChange}
+                  className="w-full pl-10 pr-10 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all appearance-none cursor-pointer"
+                >
+                  <option value="">Selecione uma empresa</option>
+                  {companies.map((empresa) => (
+                    <option key={empresa.id} value={empresa.id}>
+                      {empresa.name} - {empresa.cnpj}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg
+                    className="w-4 h-4 text-text-muted"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </div>
+              </div>
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-text-secondary mb-1">
-                Empresa *
-              </label>
-              <select
-                name="company_id"
-                value={formState.company_id}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
-              >
-                <option value="">Selecione uma empresa</option>
-                {companies.map((empresa) => (
-                  <option key={empresa.id} value={empresa.id}>
-                    {empresa.name} - {empresa.cnpj}
-                  </option>
-                ))}
-              </select>
+          </div>
+
+          {/* Seção: Descrição */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+              <AlignLeft size={16} className="text-primary-500" />
+              <span>Descrição</span>
+              <div className="flex-1 h-px bg-border" />
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-text-secondary mb-1">
-                Descrição
-              </label>
+            <div>
               <textarea
                 name="description"
                 value={formState.description}
                 onChange={handleChange}
-                placeholder="Descrição do empenho e serviços contratados"
+                placeholder="Descreva o objeto do empenho e os serviços contratados..."
                 rows={3}
-                className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 resize-none"
+                className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all resize-none"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1">
-                Data do Empenho
-              </label>
-              <input
-                type="date"
-                name="startAt"
-                value={formState.startAt}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1">
-                Data Limite
-              </label>
-              <input
-                type="date"
-                name="endAt"
-                value={formState.endAt}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
-              />
-            </div>
-            {/* <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-text-secondary mb-1">
-                Status
-              </label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
-              >
-                <option value="ativo">Ativo</option>
-                <option value="concluido">Concluído</option>
-                <option value="cancelado">Cancelado</option>
-              </select>
-            </div> */}
           </div>
-          <div className="flex justify-end gap-3 pt-4 border-t mt-5 border-border shrink-0">
+
+          {/* Seção: Período */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+              <CalendarDays size={16} className="text-primary-500" />
+              <span>Período de Vigência</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  Data do Empenho
+                </label>
+                <input
+                  type="date"
+                  name="startAt"
+                  value={formState.startAt}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  Data Limite
+                </label>
+                <input
+                  type="date"
+                  name="endAt"
+                  value={formState.endAt}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Actions */}
+          <div className="flex justify-end gap-3 pt-4 border-t border-border shrink-0">
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 cursor-pointer py-2 text-text-secondary hover:bg-surface-muted rounded-md transition-colors"
+              className="px-5 py-2.5 text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="flex items-center justify-center w-40 py-2 cursor-pointer bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors"
+              className="flex items-center justify-center px-5 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
-                <Loader className="animate-spin" />
+                <Loader className="animate-spin" size={18} />
               ) : empenho ? (
                 "Salvar Alterações"
               ) : (

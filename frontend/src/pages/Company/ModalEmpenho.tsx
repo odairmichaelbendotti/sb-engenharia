@@ -7,6 +7,7 @@ import {
   XCircle,
   Clock,
   FileText,
+  Building2,
 } from "lucide-react";
 import { formatCurrency } from "../../utils/format-currency";
 import type { Empresa } from "../../../types/empresa";
@@ -105,30 +106,36 @@ const ModalEmpenho = ({
   return (
     <div
       onClick={handleBackdropClick}
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
     >
-      <div className="bg-surface rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
-          <div>
-            <h2 className="text-lg font-semibold text-text-primary">
-              Empenhos - {empresaSelecionada.name}
-            </h2>
-            <p className="text-sm text-text-secondary">
-              {empresaSelecionada.empenhos.length} empenho
-              {empresaSelecionada.empenhos.length !== 1 ? "s" : ""} vinculado
-              {empresaSelecionada.empenhos.length !== 1 ? "s" : ""}
-              {empenhosAtivos > 0 && (
-                <span className="ml-2 text-success-text font-medium">
-                  ({empenhosAtivos} ativo{empenhosAtivos !== 1 ? "s" : ""})
-                </span>
-              )}
-            </p>
+      <div className="bg-surface rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border border-border overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-primary-50/50 to-transparent shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
+              <Building2 size={20} className="text-primary-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-text-primary">
+                {empresaSelecionada.name}
+              </h2>
+              <p className="text-sm text-text-secondary">
+                {empresaSelecionada.empenhos.length} empenho
+                {empresaSelecionada.empenhos.length !== 1 ? "s" : ""} vinculado
+                {empresaSelecionada.empenhos.length !== 1 ? "s" : ""}
+                {empenhosAtivos > 0 && (
+                  <span className="ml-2 text-success-text font-medium">
+                    ({empenhosAtivos} ativo{empenhosAtivos !== 1 ? "s" : ""})
+                  </span>
+                )}
+              </p>
+            </div>
           </div>
           <button
             onClick={handleClose}
-            className="p-2 cursor-pointer hover:bg-surface-muted rounded-md transition-colors"
+            className="p-2 hover:bg-surface-muted rounded-lg transition-colors"
           >
-            <X size={20} />
+            <X size={20} className="text-text-secondary" />
           </button>
         </div>
         <div className="p-4 overflow-y-auto">
