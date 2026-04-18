@@ -125,7 +125,7 @@ const TableCompanies = ({
                 <td className="py-3 px-4">
                   <button
                     onClick={() => openEmpenhosModal(empresa)}
-                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                    className={`cursor-pointer inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
                       empresa.empenhos.length > 0
                         ? "bg-primary-100 text-primary-600 hover:bg-primary-200"
                         : "bg-surface-muted text-text-muted"

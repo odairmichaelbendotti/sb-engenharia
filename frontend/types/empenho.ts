@@ -1,7 +1,8 @@
 export interface Empenho {
   id: number;
   numero: string;
-  valor: number;
+  description: string;
+  value: number;
   startAt: string;
   endAt: string;
   status?: "ativo" | "concluido" | "cancelado";
