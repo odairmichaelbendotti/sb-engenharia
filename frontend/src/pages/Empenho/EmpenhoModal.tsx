@@ -107,24 +107,44 @@ export function EmpenhoModal({ isOpen, empenho, onClose }: EmpenhoModalProps) {
 
     try {
       setIsLoading(true);
-      const response = await defaultFetch("/empenho/create", {
-        method: "POST",
-        body: JSON.stringify(formState),
-        credentials: "include",
-      });
 
-      const data = await response.json();
+      if (empenho) {
+        const response = await defaultFetch(`/empenho/update/${empenho.id}`, {
+          method: "PUT",
+          body: JSON.stringify(formState),
+          credentials: "include",
+        });
 
-      if (!response.ok) {
-        toast.error(data.message || "Erro ao criar empenho");
-        throw new Error("Erro ao criar empenho");
+        const data = await response.json();
+
+        if (!response.ok) {
+          toast.error(data.message || "Erro ao atualizar empenho");
+          throw new Error("Erro ao atualizar empenho");
+        }
+
+        await fetchListEmpenhos();
+        toast.info(`Empenho ${data.numero} atualizado com sucesso!`);
+      } else {
+        const response = await defaultFetch("/empenho/create", {
+          method: "POST",
+          body: JSON.stringify(formState),
+          credentials: "include",
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          toast.error(data.message || "Erro ao criar empenho");
+          throw new Error("Erro ao criar empenho");
+        }
+
+        await fetchListEmpenhos();
+        toast.info(`Empenho ${data.numero} criado com sucesso!`);
       }
 
-      await fetchListEmpenhos();
-      toast.success(`Empenho ${data.numero} criado com sucesso!`);
       onClose();
     } catch (error) {
-      throw new Error("Erro ao criar empenho" + error);
+      throw new Error("Erro no Empenho Modal" + error);
     } finally {
       setIsLoading(false);
     }
