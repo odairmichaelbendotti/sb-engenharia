@@ -13,23 +13,27 @@ export class NotaFiscalUseCase {
     empenho_id,
     company_id,
   }: NotaFiscalType) {
-    const notaFiscalExist = await this.repository.findByNumber(numero);
+    try {
+      const notaFiscalExist = await this.repository.findByNumber(numero);
 
-    if (
-      notaFiscalExist &&
-      notaFiscalExist.company_id === company_id &&
-      notaFiscalExist.empenho_id === empenho_id
-    ) {
-      throw new DomainError("Nota fiscal already exists");
+      if (
+        notaFiscalExist &&
+        notaFiscalExist.company_id === company_id &&
+        notaFiscalExist.empenho_id === empenho_id
+      ) {
+        throw new DomainError("Nota fiscal already exists");
+      }
+
+      await this.repository.create({
+        numero,
+        description,
+        vencimento: new Date(vencimento),
+        value: value * 100,
+        empenho_id,
+        company_id,
+      });
+    } catch (error) {
+      throw new DomainError("Erro ao criar nota fiscal");
     }
-
-    await this.repository.create({
-      numero,
-      description,
-      vencimento,
-      value: value * 100,
-      empenho_id,
-      company_id,
-    });
   }
 }

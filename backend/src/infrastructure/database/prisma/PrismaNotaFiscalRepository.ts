@@ -11,8 +11,8 @@ export class PrismaNotaFiscalRepository implements INotaFiscalRepository {
         description: notaFiscal.description,
         vencimento: notaFiscal.vencimento,
         value: notaFiscal.value,
-        empenho_id: notaFiscal.empenho_id,
-        company_id: notaFiscal.company_id,
+        empenho: { connect: { id: notaFiscal.empenho_id } },
+        company: { connect: { id: notaFiscal.company_id } },
       },
     });
 
