@@ -17,17 +17,17 @@ const ITEMS_PER_PAGE = 10;
 
 type TableCompaniesProps = {
   empresas: Empresa[];
-  openEmpenhosModal: (empresa: Empresa) => void;
-  openModal: (empresa: Empresa) => void;
-  openDeleteModal: (empresa: Empresa) => void;
+  handleOpenEmpenhos: (empresa: Empresa) => void;
+  handleOpen: (empresa: Empresa) => void;
+  handleOpenDelete: (empresa: Empresa) => void;
   searchTerm: string;
 };
 
 const TableCompanies = ({
   empresas,
-  openEmpenhosModal,
-  openModal,
-  openDeleteModal,
+  handleOpenEmpenhos,
+  handleOpen,
+  handleOpenDelete,
   searchTerm,
 }: TableCompaniesProps) => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -124,7 +124,7 @@ const TableCompanies = ({
                 </td>
                 <td className="py-3 px-4">
                   <button
-                    onClick={() => openEmpenhosModal(empresa)}
+                    onClick={() => handleOpenEmpenhos(empresa)}
                     className={`cursor-pointer inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
                       empresa.empenhos.length > 0
                         ? "bg-primary-100 text-primary-600 hover:bg-primary-200"
@@ -140,14 +140,14 @@ const TableCompanies = ({
                   <td className="py-3 px-4">
                     <div className="flex items-center justify-end gap-1">
                       <button
-                        onClick={() => openModal(empresa)}
+                        onClick={() => handleOpen(empresa)}
                         className="p-2 cursor-pointer hover:bg-primary-100 text-text-secondary hover:text-primary-500 rounded-md transition-colors"
                         title="Editar"
                       >
                         <Edit2 size={16} />
                       </button>
                       <button
-                        onClick={() => openDeleteModal(empresa)}
+                        onClick={() => handleOpenDelete(empresa)}
                         className="p-2 cursor-pointer hover:bg-danger-bg text-text-secondary hover:text-danger-text rounded-md transition-colors"
                         title="Excluir"
                       >

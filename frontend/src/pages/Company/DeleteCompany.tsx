@@ -2,18 +2,22 @@ import { Loader, Trash2 } from "lucide-react";
 import type { Empresa } from "../../../types/empresa";
 
 type DeleteCompanyProps = {
+  isOpen: boolean;
+  handleClose: () => void;
   empresaParaDeletar: Empresa;
-  closeDeleteModal: () => void;
   handleDelete: (id: string) => void;
   isLoading: boolean;
 };
 
 const DeleteCompany = ({
+  isOpen,
+  handleClose,
   empresaParaDeletar,
-  closeDeleteModal,
   handleDelete,
   isLoading,
 }: DeleteCompanyProps) => {
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-surface rounded-xl w-full max-w-md max-h-[85vh] flex flex-col p-6 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]">
@@ -42,7 +46,7 @@ const DeleteCompany = ({
           )}
           <div className="flex justify-center gap-3 shrink-0 mt-6">
             <button
-              onClick={closeDeleteModal}
+              onClick={handleClose}
               className="w-full cursor-pointer py-2 text-text-secondary hover:bg-surface-muted rounded-md transition-colors"
             >
               Cancelar

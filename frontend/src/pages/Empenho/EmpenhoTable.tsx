@@ -6,9 +6,11 @@ import {
   CheckCircle2,
   XCircle,
   Check,
+  Play,
 } from "lucide-react";
 import type { EmpenhoList } from "../../../types/empenho";
 import type { User } from "../../../types/user";
+import { useEmpenhos } from "../../store/empenhos";
 
 interface EmpenhoTableProps {
   empenhos: EmpenhoList[];
@@ -68,6 +70,8 @@ export function EmpenhoTable({
   onDelete,
   user,
 }: EmpenhoTableProps) {
+  const { updateStatus } = useEmpenhos();
+
   if (empenhos.length === 0) {
     return (
       <div className="py-12 text-center">
@@ -198,11 +202,23 @@ export function EmpenhoTable({
                         <Trash2 size={16} />
                       </button>
                       <button
-                        onClick={() => onDelete(empenho)}
+                        onClick={() =>
+                          updateStatus({
+                            status:
+                              empenho.status === "ATIVO"
+                                ? "FINALIZADO"
+                                : "ATIVO",
+                            empenhoId: empenho.id,
+                          })
+                        }
                         className="p-2 hover:bg-emerald-100 cursor-pointer text-text-secondary hover:text-emerald-600 rounded-md transition-colors"
                         title="Concluir"
                       >
-                        <Check size={16} />
+                        {empenho.status === "ATIVO" ? (
+                          <Check size={16} />
+                        ) : (
+                          <Play size={16} />
+                        )}
                       </button>
                     </div>
                   </td>

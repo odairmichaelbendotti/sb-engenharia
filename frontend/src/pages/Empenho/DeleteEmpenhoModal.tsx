@@ -4,15 +4,17 @@ import { useEmpenhos } from "../../store/empenhos";
 import { toast } from "sonner";
 import { useState } from "react";
 
-interface EmpenhoDeleteModalProps {
+interface DeleteEmpenhoModalProps {
+  isOpen: boolean;
   empenho: EmpenhoList | null;
-  setEmpenhoToDelete: React.Dispatch<React.SetStateAction<EmpenhoList | null>>;
+  handleClose: () => void;
 }
 
-export function EmpenhoDeleteModal({
+export function DeleteEmpenhoModal({
+  isOpen,
   empenho,
-  setEmpenhoToDelete,
-}: EmpenhoDeleteModalProps) {
+  handleClose,
+}: DeleteEmpenhoModalProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleDeleteEmpenho(id: string) {
@@ -20,11 +22,10 @@ export function EmpenhoDeleteModal({
       setIsLoading(true);
       await deleteEmpenho(id);
       toast.success("Empenho excluído com sucesso");
-      setEmpenhoToDelete(null);
+      handleClose();
     } catch (error) {
       console.log(error);
       toast.error("Erro ao excluir empenho");
-      throw new Error("Erro ao excluir empenho");
     } finally {
       setIsLoading(false);
     }
@@ -32,7 +33,7 @@ export function EmpenhoDeleteModal({
 
   const { deleteEmpenho } = useEmpenhos();
 
-  if (!empenho) return null;
+  if (!isOpen || !empenho) return null;
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -42,17 +43,17 @@ export function EmpenhoDeleteModal({
             <Trash2 size={24} className="text-danger-text" />
           </div>
           <h3 className="text-lg font-semibold text-text-primary mb-2">
-            Confirmar Exclusão
+            Excluir Empenho
           </h3>
           <p className="text-text-secondary text-sm mb-2">
-            Tem certeza que deseja excluir o empenho
+            Tem certeza que deseja excluir este empenho?
           </p>
           <p className="font-medium text-text-primary mb-6">
             &quot;{empenho.numero}&quot; - {empenho.company.name}
           </p>
           <div className="flex justify-center gap-3 shrink-0">
             <button
-              onClick={() => setEmpenhoToDelete(null)}
+              onClick={() => handleClose()}
               className="cursor-pointer w-full px-4 py-2 text-text-secondary hover:bg-surface-muted rounded-md transition-colors"
             >
               Cancelar

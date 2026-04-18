@@ -7,15 +7,16 @@ import {
   EmpenhoStats,
   EmpenhoTable,
   EmpenhoModal,
-  EmpenhoDeleteModal,
+  DeleteEmpenhoModal,
 } from "./Empenho";
 import { useUser } from "../store/user";
 
 export default function Empenhos() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [editingEmpenho, setEditingEmpenho] = useState<EmpenhoList | null>(
     null,
   );
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [empenhoToDelete, setEmpenhoToDelete] = useState<EmpenhoList | null>(
     null,
   );
@@ -57,21 +58,29 @@ export default function Empenhos() {
     }).format(value);
   };
 
-  const openModal = (empenho?: EmpenhoList) => {
+  const handleOpen = (empenho?: EmpenhoList) => {
     setEditingEmpenho(empenho || null);
-    setIsModalOpen(true);
+    setIsOpen(true);
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
+  const handleClose = () => {
+    setIsOpen(false);
     setEditingEmpenho(null);
   };
 
-  const openDeleteModal = (empenho: EmpenhoList) => setEmpenhoToDelete(empenho);
+  const handleOpenDelete = (empenho: EmpenhoList) => {
+    setEmpenhoToDelete(empenho);
+    setIsDeleteOpen(true);
+  };
+
+  const handleCloseDelete = () => {
+    setIsDeleteOpen(false);
+    setEmpenhoToDelete(null);
+  };
 
   const handleSave = () => {
     console.log("Salvar empenho:", editingEmpenho?.id);
-    closeModal();
+    handleClose();
   };
 
   return (
@@ -103,7 +112,7 @@ export default function Empenhos() {
         </div>
         {(user?.role === "MASTER" || user?.role === "EDITOR") && (
           <button
-            onClick={() => openModal()}
+            onClick={() => handleOpen()}
             className="flex cursor-pointer items-center justify-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium"
           >
             <Plus size={18} />
@@ -119,25 +128,26 @@ export default function Empenhos() {
         <EmpenhoTable
           empenhos={empenhos}
           formatCurrency={formatCurrency}
-          onEdit={openModal}
-          onDelete={openDeleteModal}
+          onEdit={handleOpen}
+          onDelete={handleOpenDelete}
           user={user}
         />
       </div>
 
-      {isModalOpen && (
+      {isOpen && (
         <EmpenhoModal
-          isOpen={isModalOpen}
+          isOpen={isOpen}
           empenho={editingEmpenho}
-          onClose={closeModal}
-          onSubmit={handleSave}
+          handleClose={handleClose}
+          handleSubmit={handleSave}
         />
       )}
 
-      {empenhoToDelete && (
-        <EmpenhoDeleteModal
+      {isDeleteOpen && empenhoToDelete && (
+        <DeleteEmpenhoModal
+          isOpen={isDeleteOpen}
           empenho={empenhoToDelete}
-          setEmpenhoToDelete={setEmpenhoToDelete}
+          handleClose={handleCloseDelete}
         />
       )}
     </div>

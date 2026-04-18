@@ -7,14 +7,16 @@ import { useCompanies } from "../../store/companies";
 import type { CreateCompanyType } from "../../../types/create-company";
 
 type RegisterOrEditCompanyProps = {
-  closeModal: () => void;
+  isOpen: boolean;
+  handleClose: () => void;
   empresaSelecionada: Empresa | null;
   formData: CreateCompanyType;
   setFormData: React.Dispatch<React.SetStateAction<CreateCompanyType>>;
 };
 
 const RegisterOrEditCompany = ({
-  closeModal,
+  isOpen,
+  handleClose,
   empresaSelecionada,
   formData,
   setFormData,
@@ -71,8 +73,10 @@ const RegisterOrEditCompany = ({
       setIsLoading(false);
     }
 
-    closeModal();
+    handleClose();
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -82,7 +86,7 @@ const RegisterOrEditCompany = ({
             {empresaSelecionada ? "Editar Empresa" : "Nova Empresa"}
           </h2>
           <button
-            onClick={closeModal}
+            onClick={handleClose}
             className="p-2 hover:bg-surface-muted rounded-md transition-colors"
           >
             <X size={20} />
@@ -221,7 +225,7 @@ const RegisterOrEditCompany = ({
           <div className="flex justify-end gap-3 pt-4 border-t border-border shrink-0">
             <button
               type="button"
-              onClick={closeModal}
+              onClick={handleClose}
               className="px-4 py-2 text-text-secondary hover:bg-surface-muted rounded-md transition-colors"
             >
               Cancelar

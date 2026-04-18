@@ -95,8 +95,8 @@ export default function NotasFiscais() {
     },
   ]);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -157,7 +157,7 @@ export default function NotasFiscais() {
     }).format(value);
   };
 
-  const openModal = (invoice?: Invoice) => {
+  const handleOpen = (invoice?: Invoice) => {
     if (invoice) {
       setEditingId(invoice.id);
       setFormData({
@@ -181,21 +181,21 @@ export default function NotasFiscais() {
         description: "",
       });
     }
-    setIsModalOpen(true);
+    setIsOpen(true);
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
+  const handleClose = () => {
+    setIsOpen(false);
     setEditingId(null);
   };
 
-  const openDeleteModal = (invoice: Invoice) => {
+  const handleOpenDelete = (invoice: Invoice) => {
     setInvoiceToDelete(invoice);
-    setIsDeleteModalOpen(true);
+    setIsDeleteOpen(true);
   };
 
-  const closeDeleteModal = () => {
-    setIsDeleteModalOpen(false);
+  const handleCloseDelete = () => {
+    setIsDeleteOpen(false);
     setInvoiceToDelete(null);
   };
 
@@ -232,14 +232,14 @@ export default function NotasFiscais() {
         },
       ]);
     }
-    closeModal();
+    handleClose();
     setCurrentPage(1);
   };
 
   const handleDelete = () => {
     if (invoiceToDelete) {
       setInvoices(invoices.filter((inv) => inv.id !== invoiceToDelete.id));
-      closeDeleteModal();
+      handleCloseDelete();
     }
   };
 
@@ -298,7 +298,7 @@ export default function NotasFiscais() {
           </p>
         </div>
         <button
-          onClick={() => openModal()}
+          onClick={() => handleOpen()}
           className="flex items-center justify-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium"
         >
           <Plus size={18} />
@@ -452,14 +452,14 @@ export default function NotasFiscais() {
                     <td className="py-3 px-4">
                       <div className="flex items-center justify-end gap-1">
                         <button
-                          onClick={() => openModal(invoice)}
+                          onClick={() => handleOpen(invoice)}
                           className="p-2 hover:bg-primary-100 text-text-secondary hover:text-primary-500 rounded-md transition-colors"
                           title="Editar"
                         >
                           <Edit2 size={16} />
                         </button>
                         <button
-                          onClick={() => openDeleteModal(invoice)}
+                          onClick={() => handleOpenDelete(invoice)}
                           className="p-2 hover:bg-danger-bg text-text-secondary hover:text-danger-text rounded-md transition-colors"
                           title="Excluir"
                         >
@@ -519,7 +519,7 @@ export default function NotasFiscais() {
       </div>
 
       {/* Modal - Cadastrar/Editar */}
-      {isModalOpen && (
+      {isOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-surface rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]">
             <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
@@ -527,7 +527,7 @@ export default function NotasFiscais() {
                 {editingId ? "Editar Nota Fiscal" : "Nova Nota Fiscal"}
               </h2>
               <button
-                onClick={closeModal}
+                onClick={handleClose}
                 className="p-2 hover:bg-surface-muted rounded-md transition-colors"
               >
                 <X size={20} />
@@ -641,7 +641,7 @@ export default function NotasFiscais() {
               <div className="flex justify-end gap-3 pt-4 border-t border-border shrink-0">
                 <button
                   type="button"
-                  onClick={closeModal}
+                  onClick={handleClose}
                   className="px-4 py-2 text-text-secondary hover:bg-surface-muted rounded-md transition-colors"
                 >
                   Cancelar
@@ -659,7 +659,7 @@ export default function NotasFiscais() {
       )}
 
       {/* Modal - Confirmar Exclusão */}
-      {isDeleteModalOpen && invoiceToDelete && (
+      {isDeleteOpen && invoiceToDelete && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-surface rounded-xl w-full max-w-md max-h-[85vh] flex flex-col p-6 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]">
             <div className="text-center overflow-y-auto">
@@ -677,7 +677,7 @@ export default function NotasFiscais() {
               </p>
               <div className="flex justify-center gap-3 shrink-0">
                 <button
-                  onClick={closeDeleteModal}
+                  onClick={handleCloseDelete}
                   className="px-4 py-2 text-text-secondary hover:bg-surface-muted rounded-md transition-colors"
                 >
                   Cancelar

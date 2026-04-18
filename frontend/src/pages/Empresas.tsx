@@ -26,9 +26,9 @@ export default function Empresas() {
     phone: "",
     email: "",
   });
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isEmpenhosModalOpen, setIsEmpenhosModalOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isEmpenhosOpen, setIsEmpenhosOpen] = useState(false);
   const [empresaSelecionada, setEmpresaSelecionada] = useState<Empresa | null>(
     null,
   );
@@ -50,7 +50,7 @@ export default function Empresas() {
     setEmpresas(companies);
   }, [companies]);
 
-  const openModal = (empresa?: Empresa) => {
+  const handleOpen = (empresa?: Empresa) => {
     if (empresa) {
       setEmpresaSelecionada(empresa);
       setFormData({
@@ -76,31 +76,31 @@ export default function Empresas() {
         email: "",
       });
     }
-    setIsModalOpen(true);
+    setIsOpen(true);
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
+  const handleClose = () => {
+    setIsOpen(false);
     setEmpresaSelecionada(null);
   };
 
-  const openDeleteModal = (empresa: Empresa) => {
+  const handleOpenDelete = (empresa: Empresa) => {
     setEmpresaParaDeletar(empresa);
-    setIsDeleteModalOpen(true);
+    setIsDeleteOpen(true);
   };
 
-  const closeDeleteModal = () => {
-    setIsDeleteModalOpen(false);
+  const handleCloseDelete = () => {
+    setIsDeleteOpen(false);
     setEmpresaParaDeletar(null);
   };
 
-  const openEmpenhosModal = (empresa: Empresa) => {
+  const handleOpenEmpenhos = (empresa: Empresa) => {
     setEmpresaSelecionada(empresa);
-    setIsEmpenhosModalOpen(true);
+    setIsEmpenhosOpen(true);
   };
 
-  const closeEmpenhosModal = () => {
-    setIsEmpenhosModalOpen(false);
+  const handleCloseEmpenhos = () => {
+    setIsEmpenhosOpen(false);
     setEmpresaSelecionada(null);
   };
 
@@ -115,7 +115,7 @@ export default function Empresas() {
     } finally {
       setIsLoading(false);
     }
-    closeDeleteModal();
+    handleCloseDelete();
   };
 
   return (
@@ -136,7 +136,7 @@ export default function Empresas() {
         </div>
         {(user?.role === "EDITOR" || user?.role === "MASTER") && (
           <button
-            onClick={() => openModal()}
+            onClick={() => handleOpen()}
             className="flex items-center cursor-pointer text-white justify-center gap-2 px-4 py-2 bg-primary-500 rounded-md hover:bg-primary-600 transition-colors text-sm font-medium"
           >
             <Plus size={18} />
@@ -183,16 +183,17 @@ export default function Empresas() {
       {/* Table */}
       <TableCompanies
         empresas={empresas}
-        openEmpenhosModal={openEmpenhosModal}
-        openModal={openModal}
-        openDeleteModal={openDeleteModal}
+        handleOpenEmpenhos={handleOpenEmpenhos}
+        handleOpen={handleOpen}
+        handleOpenDelete={handleOpenDelete}
         searchTerm={searchTerm}
       />
 
       {/* Modal - Cadastrar/Editar */}
-      {isModalOpen && (
+      {isOpen && (
         <RegisterOrEditCompany
-          closeModal={closeModal}
+          isOpen={isOpen}
+          handleClose={handleClose}
           empresaSelecionada={empresaSelecionada}
           formData={formData}
           setFormData={setFormData}
@@ -200,18 +201,20 @@ export default function Empresas() {
       )}
 
       {/* Modal - Empenhos */}
-      {isEmpenhosModalOpen && empresaSelecionada && (
+      {isEmpenhosOpen && empresaSelecionada && (
         <ModalEmpenho
+          isOpen={isEmpenhosOpen}
+          handleClose={handleCloseEmpenhos}
           empresaSelecionada={empresaSelecionada}
-          closeEmpenhosModal={closeEmpenhosModal}
         />
       )}
 
       {/* Modal - Confirmar Exclusão */}
-      {isDeleteModalOpen && empresaParaDeletar && (
+      {isDeleteOpen && empresaParaDeletar && (
         <DeleteCompany
+          isOpen={isDeleteOpen}
+          handleClose={handleCloseDelete}
           empresaParaDeletar={empresaParaDeletar}
-          closeDeleteModal={closeDeleteModal}
           handleDelete={handleDelete}
           isLoading={isLoading}
         />

@@ -12,13 +12,15 @@ import { formatCurrency } from "../../utils/format-currency";
 import type { Empresa } from "../../../types/empresa";
 
 type ModelEmpenhoProps = {
+  isOpen: boolean;
+  handleClose: () => void;
   empresaSelecionada: Empresa;
-  closeEmpenhosModal: () => void;
 };
 
 const ModalEmpenho = ({
+  isOpen,
+  handleClose,
   empresaSelecionada,
-  closeEmpenhosModal,
 }: ModelEmpenhoProps) => {
   const formatDate = (dateString: string | Date) => {
     return new Date(dateString).toLocaleDateString("pt-BR");
@@ -39,7 +41,7 @@ const ModalEmpenho = ({
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeEmpenhosModal();
+      if (e.key === "Escape") handleClose();
     };
     document.addEventListener("keydown", handleEscape);
     document.body.style.overflow = "hidden";
@@ -48,7 +50,7 @@ const ModalEmpenho = ({
       document.removeEventListener("keydown", handleEscape);
       document.body.style.overflow = "";
     };
-  }, [closeEmpenhosModal]);
+  }, [handleClose]);
 
   const getStatusConfig = (status: string) => {
     const configs: Record<
@@ -95,8 +97,10 @@ const ModalEmpenho = ({
   };
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) closeEmpenhosModal();
+    if (e.target === e.currentTarget) handleClose();
   };
+
+  if (!isOpen) return null;
 
   return (
     <div
@@ -121,7 +125,7 @@ const ModalEmpenho = ({
             </p>
           </div>
           <button
-            onClick={closeEmpenhosModal}
+            onClick={handleClose}
             className="p-2 cursor-pointer hover:bg-surface-muted rounded-md transition-colors"
           >
             <X size={20} />
@@ -201,7 +205,7 @@ const ModalEmpenho = ({
         </div>
         <div className="flex justify-end p-4 border-t border-border shrink-0">
           <button
-            onClick={closeEmpenhosModal}
+            onClick={handleClose}
             className="cursor-pointer px-4 py-2 text-text-secondary hover:bg-surface-muted rounded-md transition-colors"
           >
             Fechar

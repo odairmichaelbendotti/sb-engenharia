@@ -9,8 +9,8 @@ import type { EmpenhoList } from "../../../types/empenho";
 interface EmpenhoModalProps {
   isOpen: boolean;
   empenho: EmpenhoList | null;
-  onClose: () => void;
-  onSubmit: () => void;
+  handleClose: () => void;
+  handleSubmit: () => void;
 }
 
 interface FormState {
@@ -22,7 +22,11 @@ interface FormState {
   company_id: string;
 }
 
-export function EmpenhoModal({ isOpen, empenho, onClose }: EmpenhoModalProps) {
+export function EmpenhoModal({
+  isOpen,
+  empenho,
+  handleClose,
+}: EmpenhoModalProps) {
   const { companies, listCompanies } = useCompanies();
   const [isLoading, setIsLoading] = useState(false);
   const [formState, setFormState] = useState<FormState>({
@@ -142,7 +146,7 @@ export function EmpenhoModal({ isOpen, empenho, onClose }: EmpenhoModalProps) {
         toast.info(`Empenho ${data.numero} criado com sucesso!`);
       }
 
-      onClose();
+      handleClose();
     } catch (error) {
       throw new Error("Erro no Empenho Modal" + error);
     } finally {
@@ -159,7 +163,7 @@ export function EmpenhoModal({ isOpen, empenho, onClose }: EmpenhoModalProps) {
             {empenho ? "Editar Empenho" : "Novo Empenho"}
           </h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-2 hover:bg-surface-muted rounded-md transition-colors"
           >
             <X size={20} />
@@ -268,7 +272,7 @@ export function EmpenhoModal({ isOpen, empenho, onClose }: EmpenhoModalProps) {
           <div className="flex justify-end gap-3 pt-4 border-t mt-5 border-border shrink-0">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="px-4 cursor-pointer py-2 text-text-secondary hover:bg-surface-muted rounded-md transition-colors"
             >
               Cancelar

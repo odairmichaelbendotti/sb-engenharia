@@ -6,6 +6,12 @@ type EmpenhosState = {
   data: ListEmpenhos | null;
   fetchListEmpenhos: () => Promise<void>;
   deleteEmpenho: (id: string) => Promise<void>;
+  updateStatus: (data: UpdateEmpenhoStatus) => Promise<void>;
+};
+
+type UpdateEmpenhoStatus = {
+  status: "ATIVO" | "FINALIZADO" | "CANCELADO";
+  empenhoId: string;
 };
 
 export const useEmpenhos = create<EmpenhosState>((set) => ({
@@ -59,6 +65,39 @@ export const useEmpenhos = create<EmpenhosState>((set) => ({
     } catch (error) {
       console.log(error);
       throw new Error("Erro ao deletar empenho");
+    }
+  },
+  updateStatus: async ({ empenhoId, status }: UpdateEmpenhoStatus) => {
+    try {
+      const response = await defaultFetch(
+        `/empenho/update-status/${empenhoId}`,
+        {
+          method: "PUT",
+          credentials: "include",
+          body: JSON.stringify({ status }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Erro ao atualizar status do empenho");
+      }
+
+      await response.json();
+
+      set((state) => {
+        if (!state.data) return state;
+        return {
+          data: {
+            ...state.data,
+            empenhos: state.data.empenhos.map((empenho) =>
+              empenho.id === empenhoId ? { ...empenho, status } : empenho,
+            ),
+          },
+        };
+      });
+    } catch (error) {
+      console.error(error);
+      throw new Error("Erro ao atualizar status do empenho");
     }
   },
 }));
