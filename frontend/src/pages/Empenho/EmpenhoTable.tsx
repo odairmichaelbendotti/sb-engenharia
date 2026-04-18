@@ -5,6 +5,7 @@ import {
   Trash2,
   CheckCircle2,
   XCircle,
+  Check,
 } from "lucide-react";
 import type { EmpenhoList } from "../../../types/empenho";
 import type { User } from "../../../types/user";
@@ -195,6 +196,13 @@ export function EmpenhoTable({
                         title="Excluir"
                       >
                         <Trash2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => onDelete(empenho)}
+                        className="p-2 hover:bg-emerald-100 cursor-pointer text-text-secondary hover:text-emerald-600 rounded-md transition-colors"
+                        title="Concluir"
+                      >
+                        <Check size={16} />
                       </button>
                     </div>
                   </td>
