@@ -1,10 +1,13 @@
 import type { Request, Response } from "express";
-import type { NotaFiscalUseCase } from "../../application/usecases/NotaFiscalUseCase";
-import { formatDate } from "../../utils/formatDateToInsertDb";
+import type { NotaFiscalUseCase } from "../../application/usecases/notaFiscal/CreateInvoiceUseCase";
 import { DomainError } from "../../domain/errors/DomainError";
+import type { ListInvoicesUseCase } from "../../application/usecases/notaFiscal/ListInvoicesUseCase";
 
 export class NotaFiscalController {
-  constructor(private createNotaFiscal: NotaFiscalUseCase) {}
+  constructor(
+    private createNotaFiscal: NotaFiscalUseCase,
+    private listInvoices: ListInvoicesUseCase,
+  ) {}
   async create(req: Request, res: Response) {
     const { numero, description, vencimento, value, empenho_id, company_id } =
       req.body;
@@ -26,5 +29,9 @@ export class NotaFiscalController {
       }
       return res.status(500).json({ message: "Internal server error" });
     }
+  }
+  async list(req: Request, res: Response) {
+    const data = await this.listInvoices.execute();
+    res.status(200).json(data);
   }
 }
