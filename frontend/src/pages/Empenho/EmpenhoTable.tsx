@@ -7,6 +7,8 @@ import {
   XCircle,
   Check,
   Play,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import type { EmpenhoList } from "../../../types/empenho";
 import type { User } from "../../../types/user";
@@ -91,23 +93,38 @@ export function EmpenhoTable({
       <table className="w-full">
         <thead className="bg-surface-muted border-b border-border">
           <tr>
-            <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
-              Empenho
+            <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors">
+              <div className="flex items-center gap-1">
+                Empenho
+                <ArrowUp size={12} className="text-text-muted" />
+              </div>
             </th>
-            <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
-              Empresa
+            <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors">
+              <div className="flex items-center gap-1">
+                Empresa
+                <ArrowUp size={12} className="text-text-muted" />
+              </div>
             </th>
             <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden lg:table-cell">
               Descrição
             </th>
-            <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
-              Prazo
+            <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell cursor-pointer hover:text-text-primary transition-colors">
+              <div className="flex items-center gap-1">
+                Prazo
+                <ArrowUp size={12} className="text-text-muted" />
+              </div>
             </th>
-            <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
-              Valor
+            <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors">
+              <div className="flex items-center justify-center gap-1">
+                Valor
+                <ArrowDown size={12} className="text-text-muted" />
+              </div>
             </th>
-            <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
-              Status
+            <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors">
+              <div className="flex items-center justify-center gap-1">
+                Status
+                <ArrowUp size={12} className="text-text-muted" />
+              </div>
             </th>
             {(user?.role === "MASTER" || user?.role === "EDITOR") && (
               <th className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase">

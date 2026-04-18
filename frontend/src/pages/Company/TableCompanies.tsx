@@ -9,6 +9,8 @@ import {
   MapPin,
   Phone,
   Trash2,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import type { Empresa } from "../../../types/empresa";
 import { useUser } from "../../store/user";
@@ -56,8 +58,11 @@ const TableCompanies = ({
         <table className="w-full">
           <thead className="bg-surface-muted border-b border-border">
             <tr>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
-                Empresa
+              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors">
+                <div className="flex items-center gap-1">
+                  Empresa
+                  <ArrowUp size={12} className="text-text-muted" />
+                </div>
               </th>
               <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
                 CNPJ
@@ -68,8 +73,11 @@ const TableCompanies = ({
               <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden sm:table-cell">
                 Contato
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
-                Empenhos
+              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors">
+                <div className="flex items-center gap-1">
+                  Empenhos
+                  <ArrowDown size={12} className="text-text-muted" />
+                </div>
               </th>
               {(user?.role === "EDITOR" || user?.role === "MASTER") && (
                 <th className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
