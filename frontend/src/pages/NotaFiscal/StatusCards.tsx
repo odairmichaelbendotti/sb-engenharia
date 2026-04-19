@@ -1,10 +1,9 @@
-import { useMemo } from "react";
 import { FileText, DollarSign, CheckCircle2, Clock } from "lucide-react";
 import { StatCard } from "../../components/StatCard";
-import type { NotaFiscal } from "../../../types/notaFiscal";
+import type { InvoiceDashboard } from "./types";
 
 interface StatusCardsProps {
-  invoices: NotaFiscal[];
+  dashboard: InvoiceDashboard | null;
 }
 
 function formatCurrency(value: number) {
@@ -14,29 +13,24 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
-export function StatusCards({ invoices }: StatusCardsProps) {
-  const metrics = useMemo(() => {
-    const paid = invoices.filter((inv) => inv.status === "paid");
-    const pending = invoices.filter((inv) => inv.status === "pending");
-    const overdue = invoices.filter((inv) => inv.status === "overdue");
-
-    return {
-      total: invoices.length,
-      totalValue: invoices.reduce((sum, inv) => sum + inv.value, 0),
-      paidCount: paid.length,
-      paidValue: paid.reduce((sum, inv) => sum + inv.value, 0),
-      pendingCount: pending.length,
-      pendingValue: pending.reduce((sum, inv) => sum + inv.value, 0),
-      overdueCount: overdue.length,
-      overdueValue: overdue.reduce((sum, inv) => sum + inv.value, 0),
-    };
-  }, [invoices]);
+export function StatusCards({ dashboard }: StatusCardsProps) {
+  const metrics = dashboard || {
+    totalCount: 0,
+    totalValue: 0,
+    paidInvoices: 0,
+    paidValue: 0,
+    expiredCount: 0,
+    expiredValue: 0,
+    pendingInvoices: 0,
+    pendingValue: 0,
+    allInvoices: [],
+  };
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <StatCard
         title="Total de NFs"
-        value={metrics.total.toString()}
+        value={metrics.totalCount.toString()}
         subtitle="Emitidas"
         icon={<FileText size={24} className="text-primary-500" />}
         color="bg-primary-100"
@@ -50,15 +44,15 @@ export function StatusCards({ invoices }: StatusCardsProps) {
       />
       <StatCard
         title="Pagas"
-        value={metrics.paidCount.toString()}
+        value={metrics.paidInvoices.toString()}
         subtitle={formatCurrency(metrics.paidValue)}
         icon={<CheckCircle2 size={24} className="text-success-text" />}
         color="bg-success-bg"
       />
       <StatCard
         title="Pendentes/Vencidas"
-        value={(metrics.pendingCount + metrics.overdueCount).toString()}
-        subtitle={formatCurrency(metrics.pendingValue + metrics.overdueValue)}
+        value={(metrics.pendingInvoices + metrics.expiredCount).toString()}
+        subtitle={formatCurrency(metrics.pendingValue + metrics.expiredValue)}
         icon={<Clock size={24} className="text-warning-text" />}
         color="bg-warning-bg"
       />

@@ -2,7 +2,7 @@ import { createBrowserRouter } from "react-router";
 import MobileDashboardLayout from "./components/Layouts/MobileDashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import Empresas from "./pages/Empresas";
-import NotasFiscais from "./pages/NotaFiscal";
+import NotasFiscais from "./pages/NotasFiscais";
 import Empenhos from "./pages/Empenhos";
 import Medicoes from "./pages/Medicoes";
 import Obras from "./pages/Obras";

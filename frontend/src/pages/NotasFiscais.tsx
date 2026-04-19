@@ -1,9 +1,7 @@
 import { useState, useMemo } from "react";
 import {
   Plus,
-  Edit2,
   Trash2,
-  X,
   ChevronLeft,
   ChevronRight,
   DollarSign,
@@ -14,139 +12,190 @@ import {
   Clock,
   AlertCircle,
   XCircle,
-  Hash,
-  Building2,
-  AlignLeft,
-  CalendarDays,
-  Receipt,
-  Link2,
-  Wallet,
 } from "lucide-react";
 import { StatCard } from "../components/StatCard";
 import Breadcrumb from "../components/Breadcrumb";
-
-interface Invoice {
-  id: number;
-  number: string;
-  client: string;
-  value: number;
-  date: string;
-  dueDate: string;
-  status: "paid" | "pending" | "overdue" | "cancelled";
-  description: string;
-}
-
-interface FormData {
-  number: string;
-  client: string;
-  value: string;
-  date: string;
-  dueDate: string;
-  status: "paid" | "pending" | "overdue" | "cancelled";
-  description: string;
-}
+import type { Invoice, InvoiceDashboard } from "../store/invoices";
+import { AddModal } from "./NotaFiscal/AddModal";
 
 const ITEMS_PER_PAGE = 10;
 
-export default function NotasFiscais() {
-  const [invoices, setInvoices] = useState<Invoice[]>([
+// Mock dashboard data aligned with InvoiceDashboard type
+const mockDashboard: InvoiceDashboard = {
+  totalCount: 5,
+  totalValue: 64550.5,
+  paidInvoices: 2,
+  paidValue: 27550.0,
+  expiredCount: 1,
+  expiredValue: 22500.0,
+  pendingInvoices: 2,
+  pendingValue: 14500.5,
+  allInvoices: [
     {
-      id: 1,
-      number: "NF-2024-001",
-      client: "Construtora Silva Ltda",
-      value: 15250.0,
-      date: "2024-01-15",
-      dueDate: "2024-02-15",
-      status: "paid",
+      id: "1",
+      numero: "NF-2024-001",
       description: "Serviços de consultoria",
-    },
-    {
-      id: 2,
-      number: "NF-2024-002",
-      client: "Engenharia Santos S.A.",
-      value: 8900.5,
-      date: "2024-01-18",
-      dueDate: "2024-02-18",
-      status: "pending",
-      description: "Desenvolvimento de software",
-    },
-    {
-      id: 3,
-      number: "NF-2024-003",
-      client: "Obras Rápidas ME",
-      value: 22500.0,
-      date: "2024-01-20",
-      dueDate: "2024-02-20",
-      status: "overdue",
-      description: "Fornecimento de produtos",
-    },
-    {
-      id: 4,
-      number: "NF-2024-004",
-      client: "Fundação Forte EPP",
-      value: 5600.0,
-      date: "2024-01-22",
-      dueDate: "2024-02-22",
-      status: "pending",
-      description: "Campanha publicitária",
-    },
-    {
-      id: 5,
-      number: "NF-2024-005",
-      client: "Estrutura Primavera",
-      value: 12300.0,
-      date: "2024-01-25",
-      dueDate: "2024-02-25",
+      vencimento: "2024-02-15",
+      value: 15250.0,
       status: "paid",
-      description: "Serviços de transporte",
+      createdAt: "2024-01-15",
+      updatedAt: "2024-01-15",
+      empenho_id: "EMP-2024-001",
+      company_id: "comp-001",
+      company: {
+        id: "comp-001",
+        name: "Construtora Silva Ltda",
+        cnpj: "12.345.678/0001-90",
+        cep: "01001-000",
+        city: "São Paulo",
+        state: "SP",
+        address: "Rua A, 123",
+        phone: "(11) 1234-5678",
+        email: "contato@silva.com",
+        hasActiveContract: true,
+        createdAt: "2023-01-01",
+        updatedAt: "2024-01-01",
+      },
     },
-  ]);
+    {
+      id: "2",
+      numero: "NF-2024-002",
+      description: "Desenvolvimento de software",
+      vencimento: "2024-02-18",
+      value: 8900.5,
+      status: "pending",
+      createdAt: "2024-01-18",
+      updatedAt: "2024-01-18",
+      empenho_id: "EMP-2024-002",
+      company_id: "comp-002",
+      company: {
+        id: "comp-002",
+        name: "Engenharia Santos S.A.",
+        cnpj: "23.456.789/0001-01",
+        cep: "02002-000",
+        city: "Rio de Janeiro",
+        state: "RJ",
+        address: "Av. B, 456",
+        phone: "(21) 9876-5432",
+        email: "contato@santos.com",
+        hasActiveContract: true,
+        createdAt: "2023-02-01",
+        updatedAt: "2024-01-01",
+      },
+    },
+    {
+      id: "3",
+      numero: "NF-2024-003",
+      description: "Fornecimento de produtos",
+      vencimento: "2024-02-20",
+      value: 22500.0,
+      status: "overdue",
+      createdAt: "2024-01-20",
+      updatedAt: "2024-01-20",
+      empenho_id: "EMP-2024-003",
+      company_id: "comp-003",
+      company: {
+        id: "comp-003",
+        name: "Obras Rápidas ME",
+        cnpj: "34.567.890/0001-12",
+        cep: "03003-000",
+        city: "Belo Horizonte",
+        state: "MG",
+        address: "Rua C, 789",
+        phone: "(31) 1111-2222",
+        email: "contato@obras.com",
+        hasActiveContract: true,
+        createdAt: "2023-03-01",
+        updatedAt: "2024-01-01",
+      },
+    },
+    {
+      id: "4",
+      numero: "NF-2024-004",
+      description: "Campanha publicitária",
+      vencimento: "2024-02-22",
+      value: 5600.0,
+      status: "pending",
+      createdAt: "2024-01-22",
+      updatedAt: "2024-01-22",
+      empenho_id: "EMP-2024-004",
+      company_id: "comp-004",
+      company: {
+        id: "comp-004",
+        name: "Fundação Forte EPP",
+        cnpj: "45.678.901/0001-23",
+        cep: "04004-000",
+        city: "Curitiba",
+        state: "PR",
+        address: "Av. D, 321",
+        phone: "(41) 3333-4444",
+        email: "contato@forte.com",
+        hasActiveContract: true,
+        createdAt: "2023-04-01",
+        updatedAt: "2024-01-01",
+      },
+    },
+    {
+      id: "5",
+      numero: "NF-2024-005",
+      description: "Serviços de transporte",
+      vencimento: "2024-02-25",
+      value: 12300.0,
+      status: "paid",
+      createdAt: "2024-01-25",
+      updatedAt: "2024-01-25",
+      empenho_id: "EMP-2024-005",
+      company_id: "comp-005",
+      company: {
+        id: "comp-005",
+        name: "Estrutura Primavera",
+        cnpj: "56.789.012/0001-34",
+        cep: "05005-000",
+        city: "Porto Alegre",
+        state: "RS",
+        address: "Rua E, 654",
+        phone: "(51) 5555-6666",
+        email: "contato@primavera.com",
+        hasActiveContract: true,
+        createdAt: "2023-05-01",
+        updatedAt: "2024-01-01",
+      },
+    },
+  ],
+};
+
+export default function NotasFiscais() {
+  const [dashboard, setDashboard] = useState<InvoiceDashboard>(mockDashboard);
 
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
   const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [formData, setFormData] = useState<FormData>({
-    number: "",
-    client: "",
-    value: "",
-    date: "",
-    dueDate: "",
-    status: "pending",
-    description: "",
-  });
 
-  // Métricas
+  // Métricas do InvoiceDashboard
   const metrics = useMemo(() => {
     return {
-      total: invoices.length,
-      totalValue: invoices.reduce((sum, inv) => sum + inv.value, 0),
-      paid: invoices.filter((inv) => inv.status === "paid").length,
-      paidValue: invoices
-        .filter((inv) => inv.status === "paid")
-        .reduce((sum, inv) => sum + inv.value, 0),
-      pending: invoices.filter((inv) => inv.status === "pending").length,
-      pendingValue: invoices
-        .filter((inv) => inv.status === "pending")
-        .reduce((sum, inv) => sum + inv.value, 0),
-      overdue: invoices.filter((inv) => inv.status === "overdue").length,
-      overdueValue: invoices
-        .filter((inv) => inv.status === "overdue")
-        .reduce((sum, inv) => sum + inv.value, 0),
+      total: dashboard.totalCount,
+      totalValue: dashboard.totalValue,
+      paid: dashboard.paidInvoices,
+      paidValue: dashboard.paidValue,
+      pending: dashboard.pendingInvoices,
+      pendingValue: dashboard.pendingValue,
+      overdue: dashboard.expiredCount,
+      overdueValue: dashboard.expiredValue,
     };
-  }, [invoices]);
+  }, [dashboard]);
 
   // Filtros
   const filteredInvoices = useMemo(() => {
-    return invoices.filter(
+    return dashboard.allInvoices.filter(
       (invoice) =>
-        invoice.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        invoice.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        invoice.numero.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        invoice.company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         invoice.description.toLowerCase().includes(searchTerm.toLowerCase()),
     );
-  }, [invoices, searchTerm]);
+  }, [dashboard.allInvoices, searchTerm]);
 
   // Paginação
   const totalPages = Math.ceil(filteredInvoices.length / ITEMS_PER_PAGE);
@@ -164,36 +213,30 @@ export default function NotasFiscais() {
     }).format(value);
   };
 
-  const handleOpen = (invoice?: Invoice) => {
-    if (invoice) {
-      setEditingId(invoice.id);
-      setFormData({
-        number: invoice.number,
-        client: invoice.client,
-        value: invoice.value.toString(),
-        date: invoice.date,
-        dueDate: invoice.dueDate,
-        status: invoice.status,
-        description: invoice.description,
-      });
-    } else {
-      setEditingId(null);
-      setFormData({
-        number: "",
-        client: "",
-        value: "",
-        date: "",
-        dueDate: "",
-        status: "pending",
-        description: "",
-      });
-    }
+  const recalculateDashboard = (invoices: Invoice[]): InvoiceDashboard => {
+    const paid = invoices.filter((inv) => inv.status === "paid");
+    const pending = invoices.filter((inv) => inv.status === "pending");
+    const expired = invoices.filter((inv) => inv.status === "overdue");
+
+    return {
+      totalCount: invoices.length,
+      totalValue: invoices.reduce((sum, inv) => sum + inv.value, 0),
+      paidInvoices: paid.length,
+      paidValue: paid.reduce((sum, inv) => sum + inv.value, 0),
+      expiredCount: expired.length,
+      expiredValue: expired.reduce((sum, inv) => sum + inv.value, 0),
+      pendingInvoices: pending.length,
+      pendingValue: pending.reduce((sum, inv) => sum + inv.value, 0),
+      allInvoices: invoices,
+    };
+  };
+
+  const handleOpen = () => {
     setIsOpen(true);
   };
 
   const handleClose = () => {
     setIsOpen(false);
-    setEditingId(null);
   };
 
   const handleOpenDelete = (invoice: Invoice) => {
@@ -206,46 +249,12 @@ export default function NotasFiscais() {
     setInvoiceToDelete(null);
   };
 
-  const handleInputChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >,
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSave = () => {
-    if (!formData.number || !formData.client || !formData.value) return;
-
-    if (editingId) {
-      setInvoices(
-        invoices.map((inv) =>
-          inv.id === editingId
-            ? { ...inv, ...formData, value: parseFloat(formData.value) }
-            : inv,
-        ),
-      );
-    } else {
-      setInvoices([
-        ...invoices,
-        {
-          id: Math.max(...invoices.map((i) => i.id), 0) + 1,
-          ...formData,
-          value: parseFloat(formData.value),
-        },
-      ]);
-    }
-    handleClose();
-    setCurrentPage(1);
-  };
-
   const handleDelete = () => {
     if (invoiceToDelete) {
-      setInvoices(invoices.filter((inv) => inv.id !== invoiceToDelete.id));
+      const filteredInvoices = dashboard.allInvoices.filter(
+        (inv) => inv.id !== invoiceToDelete.id,
+      );
+      setDashboard(recalculateDashboard(filteredInvoices));
       handleCloseDelete();
     }
   };
@@ -254,8 +263,17 @@ export default function NotasFiscais() {
     return new Date(date).toLocaleDateString("pt-BR");
   };
 
-  const getStatusConfig = (status: Invoice["status"]) => {
-    const configs = {
+  const getStatusConfig = (status: string) => {
+    const configs: Record<
+      string,
+      {
+        bg: string;
+        text: string;
+        border: string;
+        icon: typeof CheckCircle2;
+        label: string;
+      }
+    > = {
       paid: {
         bg: "bg-success-bg",
         text: "text-success-text",
@@ -285,7 +303,7 @@ export default function NotasFiscais() {
         label: "Cancelado",
       },
     };
-    return configs[status];
+    return configs[status] || configs.pending;
   };
 
   return (
@@ -402,7 +420,7 @@ export default function NotasFiscais() {
                 const isOverdue =
                   invoice.status !== "paid" &&
                   invoice.status !== "cancelled" &&
-                  new Date(invoice.dueDate) < new Date();
+                  new Date(invoice.vencimento) < new Date();
                 return (
                   <tr
                     key={invoice.id}
@@ -415,16 +433,16 @@ export default function NotasFiscais() {
                         </div>
                         <div>
                           <p className="font-medium text-text-primary text-sm">
-                            {invoice.number}
+                            {invoice.numero}
                           </p>
                           <p className="text-xs text-text-secondary">
-                            {formatDate(invoice.date)}
+                            {formatDate(invoice.createdAt)}
                           </p>
                         </div>
                       </div>
                     </td>
                     <td className="py-3 px-4 text-sm text-text-primary">
-                      {invoice.client}
+                      {invoice.company?.name || "-"}
                     </td>
                     <td className="py-3 px-4 text-sm text-text-secondary hidden md:table-cell">
                       <p className="truncate max-w-50">{invoice.description}</p>
@@ -436,7 +454,7 @@ export default function NotasFiscais() {
                             isOverdue ? "text-danger-text font-medium" : ""
                           }
                         >
-                          {formatDate(invoice.dueDate)}
+                          {formatDate(invoice.vencimento)}
                         </span>
                         {isOverdue && (
                           <p className="text-xs text-danger-text">Vencida</p>
@@ -458,13 +476,14 @@ export default function NotasFiscais() {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => handleOpen(invoice)}
+                        {/* TODO: Implementar edição com EditModal */}
+                        {/* <button
+                          onClick={() => handleEdit(invoice)}
                           className="p-2 hover:bg-primary-100 text-text-secondary hover:text-primary-500 rounded-md transition-colors"
                           title="Editar"
                         >
                           <Edit2 size={16} />
-                        </button>
+                        </button> */}
                         <button
                           onClick={() => handleOpenDelete(invoice)}
                           className="p-2 hover:bg-danger-bg text-text-secondary hover:text-danger-text rounded-md transition-colors"
@@ -525,290 +544,18 @@ export default function NotasFiscais() {
         )}
       </div>
 
-      {/* Modal - Cadastrar/Editar */}
-      {isOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-surface rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl border border-border">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-border bg-linear-to-r from-primary-50/50 to-transparent shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
-                  <Receipt size={20} className="text-primary-600" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-text-primary">
-                    {editingId ? "Editar Nota Fiscal" : "Nova Nota Fiscal"}
-                  </h2>
-                  <p className="text-sm text-text-secondary">
-                    {editingId
-                      ? "Atualize os dados da NF"
-                      : "Preencha os dados para emitir uma nova NF"}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={handleClose}
-                className="p-2 hover:bg-surface-muted rounded-lg transition-colors"
-              >
-                <X size={20} className="text-text-secondary" />
-              </button>
-            </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSave();
-              }}
-              className="p-6 overflow-y-auto space-y-6"
-            >
-              {/* Seção: Identificação */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-                  <Hash size={16} className="text-primary-500" />
-                  <span>Identificação</span>
-                  <div className="flex-1 h-px bg-border" />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                      Número da NF <span className="text-danger-text">*</span>
-                    </label>
-                    <div className="relative">
-                      <Hash
-                        size={16}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-                      />
-                      <input
-                        type="text"
-                        name="number"
-                        required
-                        value={formData.number}
-                        onChange={handleInputChange}
-                        placeholder="NF-2024-001"
-                        className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                      Valor <span className="text-danger-text">*</span>
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-medium">
-                        R$
-                      </span>
-                      <input
-                        type="number"
-                        name="value"
-                        required
-                        value={formData.value}
-                        onChange={handleInputChange}
-                        placeholder="0,00"
-                        step="0.01"
-                        className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Seção: Cliente e Empenho */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-                  <Building2 size={16} className="text-primary-500" />
-                  <span>Cliente e Empenho</span>
-                  <div className="flex-1 h-px bg-border" />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                      Cliente <span className="text-danger-text">*</span>
-                    </label>
-                    <div className="relative">
-                      <Building2
-                        size={16}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-                      />
-                      <input
-                        type="text"
-                        name="client"
-                        required
-                        value={formData.client}
-                        onChange={handleInputChange}
-                        placeholder="Nome da empresa contratante"
-                        className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
-                      />
-                    </div>
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                      <span className="flex items-center gap-1.5">
-                        <Link2 size={14} />
-                        Relação de Empenhos
-                      </span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        name="empenho"
-                        className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all appearance-none cursor-pointer"
-                      >
-                        <option value="">Selecione um empenho...</option>
-                        <option value="EMP-2024-001">
-                          EMP-2024-001 - Construtora Silva Ltda - R$ 25.000,00
-                        </option>
-                        <option value="EMP-2024-002">
-                          EMP-2024-002 - Engenharia Santos S.A. - R$ 18.500,00
-                        </option>
-                        <option value="EMP-2024-003">
-                          EMP-2024-003 - Obras Rápidas ME - R$ 32.000,00
-                        </option>
-                        <option value="EMP-2024-004">
-                          EMP-2024-004 - Fundação Forte EPP - R$ 12.000,00
-                        </option>
-                        <option value="EMP-2024-005">
-                          EMP-2024-005 - Estrutura Primavera - R$ 45.000,00
-                        </option>
-                        <option value="EMP-2024-006">
-                          EMP-2024-006 - Construtora Horizonte - R$ 28.750,00
-                        </option>
-                      </select>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <svg
-                          className="w-4 h-4 text-text-muted"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </div>
-                    </div>
-                    <p className="text-xs text-text-muted mt-1.5">
-                      Selecione o empenho vinculado a esta nota fiscal
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Seção: Descrição */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-                  <AlignLeft size={16} className="text-primary-500" />
-                  <span>Descrição</span>
-                  <div className="flex-1 h-px bg-border" />
-                </div>
-                <div>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    placeholder="Descreva os serviços ou produtos referentes a esta nota fiscal..."
-                    rows={3}
-                    className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all resize-none"
-                  />
-                </div>
-              </div>
-
-              {/* Seção: Datas e Status */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-                  <CalendarDays size={16} className="text-primary-500" />
-                  <span>Datas e Status</span>
-                  <div className="flex-1 h-px bg-border" />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                      Data de Emissão
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="date"
-                        name="date"
-                        value={formData.date}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                      Data de Vencimento
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="date"
-                        name="dueDate"
-                        value={formData.dueDate}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                      <span className="flex items-center gap-1.5">
-                        <Wallet size={14} />
-                        Status
-                      </span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        name="status"
-                        value={formData.status}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all appearance-none cursor-pointer"
-                      >
-                        <option value="pending">Pendente</option>
-                        <option value="paid">Pago</option>
-                        <option value="overdue">Vencido</option>
-                        <option value="cancelled">Cancelado</option>
-                      </select>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <svg
-                          className="w-4 h-4 text-text-muted"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer Actions */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-border shrink-0">
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="px-5 py-2.5 text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium shadow-sm hover:shadow-md"
-                >
-                  {editingId ? "Salvar Alterações" : "Criar Nota Fiscal"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Modal - Cadastrar (AddModal com integração de empresas e empenhos) */}
+      <AddModal
+        isOpen={isOpen}
+        onClose={() => {
+          handleClose();
+          setCurrentPage(1);
+        }}
+        onSave={() => {
+          // Recarregar dados após criação
+          console.log("Nota fiscal criada com sucesso");
+        }}
+      />
 
       {/* Modal - Confirmar Exclusão */}
       {isDeleteOpen && invoiceToDelete && (
@@ -825,7 +572,8 @@ export default function NotasFiscais() {
                 Tem certeza que deseja excluir a nota fiscal
               </p>
               <p className="font-medium text-text-primary mb-6">
-                &quot;{invoiceToDelete.number}&quot; - {invoiceToDelete.client}?
+                &quot;{invoiceToDelete.numero}&quot; -{" "}
+                {invoiceToDelete.company?.name || "Sem cliente"}?
               </p>
               <div className="flex justify-center gap-3 shrink-0">
                 <button

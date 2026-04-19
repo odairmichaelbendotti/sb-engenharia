@@ -12,12 +12,12 @@ import {
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
-import type { NotaFiscal } from "../../../types/notaFiscal";
+import type { Invoice } from "./types";
 
 interface NotaFiscalTableProps {
-  invoices: NotaFiscal[];
-  onEdit: (invoice: NotaFiscal) => void;
-  onDelete: (invoice: NotaFiscal) => void;
+  invoices: Invoice[];
+  onEdit: (invoice: Invoice) => void;
+  onDelete: (invoice: Invoice) => void;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -119,7 +119,9 @@ export function NotaFiscalTable({
           </thead>
           <tbody className="divide-y divide-border">
             {paginatedInvoices.map((invoice) => {
-              const status = statusConfig[invoice.status];
+              const status =
+                statusConfig[invoice.status as InvoiceStatus] ||
+                statusConfig.pending;
               const StatusIcon = status.icon;
               const isOverdue =
                 invoice.status === "overdue" ||
@@ -141,13 +143,13 @@ export function NotaFiscalTable({
                           {invoice.numero}
                         </p>
                         <p className="text-xs text-text-secondary">
-                          {formatDate(invoice.date || invoice.vencimento)}
+                          {formatDate(invoice.createdAt)}
                         </p>
                       </div>
                     </div>
                   </td>
                   <td className="py-3 px-4 text-sm text-text-primary">
-                    {invoice.client || "-"}
+                    {invoice.company?.name || "-"}
                   </td>
                   <td className="py-3 px-4 text-sm text-text-secondary hidden md:table-cell">
                     <p className="truncate max-w-50">{invoice.description}</p>

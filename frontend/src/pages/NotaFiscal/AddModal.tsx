@@ -11,7 +11,7 @@ import {
   Banknote,
   CircleAlert,
 } from "lucide-react";
-import type { NotaFiscal } from "../../../types/notaFiscal";
+import type { InvoiceFormData } from "./types";
 import { useCompanies } from "../../store/companies";
 import type { Empenho } from "../../../types/empenho";
 import { toast } from "sonner";
@@ -20,7 +20,7 @@ import { defaultFetch } from "../../services/api";
 interface AddModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: Omit<NotaFiscal, "id">) => void;
+  onSave: (data: Omit<InvoiceFormData, "id">) => void;
 }
 
 const initialFormData = {
@@ -30,7 +30,7 @@ const initialFormData = {
   value: "",
   empenho_id: "",
   company_id: "",
-  status: "pending" as NotaFiscal["status"],
+  status: "pending" as InvoiceFormData["status"],
 };
 
 export function AddModal({ isOpen, onClose }: AddModalProps) {
@@ -80,12 +80,12 @@ export function AddModal({ isOpen, onClose }: AddModalProps) {
       }
 
       const data = await response.json();
-      console.log(data);
+      console.log("Data:", data);
 
       toast.success("Nota fiscal criada com sucesso");
       onClose();
     } catch (error) {
-      console.log(error);
+      console.log("Error:", error);
       toast.error("Erro ao criar nota fiscal");
       return;
     } finally {
@@ -319,7 +319,7 @@ export function AddModal({ isOpen, onClose }: AddModalProps) {
                     onChange={(e) =>
                       setFormData((f) => ({
                         ...f,
-                        status: e.target.value as NotaFiscal["status"],
+                        status: e.target.value as InvoiceFormData["status"],
                       }))
                     }
                     className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer"

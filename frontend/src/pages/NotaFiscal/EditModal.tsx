@@ -9,13 +9,13 @@ import {
   CalendarDays,
   Wallet,
 } from "lucide-react";
-import type { NotaFiscal } from "../../../types/notaFiscal";
+import type { Invoice, InvoiceFormData } from "./types";
 
 interface EditModalProps {
   isOpen: boolean;
-  invoice: NotaFiscal | null;
+  invoice: Invoice | null;
   onClose: () => void;
-  onSave: (id: string, data: Partial<NotaFiscal>) => void;
+  onSave: (id: string, data: Partial<Invoice>) => void;
 }
 
 export function EditModal({
@@ -257,7 +257,7 @@ export function EditModal({
                     onChange={(e) =>
                       setFormData((f) => ({
                         ...f,
-                        status: e.target.value as NotaFiscal["status"],
+                        status: e.target.value as InvoiceFormData["status"],
                       }))
                     }
                     className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer"

@@ -1,14 +1,19 @@
 import { Trash2 } from "lucide-react";
-import type { NotaFiscal } from "../../../types/notaFiscal";
+import type { Invoice } from "./types";
 
 interface DeleteModalProps {
   isOpen: boolean;
-  invoice: NotaFiscal | null;
+  invoice: Invoice | null;
   onClose: () => void;
   onConfirm: () => void;
 }
 
-export function DeleteModal({ isOpen, invoice, onClose, onConfirm }: DeleteModalProps) {
+export function DeleteModal({
+  isOpen,
+  invoice,
+  onClose,
+  onConfirm,
+}: DeleteModalProps) {
   if (!isOpen || !invoice) return null;
 
   return (
@@ -18,10 +23,15 @@ export function DeleteModal({ isOpen, invoice, onClose, onConfirm }: DeleteModal
           <div className="w-12 h-12 bg-danger-bg rounded-full flex items-center justify-center mx-auto mb-4">
             <Trash2 size={24} className="text-danger-text" />
           </div>
-          <h3 className="text-lg font-semibold text-text-primary mb-2">Confirmar Exclusão</h3>
-          <p className="text-text-secondary text-sm mb-2">Tem certeza que deseja excluir a nota fiscal</p>
+          <h3 className="text-lg font-semibold text-text-primary mb-2">
+            Confirmar Exclusão
+          </h3>
+          <p className="text-text-secondary text-sm mb-2">
+            Tem certeza que deseja excluir a nota fiscal
+          </p>
           <p className="font-medium text-text-primary mb-6">
-            &quot;{invoice.numero}&quot; - {invoice.client || "Sem cliente"}?
+            &quot;{invoice.numero}&quot; -{" "}
+            {invoice.company?.name || "Sem cliente"}?
           </p>
           <div className="flex justify-center gap-3 shrink-0">
             <button
