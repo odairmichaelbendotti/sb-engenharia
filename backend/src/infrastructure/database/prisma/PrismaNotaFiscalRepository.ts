@@ -61,7 +61,9 @@ export class PrismaNotaFiscalRepository implements INotaFiscalRepository {
           _sum: { value: true },
           where: { status: "PENDENTE" },
         }),
-        prisma.notaFiscal.findMany(),
+        prisma.notaFiscal.findMany({
+          include: { company: true },
+        }),
       ]);
 
       return {
