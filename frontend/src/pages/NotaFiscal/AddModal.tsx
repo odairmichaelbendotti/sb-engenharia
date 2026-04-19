@@ -4,11 +4,12 @@ import {
   Receipt,
   Hash,
   Building2,
-  Link2,
   AlignLeft,
   CalendarDays,
   Wallet,
   Loader,
+  Banknote,
+  CircleAlert,
 } from "lucide-react";
 import type { NotaFiscal } from "../../../types/notaFiscal";
 import { useCompanies } from "../../store/companies";
@@ -197,7 +198,7 @@ export function AddModal({ isOpen, onClose }: AddModalProps) {
                   <select
                     value={formData.company_id}
                     onChange={(e) => handleChangeCompany(e.target.value)}
-                    className={`w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer ${empenhosByCompany.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className={`w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer ${empenhosByCompany.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     <option value="">Selecione a empresa</option>
                     {companies.map((company) => (
@@ -210,24 +211,32 @@ export function AddModal({ isOpen, onClose }: AddModalProps) {
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  <span className="flex items-center gap-1.5">
-                    <Link2 size={14} />
-                    Empenho
-                  </span>
+                  Empenho
                 </label>
                 <div className="relative">
+                  {!formData.company_id ? (
+                    <CircleAlert
+                      size={16}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+                    />
+                  ) : (
+                    <Banknote
+                      size={16}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+                    />
+                  )}
                   <select
                     disabled={!formData.company_id && true}
                     value={formData.empenho_id}
                     onChange={(e) =>
                       setFormData((f) => ({ ...f, empenho_id: e.target.value }))
                     }
-                    className={`w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer ${empenhosByCompany.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className={`w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer ${empenhosByCompany.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     <option value="">
                       {!formData.company_id
-                        ? "Selecione a empresa"
-                        : "Selecione um empenho..."}
+                        ? "Primeiro selecione a empresa"
+                        : "Selecione um empenho"}
                     </option>
                     {empenhosByCompany.map((empenho) => (
                       <option key={empenho.id} value={empenho.id}>
