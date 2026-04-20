@@ -6,10 +6,12 @@ import NotaFiscalTable from "./NotaFiscal/NotaFiscalTable";
 import { DeleteModal } from "./NotaFiscal/DeleteModal";
 import StatusCards from "./NotaFiscal/StatusCards";
 import Header from "./NotaFiscal/Header";
+import EditModal from "./NotaFiscal/EditModal";
 
 export default function NotasFiscais() {
   const [isOpen, setIsOpen] = useState(false);
   const [deleteInvoice, setDeleteInvoice] = useState<Invoice | null>(null);
+  const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
 
   const {
     list,
@@ -30,6 +32,9 @@ export default function NotasFiscais() {
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
+      {editInvoice && (
+        <EditModal editInvoice={editInvoice} setEditInvoice={setEditInvoice} />
+      )}
       {/* Breadcrumb */}
       <Breadcrumb current="Notas Fiscais" />
 
@@ -72,6 +77,7 @@ export default function NotasFiscais() {
       <NotaFiscalTable
         allInvoices={allInvoices}
         setDeleteInvoice={setDeleteInvoice}
+        setEditInvoice={setEditInvoice}
       />
 
       {/* Modal - Cadastrar (AddModal com integração de empresas e empenhos) */}

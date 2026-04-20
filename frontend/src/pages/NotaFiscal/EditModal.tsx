@@ -1,47 +1,89 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   X,
   Receipt,
   Hash,
   Building2,
-  Link2,
   AlignLeft,
   CalendarDays,
   Wallet,
+  CircleAlert,
+  Banknote,
+  Loader,
 } from "lucide-react";
 import type { Invoice, InvoiceFormData } from "./types";
+import { useCompanies } from "../../store/companies";
+import type { Empenho } from "../../../types/empenho";
+import { toast } from "sonner";
+import { defaultFetch } from "../../services/api";
 
 interface EditModalProps {
-  isOpen: boolean;
-  invoice: Invoice | null;
-  onClose: () => void;
-  onSave: (id: string, data: Partial<Invoice>) => void;
+  editInvoice: Invoice | null;
+  setEditInvoice: React.Dispatch<React.SetStateAction<Invoice | null>>;
 }
 
-export function EditModal({
-  isOpen,
-  invoice,
-  onClose,
-  onSave,
+export default function EditModal({
+  editInvoice,
+  setEditInvoice,
 }: EditModalProps) {
   const [formData, setFormData] = useState({
-    numero: invoice?.numero || "",
-    description: invoice?.description || "",
-    vencimento: invoice?.vencimento || "",
-    value: invoice?.value?.toString() || "",
-    empenho_id: invoice?.empenho_id || "",
-    company_id: invoice?.company_id || "",
-    status: invoice?.status || "pending",
+    numero: "",
+    description: "",
+    vencimento: "",
+    value: "",
+    empenho_id: "",
+    company_id: "",
+    status: "pending" as InvoiceFormData["status"],
   });
+  const [empenhosByCompany, setEmpenhosByCompany] = useState<Empenho[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  if (!isOpen || !invoice) return null;
+  const { companies } = useCompanies();
 
-  function handleSubmit(e: React.FormEvent) {
+  // Inicializa formData quando editInvoice muda
+  useEffect(() => {
+    if (editInvoice) {
+      setFormData({
+        numero: editInvoice.numero || "",
+        description: editInvoice.description || "",
+        vencimento: editInvoice.vencimento || "",
+        value: editInvoice.value?.toString() || "",
+        empenho_id: editInvoice.empenho_id || "",
+        company_id: editInvoice.company_id || "",
+        status:
+          (editInvoice.status?.toLowerCase() as InvoiceFormData["status"]) ||
+          "pending",
+      });
+
+      // Carrega empenhos da empresa selecionada
+      const company = companies.find((c) => c.id === editInvoice.company_id);
+      if (company) {
+        setEmpenhosByCompany(company.empenhos);
+      }
+    }
+  }, [editInvoice, companies]);
+
+  function handleChangeCompany(companyId: string) {
+    setFormData((f) => ({ ...f, company_id: companyId, empenho_id: "" }));
+    const company = companies.find((c) => c.id === companyId);
+    if (company) {
+      setEmpenhosByCompany(company.empenhos);
+    } else {
+      setEmpenhosByCompany([]);
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!formData.numero || !formData.value || !formData.vencimento || !invoice)
+    if (
+      !formData.numero ||
+      !formData.value ||
+      !formData.vencimento ||
+      !editInvoice
+    )
       return;
 
-    onSave(invoice.id, {
+    const nf = {
       numero: formData.numero,
       description: formData.description,
       vencimento: formData.vencimento,
@@ -49,10 +91,35 @@ export function EditModal({
       empenho_id: formData.empenho_id,
       company_id: formData.company_id,
       status: formData.status,
-    });
+    };
 
-    onClose();
+    try {
+      setIsLoading(true);
+      const response = await defaultFetch(
+        `/nota-fiscal/update/${editInvoice.id}`,
+        {
+          method: "PUT",
+          credentials: "include",
+          body: JSON.stringify(nf),
+        },
+      );
+
+      if (!response.ok) {
+        toast.error("Erro ao atualizar nota fiscal");
+        return;
+      }
+
+      toast.success("Nota fiscal atualizada com sucesso");
+      setEditInvoice(null);
+    } catch (error) {
+      console.log("Error:", error);
+      toast.error("Erro ao atualizar nota fiscal");
+    } finally {
+      setIsLoading(false);
+    }
   }
+
+  // if (!editInvoice) return null;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -73,8 +140,9 @@ export function EditModal({
             </div>
           </div>
           <button
-            onClick={onClose}
-            className="p-2 hover:bg-surface-muted rounded-lg transition-colors"
+            title="Fechar"
+            onClick={() => setEditInvoice(null)}
+            className="p-2 cursor-pointer hover:bg-surface-muted rounded-lg transition-colors"
           >
             <X size={20} className="text-text-secondary" />
           </button>
@@ -151,36 +219,54 @@ export function EditModal({
                     size={16}
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
                   />
-                  <input
-                    type="text"
+                  <select
                     value={formData.company_id}
-                    onChange={(e) =>
-                      setFormData((f) => ({ ...f, company_id: e.target.value }))
-                    }
-                    placeholder="Nome da empresa"
-                    className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
-                  />
+                    onChange={(e) => handleChangeCompany(e.target.value)}
+                    className={`w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer ${empenhosByCompany.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    <option value="">Selecione a empresa</option>
+                    {companies.map((company) => (
+                      <option key={company.id} value={company.id}>
+                        {company.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  <span className="flex items-center gap-1.5">
-                    <Link2 size={14} />
-                    Empenho
-                  </span>
+                  Empenho
                 </label>
                 <div className="relative">
+                  {!formData.company_id ? (
+                    <CircleAlert
+                      size={16}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+                    />
+                  ) : (
+                    <Banknote
+                      size={16}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+                    />
+                  )}
                   <select
+                    disabled={!formData.company_id && true}
                     value={formData.empenho_id}
                     onChange={(e) =>
                       setFormData((f) => ({ ...f, empenho_id: e.target.value }))
                     }
-                    className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer"
+                    className={`w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer ${empenhosByCompany.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
-                    <option value="">Selecione um empenho...</option>
-                    <option value="EMP-2024-001">EMP-2024-001</option>
-                    <option value="EMP-2024-002">EMP-2024-002</option>
-                    <option value="EMP-2024-003">EMP-2024-003</option>
+                    <option value="">
+                      {!formData.company_id
+                        ? "Primeiro selecione a empresa"
+                        : "Selecione um empenho"}
+                    </option>
+                    {empenhosByCompany.map((empenho) => (
+                      <option key={empenho.id} value={empenho.id}>
+                        {empenho.numero} - {empenho.description}
+                      </option>
+                    ))}
                   </select>
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                     <svg
@@ -291,16 +377,23 @@ export function EditModal({
           <div className="flex justify-end gap-3 pt-4 border-t border-border shrink-0">
             <button
               type="button"
-              onClick={onClose}
-              className="px-5 py-2.5 text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium"
+              title="Cancelar"
+              onClick={() => setEditInvoice(null)}
+              className="px-5 cursor-pointer py-2.5 text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium"
             >
               Cancelar
             </button>
             <button
+              title="Salvar"
               type="submit"
-              className="px-5 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium shadow-sm"
+              disabled={isLoading}
+              className="px-5 cursor-pointer py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium shadow-sm flex justify-center items-center gap-2"
             >
-              Salvar Alterações
+              {isLoading ? (
+                <Loader className="animate-spin" />
+              ) : (
+                "Salvar Alterações"
+              )}
             </button>
           </div>
         </form>

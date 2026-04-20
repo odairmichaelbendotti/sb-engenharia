@@ -11,11 +11,13 @@ import type { Invoice } from "../../store/invoices";
 type NotaFiscalTable = {
   allInvoices: Invoice[];
   setDeleteInvoice: React.Dispatch<React.SetStateAction<Invoice | null>>;
+  setEditInvoice: React.Dispatch<React.SetStateAction<Invoice | null>>;
 };
 
 const NotaFiscalTable = ({
   allInvoices,
   setDeleteInvoice,
+  setEditInvoice,
 }: NotaFiscalTable) => {
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString("pt-BR");
@@ -108,7 +110,8 @@ const NotaFiscalTable = ({
                   <div className="flex items-center justify-end gap-1">
                     <button
                       className="p-2 hover:bg-primary-100 cursor-pointer text-text-secondary hover:text-primary-500 rounded-md transition-colors"
-                      title="Visualizar"
+                      title="Gerenciar"
+                      onClick={() => setEditInvoice(invoice)}
                     >
                       <FileText size={16} />
                     </button>
