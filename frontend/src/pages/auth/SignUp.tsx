@@ -11,8 +11,7 @@ export default function SignUp() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const { user } = useUser();
-
+  const { user, signup } = useUser();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -21,8 +20,9 @@ export default function SignUp() {
     }
   }, []);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setIsLoading(true);
 
     if (!name || !email || !password || !confirmPassword) {
       toast.error("Preencha todos os campos");
@@ -34,12 +34,16 @@ export default function SignUp() {
       return;
     }
 
-    setIsLoading(true);
-    // TODO: Implementar lógica de signup
-    setTimeout(() => {
+    try {
+      const response = await signup(name, email, password);
+      toast.info(`${response.name.split(" ")[0]}, seja bem-vindo!`);
+      console.log(response);
+      navigate("/");
+    } catch (error) {
+      console.log(error);
+    } finally {
       setIsLoading(false);
-      toast.success("Conta criada com sucesso!");
-    }, 1000);
+    }
   }
 
   return (

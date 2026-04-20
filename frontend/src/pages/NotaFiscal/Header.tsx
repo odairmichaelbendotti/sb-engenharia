@@ -41,7 +41,7 @@ const Header = ({ totalValue, setIsOpen }: HeaderProps) => {
         className="flex items-center justify-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium"
       >
         <Plus size={18} />
-        Nova NF
+        Nova Nota Fiscal
       </button>
     </div>
   );
