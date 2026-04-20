@@ -18,4 +18,5 @@ export interface INotaFiscalRepository {
   findByNumber(number: string): Promise<NotaFiscal | null>;
   list(): Promise<listInvoices>;
   delete(id: string): Promise<void>;
+  update(notaFiscal: NotaFiscalType, id: string): Promise<NotaFiscalType>;
 }
