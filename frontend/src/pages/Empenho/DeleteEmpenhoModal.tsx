@@ -1,4 +1,13 @@
-import { Loader, Trash2, X, AlertTriangle } from "lucide-react";
+import {
+  Loader,
+  Trash2,
+  X,
+  AlertTriangle,
+  Building2,
+  Calendar,
+  DollarSign,
+  FileText,
+} from "lucide-react";
 import type { EmpenhoList } from "../../../types/empenho";
 import { useEmpenhos } from "../../store/empenhos";
 import { toast } from "sonner";
@@ -35,67 +44,136 @@ export function DeleteEmpenhoModal({
 
   if (!isOpen || !empenho) return null;
 
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  };
+
+  const formatDate = (date: Date | string) => {
+    return new Date(date).toLocaleDateString("pt-BR");
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl border border-border overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border bg-linear-to-r from-red-50/50 to-transparent shrink-0">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl border border-gray-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200 relative">
+        {/* Close Button */}
+        <button
+          onClick={handleClose}
+          className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg transition-colors z-10"
+        >
+          <X size={20} className="text-gray-400" />
+        </button>
+
+        {/* Warning Banner */}
+        <div className="bg-red-50 border-b border-red-100 px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
-              <AlertTriangle size={20} className="text-red-600" />
+            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center shrink-0">
+              <AlertTriangle size={22} className="text-red-600" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-text-primary">
-                Excluir Empenho
+              <h2 className="text-lg font-semibold text-red-900">
+                Excluir Empenho Permanentemente
               </h2>
-              <p className="text-sm text-text-secondary">
-                Esta ação não pode ser desfeita
+              <p className="text-sm text-red-700">
+                Esta ação não poderá ser desfeita
               </p>
             </div>
           </div>
-          <button
-            onClick={handleClose}
-            className="p-2 hover:bg-surface-muted rounded-lg transition-colors"
-          >
-            <X size={20} className="text-text-secondary" />
-          </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 text-center">
-          <div className="w-16 h-16 bg-danger-bg rounded-full flex items-center justify-center mx-auto mb-4">
-            <Trash2 size={28} className="text-danger-text" />
+        <div className="p-6">
+          {/* Empenho Info Card */}
+          <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center shrink-0">
+                <FileText size={24} className="text-primary-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-0.5">
+                  Número do Empenho
+                </p>
+                <p className="text-xl font-bold text-gray-900">
+                  {empenho.numero}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center gap-2">
+                <Building2 size={16} className="text-gray-400" />
+                <div>
+                  <p className="text-xs text-gray-500">Empresa</p>
+                  <p className="text-sm font-medium text-gray-800 truncate max-w-37.5">
+                    {empenho.company.name}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <DollarSign size={16} className="text-gray-400" />
+                <div>
+                  <p className="text-xs text-gray-500">Valor Total</p>
+                  <p className="text-sm font-medium text-gray-800">
+                    {formatCurrency(empenho.value)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Calendar size={16} className="text-gray-400" />
+                <div>
+                  <p className="text-xs text-gray-500">Início</p>
+                  <p className="text-sm font-medium text-gray-800">
+                    {formatDate(empenho.startAt)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Calendar size={16} className="text-gray-400" />
+                <div>
+                  <p className="text-xs text-gray-500">Prazo Final</p>
+                  <p className="text-sm font-medium text-gray-800">
+                    {formatDate(empenho.endAt)}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-          <p className="text-text-secondary text-sm mb-2">
-            Tem certeza que deseja excluir permanentemente o empenho
-          </p>
-          <p className="font-semibold text-text-primary mb-6 text-lg">
-            &quot;{empenho.numero}&quot;
-          </p>
-          <p className="text-sm text-text-muted mb-6">
-            Empresa: {empenho.company.name}
+
+          {/* Warning Box */}
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-amber-800">
+              <span className="font-semibold">Atenção:</span> Ao excluir este
+              empenho, todas as notas fiscais e pagamentos associados também
+              serão removidos do sistema.
+            </p>
+          </div>
+
+          <p className="text-center text-gray-600 text-sm mb-6">
+            Deseja realmente prosseguir com a exclusão?
           </p>
         </div>
 
         {/* Footer Actions */}
-        <div className="flex justify-center gap-3 p-6 pt-0 shrink-0">
+        <div className="flex gap-3 p-6 pt-0">
           <button
             onClick={() => handleClose()}
-            className="px-5 py-2.5 text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium"
+            className="flex-1 px-5 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors font-medium"
           >
             Cancelar
           </button>
           <button
             onClick={() => handleDeleteEmpenho(empenho.id)}
             disabled={isLoading}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-danger-text text-white rounded-lg hover:bg-red-700 transition-colors font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <Loader className="animate-spin" size={18} />
             ) : (
               <>
                 <Trash2 size={18} />
-                Excluir Empenho
+                Sim, Excluir Empenho
               </>
             )}
           </button>
