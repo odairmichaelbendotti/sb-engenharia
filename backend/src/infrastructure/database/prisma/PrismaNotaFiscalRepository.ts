@@ -71,16 +71,20 @@ export class PrismaNotaFiscalRepository implements INotaFiscalRepository {
         }),
       ]);
 
+      const parsedInvoices = allInvoices.map((invoice) => {
+        return { ...invoice, value: invoice.value ? invoice.value / 100 : 0 };
+      });
+
       return {
         totalCount,
-        totalValue: totalValue._sum.value || 0,
+        totalValue: (totalValue._sum.value ?? 0) / 100,
         paidInvoices,
-        paidValue: paidValue._sum.value || 0,
+        paidValue: (paidValue._sum.value ?? 0) / 100,
         expiredCount,
-        expiredValue: expiredValue._sum.value || 0,
+        expiredValue: (expiredValue._sum.value ?? 0) / 100,
         pendingInvoices,
-        pendingValue: pendingValue._sum.value || 0,
-        allInvoices,
+        pendingValue: (pendingValue._sum.value ?? 0) / 100,
+        allInvoices: parsedInvoices,
       };
     } catch (error) {
       throw new DomainError("Erro ao listar notas fiscais");
