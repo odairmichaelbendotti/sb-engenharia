@@ -20,7 +20,6 @@ import { defaultFetch } from "../../services/api";
 interface AddModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: Omit<InvoiceFormData, "id">) => void;
 }
 
 const initialFormData = {
