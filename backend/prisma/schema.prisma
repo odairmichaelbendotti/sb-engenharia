@@ -18,7 +18,7 @@ model User {
   name      String
   email     String   @unique
   password  String
-  role      UserRole  @default(USER)
+  role      UserRole @default(USER)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 }
@@ -54,6 +54,7 @@ model Empenho {
   startAt     DateTime
   endAt       DateTime
   value       Int
+  totalPaid   Int           @default(0)
   status      EmpenhoStatus @default(ATIVO)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @default(now())
