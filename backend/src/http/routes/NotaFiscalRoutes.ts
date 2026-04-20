@@ -6,14 +6,17 @@ import { DeleteInvoiceUseCase } from "../../application/usecases/notaFiscal/Dele
 import { CreateInvoiceUseCase } from "../../application/usecases/notaFiscal/CreateInvoiceUseCase";
 import { UpdateCompanyUseCase } from "../../application/usecases/company/UpdateCompanyUseCase";
 import { UpdateInvoiceUseCase } from "../../application/usecases/notaFiscal/UpdateInvoiceUseCase";
+import { PrismaEmpenhoRepository } from "../../infrastructure/database/prisma/PrismaEmpenhoRepository";
 
 export const NotaFiscalRoutes = Router();
 
 const repository = new PrismaNotaFiscalRepository();
-const createInvoice = new CreateInvoiceUseCase(repository);
+const empenhoRepository = new PrismaEmpenhoRepository();
+const createInvoice = new CreateInvoiceUseCase(repository, empenhoRepository);
 const listInvoices = new ListInvoicesUseCase(repository);
 const deleteInvoice = new DeleteInvoiceUseCase(repository);
 const updateInvoice = new UpdateInvoiceUseCase(repository);
+
 const notaFiscalController = new NotaFiscalController(
   createInvoice,
   listInvoices,

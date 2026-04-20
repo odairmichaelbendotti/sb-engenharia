@@ -28,11 +28,11 @@ export class CreateEmpenhoUseCase {
       throw new DomainError("You are not authorized to create an empenho");
     }
 
-    const existingEmpenho = await this.repository.findByEmpenhoId(numero);
+    // const existingEmpenho = await this.repository.findByEmpenhoId(numero);
 
-    if (existingEmpenho) {
-      throw new DomainError("Empenho already exists");
-    }
+    // if (existingEmpenho) {
+    //   throw new DomainError("Empenho already exists");
+    // }
 
     return this.repository.create({
       numero,

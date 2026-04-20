@@ -5,7 +5,11 @@ import {
   ArrowUp,
   ArrowDown,
   FileText,
+  CheckCircle2,
+  CircleDashed,
+  Clock,
 } from "lucide-react";
+import { useState } from "react";
 import type { EmpenhoList } from "../../../types/empenho";
 import type { User } from "../../../types/user";
 
@@ -24,13 +28,79 @@ const formatDate = (date: Date | string) => {
   return date.toLocaleDateString("pt-BR");
 };
 
-const getStatusStyle = (status: string) => {
-  const styles: Record<string, string> = {
-    ATIVO: "bg-emerald-500 text-white",
-    FINALIZADO: "bg-blue-500 text-white",
-    CANCELADO: "bg-red-500 text-white",
+const ProgressBar = ({
+  value,
+  totalPaid,
+  status,
+  formatCurrency,
+}: {
+  value: number;
+  totalPaid: number;
+  status: string;
+  formatCurrency: (value: number) => string;
+}) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  const isFinalizado = status.toLowerCase() === "finalizado";
+  const paidValue = totalPaid ?? 0;
+  const rawPercentage = (paidValue / value) * 100;
+  const percentage = isFinalizado
+    ? 100
+    : Math.min(100, Math.max(paidValue > 0 ? 1 : 0, Math.round(rawPercentage)));
+
+  const isComplete = percentage === 100;
+  const isZero = paidValue === 0;
+
+  const getBarColor = () => {
+    if (isFinalizado || isComplete) return "bg-emerald-500";
+    if (isZero) return "bg-gray-400";
+    return "bg-blue-500";
   };
-  return styles[status.toUpperCase()] || styles.ATIVO;
+
+  const getIcon = () => {
+    if (isFinalizado || isComplete) {
+      return <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />;
+    }
+    if (isZero) {
+      return <CircleDashed size={16} className="text-gray-400 shrink-0" />;
+    }
+    return <Clock size={16} className="text-blue-500 shrink-0" />;
+  };
+
+  const getStatusText = () => {
+    if (isFinalizado) return "Finalizado";
+    if (isZero) return "Não iniciado";
+    const realPercentage = Math.round(rawPercentage);
+    return `${realPercentage > 0 ? realPercentage : "< 1"}% pago`;
+  };
+
+  return (
+    <div
+      className="relative w-full min-w-0"
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+    >
+      <div className="flex items-center gap-2 w-full">
+        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden min-w-0">
+          <div
+            className={`h-full rounded-full transition-all duration-300 ${getBarColor()}`}
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
+        {getIcon()}
+      </div>
+
+      {showTooltip && (
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-md whitespace-nowrap z-10 shadow-lg">
+          <div className="font-medium">{getStatusText()}</div>
+          <div className="text-gray-300">
+            {formatCurrency(paidValue)} / {formatCurrency(value)}
+          </div>
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800" />
+        </div>
+      )}
+    </div>
+  );
 };
 
 export function EmpenhoTable({
@@ -88,7 +158,7 @@ export function EmpenhoTable({
             </th>
             <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors">
               <div className="flex items-center justify-center gap-1">
-                Status
+                Progresso
                 <ArrowUp size={12} className="text-text-muted" />
               </div>
             </th>
@@ -156,12 +226,13 @@ export function EmpenhoTable({
                     {formatCurrency(empenho.value)}
                   </p>
                 </td>
-                <td className="py-3 px-4 text-center">
-                  <span
-                    className={`inline-block px-3 py-1 rounded-md text-xs font-medium ${getStatusStyle(empenho.status)}`}
-                  >
-                    {empenho.status}
-                  </span>
+                <td className="py-3 px-4">
+                  <ProgressBar
+                    value={empenho.value}
+                    totalPaid={empenho.totalPaid}
+                    status={empenho.status}
+                    formatCurrency={formatCurrency}
+                  />
                 </td>
 
                 {(user?.role === "MASTER" || user?.role === "EDITOR") && (

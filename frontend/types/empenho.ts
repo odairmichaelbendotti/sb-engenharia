@@ -15,6 +15,7 @@ export type EmpenhoList = {
   startAt: Date;
   endAt: Date;
   value: number;
+  totalPaid: number;
   status: string;
   createdAt: Date;
   updatedAt: Date;

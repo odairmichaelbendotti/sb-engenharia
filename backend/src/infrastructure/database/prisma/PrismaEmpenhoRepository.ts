@@ -31,11 +31,12 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
   async findByEmpenhoId(empenhoId: string): Promise<Empenho | null> {
     try {
       const empenho = await prisma.empenho.findUnique({
-        where: { numero: empenhoId },
+        where: { id: empenhoId },
       });
 
       return empenho;
     } catch (error) {
+      console.log(error);
       throw new DomainError("Error finding empenho");
     }
   }
@@ -84,6 +85,7 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
           return {
             ...empenho,
             value: Number(empenho.value) / 100,
+            totalPaid: Number(empenho.totalPaid) / 100,
           };
         },
       );
@@ -147,6 +149,20 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
     } catch (error) {
       console.log(error);
       throw new DomainError("Error updating empenho status");
+    }
+  }
+  async incrementInvoiceValue(empenhoId: string, value: number): Promise<void> {
+    try {
+      await prisma.empenho.update({
+        where: { id: empenhoId },
+        data: {
+          totalPaid: {
+            increment: value * 100,
+          },
+        },
+      });
+    } catch (error) {
+      throw new Error("Error incrementing invoice value");
     }
   }
 }

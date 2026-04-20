@@ -26,6 +26,7 @@ export const useEmpenhos = create<EmpenhosState>((set) => ({
       }
 
       const responseData: ListEmpenhos = await response.json();
+      console.log(responseData);
       set({ data: responseData });
     } catch (error) {
       console.log(error);

@@ -27,4 +27,5 @@ export interface IEmpenhoRepository {
     empenhoId: string,
     status: "ATIVO" | "FINALIZADO" | "CANCELADO",
   ): Promise<Empenho>;
+  incrementInvoiceValue(empenhoId: string, value: number): Promise<void>;
 }
