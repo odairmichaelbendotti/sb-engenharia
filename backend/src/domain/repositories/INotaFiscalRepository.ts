@@ -17,4 +17,5 @@ export interface INotaFiscalRepository {
   create(notaFiscal: NotaFiscalType): Promise<NotaFiscal>;
   findByNumber(number: string): Promise<NotaFiscal | null>;
   list(): Promise<listInvoices>;
+  delete(id: string): Promise<void>;
 }

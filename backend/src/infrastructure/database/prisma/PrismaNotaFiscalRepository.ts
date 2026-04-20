@@ -81,4 +81,15 @@ export class PrismaNotaFiscalRepository implements INotaFiscalRepository {
       throw new DomainError("Erro ao listar notas fiscais");
     }
   }
+  async delete(id: string): Promise<void> {
+    try {
+      await prisma.notaFiscal.delete({
+        where: {
+          id,
+        },
+      });
+    } catch (error) {
+      throw new DomainError("Erro ao deletar nota fiscal");
+    }
+  }
 }
