@@ -1,12 +1,12 @@
 import type { Request, Response } from "express";
-import type { NotaFiscalUseCase } from "../../application/usecases/notaFiscal/CreateInvoiceUseCase";
 import { DomainError } from "../../domain/errors/DomainError";
 import type { ListInvoicesUseCase } from "../../application/usecases/notaFiscal/ListInvoicesUseCase";
 import type { DeleteInvoiceUseCase } from "../../application/usecases/notaFiscal/DeleteInvoiceUseCase";
+import { CreateInvoiceUseCase } from "../../application/usecases/notaFiscal/CreateInvoiceUseCase";
 
 export class NotaFiscalController {
   constructor(
-    private createNotaFiscal: NotaFiscalUseCase,
+    private createNotaFiscal: CreateInvoiceUseCase,
     private listInvoices: ListInvoicesUseCase,
     private deleteInvoice: DeleteInvoiceUseCase,
   ) {}
@@ -15,7 +15,7 @@ export class NotaFiscalController {
       req.body;
 
     try {
-      await this.createNotaFiscal.execute({
+      const nf = await this.createNotaFiscal.execute({
         numero,
         description,
         vencimento,
@@ -24,7 +24,9 @@ export class NotaFiscalController {
         company_id,
       });
 
-      res.status(201).json({ message: "Nota fiscal successfully created" });
+      console.log(nf);
+
+      res.status(201).json(nf);
     } catch (error) {
       if (error instanceof DomainError) {
         return res.status(400).json({ message: error.message });

@@ -1,6 +1,15 @@
 import { create } from "zustand";
 import { defaultFetch } from "../services/api";
 
+export type CreateInvoiceProps = {
+  numero: string;
+  description: string;
+  vencimento: string;
+  value: number;
+  empenho_id: string;
+  company_id: string;
+};
+
 export type InvoiceDashboard = {
   totalCount: number;
   totalValue: number;
@@ -11,7 +20,8 @@ export type InvoiceDashboard = {
   pendingInvoices: number;
   pendingValue: number;
   allInvoices: Invoice[];
-  list: () => void;
+  create: (createInvoice: CreateInvoiceProps) => Promise<void>;
+  list: () => Promise<void>;
   delete: (id: string) => Promise<void>;
 };
 
@@ -53,6 +63,25 @@ export const useInvoice = create<InvoiceDashboard>((set) => ({
   pendingValue: 0,
   allInvoices: [],
 
+  async create(createInvoice: CreateInvoiceProps) {
+    try {
+      const response = await defaultFetch(`/nota-fiscal/create`, {
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify(createInvoice),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao criar nota fiscal");
+      }
+
+      const data = await response.json();
+      set((state) => ({ allInvoices: [...state.allInvoices, data] }));
+    } catch (error) {
+      console.log(error);
+      throw new Error("Erro ao criar nota fiscal");
+    }
+  },
   async list() {
     try {
       const response = await defaultFetch("/nota-fiscal/list", {

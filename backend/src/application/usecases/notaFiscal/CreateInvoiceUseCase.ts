@@ -2,7 +2,7 @@ import type { NotaFiscalType } from "../../../domain/entities/NotaFiscal";
 import { DomainError } from "../../../domain/errors/DomainError";
 import type { INotaFiscalRepository } from "../../../domain/repositories/INotaFiscalRepository";
 
-export class NotaFiscalUseCase {
+export class CreateInvoiceUseCase {
   constructor(private repository: INotaFiscalRepository) {}
 
   async execute({
@@ -24,7 +24,7 @@ export class NotaFiscalUseCase {
         throw new DomainError("Nota fiscal already exists");
       }
 
-      await this.repository.create({
+      return await this.repository.create({
         numero,
         description,
         vencimento: new Date(vencimento),
@@ -33,7 +33,7 @@ export class NotaFiscalUseCase {
         company_id,
       });
     } catch (error) {
-      throw new DomainError("Erro ao criar nota fiscal");
+      throw new DomainError("Erro ao criar nota fiscal - aqui");
     }
   }
 }

@@ -44,5 +44,4 @@ export type InvoiceFormData = {
   value: string;
   empenho_id: string;
   company_id: string;
-  status: "paid" | "pending" | "overdue" | "cancelled";
 };

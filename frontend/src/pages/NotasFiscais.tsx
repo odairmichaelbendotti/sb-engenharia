@@ -81,7 +81,7 @@ export default function NotasFiscais() {
       />
 
       {/* Modal - Cadastrar (AddModal com integração de empresas e empenhos) */}
-      <AddModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      {isOpen && <AddModal isOpen={isOpen} setIsOpen={setIsOpen} />}
 
       {deleteInvoice && (
         <DeleteModal

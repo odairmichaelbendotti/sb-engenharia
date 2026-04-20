@@ -6,7 +6,6 @@ import {
   Building2,
   AlignLeft,
   CalendarDays,
-  Wallet,
   Loader,
   Banknote,
   CircleAlert,
@@ -15,29 +14,29 @@ import type { InvoiceFormData } from "./types";
 import { useCompanies } from "../../store/companies";
 import type { Empenho } from "../../../types/empenho";
 import { toast } from "sonner";
-import { defaultFetch } from "../../services/api";
+import { useInvoice } from "../../store/invoices";
 
 interface AddModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const initialFormData = {
+const initialFormData: InvoiceFormData = {
   numero: "",
   description: "",
   vencimento: "",
   value: "",
   empenho_id: "",
   company_id: "",
-  status: "pending" as InvoiceFormData["status"],
 };
 
-export function AddModal({ isOpen, onClose }: AddModalProps) {
+export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
   const [formData, setFormData] = useState(initialFormData);
   const [empenhosByCompany, setEmpenhosByCompany] = useState<Empenho[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const { companies } = useCompanies();
+  const { create } = useInvoice();
 
   function handleChangeCompany(companyId: string) {
     setFormData((f) => ({ ...f, company_id: companyId, empenho_id: "" }));
@@ -59,30 +58,17 @@ export function AddModal({ isOpen, onClose }: AddModalProps) {
       numero: formData.numero,
       description: formData.description,
       vencimento: formData.vencimento,
-      value: parseFloat(formData.value),
+      value: Number(Number(formData.value).toFixed(2)),
       empenho_id: formData.empenho_id,
       company_id: formData.company_id,
-      status: formData.status,
     };
 
     try {
       setIsLoading(true);
-      const response = await defaultFetch("/nota-fiscal/create", {
-        method: "POST",
-        credentials: "include",
-        body: JSON.stringify(nf),
-      });
-
-      if (!response.ok) {
-        toast.error("Erro ao criar nota fiscal");
-        return;
-      }
-
-      const data = await response.json();
-      console.log("Data:", data);
+      await create(nf);
 
       toast.success("Nota fiscal criada com sucesso");
-      onClose();
+      setIsOpen(false);
     } catch (error) {
       console.log("Error:", error);
       toast.error("Erro ao criar nota fiscal");
@@ -116,7 +102,7 @@ export function AddModal({ isOpen, onClose }: AddModalProps) {
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => setIsOpen(false)}
             className="p-2 hover:bg-surface-muted rounded-lg transition-colors"
           >
             <X size={20} className="text-text-secondary" />
@@ -305,7 +291,7 @@ export function AddModal({ isOpen, onClose }: AddModalProps) {
                   className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
                 />
               </div>
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">
                   <span className="flex items-center gap-1.5">
                     <Wallet size={14} />
@@ -344,7 +330,7 @@ export function AddModal({ isOpen, onClose }: AddModalProps) {
                     </svg>
                   </div>
                 </div>
-              </div>
+              </div> */}
             </div>
           </div>
 
@@ -352,8 +338,8 @@ export function AddModal({ isOpen, onClose }: AddModalProps) {
           <div className="flex justify-end gap-3 pt-4 border-t border-border shrink-0">
             <button
               type="button"
-              onClick={onClose}
-              className="px-5 py-2.5 text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium"
+              onClick={() => setIsOpen(false)}
+              className="cursor-pointer px-5 py-2.5 text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium"
             >
               Cancelar
             </button>

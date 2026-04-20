@@ -9,18 +9,23 @@ import { prisma } from "../../prisma/prisma";
 
 export class PrismaNotaFiscalRepository implements INotaFiscalRepository {
   async create(notaFiscal: NotaFiscalType): Promise<NotaFiscal> {
-    const notaFiscalCreated = await prisma.notaFiscal.create({
-      data: {
-        numero: notaFiscal.numero,
-        description: notaFiscal.description,
-        vencimento: notaFiscal.vencimento,
-        value: notaFiscal.value,
-        empenho: { connect: { id: notaFiscal.empenho_id } },
-        company: { connect: { id: notaFiscal.company_id } },
-      },
-    });
+    try {
+      const notaFiscalCreated = await prisma.notaFiscal.create({
+        data: {
+          numero: notaFiscal.numero,
+          description: notaFiscal.description,
+          vencimento: notaFiscal.vencimento,
+          value: notaFiscal.value,
+          empenho: { connect: { id: notaFiscal.empenho_id } },
+          company: { connect: { id: notaFiscal.company_id } },
+        },
+        include: { company: true },
+      });
 
-    return notaFiscalCreated;
+      return notaFiscalCreated;
+    } catch (error) {
+      throw new DomainError("Erro ao criar nota fiscal");
+    }
   }
   async findByNumber(number: string): Promise<NotaFiscal | null> {
     const notaFiscal = await prisma.notaFiscal.findFirst({
