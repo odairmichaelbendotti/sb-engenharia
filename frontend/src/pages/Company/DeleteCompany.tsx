@@ -1,4 +1,12 @@
-import { Loader, Trash2, X, AlertTriangle, Building2 } from "lucide-react";
+import {
+  Loader,
+  Trash2,
+  X,
+  AlertTriangle,
+  Building2,
+  Hash,
+  Layers2,
+} from "lucide-react";
 import type { Empresa } from "../../../types/empresa";
 
 type DeleteCompanyProps = {
@@ -18,82 +26,128 @@ const DeleteCompany = ({
 }: DeleteCompanyProps) => {
   if (!isOpen) return null;
 
+  const formatCNPJ = (cnpj: string) => {
+    return cnpj.replace(
+      /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
+      "$1.$2.$3/$4-$5",
+    );
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl border border-border overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border bg-linear-to-r from-red-50/50 to-transparent shrink-0">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl border border-gray-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200 relative">
+        {/* Close Button */}
+        <button
+          onClick={handleClose}
+          className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg transition-colors z-10"
+        >
+          <X size={20} className="text-gray-400" />
+        </button>
+
+        {/* Warning Banner */}
+        <div className="bg-red-50 border-b border-red-100 px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
-              <AlertTriangle size={20} className="text-red-600" />
+            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center shrink-0">
+              <AlertTriangle size={22} className="text-red-600" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-text-primary">
-                Excluir Empresa
+              <h2 className="text-lg font-semibold text-red-900">
+                Excluir Empresa Permanentemente
               </h2>
-              <p className="text-sm text-text-secondary">
-                Esta ação não pode ser desfeita
+              <p className="text-sm text-red-700">
+                Esta ação não poderá ser desfeita
               </p>
             </div>
           </div>
-          <button
-            onClick={handleClose}
-            className="p-2 hover:bg-surface-muted rounded-lg transition-colors"
-          >
-            <X size={20} className="text-text-secondary" />
-          </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 text-center">
-          <div className="w-16 h-16 bg-danger-bg rounded-full flex items-center justify-center mx-auto mb-4">
-            <Building2 size={28} className="text-danger-text" />
-          </div>
-          <p className="text-text-secondary text-sm mb-2">
-            Tem certeza que deseja excluir permanentemente a empresa
-          </p>
-          <p className="font-semibold text-text-primary mb-6 text-lg">
-            &quot;{empresaParaDeletar.name}&quot;
-          </p>
-          {empresaParaDeletar.empenhos.length > 0 && (
-            <div className="bg-warning-bg border border-warning-border rounded-lg p-4 mb-6">
-              <div className="flex items-start gap-2">
-                <AlertTriangle
-                  size={16}
-                  className="text-warning-text mt-0.5 shrink-0"
-                />
-                <p className="text-warning-text text-sm text-left">
-                  <strong>Atenção:</strong> Esta empresa possui{" "}
-                  {empresaParaDeletar.empenhos.length} empenho
-                  {empresaParaDeletar.empenhos.length !== 1 ? "s" : ""}{" "}
-                  vinculado
-                  {empresaParaDeletar.empenhos.length !== 1 ? "s" : ""}. A
-                  exclusão também removerá esses vínculos.
+        <div className="p-6">
+          {/* Company Info Card */}
+          <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center shrink-0">
+                <Building2 size={24} className="text-primary-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-0.5">Razão Social</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {empresaParaDeletar.name}
                 </p>
               </div>
             </div>
-          )}
+
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center gap-2">
+                <Hash size={16} className="text-gray-400" />
+                <div>
+                  <p className="text-xs text-gray-500">CNPJ</p>
+                  <p className="text-sm font-medium text-gray-800">
+                    {formatCNPJ(empresaParaDeletar.cnpj)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Layers2 size={16} className="text-gray-400" />
+                <div>
+                  <p className="text-xs text-gray-500">Empenhos Vinculados</p>
+                  <p className="text-sm font-medium text-gray-800">
+                    {empresaParaDeletar.empenhos.length} empenho
+                    {empresaParaDeletar.empenhos.length !== 1 ? "s" : ""}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Warning Box */}
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-amber-800">
+              <span className="font-semibold">Atenção:</span>{" "}
+              {empresaParaDeletar.empenhos.length > 0 ? (
+                <>
+                  Esta empresa possui {empresaParaDeletar.empenhos.length}{" "}
+                  empenho
+                  {empresaParaDeletar.empenhos.length !== 1 ? "s" : ""}{" "}
+                  vinculado
+                  {empresaParaDeletar.empenhos.length !== 1 ? "s" : ""}. Ao
+                  excluir a empresa, todos os empenhos, notas fiscais e
+                  pagamentos associados também serão permanentemente removidos.
+                </>
+              ) : (
+                <>
+                  Ao excluir esta empresa, todos os dados associados serão
+                  permanentemente removidos do sistema. Certifique-se de que não
+                  há pendências.
+                </>
+              )}
+            </p>
+          </div>
+
+          <p className="text-center text-gray-600 text-sm mb-6">
+            Deseja realmente prosseguir com a exclusão?
+          </p>
         </div>
 
         {/* Footer Actions */}
-        <div className="flex justify-center gap-3 p-6 pt-0 shrink-0">
+        <div className="flex gap-3 p-6 pt-0">
           <button
             onClick={handleClose}
-            className="px-5 py-2.5 text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium"
+            className="flex-1 px-5 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors font-medium"
           >
             Cancelar
           </button>
           <button
             onClick={() => handleDelete(empresaParaDeletar.id)}
             disabled={isLoading}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-danger-text text-white rounded-lg hover:bg-red-700 transition-colors font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <Loader className="animate-spin" size={18} />
             ) : (
               <>
                 <Trash2 size={18} />
-                Excluir Empresa
+                Sim, Excluir Empresa
               </>
             )}
           </button>
