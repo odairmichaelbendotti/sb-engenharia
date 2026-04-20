@@ -6,7 +6,7 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
-import type { Invoice } from "../../store/invoices";
+import { type Invoice } from "../../store/invoices";
 
 type NotaFiscalTable = {
   allInvoices: Invoice[];
@@ -29,8 +29,6 @@ const NotaFiscalTable = ({
       currency: "BRL",
     }).format(value);
   };
-
-  console.log(allInvoices);
 
   return (
     <div className="bg-surface border border-border rounded-lg overflow-hidden">

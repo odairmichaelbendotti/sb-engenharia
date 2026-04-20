@@ -115,6 +115,7 @@ export class PrismaNotaFiscalRepository implements INotaFiscalRepository {
       const updatedInvoice = await prisma.notaFiscal.update({
         where: { id },
         data: parsedInvoice,
+        include: { company: true },
       });
       return updatedInvoice;
     } catch (error) {

@@ -23,6 +23,7 @@ export type InvoiceDashboard = {
   create: (createInvoice: CreateInvoiceProps) => Promise<void>;
   list: () => Promise<void>;
   delete: (id: string) => Promise<void>;
+  update: (id: string, updateInvoice: CreateInvoiceProps) => Promise<Invoice>;
 };
 
 export type Invoice = {
@@ -126,6 +127,32 @@ export const useInvoice = create<InvoiceDashboard>((set) => ({
     } catch (error) {
       console.log(error);
       throw new Error("Erro ao excluir nota fiscal");
+    }
+  },
+  async update(id: string, invoice: CreateInvoiceProps) {
+    try {
+      const response = await defaultFetch(`/invoices/update/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(invoice),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao atualizar nota fiscal");
+      }
+
+      const data = await response.json();
+
+      set((state) => ({
+        allInvoices: state.allInvoices.map((invoice) =>
+          invoice.id === data.id ? data : invoice,
+        ),
+      }));
+
+      return data;
+    } catch (error) {
+      console.log(error);
+      throw new Error("Erro ao atualizar nota fiscal");
     }
   },
 }));

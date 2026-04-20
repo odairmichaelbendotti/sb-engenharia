@@ -11,11 +11,11 @@ import {
   Banknote,
   Loader,
 } from "lucide-react";
-import type { Invoice, InvoiceFormData } from "./types";
+import type { Invoice } from "./types";
 import { useCompanies } from "../../store/companies";
 import type { Empenho } from "../../../types/empenho";
 import { toast } from "sonner";
-import { defaultFetch } from "../../services/api";
+import { useInvoice } from "../../store/invoices";
 
 interface EditModalProps {
   editInvoice: Invoice | null;
@@ -33,12 +33,13 @@ export default function EditModal({
     value: "",
     empenho_id: "",
     company_id: "",
-    status: "pending" as InvoiceFormData["status"],
+    status: "pending",
   });
   const [empenhosByCompany, setEmpenhosByCompany] = useState<Empenho[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const { companies } = useCompanies();
+  const { update } = useInvoice();
 
   // Inicializa formData quando editInvoice muda
   useEffect(() => {
@@ -50,9 +51,7 @@ export default function EditModal({
         value: editInvoice.value?.toString() || "",
         empenho_id: editInvoice.empenho_id || "",
         company_id: editInvoice.company_id || "",
-        status:
-          (editInvoice.status?.toLowerCase() as InvoiceFormData["status"]) ||
-          "pending",
+        status: editInvoice.status?.toUpperCase() || "PENDING",
       });
 
       // Carrega empenhos da empresa selecionada
@@ -87,7 +86,7 @@ export default function EditModal({
       numero: formData.numero,
       description: formData.description,
       vencimento: formData.vencimento,
-      value: parseFloat(formData.value),
+      value: Number(formData.value),
       empenho_id: formData.empenho_id,
       company_id: formData.company_id,
       status: formData.status,
@@ -95,20 +94,7 @@ export default function EditModal({
 
     try {
       setIsLoading(true);
-      const response = await defaultFetch(
-        `/nota-fiscal/update/${editInvoice.id}`,
-        {
-          method: "PUT",
-          credentials: "include",
-          body: JSON.stringify(nf),
-        },
-      );
-
-      if (!response.ok) {
-        toast.error("Erro ao atualizar nota fiscal");
-        return;
-      }
-
+      await update(editInvoice.id, nf);
       toast.success("Nota fiscal atualizada com sucesso");
       setEditInvoice(null);
     } catch (error) {
@@ -119,7 +105,9 @@ export default function EditModal({
     }
   }
 
-  // if (!editInvoice) return null;
+  console.log(formData);
+
+  if (!editInvoice) return null;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -323,7 +311,7 @@ export default function EditModal({
                 <input
                   type="date"
                   required
-                  value={formData.vencimento}
+                  value={formData.vencimento.split("T")[0]}
                   onChange={(e) =>
                     setFormData((f) => ({ ...f, vencimento: e.target.value }))
                   }
@@ -343,15 +331,15 @@ export default function EditModal({
                     onChange={(e) =>
                       setFormData((f) => ({
                         ...f,
-                        status: e.target.value as InvoiceFormData["status"],
+                        status: e.target.value,
                       }))
                     }
                     className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer"
                   >
-                    <option value="pending">Pendente</option>
-                    <option value="paid">Pago</option>
-                    <option value="overdue">Vencido</option>
-                    <option value="cancelled">Cancelado</option>
+                    <option value="PENDENTE">Pendente</option>
+                    <option value="PAGO">Pago</option>
+                    <option value="VENCIDO">Vencido</option>
+                    <option value="CANCELADO">Cancelado</option>
                   </select>
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                     <svg
