@@ -12,6 +12,7 @@ export type InvoiceDashboard = {
   pendingValue: number;
   allInvoices: Invoice[];
   list: () => void;
+  delete: (id: string) => Promise<void>;
 };
 
 export type Invoice = {
@@ -75,6 +76,27 @@ export const useInvoice = create<InvoiceDashboard>((set) => ({
     } catch (error) {
       console.log(error);
       throw new Error("Erro ao buscar notas fiscais");
+    }
+  },
+  async delete(id: string) {
+    try {
+      const response = await defaultFetch(`/invoices/delete/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao excluir nota fiscal - aqui");
+      }
+
+      set((state) => ({
+        allInvoices: state.allInvoices.filter((invoice) => invoice.id !== id),
+      }));
+
+      return await response.json();
+    } catch (error) {
+      console.log(error);
+      throw new Error("Erro ao excluir nota fiscal");
     }
   },
 }));

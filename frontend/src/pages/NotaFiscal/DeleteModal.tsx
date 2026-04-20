@@ -9,8 +9,11 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
+  Loader,
 } from "lucide-react";
-import type { Invoice } from "../../store/invoices";
+import { useInvoice, type Invoice } from "../../store/invoices";
+import { toast } from "sonner";
+import { useState } from "react";
 
 type DeleteModalProps = {
   deleteInvoice: Invoice | null;
@@ -70,10 +73,28 @@ export function DeleteModal({
   deleteInvoice,
   setDeleteInvoice,
 }: DeleteModalProps) {
-  if (!deleteInvoice) return null;
+  const [isLoading, setIsLoading] = useState(false);
 
+  const { delete: deleteInvoiceFn } = useInvoice();
+
+  if (!deleteInvoice) return null;
   const status = getStatusConfig(deleteInvoice.status);
   const StatusIcon = status.icon;
+
+  async function handleDeleteInvoice(id: string) {
+    setIsLoading(true);
+    try {
+      await deleteInvoiceFn(id);
+      toast.success("Nota fiscal excluída com sucesso");
+      setDeleteInvoice(null);
+    } catch (error) {
+      console.log(error);
+      toast.error("Erro ao excluir nota fiscal");
+      throw new Error("Erro ao excluir nota fiscal");
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -153,16 +174,24 @@ export function DeleteModal({
           <div className="flex gap-3">
             <button
               onClick={() => setDeleteInvoice(null)}
-              className="flex-1 cursor-pointer px-4 py-2.5 text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium"
+              className="flex-1 flex justify-center items-center cursor-pointer px-4 py-2.5 text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium"
             >
               Cancelar
             </button>
             <button
-              onClick={() => setDeleteInvoice(null)}
+              onClick={() => handleDeleteInvoice(deleteInvoice.id)}
               className="flex-1 cursor-pointer px-4 py-2.5 bg-danger-text text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2"
             >
-              <Trash2 size={16} />
-              Sim, excluir
+              {isLoading ? (
+                <>
+                  <Loader className="animate-spin" />
+                </>
+              ) : (
+                <>
+                  <Trash2 size={16} />
+                  Sim, excluir
+                </>
+              )}
             </button>
           </div>
         </div>
