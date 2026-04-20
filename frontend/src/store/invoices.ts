@@ -11,7 +11,7 @@ export type InvoiceDashboard = {
   pendingInvoices: number;
   pendingValue: number;
   allInvoices: Invoice[];
-  list?: () => void;
+  list: () => void;
 };
 
 export type Invoice = {
@@ -41,7 +41,7 @@ export type Invoice = {
   };
 };
 
-export const useInvoice = create<InvoiceDashboard>(() => ({
+export const useInvoice = create<InvoiceDashboard>((set) => ({
   totalCount: 0,
   totalValue: 0,
   paidInvoices: 0,
@@ -61,7 +61,17 @@ export const useInvoice = create<InvoiceDashboard>(() => ({
       if (!response.ok) throw new Error("Erro ao buscar notas fiscais");
 
       const data = await response.json();
-      console.log(data);
+      set({
+        totalCount: data.totalCount,
+        totalValue: data.totalValue,
+        paidInvoices: data.paidInvoices,
+        paidValue: data.paidValue,
+        expiredCount: data.expiredCount,
+        expiredValue: data.expiredValue,
+        pendingInvoices: data.pendingInvoices,
+        pendingValue: data.pendingValue,
+        allInvoices: data.allInvoices,
+      });
     } catch (error) {
       console.log(error);
       throw new Error("Erro ao buscar notas fiscais");
