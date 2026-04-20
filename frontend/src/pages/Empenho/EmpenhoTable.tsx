@@ -1,18 +1,13 @@
 import {
   Layers2,
   Building2,
-  Edit2,
   Trash2,
-  CheckCircle2,
-  XCircle,
-  Check,
-  Play,
   ArrowUp,
   ArrowDown,
+  FileText,
 } from "lucide-react";
 import type { EmpenhoList } from "../../../types/empenho";
 import type { User } from "../../../types/user";
-import { useEmpenhos } from "../../store/empenhos";
 
 interface EmpenhoTableProps {
   empenhos: EmpenhoList[];
@@ -29,40 +24,13 @@ const formatDate = (date: Date | string) => {
   return date.toLocaleDateString("pt-BR");
 };
 
-const getStatusConfig = (status: string) => {
-  const configs: Record<
-    string,
-    {
-      bg: string;
-      text: string;
-      border: string;
-      icon: typeof CheckCircle2;
-      label: string;
-    }
-  > = {
-    ATIVO: {
-      bg: "bg-success-bg",
-      text: "text-success-text",
-      border: "border-success-border",
-      icon: CheckCircle2,
-      label: "Ativo",
-    },
-    FINALIZADO: {
-      bg: "bg-blue-100",
-      text: "text-blue-600",
-      border: "border-blue-200",
-      icon: CheckCircle2,
-      label: "Finalizado",
-    },
-    CANCELADO: {
-      bg: "bg-danger-bg",
-      text: "text-danger-text",
-      border: "border-danger-border",
-      icon: XCircle,
-      label: "Cancelado",
-    },
+const getStatusStyle = (status: string) => {
+  const styles: Record<string, string> = {
+    ATIVO: "bg-emerald-500 text-white",
+    FINALIZADO: "bg-blue-500 text-white",
+    CANCELADO: "bg-red-500 text-white",
   };
-  return configs[status.toUpperCase()] || configs.ATIVO;
+  return styles[status.toUpperCase()] || styles.ATIVO;
 };
 
 export function EmpenhoTable({
@@ -72,8 +40,6 @@ export function EmpenhoTable({
   onDelete,
   user,
 }: EmpenhoTableProps) {
-  const { updateStatus } = useEmpenhos();
-
   if (empenhos.length === 0) {
     return (
       <div className="py-12 text-center">
@@ -135,8 +101,6 @@ export function EmpenhoTable({
         </thead>
         <tbody className="divide-y divide-border">
           {empenhos.map((empenho) => {
-            const status = getStatusConfig(empenho.status);
-            const StatusIcon = status.icon;
             const isNearDeadline =
               empenho.status.toLowerCase() === "ativo" &&
               new Date(empenho.endAt) <
@@ -194,9 +158,8 @@ export function EmpenhoTable({
                 </td>
                 <td className="py-3 px-4 text-center">
                   <span
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${status.bg} ${status.text} ${status.border}`}
+                    className={`inline-block px-3 py-1 rounded-md text-xs font-medium ${getStatusStyle(empenho.status)}`}
                   >
-                    <StatusIcon size={12} />
                     {empenho.status}
                   </span>
                 </td>
@@ -206,10 +169,10 @@ export function EmpenhoTable({
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => onEdit(empenho)}
-                        className="p-2 hover:bg-primary-100 cursor-pointer text-text-secondary hover:text-primary-500 rounded-md transition-colors"
-                        title="Editar"
+                        className="flex items-center gap-2 px-3 py-1.5 hover:bg-primary-50 cursor-pointer text-text-secondary hover:text-primary-700 rounded-md transition-colors text-sm font-medium"
+                        title="Gerenciar"
                       >
-                        <Edit2 size={16} />
+                        <FileText size={16} />
                       </button>
                       <button
                         onClick={() => onDelete(empenho)}
@@ -217,25 +180,6 @@ export function EmpenhoTable({
                         title="Excluir"
                       >
                         <Trash2 size={16} />
-                      </button>
-                      <button
-                        onClick={() =>
-                          updateStatus({
-                            status:
-                              empenho.status === "ATIVO"
-                                ? "FINALIZADO"
-                                : "ATIVO",
-                            empenhoId: empenho.id,
-                          })
-                        }
-                        className="p-2 hover:bg-emerald-100 cursor-pointer text-text-secondary hover:text-emerald-600 rounded-md transition-colors"
-                        title="Concluir"
-                      >
-                        {empenho.status === "ATIVO" ? (
-                          <Check size={16} />
-                        ) : (
-                          <Play size={16} />
-                        )}
                       </button>
                     </div>
                   </td>

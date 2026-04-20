@@ -6,6 +6,10 @@ import {
   Building2,
   AlignLeft,
   CalendarDays,
+  CheckCircle2,
+  XCircle,
+  Activity,
+  AlertCircle,
 } from "lucide-react";
 import { useCompanies } from "../../store/companies";
 import { useState, useEffect } from "react";
@@ -46,13 +50,23 @@ export function EmpenhoModal({
     company_id: "",
   });
 
-  const { fetchListEmpenhos } = useEmpenhos();
+  const { fetchListEmpenhos, updateStatus } = useEmpenhos();
+  const [currentStatus, setCurrentStatus] = useState(
+    empenho?.status || "ATIVO",
+  );
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && companies.length === 0) {
       listCompanies();
     }
   }, [isOpen, companies.length, listCompanies]);
+
+  useEffect(() => {
+    if (empenho) {
+      setCurrentStatus(empenho.status);
+    }
+  }, [empenho]);
 
   useEffect(() => {
     if (empenho) {
@@ -342,6 +356,90 @@ export function EmpenhoModal({
               </div>
             </div>
           </div>
+
+          {/* Seção: Status e Ações (apenas em edição) */}
+          {empenho && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+                <AlertCircle size={16} className="text-primary-500" />
+                <span>Status e Ações</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+              <div className="bg-surface rounded-lg p-4 border border-border">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm text-text-secondary mr-2">
+                    Status:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setUpdatingStatus("ATIVO");
+                      await updateStatus({
+                        status: "ATIVO",
+                        empenhoId: empenho.id,
+                      });
+                      setCurrentStatus("ATIVO");
+                      await fetchListEmpenhos();
+                      setUpdatingStatus(null);
+                    }}
+                    disabled={updatingStatus !== null}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors border ${currentStatus === "ATIVO" ? "bg-emerald-500 text-white border-emerald-500" : "bg-surface text-text-secondary border-border hover:border-emerald-300 hover:text-emerald-600"} ${updatingStatus !== null ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+                  >
+                    {updatingStatus === "ATIVO" ? (
+                      <Loader size={14} className="animate-spin" />
+                    ) : (
+                      <Activity size={14} />
+                    )}
+                    Ativo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setUpdatingStatus("FINALIZADO");
+                      await updateStatus({
+                        status: "FINALIZADO",
+                        empenhoId: empenho.id,
+                      });
+                      setCurrentStatus("FINALIZADO");
+                      await fetchListEmpenhos();
+                      setUpdatingStatus(null);
+                    }}
+                    disabled={updatingStatus !== null}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors border ${currentStatus === "FINALIZADO" ? "bg-primary-500 text-white border-primary-500" : "bg-surface text-text-secondary border-border hover:border-primary-300 hover:text-primary-600"} ${updatingStatus !== null ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+                  >
+                    {updatingStatus === "FINALIZADO" ? (
+                      <Loader size={14} className="animate-spin" />
+                    ) : (
+                      <CheckCircle2 size={14} />
+                    )}
+                    Finalizado
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setUpdatingStatus("CANCELADO");
+                      await updateStatus({
+                        status: "CANCELADO",
+                        empenhoId: empenho.id,
+                      });
+                      setCurrentStatus("CANCELADO");
+                      await fetchListEmpenhos();
+                      setUpdatingStatus(null);
+                    }}
+                    disabled={updatingStatus !== null}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors border ${currentStatus === "CANCELADO" ? "bg-red-500 text-white border-red-500" : "bg-surface text-text-secondary border-border hover:border-red-300 hover:text-red-600"} ${updatingStatus !== null ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+                  >
+                    {updatingStatus === "CANCELADO" ? (
+                      <Loader size={14} className="animate-spin" />
+                    ) : (
+                      <XCircle size={14} />
+                    )}
+                    Cancelado
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Footer Actions */}
           <div className="flex justify-end gap-3 pt-4 border-t border-border shrink-0">
