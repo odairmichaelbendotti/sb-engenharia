@@ -6,10 +6,10 @@ import {
   AlertCircle,
   TrendingUp,
 } from "lucide-react";
-import type { EmpenhoList } from "../../../types/empenho";
+import type { Empenho } from "../../../types/empenho";
 
 interface EmpenhoDetailsProps {
-  empenho: EmpenhoList | null;
+  empenho: Empenho | null;
   newValue: string;
 }
 

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import type { InvoiceFormData } from "./types";
 import { useCompanies } from "../../store/companies";
-import type { EmpenhoList } from "../../../types/empenho";
+import type { Empenho } from "../../../types/empenho";
 import { toast } from "sonner";
 import { useInvoice } from "../../store/invoices";
 import { EmpenhoDetails } from "./EmpenhoDetails";
@@ -33,11 +33,9 @@ const initialFormData: InvoiceFormData = {
 
 export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
   const [formData, setFormData] = useState(initialFormData);
-  const [empenhosByCompany, setEmpenhosByCompany] = useState<EmpenhoList[]>([]);
+  const [empenhosByCompany, setEmpenhosByCompany] = useState<Empenho[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedEmpenho, setSelectedEmpenho] = useState<EmpenhoList | null>(
-    null,
-  );
+  const [selectedEmpenho, setSelectedEmpenho] = useState<Empenho | null>(null);
 
   const { companies } = useCompanies();
   const { create } = useInvoice();
