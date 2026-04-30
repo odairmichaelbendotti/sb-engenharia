@@ -12,9 +12,10 @@ import {
 } from "lucide-react";
 import type { InvoiceFormData } from "./types";
 import { useCompanies } from "../../store/companies";
-import type { Empenho } from "../../../types/empenho";
+import type { EmpenhoList } from "../../../types/empenho";
 import { toast } from "sonner";
 import { useInvoice } from "../../store/invoices";
+import { EmpenhoDetails } from "./EmpenhoDetails";
 
 interface AddModalProps {
   isOpen: boolean;
@@ -32,8 +33,11 @@ const initialFormData: InvoiceFormData = {
 
 export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
   const [formData, setFormData] = useState(initialFormData);
-  const [empenhosByCompany, setEmpenhosByCompany] = useState<Empenho[]>([]);
+  const [empenhosByCompany, setEmpenhosByCompany] = useState<EmpenhoList[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedEmpenho, setSelectedEmpenho] = useState<EmpenhoList | null>(
+    null,
+  );
 
   const { companies } = useCompanies();
   const { create } = useInvoice();
@@ -46,6 +50,20 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
     } else {
       setEmpenhosByCompany([]);
     }
+  }
+
+  function handleChangeEmpenho(
+    e: React.ChangeEvent<HTMLSelectElement, HTMLSelectElement>,
+  ) {
+    setFormData((f) => ({ ...f, empenho_id: e.target.value }));
+
+    const empenho = empenhosByCompany.find(
+      (f) => f.id.toString() === e.target.value,
+    );
+
+    if (!empenho) return setSelectedEmpenho(null);
+
+    setSelectedEmpenho(empenho);
   }
 
   if (!isOpen) return null;
@@ -110,6 +128,14 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6">
+          {/* Empenho Selecionado */}
+          {selectedEmpenho && (
+            <EmpenhoDetails
+              empenho={selectedEmpenho}
+              newValue={formData.value}
+            />
+          )}
+
           {/* Identificação */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
@@ -213,9 +239,7 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
                   <select
                     disabled={!formData.company_id && true}
                     value={formData.empenho_id}
-                    onChange={(e) =>
-                      setFormData((f) => ({ ...f, empenho_id: e.target.value }))
-                    }
+                    onChange={(e) => handleChangeEmpenho(e)}
                     className={`w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer ${empenhosByCompany.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     <option value="">
