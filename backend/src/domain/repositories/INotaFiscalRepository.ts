@@ -1,5 +1,5 @@
-import type { NotaFiscal } from "../../generated/prisma/client";
-import type { NotaFiscalType } from "../entities/NotaFiscal";
+import type { NotaFiscal } from "../../generated/prisma/client.js";
+import type { NotaFiscalType } from "../entities/NotaFiscal.js";
 
 export type listInvoices = {
   totalCount: number;

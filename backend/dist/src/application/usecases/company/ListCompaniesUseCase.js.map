@@ -1,0 +1,1 @@
+{"version":3,"file":"ListCompaniesUseCase.js","sourceRoot":"","sources":["../../../../../src/application/usecases/company/ListCompaniesUseCase.ts"],"names":[],"mappings":"AAEA,MAAM,OAAO,oBAAoB;IACX;IAApB,YAAoB,UAA8B;QAA9B,eAAU,GAAV,UAAU,CAAoB;IAAG,CAAC;IAEtD,KAAK,CAAC,OAAO;QACX,OAAO,IAAI,CAAC,UAAU,CAAC,IAAI,EAAE,CAAC;IAChC,CAAC;CACF"}

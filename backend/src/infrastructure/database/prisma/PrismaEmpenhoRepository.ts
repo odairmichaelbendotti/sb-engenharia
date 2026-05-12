@@ -1,12 +1,12 @@
 import type {
   empenhosDTO,
   IEmpenhoRepository,
-} from "../../../domain/repositories/IEmpenhoRepository";
-import type { EmpenhoType } from "../../../domain/entities/Empenho";
-import type { Empenho } from "../../../generated/prisma/client";
-import { prisma } from "../../prisma/prisma";
-import { DomainError } from "../../../domain/errors/DomainError";
-import { formatDate } from "../../../utils/formatDateToInsertDb";
+} from "../../../domain/repositories/IEmpenhoRepository.js";
+import type { EmpenhoType } from "../../../domain/entities/Empenho.js";
+import type { Empenho } from "../../../generated/prisma/client.js";
+import { prisma } from "../../prisma/prisma.js";
+import { DomainError } from "../../../domain/errors/DomainError.js";
+import { formatDate } from "../../../utils/formatDateToInsertDb.js";
 
 export class PrismaEmpenhoRepository implements IEmpenhoRepository {
   async create(empenho: EmpenhoType): Promise<Empenho> {

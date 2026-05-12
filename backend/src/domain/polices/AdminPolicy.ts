@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from "../../@types/AuthenticatedUser";
+import type { AuthenticatedUser } from "../../@types/AuthenticatedUser.js";
 
 export class AdminPolicy {
   isAdmin(user: AuthenticatedUser) {

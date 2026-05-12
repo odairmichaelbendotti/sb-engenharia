@@ -1,0 +1,1 @@
+{"version":3,"file":"DeleteCompanyUseCase.d.ts","sourceRoot":"","sources":["../../../../../src/application/usecases/company/DeleteCompanyUseCase.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,kBAAkB,EAAE,MAAM,oDAAoD,CAAC;AAE7F,qBAAa,oBAAoB;IACnB,OAAO,CAAC,UAAU;gBAAV,UAAU,EAAE,kBAAkB;IAE5C,OAAO,CAAC,EAAE,EAAE,MAAM;CAGzB"}

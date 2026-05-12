@@ -1,6 +1,6 @@
-import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser";
-import { AdminPolicy } from "../../../domain/polices/AdminPolicy";
-import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository";
+import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
+import { AdminPolicy } from "../../../domain/polices/AdminPolicy.js";
+import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository.js";
 
 type DeleteEmpenhoUseCaseInput = {
   user: AuthenticatedUser;

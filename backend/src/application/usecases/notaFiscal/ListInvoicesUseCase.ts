@@ -1,4 +1,4 @@
-import type { INotaFiscalRepository } from "../../../domain/repositories/INotaFiscalRepository";
+import type { INotaFiscalRepository } from "../../../domain/repositories/INotaFiscalRepository.js";
 
 export class ListInvoicesUseCase {
   constructor(private repository: INotaFiscalRepository) {}

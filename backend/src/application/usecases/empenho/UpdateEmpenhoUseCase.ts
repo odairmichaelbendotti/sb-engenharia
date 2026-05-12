@@ -1,9 +1,9 @@
-import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser";
-import type { EmpenhoType } from "../../../domain/entities/Empenho";
-import { DomainError } from "../../../domain/errors/DomainError";
-import { AdminPolicy } from "../../../domain/polices/AdminPolicy";
-import type { ICompanyRepository } from "../../../domain/repositories/ICompanyRepository";
-import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository";
+import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
+import type { EmpenhoType } from "../../../domain/entities/Empenho.js";
+import { DomainError } from "../../../domain/errors/DomainError.js";
+import { AdminPolicy } from "../../../domain/polices/AdminPolicy.js";
+import type { ICompanyRepository } from "../../../domain/repositories/ICompanyRepository.js";
+import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository.js";
 
 export class UpdateEmpenhoUseCase {
   constructor(

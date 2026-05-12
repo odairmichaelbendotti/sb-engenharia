@@ -1,0 +1,1 @@
+{"version":3,"file":"InfrastructureError.js","sourceRoot":"","sources":["../../../../src/infrastructure/errors/InfrastructureError.ts"],"names":[],"mappings":"AAAA,MAAM,OAAO,mBAAoB,SAAQ,KAAK;IAC5C,YAAY,OAAe;QACzB,KAAK,CAAC,OAAO,CAAC,CAAC;QACf,IAAI,CAAC,IAAI,GAAG,qBAAqB,CAAC;IACpC,CAAC;CACF"}

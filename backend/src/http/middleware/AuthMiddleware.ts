@@ -1,5 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import type { ITokenValidator } from "../../domain/cryptography/TokenValidator.js";
+import type { AuthenticatedUser } from "../../@types/AuthenticatedUser.js";
+import type { JwtPayload } from "jsonwebtoken";
 
 export class AuthMiddleware {
   constructor(private tokenValidator: ITokenValidator) {}
@@ -9,14 +11,28 @@ export class AuthMiddleware {
 
     if (!token) return res.status(401).json({ message: "Token not provided" });
 
-    const payload = this.tokenValidator.validate(token);
+    const payload = this.tokenValidator.validate(token) as JwtPayload;
     console.log("Payload here", payload);
 
     if (!payload) {
       return res.status(401).json({ message: "Invalid token" });
     }
 
-    req.user = payload;
+    const user: AuthenticatedUser = {
+      id: payload.id,
+      name: payload.name,
+      email: payload.email,
+      role: payload.role,
+    };
+
+    req.user = user;
     next();
   };
 }
+
+// export interface AuthenticatedUser {
+//   id: string;
+//   name: string;
+//   email: string;
+//   role: "MASTER" | "EDITOR" | "USER";
+// }

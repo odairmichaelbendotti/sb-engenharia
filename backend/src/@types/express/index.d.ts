@@ -7,6 +7,6 @@ interface JwtPayload {
 
 declare namespace Express {
   interface Request {
-    user?: JwtPayload;
+    user?: AuthenticatedUser;
   }
 }

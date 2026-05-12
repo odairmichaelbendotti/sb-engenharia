@@ -1,10 +1,10 @@
-import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser";
-import { DomainError } from "../../../domain/errors/DomainError";
-import { AdminPolicy } from "../../../domain/polices/AdminPolicy";
+import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
+import { DomainError } from "../../../domain/errors/DomainError.js";
+import { AdminPolicy } from "../../../domain/polices/AdminPolicy.js";
 import type {
   IEmpenhoRepository,
   UpdateStatusDTO,
-} from "../../../domain/repositories/IEmpenhoRepository";
+} from "../../../domain/repositories/IEmpenhoRepository.js";
 
 export class UpdateStatusEmpenhoUseCase {
   constructor(private repository: IEmpenhoRepository) {}
