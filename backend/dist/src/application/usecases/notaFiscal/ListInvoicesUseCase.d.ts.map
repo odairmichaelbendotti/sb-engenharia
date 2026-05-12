@@ -1,0 +1,1 @@
+{"version":3,"file":"ListInvoicesUseCase.d.ts","sourceRoot":"","sources":["../../../../../src/application/usecases/notaFiscal/ListInvoicesUseCase.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,qBAAqB,EAAE,MAAM,uDAAuD,CAAC;AAEnG,qBAAa,mBAAmB;IAClB,OAAO,CAAC,UAAU;gBAAV,UAAU,EAAE,qBAAqB;IAE/C,OAAO;CAGd"}

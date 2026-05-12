@@ -1,6 +1,6 @@
-import type { CompanyType } from "../../../domain/entities/Company";
-import { DomainError } from "../../../domain/errors/DomainError";
-import type { ICompanyRepository } from "../../../domain/repositories/ICompanyRepository";
+import type { CompanyType } from "../../../domain/entities/Company.js";
+import { DomainError } from "../../../domain/errors/DomainError.js";
+import type { ICompanyRepository } from "../../../domain/repositories/ICompanyRepository.js";
 
 export class CreateCompanyUseCase {
   constructor(private repository: ICompanyRepository) {}

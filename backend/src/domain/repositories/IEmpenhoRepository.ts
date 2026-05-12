@@ -1,5 +1,7 @@
-import type { Empenho } from "../../generated/prisma/client";
-import type { EmpenhoType } from "../entities/Empenho";
+import type { Empenho } from "../../generated/prisma/client.js";
+import type { EmpenhoType } from "../entities/Empenho.js";
+
+export type UpdateStatusDTO = "ATIVO" | "FINALIZADO" | "CANCELADO";
 
 export type empenhosDTO = {
   empenhos: (Empenho & {

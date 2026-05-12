@@ -1,4 +1,4 @@
-import type { Company } from "../../generated/prisma/client";
+import type { Company } from "../../generated/prisma/client.js";
 import { CompanyEntity, type CompanyType } from "../entities/Company.js";
 
 export type ListCompaniesResponse = {

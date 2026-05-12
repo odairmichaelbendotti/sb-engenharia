@@ -1,11 +1,11 @@
-import type { NotaFiscalType } from "../../../domain/entities/NotaFiscal";
-import { DomainError } from "../../../domain/errors/DomainError";
+import type { NotaFiscalType } from "../../../domain/entities/NotaFiscal.js";
+import { DomainError } from "../../../domain/errors/DomainError.js";
 import type {
   INotaFiscalRepository,
   listInvoices,
-} from "../../../domain/repositories/INotaFiscalRepository";
-import type { NotaFiscal } from "../../../generated/prisma/client";
-import { prisma } from "../../prisma/prisma";
+} from "../../../domain/repositories/INotaFiscalRepository.js";
+import type { NotaFiscal } from "../../../generated/prisma/client.js";
+import { prisma } from "../../prisma/prisma.js";
 
 export class PrismaNotaFiscalRepository implements INotaFiscalRepository {
   async create(notaFiscal: NotaFiscalType): Promise<NotaFiscal> {

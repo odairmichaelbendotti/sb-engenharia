@@ -1,4 +1,3 @@
-import type { Request } from "express";
 import { User } from "../../../domain/entities/User.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import type { IUserRepository } from "../../../domain/repositories/IUserRepository.js";

@@ -1,0 +1,1 @@
+{"version":3,"file":"ListEmpenhosUseCase.d.ts","sourceRoot":"","sources":["../../../../../src/application/usecases/empenho/ListEmpenhosUseCase.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,kBAAkB,EAAE,MAAM,oDAAoD,CAAC;AAE7F,qBAAa,mBAAmB;IAClB,OAAO,CAAC,UAAU;gBAAV,UAAU,EAAE,kBAAkB;IAE5C,OAAO;CAGd"}

@@ -1,10 +1,10 @@
 import type { Request, Response } from "express";
-import type { CreateEmpenhoUseCase } from "../../application/usecases/empenho/CreateEmpenhoUseCase";
-import { DomainError } from "../../domain/errors/DomainError";
-import type { ListEmpenhosUseCase } from "../../application/usecases/empenho/ListEmpenhosUseCase";
-import type { DeleteEmpenhoUseCase } from "../../application/usecases/empenho/DeleteEmpenhoUseCase";
-import type { UpdateEmpenhoUseCase } from "../../application/usecases/empenho/UpdateEmpenhoUseCase";
-import type { UpdateStatusEmpenhoUseCase } from "../../application/usecases/empenho/UpdateEmpenhoStatusUseCase";
+import type { CreateEmpenhoUseCase } from "../../application/usecases/empenho/CreateEmpenhoUseCase.js";
+import { DomainError } from "../../domain/errors/DomainError.js";
+import type { ListEmpenhosUseCase } from "../../application/usecases/empenho/ListEmpenhosUseCase.js";
+import type { DeleteEmpenhoUseCase } from "../../application/usecases/empenho/DeleteEmpenhoUseCase.js";
+import type { UpdateEmpenhoUseCase } from "../../application/usecases/empenho/UpdateEmpenhoUseCase.js";
+import type { UpdateStatusEmpenhoUseCase } from "../../application/usecases/empenho/UpdateEmpenhoStatusUseCase.js";
 
 export class EmpenhoController {
   constructor(
