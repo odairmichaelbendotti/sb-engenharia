@@ -4,6 +4,7 @@ export interface Empenho {
   description: string;
   value: number;
   startAt: string;
+  totalPaid: number;
   endAt: string;
   status?: "ativo" | "concluido" | "cancelado";
 }
