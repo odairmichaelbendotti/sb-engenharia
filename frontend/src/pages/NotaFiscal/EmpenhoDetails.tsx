@@ -42,11 +42,11 @@ export function EmpenhoDetails({ empenho, newValue }: EmpenhoDetailsProps) {
 
   // Definir cores baseado no status
   const statusColor =
-    empenho.status === "ATIVO"
+    empenho.status === "ativo"
       ? "bg-emerald-100 text-emerald-700"
       : "bg-slate-100 text-slate-700";
   const statusBgDot =
-    empenho.status === "ATIVO" ? "bg-emerald-500" : "bg-slate-500";
+    empenho.status === "ativo" ? "bg-emerald-500" : "bg-slate-500";
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500 ease-out">
