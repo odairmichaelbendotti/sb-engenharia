@@ -1,4 +1,4 @@
-import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository";
+import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository.js";
 
 export class ListEmpenhosUseCase {
   constructor(private repository: IEmpenhoRepository) {}

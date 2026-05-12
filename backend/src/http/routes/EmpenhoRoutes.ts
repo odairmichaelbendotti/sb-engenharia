@@ -1,14 +1,14 @@
 import { Router } from "express";
-import { PrismaEmpenhoRepository } from "../../infrastructure/database/prisma/PrismaEmpenhoRepository";
-import { CreateEmpenhoUseCase } from "../../application/usecases/empenho/CreateEmpenhoUseCase";
-import { EmpenhoController } from "../controllers/EmpenhoController";
-import { ListEmpenhosUseCase } from "../../application/usecases/empenho/ListEmpenhosUseCase";
-import { DeleteEmpenhoUseCase } from "../../application/usecases/empenho/DeleteEmpenhoUseCase";
-import { AuthMiddleware } from "../middleware/AuthMiddleware";
-import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator";
-import { UpdateEmpenhoUseCase } from "../../application/usecases/empenho/UpdateEmpenhoUseCase";
-import { PrismaCompanyRepository } from "../../infrastructure/database/prisma/PrismaCompanyRepository";
-import { UpdateStatusEmpenhoUseCase } from "../../application/usecases/empenho/UpdateEmpenhoStatusUseCase";
+import { PrismaEmpenhoRepository } from "../../infrastructure/database/prisma/PrismaEmpenhoRepository.js";
+import { CreateEmpenhoUseCase } from "../../application/usecases/empenho/CreateEmpenhoUseCase.js";
+import { EmpenhoController } from "../controllers/EmpenhoController.js";
+import { ListEmpenhosUseCase } from "../../application/usecases/empenho/ListEmpenhosUseCase.js";
+import { DeleteEmpenhoUseCase } from "../../application/usecases/empenho/DeleteEmpenhoUseCase.js";
+import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
+import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
+import { UpdateEmpenhoUseCase } from "../../application/usecases/empenho/UpdateEmpenhoUseCase.js";
+import { PrismaCompanyRepository } from "../../infrastructure/database/prisma/PrismaCompanyRepository.js";
+import { UpdateStatusEmpenhoUseCase } from "../../application/usecases/empenho/UpdateEmpenhoStatusUseCase.js";
 
 export const EmpenhoRoutes = Router();
 

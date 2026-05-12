@@ -1,7 +1,7 @@
-import type { NotaFiscalType } from "../../../domain/entities/NotaFiscal";
-import { DomainError } from "../../../domain/errors/DomainError";
-import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository";
-import type { INotaFiscalRepository } from "../../../domain/repositories/INotaFiscalRepository";
+import type { NotaFiscalType } from "../../../domain/entities/NotaFiscal.js";
+import { DomainError } from "../../../domain/errors/DomainError.js";
+import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository.js";
+import type { INotaFiscalRepository } from "../../../domain/repositories/INotaFiscalRepository.js";
 
 export class CreateInvoiceUseCase {
   constructor(

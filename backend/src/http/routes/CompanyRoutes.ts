@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { PrismaCompanyRepository } from "../../infrastructure/database/prisma/PrismaCompanyRepository";
-import { CreateCompanyUseCase } from "../../application/usecases/company/CreateCompanyUseCase";
-import { CompanyController } from "../controllers/CompanyController";
-import { ListCompaniesUseCase } from "../../application/usecases/company/ListCompaniesUseCase";
-import { DeleteCompanyUseCase } from "../../application/usecases/company/DeleteCompanyUseCase";
-import { UpdateCompanyUseCase } from "../../application/usecases/company/UpdateCompanyUseCase";
+import { PrismaCompanyRepository } from "../../infrastructure/database/prisma/PrismaCompanyRepository.js";
+import { CreateCompanyUseCase } from "../../application/usecases/company/CreateCompanyUseCase.js";
+import { CompanyController } from "../controllers/CompanyController.js";
+import { ListCompaniesUseCase } from "../../application/usecases/company/ListCompaniesUseCase.js";
+import { DeleteCompanyUseCase } from "../../application/usecases/company/DeleteCompanyUseCase.js";
+import { UpdateCompanyUseCase } from "../../application/usecases/company/UpdateCompanyUseCase.js";
 
 export const CompanyRoutes = Router();
 

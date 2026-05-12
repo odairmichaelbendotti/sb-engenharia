@@ -1,11 +1,11 @@
-import type { CompanyEntity } from "../../../domain/entities/Company";
-import { DomainError } from "../../../domain/errors/DomainError";
+import type { CompanyEntity } from "../../../domain/entities/Company.js";
+import { DomainError } from "../../../domain/errors/DomainError.js";
 import type {
   ICompanyRepository,
   ListCompaniesResponse,
-} from "../../../domain/repositories/ICompanyRepository";
-import type { Company, Empenho } from "../../../generated/prisma/client";
-import { prisma } from "../../prisma/prisma";
+} from "../../../domain/repositories/ICompanyRepository.js";
+import type { Company, Empenho } from "../../../generated/prisma/client.js";
+import { prisma } from "../../prisma/prisma.js";
 
 export class PrismaCompanyRepository implements ICompanyRepository {
   async create(company: CompanyEntity): Promise<Company> {

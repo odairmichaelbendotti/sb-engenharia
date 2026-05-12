@@ -27,7 +27,7 @@ export class SignUpUseCase {
       id: createdUser.id,
       name: createdUser.name,
       email: createdUser.email,
-      admin: createdUser.admin,
+      role: createdUser.role,
     });
 
     console.log("User created:", createdUser);

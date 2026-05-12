@@ -1,9 +1,9 @@
 import type { Request, Response } from "express";
-import { DomainError } from "../../domain/errors/DomainError";
-import type { ListInvoicesUseCase } from "../../application/usecases/notaFiscal/ListInvoicesUseCase";
-import type { DeleteInvoiceUseCase } from "../../application/usecases/notaFiscal/DeleteInvoiceUseCase";
-import { CreateInvoiceUseCase } from "../../application/usecases/notaFiscal/CreateInvoiceUseCase";
-import type { UpdateInvoiceUseCase } from "../../application/usecases/notaFiscal/UpdateInvoiceUseCase";
+import { DomainError } from "../../domain/errors/DomainError.js";
+import type { ListInvoicesUseCase } from "../../application/usecases/notaFiscal/ListInvoicesUseCase.js";
+import type { DeleteInvoiceUseCase } from "../../application/usecases/notaFiscal/DeleteInvoiceUseCase.js";
+import { CreateInvoiceUseCase } from "../../application/usecases/notaFiscal/CreateInvoiceUseCase.js";
+import type { UpdateInvoiceUseCase } from "../../application/usecases/notaFiscal/UpdateInvoiceUseCase.js";
 
 export class NotaFiscalController {
   constructor(
