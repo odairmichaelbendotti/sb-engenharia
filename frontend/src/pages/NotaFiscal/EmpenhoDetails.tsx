@@ -51,7 +51,7 @@ export function EmpenhoDetails({ empenho, newValue }: EmpenhoDetailsProps) {
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500 ease-out">
       {/* Card Principal */}
-      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl border border-blue-100 p-5 shadow-sm">
+      <div className="bg-linear-to-br from-blue-50 to-cyan-50 rounded-xl border border-blue-100 p-5 shadow-sm">
         {/* Header com Numero e Status */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
@@ -152,7 +152,7 @@ export function EmpenhoDetails({ empenho, newValue }: EmpenhoDetailsProps) {
           </div>
           <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
             <div
-              className="bg-gradient-to-r from-emerald-400 to-emerald-500 h-full rounded-full transition-all duration-300"
+              className="bg-linear-to-r from-emerald-400 to-emerald-500 h-full rounded-full transition-all duration-300"
               style={{ width: `${Math.min(100, paidPercentage)}%` }}
             />
           </div>
@@ -179,8 +179,8 @@ export function EmpenhoDetails({ empenho, newValue }: EmpenhoDetailsProps) {
             <div
               className={`h-full rounded-full transition-all duration-300 ${
                 exceedsLimit
-                  ? "bg-gradient-to-r from-red-400 to-red-500"
-                  : "bg-gradient-to-r from-violet-400 to-violet-500"
+                  ? "bg-linear-to-r from-red-400 to-red-500"
+                  : "bg-linear-to-r from-violet-400 to-violet-500"
               }`}
               style={{ width: `${Math.min(100, totalPercentage)}%` }}
             />
@@ -191,10 +191,7 @@ export function EmpenhoDetails({ empenho, newValue }: EmpenhoDetailsProps) {
       {/* Aviso de Erro - Se Exceder Limite */}
       {exceedsLimit && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3">
-          <AlertCircle
-            size={20}
-            className="text-red-600 flex-shrink-0 mt-0.5"
-          />
+          <AlertCircle size={20} className="text-red-600 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-semibold text-red-900 mb-1">
               Atenção: Limite do Empenho Será Ultrapassado
