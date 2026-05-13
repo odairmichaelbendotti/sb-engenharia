@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "build": "prisma generate && tsc",
-    "dev": "npx tsx --env-file=.env --watch ./server.ts"
+    "dev": "npx tsx --env-file=.env --watch ./server.ts",
+    "start": "node --env-file=./env ./dist/server.js"
   },
   "keywords": [],
   "author": "",
