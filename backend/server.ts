@@ -10,7 +10,7 @@ const app = express();
 app.use(
   cors({
     credentials: true,
-    origin: "*",
+    origin: "https://sb-engenharia.vercel.app",
   }),
 );
 app.use(cookieParser());

@@ -6,7 +6,7 @@ type RequestInit = {
 
 export async function defaultFetch(endpoint: string, options?: RequestInit) {
   try {
-    const response = await fetch(`${import.meta.env.VITE_HOST}${endpoint}`, {
+    const response = await fetch(`${import.meta.env.VITE_HOST}/${endpoint}`, {
       ...options,
       headers: {
         "Content-Type": "application/json",
