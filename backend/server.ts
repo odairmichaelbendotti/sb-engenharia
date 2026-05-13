@@ -21,5 +21,5 @@ app.use("/api", EmpenhoRoutes);
 app.use("/api", NotaFiscalRoutes);
 
 app.listen(process.env.PORT, () => {
-  console.log(`http://74.50.67.174:${process.env.PORT}`);
+  console.log(`https://74.50.67.174`);
 });
