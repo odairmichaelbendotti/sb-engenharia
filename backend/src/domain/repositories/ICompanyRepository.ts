@@ -1,8 +1,8 @@
-import type { Company } from "../../generated/prisma/client.js";
+import type { Company, Empenho } from "../../generated/prisma/client.js";
 import { CompanyEntity, type CompanyType } from "../entities/Company.js";
 
 export type ListCompaniesResponse = {
-  companies: Company[];
+  companies: (Company & { empenhos: Empenho[] })[];
   stats: {
     totalCompanies: number;
     totalEmpenhos: number;

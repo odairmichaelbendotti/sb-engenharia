@@ -60,8 +60,18 @@ export class PrismaCompanyRepository implements ICompanyRepository {
         prisma.empenho.count({ where: { status: "ATIVO" } }),
         prisma.empenho.aggregate({ _sum: { value: true } }),
       ]);
+
+      // Aqui vou dividir o valor do empenho de cada empresa por 100
+      const companiesWithDividedValue = companies.map((company) => ({
+        ...company,
+        empenhos: company.empenhos.map((empenho) => ({
+          ...empenho,
+          value: empenho.value / 100,
+        })),
+      }));
+
       return {
-        companies,
+        companies: companiesWithDividedValue,
         stats: {
           totalCompanies,
           totalEmpenhos,
