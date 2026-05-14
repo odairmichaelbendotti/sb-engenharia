@@ -16,6 +16,8 @@ interface EmpenhoDetailsProps {
 export function EmpenhoDetails({ empenho, newValue }: EmpenhoDetailsProps) {
   if (!empenho) return null;
 
+  console.log({ empenho, newValue });
+
   const totalPaid = empenho.totalPaid || 0;
   const totalValue = empenho.value || 0;
   const newValueNum = Number(newValue) || 0;

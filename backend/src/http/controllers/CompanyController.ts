@@ -44,9 +44,17 @@ export class CompanyController {
           .status(204)
           .json({ message: "No companies registered in the system" });
 
-      // console.log(data.companies[0].empenhos);
+      const companies = data.companies.map((company) => ({
+        ...company,
+        empenhos: company.empenhos.map((empenho) => ({
+          ...empenho,
+          totalPaid: empenho.totalPaid / 100,
+        })),
+      }));
 
-      res.status(200).json(data);
+      console.log(companies);
+
+      res.status(200).json({ ...data, companies: companies });
     } catch (error) {
       if (error instanceof DomainError) {
         res.status(400).json({ message: error.message });
