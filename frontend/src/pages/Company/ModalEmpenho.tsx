@@ -97,6 +97,8 @@ const ModalEmpenho = ({
     );
   };
 
+  console.log(empresaSelecionada);
+
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) handleClose();
   };

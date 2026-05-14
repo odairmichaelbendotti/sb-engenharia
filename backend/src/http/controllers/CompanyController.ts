@@ -44,6 +44,8 @@ export class CompanyController {
           .status(204)
           .json({ message: "No companies registered in the system" });
 
+      // console.log(data.companies[0].empenhos);
+
       res.status(200).json(data);
     } catch (error) {
       if (error instanceof DomainError) {

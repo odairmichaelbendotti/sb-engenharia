@@ -7,10 +7,11 @@ import { EmpenhoRoutes } from "./src/http/routes/EmpenhoRoutes.js";
 import { NotaFiscalRoutes } from "./src/http/routes/NotaFiscalRoutes.js";
 
 const app = express();
+
 app.use(
   cors({
     credentials: true,
-    origin: "http://localhost:5173",
+    origin: process.env.ALLOWED_DEV_ORIGIN,
   }),
 );
 app.use(cookieParser());
@@ -21,5 +22,7 @@ app.use("/api", EmpenhoRoutes);
 app.use("/api", NotaFiscalRoutes);
 
 app.listen(process.env.PORT, () => {
-  console.log(`http://74.50.67.174:${process.env.PORT}`);
+  console.log(
+    `${process.env.NODE_ENV === "development" ? "development" : "production"} server running on port ${process.env.PORT}`,
+  );
 });
