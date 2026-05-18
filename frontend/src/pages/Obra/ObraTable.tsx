@@ -24,7 +24,7 @@ interface ObraTableProps {
 }
 
 const STATUS_MAP = {
-  EM_ANDAMENTO: { label: "Em Andamento", icon: Activity, bg: "bg-warning-bg", text: "text-warning-text", border: "border-warning-border" },
+  EM_ANDAMENTO: { label: "Andamento", icon: Activity, bg: "bg-warning-bg", text: "text-warning-text", border: "border-warning-border" },
   CONCLUIDA: { label: "Concluída", icon: CheckCircle2, bg: "bg-success-bg", text: "text-success-text", border: "border-success-border" },
   PARALISADA: { label: "Paralisada", icon: PauseCircle, bg: "bg-danger-bg", text: "text-danger-text", border: "border-danger-border" },
   CANCELADA: { label: "Cancelada", icon: XCircle, bg: "bg-surface-muted", text: "text-text-muted", border: "border-border" },
@@ -46,8 +46,8 @@ function StatusBadge({ status }: { status: Obra["status"] }) {
   const cfg = STATUS_MAP[status] ?? STATUS_MAP.CANCELADA;
   const Icon = cfg.icon;
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
-      <Icon size={11} />
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium border ${cfg.bg} ${cfg.text} ${cfg.border} whitespace-nowrap`}>
+      <Icon size={10} />
       {cfg.label}
     </span>
   );
@@ -101,7 +101,10 @@ function DeadlineCell({ date, status }: { date: Date | string; status: Obra["sta
   );
 }
 
-export function ObraTable({ obras, formatCurrency, onEdit, onDelete, user }: ObraTableProps) {
+export function ObraTable({ obras, onEdit, onDelete, user }: Omit<ObraTableProps, "formatCurrency">) {
+  const formatCurrency = (v: number) =>
+    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+
   const [sortKey, setSortKey] = useState<SortKey>("dataPrevisaoTermino");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 

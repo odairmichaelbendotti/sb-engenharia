@@ -7,10 +7,10 @@ type FilterCompanyProps = {
 
 const FilterCompany = ({ searchTerm, setSearchTerm }: FilterCompanyProps) => {
   return (
-    <div className="flex flex-col sm:flex-row gap-3 mb-4">
+    <div className="flex flex-col sm:flex-row gap-2">
       <div className="relative flex-1">
         <Search
-          size={18}
+          size={16}
           className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
         />
         <input
@@ -18,13 +18,9 @@ const FilterCompany = ({ searchTerm, setSearchTerm }: FilterCompanyProps) => {
           placeholder="Buscar por nome, CNPJ ou cidade..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-border rounded-md bg-surface text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-200"
+          className="w-full pl-9 pr-3 py-2 border border-border rounded-lg bg-surface text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
         />
       </div>
-      <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-md hover:bg-surface-muted transition-colors text-sm text-text-secondary">
-        <Filter size={16} />
-        Filtros
-      </button>
     </div>
   );
 };

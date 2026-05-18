@@ -53,7 +53,7 @@ const TableCompanies = ({
   );
 
   return (
-    <div className="bg-surface border border-border rounded-lg overflow-hidden">
+    <div>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-surface-muted border-b border-border">

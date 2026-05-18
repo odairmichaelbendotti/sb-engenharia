@@ -43,8 +43,8 @@ export function ObraFilters({ filters, onChange, total, filtered }: ObraFiltersP
   }
 
   return (
-    <div className="bg-surface border border-border rounded-xl p-4 mb-4">
-      <div className="flex flex-col sm:flex-row gap-3">
+    <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+      <div className="flex flex-col sm:flex-row gap-2 flex-1">
         {/* Search */}
         <div className="relative flex-1">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
@@ -87,7 +87,7 @@ export function ObraFilters({ filters, onChange, total, filtered }: ObraFiltersP
         {hasFilters && (
           <button
             onClick={clearAll}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm text-text-secondary hover:text-danger-text hover:bg-danger-bg border border-border rounded-lg transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm text-text-secondary hover:text-danger-text hover:bg-danger-bg border border-border rounded-lg transition-colors cursor-pointer shrink-0"
           >
             <X size={14} />
             Limpar
@@ -96,10 +96,12 @@ export function ObraFilters({ filters, onChange, total, filtered }: ObraFiltersP
       </div>
 
       {hasFilters && (
-        <p className="text-xs text-text-muted mt-2">
-          Exibindo <span className="font-semibold text-text-secondary">{filtered}</span> de{" "}
-          <span className="font-semibold text-text-secondary">{total}</span> obras
-        </p>
+        <p
+          className="text-xs text-text-muted"
+          dangerouslySetInnerHTML={{
+            __html: `Exibindo <strong>${filtered}</strong> de <strong>${total}</strong> obras com filtro: <em>${filters.search}</em>`,
+          }}
+        />
       )}
     </div>
   );

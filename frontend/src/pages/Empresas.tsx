@@ -124,70 +124,80 @@ export default function Empresas() {
       <Breadcrumb current="Empresas" />
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary flex items-center gap-2">
-            <Building2 className="text-primary-500" />
+          <h1 className="text-xl font-bold text-text-primary flex items-center gap-2">
+            <Building2 size={20} className="text-primary-500" />
             Empresas
           </h1>
-          <p className="text-text-secondary text-sm mt-1">
+          <p className="text-text-secondary text-xs mt-0.5">
             Gerencie as empresas cadastradas e seus empenhos
           </p>
         </div>
         {(user?.role === "EDITOR" || user?.role === "MASTER") && (
           <button
             onClick={() => handleOpen()}
-            className="flex items-center cursor-pointer text-white justify-center gap-2 px-4 py-2 bg-primary-500 rounded-md hover:bg-primary-600 transition-colors text-sm font-medium"
+            className="flex items-center cursor-pointer text-white justify-center gap-2 px-4 py-2 bg-primary-500 rounded-md hover:bg-primary-600 transition-colors text-sm font-medium shrink-0"
           >
-            <Plus size={18} />
+            <Plus size={16} />
             Nova Empresa
           </button>
         )}
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
         <StatCard
           title="Total de Empresas"
           value={stats?.totalCompanies.toString() || "0"}
           subtitle="Cadastradas"
-          icon={<Building2 size={24} className="text-primary-500" />}
+          icon={<Building2 size={18} className="text-primary-500" />}
           color="bg-primary-100"
+          iconRounded="rounded-lg"
+          compact
         />
         <StatCard
           title="Total de Empenhos"
           value={stats?.totalEmpenhos.toString() || "0"}
           subtitle="Vinculados"
-          icon={<Layers2 size={24} className="text-secondary-500" />}
+          icon={<Layers2 size={18} className="text-secondary-500" />}
           color="bg-secondary-100"
+          iconRounded="rounded-lg"
+          compact
         />
         <StatCard
           title="Empenhos Ativos"
           value={stats?.totalEmpenhosActive.toString() || "0"}
           subtitle="Em andamento"
-          icon={<Layers2 size={24} className="text-success-text" />}
+          icon={<Layers2 size={18} className="text-success-text" />}
           color="bg-success-bg"
+          iconRounded="rounded-lg"
+          compact
         />
         <StatCard
           title="Valor Total"
           value={formatCurrency(stats?.totalEmpenhosValue || 0)}
           subtitle="Empenhado"
-          icon={<span className="text-accent-500 font-bold text-lg">R$</span>}
+          icon={<span className="text-accent-500 font-bold text-sm">R$</span>}
           color="bg-accent-100"
+          iconRounded="rounded-lg"
+          compact
         />
       </div>
 
-      {/* Filters */}
-      <FilterCompany searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
-
-      {/* Table */}
-      <TableCompanies
-        empresas={empresas}
-        handleOpenEmpenhos={handleOpenEmpenhos}
-        handleOpen={handleOpen}
-        handleOpenDelete={handleOpenDelete}
-        searchTerm={searchTerm}
-      />
+      {/* Filters + Table */}
+      <div className="bg-surface border border-border rounded-lg overflow-hidden">
+        <div className="px-4 pt-3 pb-2 border-b border-border">
+          <FilterCompany searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+        </div>
+        <TableCompanies
+          empresas={empresas}
+          handleOpenEmpenhos={handleOpenEmpenhos}
+          handleOpen={handleOpen}
+          handleOpenDelete={handleOpenDelete}
+          searchTerm={searchTerm}
+        />
+      </div>
 
       {/* Modal - Cadastrar/Editar */}
       {isOpen && (
