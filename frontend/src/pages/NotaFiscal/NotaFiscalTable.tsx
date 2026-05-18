@@ -31,7 +31,7 @@ const NotaFiscalTable = ({
   };
 
   return (
-    <div className="bg-surface border border-border rounded-lg overflow-hidden">
+    <div>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-surface-muted border-b border-border">
@@ -87,22 +87,27 @@ const NotaFiscalTable = ({
                   {formatCurrency(invoice.value)}
                 </td>
                 <td className="py-3 px-4 text-center">
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${invoice.status === "pago" || invoice.status === "PAGO" ? "bg-success-bg text-success-text border-success-border" : invoice.status === "vencido" || invoice.status === "VENCIDO" ? "bg-danger-bg text-danger-text border-danger-border" : invoice.status === "cancelado" || invoice.status === "CANCELADO" ? "bg-gray-100 text-gray-600 border-gray-200" : "bg-warning-bg text-warning-text border-warning-border"}`}
-                  >
-                    {invoice.status === "pago" || invoice.status === "PAGO" ? (
-                      <CheckCircle2 size={12} />
-                    ) : invoice.status === "vencido" ||
-                      invoice.status === "VENCIDO" ? (
-                      <AlertCircle size={12} />
-                    ) : invoice.status === "cancelado" ||
-                      invoice.status === "CANCELADO" ? (
-                      <XCircle size={12} />
-                    ) : (
-                      <Clock size={12} />
-                    )}
-                    {invoice.status}
-                  </span>
+                  {(() => {
+                    const s = invoice.status?.toLowerCase();
+                    const isPago = s === "pago";
+                    const isVencido = s === "vencido";
+                    const isCancelado = s === "cancelado";
+                    const cls = isPago
+                      ? "bg-success-bg text-success-text border-success-border"
+                      : isVencido
+                        ? "bg-danger-bg text-danger-text border-danger-border"
+                        : isCancelado
+                          ? "bg-surface-muted text-text-muted border-border"
+                          : "bg-warning-bg text-warning-text border-warning-border";
+                    const label = isPago ? "Pago" : isVencido ? "Vencido" : isCancelado ? "Cancelado" : "Pendente";
+                    const Icon = isPago ? CheckCircle2 : isVencido ? AlertCircle : isCancelado ? XCircle : Clock;
+                    return (
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium border whitespace-nowrap ${cls}`}>
+                        <Icon size={10} />
+                        {label}
+                      </span>
+                    );
+                  })()}
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex items-center justify-end gap-1">
