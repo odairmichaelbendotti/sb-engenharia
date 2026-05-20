@@ -90,19 +90,19 @@ export default function Obras() {
       <Breadcrumb current="Obras" />
 
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary flex items-center gap-2">
-            <HardHat className="text-primary-500" />
+          <h1 className="text-xl font-bold text-text-primary flex items-center gap-2">
+            <HardHat size={20} className="text-primary-500" />
             Gerenciador de Obras
           </h1>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <p className="text-text-secondary text-sm">
-              Controle e acompanhamento de obras em tempo real
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <p className="text-text-secondary text-xs">
+              Controle e acompanhamento em tempo real
             </p>
-            <span className="text-text-muted">|</span>
-            <div className="flex items-center gap-1.5 text-sm">
-              <DollarSign size={14} className="text-accent-500" />
+            <span className="text-text-muted text-xs">·</span>
+            <div className="flex items-center gap-1 text-xs">
+              <DollarSign size={12} className="text-accent-500" />
               <span className="text-text-secondary">Orçamento total:</span>
               <span className="font-semibold text-text-primary">
                 {formatCurrency(stats.orcamentoTotal)}
@@ -116,7 +116,7 @@ export default function Obras() {
             onClick={handleOpenCreate}
             className="flex cursor-pointer items-center justify-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium shrink-0"
           >
-            <Plus size={18} />
+            <Plus size={16} />
             Nova Obra
           </button>
         )}
@@ -125,19 +125,18 @@ export default function Obras() {
       {/* Stats */}
       <ObraStats stats={stats} formatCurrency={formatCurrency} />
 
-      {/* Filters */}
-      <ObraFilters
-        filters={filters}
-        onChange={setFilters}
-        total={obras.length}
-        filtered={filteredObras.length}
-      />
-
-      {/* Table */}
+      {/* Filters + Table agrupados */}
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
+        <div className="px-4 pt-3 pb-2 border-b border-border">
+          <ObraFilters
+            filters={filters}
+            onChange={setFilters}
+            total={obras.length}
+            filtered={filteredObras.length}
+          />
+        </div>
         <ObraTable
           obras={filteredObras}
-          formatCurrency={formatCurrency}
           onEdit={handleOpenEdit}
           onDelete={handleOpenDelete}
           user={user}
