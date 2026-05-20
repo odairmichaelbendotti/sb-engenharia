@@ -1,15 +1,15 @@
-# SB Engenharia - Sistema de Gestão
+# SB Engenharia - Sistema de Gestão de Obras Públicas
 
-Um sistema completo de gestão para empresas de engenharia, desenvolvido com tecnologias modernas e arquitetura bem estruturada.
+Um sistema completo de gestão de obras públicas, desenvolvido com tecnologias modernas e arquitetura bem estruturada.
 
 ## 📋 Visão Geral
 
-O SB Engenharia é uma aplicação fullstack que permite gerenciar:
+O SB Engenharia é uma aplicação fullstack especializada em gestão de obras públicas que permite gerenciar:
 
-- **Empresas**: Cadastro e gerenciamento de empresas com dados como CNPJ, endereço, telefone
-- **Empenhos**: Acompanhamento de compromissos financeiros
-- **Notas Fiscais**: Gestão de documentos fiscais
-- **Obras**: Registro e acompanhamento de projetos/obras
+- **Obras Públicas**: Registro, acompanhamento e gestão completa de projetos de obras públicas
+- **Empresas**: Cadastro de empresas contratadas para execução das obras
+- **Empenhos**: Acompanhamento de compromissos financeiros e empenhos de crédito
+- **Notas Fiscais**: Gestão de documentos fiscais e medições de obras
 
 ## 🏗️ Arquitetura
 
