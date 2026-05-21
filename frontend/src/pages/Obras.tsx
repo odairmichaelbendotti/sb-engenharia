@@ -1,5 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
-import { Plus, HardHat, DollarSign } from "lucide-react";
+import {
+  Plus,
+  HardHat,
+  DollarSign,
+  Loader2,
+  FolderOpen,
+  AlertCircle,
+} from "lucide-react";
 import Breadcrumb from "../components/Breadcrumb";
 import { useObras } from "../store/obras";
 import { useUser } from "../store/user";
@@ -14,7 +21,9 @@ import {
 import type { ObraFiltersState } from "./Obra";
 
 const formatCurrency = (v: number) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
+    v,
+  );
 
 export default function Obras() {
   const { data, fetchObras } = useObras();
@@ -24,10 +33,27 @@ export default function Obras() {
   const [editingObra, setEditingObra] = useState<Obra | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [obraToDelete, setObraToDelete] = useState<Obra | null>(null);
-  const [filters, setFilters] = useState<ObraFiltersState>({ search: "", status: "", tipo: "" });
+  const [filters, setFilters] = useState<ObraFiltersState>({
+    search: "",
+    status: "",
+    tipo: "",
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchObras();
+    const loadObras = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        await fetchObras();
+      } catch {
+        setError("Erro ao carregar obras. Tente novamente.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadObras();
   }, [fetchObras]);
 
   const obras = useMemo(() => data?.obras ?? [], [data]);
@@ -122,26 +148,74 @@ export default function Obras() {
         )}
       </div>
 
-      {/* Stats */}
-      <ObraStats stats={stats} formatCurrency={formatCurrency} />
-
-      {/* Filters + Table agrupados */}
-      <div className="bg-surface border border-border rounded-lg overflow-hidden">
-        <div className="px-4 pt-3 pb-2 border-b border-border">
-          <ObraFilters
-            filters={filters}
-            onChange={setFilters}
-            total={obras.length}
-            filtered={filteredObras.length}
-          />
+      {/* Loading State */}
+      {isLoading ? (
+        <div className="bg-surface border border-border rounded-lg p-12 flex flex-col items-center justify-center">
+          <Loader2 size={48} className="text-primary-500 animate-spin mb-4" />
+          <p className="text-text-secondary text-sm">Carregando obras...</p>
         </div>
-        <ObraTable
-          obras={filteredObras}
-          onEdit={handleOpenEdit}
-          onDelete={handleOpenDelete}
-          user={user}
-        />
-      </div>
+      ) : error ? (
+        /* Error State */
+        <div className="bg-surface border border-border rounded-lg p-12 flex flex-col items-center justify-center">
+          <AlertCircle size={48} className="text-danger-text mb-4" />
+          <p className="text-text-secondary text-sm mb-4">{error}</p>
+          <button
+            onClick={() => {
+              setError(null);
+              setIsLoading(true);
+              fetchObras().finally(() => setIsLoading(false));
+            }}
+            className="px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* Stats */}
+          <ObraStats stats={stats} formatCurrency={formatCurrency} />
+
+          {/* Filters + Table agrupados */}
+          <div className="bg-surface border border-border rounded-lg overflow-hidden">
+            <div className="px-4 pt-3 pb-2 border-b border-border">
+              <ObraFilters
+                filters={filters}
+                onChange={setFilters}
+                total={obras.length}
+                filtered={filteredObras.length}
+              />
+            </div>
+            {filteredObras.length === 0 ? (
+              /* Empty State */
+              <div className="p-12 flex flex-col items-center justify-center">
+                <FolderOpen size={48} className="text-text-muted mb-4" />
+                <p className="text-text-secondary text-sm mb-2">
+                  {obras.length === 0
+                    ? "Nenhuma obra cadastrada"
+                    : "Nenhuma obra encontrada com os filtros aplicados"}
+                </p>
+                {obras.length === 0 &&
+                  (user?.role === "MASTER" || user?.role === "EDITOR") && (
+                    <button
+                      onClick={handleOpenCreate}
+                      className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium"
+                    >
+                      <Plus size={16} />
+                      Criar primeira obra
+                    </button>
+                  )}
+              </div>
+            ) : (
+              <ObraTable
+                obras={filteredObras}
+                onEdit={handleOpenEdit}
+                onDelete={handleOpenDelete}
+                user={user}
+              />
+            )}
+          </div>
+        </>
+      )}
 
       {/* Modals */}
       {isModalOpen && (

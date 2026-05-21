@@ -1,6 +1,26 @@
 # SB Engenharia - Sistema de Gestão de Obras Públicas
 
-Um sistema completo de gestão de obras públicas, desenvolvido com tecnologias modernas e arquitetura bem estruturada.
+<div align="center">
+
+[![License](https://img.shields.io/badge/license-ISC-blue.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/react-19.2.0-blue.svg)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/typescript-5.9.3-blue.svg)](https://www.typescriptlang.org/)
+
+</div>
+
+Um sistema completo de gestão de obras públicas, desenvolvido com tecnologias modernas e arquitetura bem estruturada. Otimizado para facilitar o gerenciamento integrado de projetos de infraestrutura pública, desde o planejamento até a execução e fiscalização.
+
+## ✨ Principais Características
+
+- 🏗️ **Gestão Completa de Obras**: Planejamento, execução e acompanhamento de projetos de obras públicas
+- 🏢 **Cadastro de Empresas**: Gerenciamento de empresas contratadas com validação de dados
+- 💰 **Controle Financeiro**: Empenhos, liquidações e gestão de créditos
+- 📄 **Documentação Fiscal**: Notas fiscais integradas e medições de obras
+- 🔐 **Segurança**: Autenticação JWT com criptografia de senhas
+- 📊 **Dashboard Intuitivo**: Interface responsiva e amigável
+- ⚡ **Performance**: Otimizado com Vite e Prisma
+- 🎯 **Type-Safe**: TypeScript em todo o stack
 
 ## 📋 Visão Geral
 
@@ -13,67 +33,66 @@ O SB Engenharia é uma aplicação fullstack especializada em gestão de obras p
 
 ## 🏗️ Arquitetura
 
-O projeto segue uma arquitetura em camadas com separação clara entre frontend e backend:
+O projeto segue uma **arquitetura em camadas** (Clean Architecture) com separação clara entre frontend e backend, garantindo escalabilidade, testabilidade e manutenibilidade.
 
 ```
 sb-engenharia/
-├── backend/          # API REST com Express
-├── frontend/         # Interface React com Vite
+├── backend/          # API REST com Express + TypeScript
+├── frontend/         # SPA React com Vite
 └── LICENSE
 ```
 
-### Backend
+### 🔙 Backend - Clean Architecture
 
-**Stack**: Node.js | Express | TypeScript | Prisma | PostgreSQL
+**Stack**: Node.js 18+ | Express 5 | TypeScript 5.9 | Prisma 7 | PostgreSQL
 
-Estrutura do código:
+**Camadas**:
 
-- `src/domain/` - Entidades e regras de negócio
-- `src/application/` - Casos de uso (usecases)
-- `src/infrastructure/` - Implementações técnicas (BD, criptografia)
-- `src/http/` - Camada HTTP (controllers, routes, middleware)
-- `src/utils/` - Funções auxiliares
-
-**Recursos principais**:
-
-- Autenticação com JWT
-- Criptografia de senhas com bcrypt
-- CORS habilitado
-- Prisma para ORM e migrations
-- TypeScript para segurança de tipos
-
-### Frontend
-
-**Stack**: React 19 | Vite | TypeScript | Tailwind CSS | Zustand
-
-Estrutura do código:
-
-- `src/components/` - Componentes reutilizáveis
-- `src/pages/` - Páginas da aplicação
-- `src/services/` - Chamadas de API
-- `src/store/` - Estado global (Zustand)
-- `src/hooks/` - Custom hooks
-- `src/types/` - Tipos TypeScript
-- `src/utils/` - Funções utilitárias
+| Camada             | Responsabilidade                                              |
+| ------------------ | ------------------------------------------------------------- |
+| **Domain**         | Entidades, lógica de negócio pura (sem dependências externas) |
+| **Application**    | Casos de uso, orquestração de lógica                          |
+| **Infrastructure** | Implementações técnicas (BD, criptografia, APIs externas)     |
+| **HTTP**           | Controllers, rotas, middleware, tratamento de requisições     |
 
 **Recursos principais**:
 
-- Interface responsiva com Tailwind CSS
-- Roteamento com React Router
-- Ícones com Lucide React
-- Notificações com Sonner
-- Estado global com Zustand
-- ESLint para qualidade de código
+- ✅ Autenticação com JWT (Jason Web Tokens)
+- 🔒 Criptografia de senhas com bcrypt
+- 🌐 CORS habilitado e configurável
+- 🗄️ ORM Prisma com migrations automáticas
+- 📝 TypeScript para segurança de tipos
+- 🏗️ Arquitetura em camadas bem definida
+- 🍪 Cookie Parser para gerenciamento de sessões
+- 📦 Dependency Injection (em implementações específicas)
+
+### 🎨 Frontend - Modern React Stack
+
+**Stack**: React 19 | Vite 7 | TypeScript 5.9 | Tailwind CSS 4 | Zustand 5
+
+**Recursos principais**:
+
+- 📱 Interface responsiva (mobile-first)
+- 🎨 Styling com Tailwind CSS (utility-first)
+- 🗂️ Roteamento com React Router v7
+- 🎯 Estado global com Zustand
+- 🏗️ Componentes reutilizáveis
+- ⚡ Build otimizado com Vite
+- 🔍 Validação com TypeScript
+- ✨ Ícones com Lucide React
+- 🔔 Notificações com Sonner
+- 🎯 ESLint para qualidade de código
 
 ## 🚀 Como Iniciar
 
 ### Pré-requisitos
 
-- **Node.js** 18+ e npm/yarn
-- **PostgreSQL** 12+ (ou compatível)
-- **Git**
+- **Node.js** 18.0.0 ou superior ([download](https://nodejs.org/))
+- **npm** 9+ ou **yarn** 3.6+
+- **PostgreSQL** 12+ ([download](https://www.postgresql.org/))
+- **Git** ([download](https://git-scm.com/))
 
-### Instalação
+### ⚙️ Instalação Rápida
 
 1. **Clone o repositório**
 
@@ -82,45 +101,75 @@ git clone <repository-url>
 cd sb-engenharia
 ```
 
-2. **Instale as dependências do backend**
+2. **Configure o Backend**
 
 ```bash
 cd backend
 npm install
+
+# Configure as variáveis de ambiente
+cp .env.example .env  # (ou crie manualmente o arquivo .env)
 ```
 
-3. **Configure o banco de dados**
+Edite o arquivo `.env`:
+
+```env
+DATABASE_URL="postgresql://usuario:senha@localhost:5432/sb_engenharia"
+JWT_SECRET="sua_chave_secreta_muito_segura_aqui"
+NODE_ENV="development"
+PORT="3000"
+```
+
+3. **Setup do Banco de Dados**
 
 ```bash
-# Crie um arquivo .env no diretório backend
-DATABASE_URL="postgresql://user:password@localhost:5432/sb_engenharia"
-JWT_SECRET="sua_chave_secreta_aqui"
+# Execute as migrations do Prisma
+npx prisma migrate dev --name init
+
+# (Opcional) Abra o Prisma Studio para visualizar dados
+npx prisma studio
 ```
 
-4. **Execute as migrations do Prisma**
-
-```bash
-npx prisma migrate dev
-```
-
-5. **Instale as dependências do frontend**
+4. **Configure o Frontend**
 
 ```bash
 cd ../frontend
 npm install
+
+# (Opcional) Crie arquivo .env se houver variáveis específicas
+# cp .env.example .env
 ```
 
-6. **Configure o frontend (se necessário)**
-   Crie um arquivo `.env` no diretório frontend se precisar de variáveis de ambiente específicas.
+### 🔄 Executar em Desenvolvimento
 
-## 💻 Desenvolvimento
+**Terminal 1 - Backend**:
+
+```bash
+cd backend
+npm run dev
+# Server rodando em http://localhost:3000
+```
+
+**Terminal 2 - Frontend**:
+
+```bash
+cd frontend
+npm run dev
+# Aplicação rodando em http://localhost:5173
+```
+
+Acesse a aplicação em **http://localhost:5173**
+
+## 💻 Guia de Desenvolvimento
 
 ### Backend
+
+**Scripts disponíveis**:
 
 ```bash
 cd backend
 
-# Iniciar servidor em modo desenvolvimento
+# Desenvolvimento com auto-reload
 npm run dev
 
 # Build para produção
@@ -130,199 +179,355 @@ npm run build
 npm start
 ```
 
-**Endpoints principais**:
+**Endpoints principais da API**:
 
-- `GET /api/companies` - Listar empresas
-- `POST /api/companies` - Criar empresa
-- `GET /api/empenhos` - Listar empenhos
-- `GET /api/notas-fiscais` - Listar notas fiscais
-- `GET /api/obras` - Listar obras
+| Método | Endpoint             | Descrição                 |
+| ------ | -------------------- | ------------------------- |
+| GET    | `/api/companies`     | Listar todas as empresas  |
+| POST   | `/api/companies`     | Criar nova empresa        |
+| GET    | `/api/companies/:id` | Obter detalhes da empresa |
+| GET    | `/api/empenhos`      | Listar empenhos           |
+| POST   | `/api/empenhos`      | Criar empenho             |
+| GET    | `/api/notas-fiscais` | Listar notas fiscais      |
+| POST   | `/api/notas-fiscais` | Criar nota fiscal         |
+| GET    | `/api/obras`         | Listar obras públicas     |
+| POST   | `/api/obras`         | Criar obra                |
+
+**Estrutura de pastas do Backend**:
+
+```
+backend/src/
+├── @types/              # Type definitions customizadas
+├── domain/              # Camada de Domínio
+│   ├── entities/        # Entidades (Company, User, etc.)
+│   ├── repositories/    # Interfaces de repositórios
+│   ├── cryptography/    # Contratos de criptografia
+│   ├── polices/         # Políticas de acesso
+│   └── errors/          # Erros de negócio
+├── application/         # Camada de Aplicação
+│   └── usecases/        # Casos de uso por domínio
+│       ├── company/
+│       ├── empenho/
+│       ├── notaFiscal/
+│       └── user/
+├── infrastructure/      # Camada de Infraestrutura
+│   ├── database/        # Configuração de BD
+│   ├── cryptography/    # Implementações de criptografia
+│   ├── prisma/          # Prisma client
+│   └── errors/          # Erros de infraestrutura
+├── http/                # Camada HTTP
+│   ├── controllers/     # Controladores por recurso
+│   ├── middleware/      # Middleware Express
+│   ├── routes/          # Definição de rotas
+│   └── server.ts        # Configuração do servidor
+├── utils/               # Funções auxiliares
+└── server.ts            # Entry point
+```
 
 ### Frontend
+
+**Scripts disponíveis**:
 
 ```bash
 cd frontend
 
-# Iniciar servidor de desenvolvimento
+# Desenvolvimento com hot reload
 npm run dev
 
-# Build para produção
+# Build otimizado para produção
 npm run build
 
-# Preview do build
+# Preview do build local
 npm run preview
 
-# Verificar linting
+# Verificar qualidade de código
 npm run lint
 ```
 
-A aplicação estará disponível em `http://localhost:5173` (Vite default).
+**Principais páginas**:
 
-## 📁 Estrutura de Pastas Detalhada
+| Página        | Rota             | Descrição                    |
+| ------------- | ---------------- | ---------------------------- |
+| Dashboard     | `/`              | Visão geral e estatísticas   |
+| Empresas      | `/empresas`      | Gerenciamento de empresas    |
+| Empenhos      | `/empenhos`      | Acompanhamento de empenhos   |
+| Notas Fiscais | `/notas-fiscais` | Gestão de documentos fiscais |
+| Obras         | `/obras`         | Acompanhamento de obras      |
+| Medições      | `/medicoes`      | Registros de medições        |
 
-### Backend
-
-```
-backend/
-├── src/
-│   ├── @types/           # Type definitions customizadas
-│   ├── application/      # Casos de uso da aplicação
-│   │   └── usecases/
-│   │       ├── company/
-│   │       ├── empenho/
-│   │       ├── notaFiscal/
-│   │       └── user/
-│   ├── domain/           # Lógica de negócio
-│   │   ├── entities/     # Entidades do domínio
-│   │   ├── repositories/ # Interfaces de repositórios
-│   │   ├── cryptography/ # Contratos de criptografia
-│   │   ├── polices/      # Políticas de acesso
-│   │   └── errors/       # Erros de domínio
-│   ├── infrastructure/   # Implementações técnicas
-│   │   ├── database/     # Conexão e configuração BD
-│   │   ├── cryptography/ # Implementações de criptografia
-│   │   ├── prisma/       # Prisma client e migrations
-│   │   └── errors/       # Erros de infraestrutura
-│   ├── http/             # Camada HTTP
-│   │   ├── controllers/  # Controladores
-│   │   ├── middleware/   # Middleware Express
-│   │   ├── routes/       # Definição de rotas
-│   │   └── server.ts     # Servidor principal
-│   ├── utils/            # Funções auxiliares
-│   ├── generated/        # Código gerado (Prisma)
-│   └── server.ts         # Entry point
-├── prisma/
-│   └── schema.prisma     # Schema do banco de dados
-├── package.json
-├── tsconfig.json
-└── .env.example
-```
-
-### Frontend
+**Estrutura de pastas do Frontend**:
 
 ```
-frontend/
-├── src/
-│   ├── components/       # Componentes React
-│   │   ├── Layouts/      # Componentes de layout
-│   │   ├── Sidebar/      # Sidebar da aplicação
-│   │   ├── Breadcrumb.tsx
-│   │   └── StatCard.tsx
-│   ├── pages/            # Páginas da aplicação
-│   │   ├── auth/         # Páginas de autenticação
-│   │   ├── Dashboard.tsx
-│   │   ├── Empresas.tsx
-│   │   ├── Empenhos.tsx
-│   │   ├── NotasFiscais.tsx
-│   │   ├── Obras.tsx
-│   │   └── Medicoes.tsx
-│   ├── services/         # Serviços HTTP/API
-│   ├── store/            # Estado global (Zustand)
-│   ├── hooks/            # Custom hooks
-│   ├── types/            # Tipos TypeScript
-│   ├── utils/            # Funções utilitárias
-│   ├── routes.tsx        # Configuração de rotas
-│   ├── main.tsx          # Entry point
-│   └── index.css         # Estilos globais
-├── index.html
-├── vite.config.ts
-├── tsconfig.json
-├── tsconfig.app.json
-├── tsconfig.node.json
-├── eslint.config.js
-└── package.json
+frontend/src/
+├── components/          # Componentes reutilizáveis
+│   ├── Layouts/         # Componentes de layout
+│   ├── Sidebar/         # Barra de navegação
+│   ├── Breadcrumb.tsx
+│   └── StatCard.tsx
+├── pages/               # Páginas da aplicação
+│   ├── auth/            # Páginas de autenticação
+│   ├── Dashboard.tsx
+│   ├── Empresas.tsx
+│   ├── Empenhos.tsx
+│   ├── NotasFiscais.tsx
+│   ├── Obras.tsx
+│   └── Medicoes.tsx
+├── services/            # Serviços HTTP/API
+│   └── api.ts           # Cliente HTTP configurado
+├── store/               # Estado global (Zustand)
+│   ├── companies.ts
+│   ├── empenhos.ts
+│   ├── invoices.ts
+│   ├── obras.ts
+│   └── user.ts
+├── hooks/               # Custom hooks React
+├── types/               # Definições de tipos
+├── utils/               # Funções auxiliares
+├── routes.tsx           # Configuração de rotas
+├── main.tsx             # Entry point
+└── index.css            # Estilos globais
 ```
 
-## 🔐 Autenticação
+## � Autenticação e Segurança
 
-O sistema usa JWT (JSON Web Tokens) para autenticação:
+### Fluxo de Autenticação
 
-1. Usuário faz login com credenciais
-2. Backend valida e gera um JWT
-3. JWT é armazenado no cliente
-4. Requisições subsequentes incluem o JWT
-5. AuthMiddleware valida o token
+O sistema implementa **JWT (JSON Web Tokens)** para autenticação stateless:
+
+```
+1. Usuário faz login com email/senha
+   ↓
+2. Backend valida credenciais
+   ↓
+3. Senha comparada com hash bcrypt
+   ↓
+4. Se válido, gera JWT assinado
+   ↓
+5. Token retornado ao cliente
+   ↓
+6. Cliente armazena token
+   ↓
+7. Requisições subsequentes incluem token no header: Authorization: Bearer <token>
+   ↓
+8. AuthMiddleware valida token em cada requisição
+```
+
+### Medidas de Segurança
+
+- 🔒 Senhas criptografadas com bcrypt (salt rounds: 10)
+- 🔑 JWT com expiração configurável
+- 🌐 CORS restritivo
+- 🛡️ TypeScript para segurança de tipos
+- 🔐 Variáveis sensíveis em arquivo `.env`
 
 ## 🔧 Configuração Avançada
 
 ### Variáveis de Ambiente
 
-**Backend (.env)**
+**Backend** (arquivo `.env` na pasta `/backend`):
 
-```
-DATABASE_URL=postgresql://user:password@localhost:5432/db_name
-JWT_SECRET=sua_chave_secreta_muito_segura
-NODE_ENV=development
-PORT=3000
+```env
+# Banco de dados
+DATABASE_URL="postgresql://usuario:senha@localhost:5432/sb_engenharia"
+
+# JWT
+JWT_SECRET="sua_chave_secreta_muito_segura_aqui_minimo_32_caracteres"
+JWT_EXPIRATION="7d"
+
+# Server
+NODE_ENV="development"  # development | production
+PORT="3000"
+
+# CORS
+CORS_ORIGIN="http://localhost:5173"
+
+# Logs
+LOG_LEVEL="debug"  # debug | info | warn | error
 ```
 
-**Frontend (.env)**
+**Frontend** (arquivo `.env` na pasta `/frontend` - opcional):
 
-```
+```env
 VITE_API_URL=http://localhost:3000/api
+VITE_APP_NAME="SB Engenharia"
 ```
 
-### Prisma
-
-Operações comuns:
+### Gerenciamento de Migrations (Prisma)
 
 ```bash
-# Criar uma nova migration
-npx prisma migrate dev --name nome_da_migration
+cd backend
+
+# Criar nova migration após alterar schema.prisma
+npx prisma migrate dev --name descricao_da_mudanca
+
+# Aplicar migrations pendentes
+npx prisma migrate deploy
 
 # Verificar status das migrations
 npx prisma migrate status
 
-# Abrir Prisma Studio (visualizador de BD)
-npx prisma studio
+# Reverter última migration (dev only)
+npx prisma migrate resolve --rolled-back <migration_name>
 
-# Gerar Prisma Client
-npx prisma generate
+# Resetar banco de dados (⚠️ CUIDADO - deleta dados)
+npx prisma migrate reset
+
+# Abrir Prisma Studio (visualizador gráfico de dados)
+npx prisma studio
 ```
 
-## 📦 Build para Produção
+### Desenvolvimento com Prisma
 
-### Backend
+```bash
+# Gerar Prisma Client (executado automaticamente em npm install)
+npx prisma generate
+
+# Validar schema.prisma
+npx prisma validate
+
+# Formatar schema.prisma
+npx prisma format
+```
+
+## 📦 Build e Deployment
+
+### Build Local
+
+**Backend**:
 
 ```bash
 cd backend
 npm run build
-# Isso irá gerar a pasta dist/ com o código compilado
-npm start
+# Gera a pasta dist/ com código compilado
 ```
 
-### Frontend
+**Frontend**:
 
 ```bash
 cd frontend
 npm run build
-# Isso irá gerar a pasta dist/ com os arquivos otimizados
+# Gera a pasta dist/ com arquivos otimizados (JS, CSS, HTML)
 ```
+
+### Deployment
+
+#### Backend em Produção
+
+```bash
+cd backend
+
+# 1. Build
+npm run build
+
+# 2. Definir variáveis de ambiente
+export NODE_ENV=production
+export DATABASE_URL="postgresql://..."
+export JWT_SECRET="..."
+
+# 3. Iniciar servidor
+npm start
+# ou usar PM2
+pm2 start dist/server.js --name "sb-backend"
+```
+
+#### Frontend em Produção
+
+**Opção 1 - Servir arquivos estáticos**:
+
+```bash
+cd frontend
+npm run build
+# Upload a pasta dist/ para seu servidor web (nginx, apache, etc)
+```
+
+**Opção 2 - Vercel (recomendado para este projeto)**:
+
+- Commit seu código no Git
+- Conecte seu repositório no [Vercel](https://vercel.com)
+- Vercel detectará automaticamente que é um projeto Vite/React
+- Deploy automático em cada push
+
+Veja o arquivo [vercel.json](frontend/vercel.json) para configurações específicas.
+
+### Performance
+
+- ✅ Frontend: Vite oferece bundle pequeno (~200KB gzipped)
+- ✅ Backend: Prisma otimiza queries ao banco
+- ✅ Imagens: Considere usar CDN para servir assets
+- ✅ Cache: Implemente cache nos endpoints de API
 
 ## 🧪 Testes
 
 Atualmente, o projeto não possui testes automatizados configurados. Para adicionar:
 
-- Backend: Jest ou Vitest recomendados
-- Frontend: Vitest + React Testing Library
+- **Backend**: Jest ou Vitest (recomendado)
+- **Frontend**: Vitest + React Testing Library
+
+Contribuições com testes são bem-vindas! 🎉
+
+## 📚 Documentação Adicional
+
+- [Backend README](backend/README.md) (se disponível)
+- [Frontend README](frontend/README.md) (se disponível)
+- [Prisma Documentation](https://www.prisma.io/docs/)
+- [React Documentation](https://react.dev)
+- [Express.js Guide](https://expressjs.com)
 
 ## 📝 Licença
 
-Este projeto está licenciado sob ISC - veja o arquivo [LICENSE](LICENSE) para detalhes.
+Este projeto está licenciado sob **ISC** - veja o arquivo [LICENSE](LICENSE) para detalhes.
 
 ## 🤝 Contribuição
 
-Para contribuir com o projeto:
+Contribuições são bem-vindas! Para contribuir com o projeto:
 
-1. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-2. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-3. Push para a branch (`git push origin feature/AmazingFeature`)
-4. Abra um Pull Request
+1. **Fork** o repositório
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. **Commit** suas mudanças (`git commit -m 'feat: add AmazingFeature'`)
+4. **Push** para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um **Pull Request** com descrição clara das mudanças
+
+### Padrão de Commits
+
+Utilizamos [Conventional Commits](https://www.conventionalcommits.org/):
+
+- `feat:` - Nova feature
+- `fix:` - Correção de bug
+- `docs:` - Alterações em documentação
+- `style:` - Formatação, espaçamento (sem mudanças de lógica)
+- `refactor:` - Refatoração de código
+- `perf:` - Melhorias de performance
+- `test:` - Adição ou alteração de testes
+- `chore:` - Alterações em configuração ou dependências
 
 ## 📞 Suporte
 
-Para suporte ou dúvidas sobre o projeto, entre em contato com a equipe de desenvolvimento.
+Para suporte ou dúvidas sobre o projeto:
+
+- 📧 Entre em contato com a equipe de desenvolvimento
+- 🐛 Abra uma [Issue](../../issues) no repositório
+- 💬 Inicie uma [Discussion](../../discussions)
+
+## 🗺️ Roadmap
+
+Funcionalidades planejadas para o futuro:
+
+- [ ] Testes automatizados (unit e integration)
+- [ ] Documentação de API com Swagger/OpenAPI
+- [ ] Sistema de permissões mais granulares
+- [ ] Exportação de relatórios em PDF
+- [ ] Integração com sistemas de assinatura digital
+- [ ] Mobile app nativo
+- [ ] Dark mode
+- [ ] Notificações em tempo real (WebSocket)
+- [ ] Exportação de dados em Excel
 
 ---
 
-**Última atualização**: Maio de 2026
+<div align="center">
+
+**Desenvolvido com ❤️ para gestão pública**
+
+Última atualização: Maio de 2026
+
+</div>
