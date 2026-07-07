@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import { EmpenhoRoutes } from "./src/http/routes/EmpenhoRoutes.js";
 import { NotaFiscalRoutes } from "./src/http/routes/NotaFiscalRoutes.js";
+import { TenantRoutes } from "./src/http/routes/TenantRoutes.js";
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use("/api", UserRoutes);
 app.use("/api", CompanyRoutes);
 app.use("/api", EmpenhoRoutes);
 app.use("/api", NotaFiscalRoutes);
+app.use("/api", TenantRoutes);
 
 app.listen(process.env.PORT, () => {
   console.log(

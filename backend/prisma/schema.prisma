@@ -8,9 +8,28 @@ datasource db {
 }
 
 enum UserRole {
-  MASTER
+  PLATFORM_ADMIN // Estado maior
+  MASTER // Comandantes da OM
   EDITOR
   USER
+}
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  apelido   String   @unique
+  cnpj      String   @unique
+  cep       String
+  city      String
+  state     String
+  address   String
+  phone     String
+  email     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  empenhos Empenho[]
+  users    User[]
 }
 
 model User {
@@ -21,6 +40,9 @@ model User {
   role      UserRole @default(USER)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
+
+  tenant_id String
+  tenant    Tenant @relation(fields: [tenant_id], references: [id])
 }
 
 model Company {
@@ -47,10 +69,22 @@ enum EmpenhoStatus {
   CANCELADO
 }
 
+enum EmpenhoCategory {
+  MANUTENCAO_PREDIAL
+  ALIMENTACAO
+  HOSPITALAR
+  COMBUSTIVEL
+  TECNOLOGIA
+  LIMPEZA_CONSERVACAO
+  SEGURANCA_VIGILANCIA
+  OUTROS
+}
+
 model Empenho {
   id          String        @id @default(uuid())
   numero      String        @unique
   description String
+  category    EmpenhoCategory
   startAt     DateTime
   endAt       DateTime
   value       Int
@@ -58,6 +92,9 @@ model Empenho {
   status      EmpenhoStatus @default(ATIVO)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @default(now())
+
+  tenant_id String
+  tenant    Tenant @relation(fields: [tenant_id], references: [id])
 
   company_id  String
   company     Company      @relation(fields: [company_id], references: [id])

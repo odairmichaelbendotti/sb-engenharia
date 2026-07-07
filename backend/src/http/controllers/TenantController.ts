@@ -1,0 +1,47 @@
+import type { Request, Response } from "express";
+import type { CreateTenantUseCase } from "../../application/usecases/tenant/CreateTenantUseCase.js";
+import { DomainError } from "../../domain/errors/DomainError.js";
+
+export class TenantController {
+  constructor(private createTenant: CreateTenantUseCase) {}
+
+  async create(req: Request, res: Response) {
+    const { name, apelido, cnpj, cep, city, state, address, phone, email } =
+      req.body;
+
+    if (
+      !name ||
+      !apelido ||
+      !cnpj ||
+      !cep ||
+      !city ||
+      !state ||
+      !address ||
+      !phone ||
+      !email
+    ) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    try {
+      const tenant = await this.createTenant.execute({
+        name,
+        apelido,
+        cnpj,
+        cep,
+        city,
+        state,
+        address,
+        phone,
+        email,
+      });
+      res.status(201).json(tenant);
+    } catch (error) {
+      if (error instanceof DomainError) {
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  }
+}
