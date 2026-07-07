@@ -81,38 +81,38 @@ export class EmpenhoController {
     }
   }
   async update(req: Request, res: Response) {
-    const { empenhoId } = req.params;
-    const { numero, description, startAt, endAt, value, company_id } = req.body;
-    const { user } = req;
-
-    if (Array.isArray(empenhoId) || !empenhoId) {
-      throw new DomainError("Empenho ID is required");
-    }
-
-    if (!user) {
-      throw new DomainError("User not found");
-    }
-
-    if (
-      !numero ||
-      !description ||
-      !startAt ||
-      !endAt ||
-      !value ||
-      !company_id
-    ) {
-      throw new DomainError("All fields are required");
-    }
-
-    const editedEmpenho = await this.updateEmpenho.execute({
-      empenhoId,
-      data: req.body,
-      user,
-    });
-
-    res.status(200).json(editedEmpenho);
-
     try {
+      const { empenhoId } = req.params;
+      const { numero, description, startAt, endAt, value, company_id } =
+        req.body;
+      const { user } = req;
+
+      if (Array.isArray(empenhoId) || !empenhoId) {
+        throw new DomainError("Empenho ID is required");
+      }
+
+      if (!user) {
+        throw new DomainError("User not found");
+      }
+
+      if (
+        !numero ||
+        !description ||
+        !startAt ||
+        !endAt ||
+        !value ||
+        !company_id
+      ) {
+        throw new DomainError("All fields are required");
+      }
+
+      const editedEmpenho = await this.updateEmpenho.execute({
+        empenhoId,
+        data: req.body,
+        user,
+      });
+
+      res.status(200).json(editedEmpenho);
     } catch (error) {
       if (error instanceof DomainError) {
         return res.status(400).json({ message: error.message });
@@ -121,29 +121,35 @@ export class EmpenhoController {
     }
   }
   async updateStatus(req: Request, res: Response) {
-    const { empenhoId } = req.params;
-    const { status } = req.body;
-    const { user } = req;
-    console.log(empenhoId);
+    try {
+      const { empenhoId } = req.params;
+      const { status } = req.body;
+      const { user } = req;
 
-    if (!user) {
-      throw new DomainError("User not found");
+      if (!user) {
+        throw new DomainError("User not found");
+      }
+
+      if (!empenhoId || Array.isArray(empenhoId)) {
+        throw new DomainError("Empenho ID is required");
+      }
+
+      if (!status) {
+        throw new DomainError("Status is required");
+      }
+
+      const updatedEmpenho = await this.updateStatusEmpenho.execute({
+        empenhoId,
+        status,
+        user,
+      });
+
+      res.status(200).json(updatedEmpenho);
+    } catch (error) {
+      if (error instanceof DomainError) {
+        return res.status(400).json({ message: error.message });
+      }
+      return res.status(500).json({ message: "Internal server error" });
     }
-
-    if (!empenhoId || Array.isArray(empenhoId)) {
-      throw new DomainError("Empenho ID is required");
-    }
-
-    if (!status) {
-      throw new DomainError("Status is required");
-    }
-
-    const updatedEmpenho = await this.updateStatusEmpenho.execute({
-      empenhoId,
-      status,
-      user,
-    });
-
-    res.status(200).json(updatedEmpenho);
   }
 }

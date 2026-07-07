@@ -1,5 +1,5 @@
 import type { SignInUseCase } from "../../application/usecases/user/SignInUseCase.js";
-import { SignUpUseCase } from "../../application/usecases/user/SingnUpUseCase.js";
+import { SignUpUseCase } from "../../application/usecases/user/SignUpUseCase.js";
 import { DomainError } from "../../domain/errors/DomainError.js";
 import { type Request, type Response } from "express";
 

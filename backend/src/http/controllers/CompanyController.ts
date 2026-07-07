@@ -52,8 +52,6 @@ export class CompanyController {
         })),
       }));
 
-      console.log(companies);
-
       res.status(200).json({ ...data, companies: companies });
     } catch (error) {
       if (error instanceof DomainError) {
@@ -74,7 +72,6 @@ export class CompanyController {
       await this.deleteCompany.execute(id);
       return res.status(200).json({ message: "Company successfully deleted" });
     } catch (error) {
-      console.log(error);
       if (error instanceof DomainError) {
         return res.status(400).json({ message: error.message });
       }
@@ -124,7 +121,6 @@ export class CompanyController {
       if (error instanceof DomainError) {
         res.status(400).json({ message: error.message });
       } else {
-        console.log(error);
         res.status(500).json({ message: "Internal server error" });
       }
     }

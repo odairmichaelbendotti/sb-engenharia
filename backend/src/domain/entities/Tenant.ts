@@ -1,3 +1,5 @@
+import { DomainError } from "../errors/DomainError.js";
+
 export type TenantType = {
   name: string;
   apelido: string;
@@ -8,6 +10,12 @@ export type TenantType = {
   address: string;
   phone: string;
   email: string;
+};
+
+export type PersistedTenant = TenantType & {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 export class TenantEntity {
@@ -21,6 +29,10 @@ export class TenantEntity {
   public readonly phone: string;
   public readonly email: string;
   constructor(props: TenantType) {
+    if (props.cnpj.replace(/\D/g, "").length !== 14) {
+      throw new DomainError("Tenant cnpj must have 14 digits");
+    }
+
     this.name = props.name;
     this.apelido = props.apelido;
     this.cnpj = props.cnpj;

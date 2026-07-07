@@ -60,8 +60,8 @@ model Company {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @default(now())
 
-  empenhos    Empenho[]
-  notasFicais NotaFiscal[]
+  empenhos Empenho[]
+  invoices Invoice[]
 }
 
 enum EmpenhoStatus {
@@ -97,31 +97,33 @@ model Empenho {
   tenant_id String
   tenant    Tenant @relation(fields: [tenant_id], references: [id])
 
-  company_id  String
-  company     Company      @relation(fields: [company_id], references: [id])
-  notaFiscals NotaFiscal[]
+  company_id String
+  company    Company   @relation(fields: [company_id], references: [id])
+  invoices   Invoice[]
 }
 
-enum NotaFiscalStatus {
+enum InvoiceStatus {
   PENDENTE
   PAGO
   VENCIDO
   CANCELADO
 }
 
-model NotaFiscal {
-  id          String           @id @default(uuid())
+model Invoice {
+  id          String        @id @default(uuid())
   numero      String
   description String
   vencimento  DateTime
   value       Int
-  status      NotaFiscalStatus @default(PENDENTE)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @default(now())
+  status      InvoiceStatus @default(PENDENTE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @default(now())
 
   empenho_id String
   empenho    Empenho @relation(fields: [empenho_id], references: [id], onDelete: Cascade)
 
   company_id String
   company    Company @relation(fields: [company_id], references: [id])
+
+  @@map("nota_fiscal")
 }

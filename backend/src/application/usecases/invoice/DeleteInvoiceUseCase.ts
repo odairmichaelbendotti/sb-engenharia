@@ -1,7 +1,7 @@
-import type { INotaFiscalRepository } from "../../../domain/repositories/INotaFiscalRepository.js";
+import type { IInvoiceRepository } from "../../../domain/repositories/IInvoiceRepository.js";
 
 export class DeleteInvoiceUseCase {
-  constructor(private deleteInvoice: INotaFiscalRepository) {}
+  constructor(private deleteInvoice: IInvoiceRepository) {}
 
   async execute(id: string) {
     return await this.deleteInvoice.delete(id);

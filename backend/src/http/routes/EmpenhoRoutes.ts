@@ -36,7 +36,7 @@ EmpenhoRoutes.post("/empenho/create", authMiddleware.handle, (req, res) =>
   empenhoController.create(req, res),
 );
 
-EmpenhoRoutes.get("/empenho/list", (req, res) =>
+EmpenhoRoutes.get("/empenho/list", authMiddleware.handle, (req, res) =>
   empenhoController.list(req, res),
 );
 

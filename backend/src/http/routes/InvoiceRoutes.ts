@@ -1,41 +1,53 @@
 import { Router } from "express";
-import { PrismaNotaFiscalRepository } from "../../infrastructure/database/prisma/PrismaNotaFiscalRepository.js";
-import { NotaFiscalController } from "../controllers/NotaFiscalController.js";
-import { ListInvoicesUseCase } from "../../application/usecases/notaFiscal/ListInvoicesUseCase.js";
-import { DeleteInvoiceUseCase } from "../../application/usecases/notaFiscal/DeleteInvoiceUseCase.js";
-import { CreateInvoiceUseCase } from "../../application/usecases/notaFiscal/CreateInvoiceUseCase.js";
-import { UpdateCompanyUseCase } from "../../application/usecases/company/UpdateCompanyUseCase.js";
-import { UpdateInvoiceUseCase } from "../../application/usecases/notaFiscal/UpdateInvoiceUseCase.js";
+import { PrismaInvoiceRepository } from "../../infrastructure/database/prisma/PrismaInvoiceRepository.js";
+import { InvoiceController } from "../controllers/InvoiceController.js";
+import { ListInvoicesUseCase } from "../../application/usecases/invoice/ListInvoicesUseCase.js";
+import { DeleteInvoiceUseCase } from "../../application/usecases/invoice/DeleteInvoiceUseCase.js";
+import { CreateInvoiceUseCase } from "../../application/usecases/invoice/CreateInvoiceUseCase.js";
+import { UpdateInvoiceUseCase } from "../../application/usecases/invoice/UpdateInvoiceUseCase.js";
 import { PrismaEmpenhoRepository } from "../../infrastructure/database/prisma/PrismaEmpenhoRepository.js";
+import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
+import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
 
-export const NotaFiscalRoutes = Router();
+export const InvoiceRoutes = Router();
 
-const repository = new PrismaNotaFiscalRepository();
+const repository = new PrismaInvoiceRepository();
 const empenhoRepository = new PrismaEmpenhoRepository();
 const createInvoice = new CreateInvoiceUseCase(repository, empenhoRepository);
 const listInvoices = new ListInvoicesUseCase(repository);
 const deleteInvoice = new DeleteInvoiceUseCase(repository);
 const updateInvoice = new UpdateInvoiceUseCase(repository);
 
-const notaFiscalController = new NotaFiscalController(
+const invoiceController = new InvoiceController(
   createInvoice,
   listInvoices,
   deleteInvoice,
   updateInvoice,
 );
 
-NotaFiscalRoutes.post("/nota-fiscal/create", (req, res) =>
-  notaFiscalController.create(req, res),
+const token = new TokenGenerator();
+const authMiddleware = new AuthMiddleware(token);
+
+InvoiceRoutes.post(
+  "/invoices/create",
+  authMiddleware.handle,
+  (req, res) => invoiceController.create(req, res),
 );
 
-NotaFiscalRoutes.get("/nota-fiscal/list", (req, res) =>
-  notaFiscalController.list(req, res),
+InvoiceRoutes.get(
+  "/invoices/list",
+  authMiddleware.handle,
+  (req, res) => invoiceController.list(req, res),
 );
 
-NotaFiscalRoutes.delete("/invoices/delete/:id", (req, res) =>
-  notaFiscalController.delete(req, res),
+InvoiceRoutes.delete(
+  "/invoices/delete/:id",
+  authMiddleware.handle,
+  (req, res) => invoiceController.delete(req, res),
 );
 
-NotaFiscalRoutes.put("/invoices/update/:id", (req, res) =>
-  notaFiscalController.update(req, res),
+InvoiceRoutes.put(
+  "/invoices/update/:id",
+  authMiddleware.handle,
+  (req, res) => invoiceController.update(req, res),
 );

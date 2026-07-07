@@ -46,7 +46,7 @@ export class PrismaUserRepository implements IUserRepository {
         password: newUser.password,
       });
     } catch (err) {
-      throw new Error("Erro servidor");
+      throw new DomainError("Server error");
     }
   }
 }

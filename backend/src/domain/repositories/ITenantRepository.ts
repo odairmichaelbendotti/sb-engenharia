@@ -1,9 +1,8 @@
-import type { Tenant } from "../../generated/prisma/client.js";
-import type { TenantType } from "../entities/Tenant.js";
+import type { PersistedTenant, TenantType } from "../entities/Tenant.js";
 
 export interface ITenantRepository {
-  create(tenant: TenantType): Promise<Tenant>;
-  findByCnpj(cnpj: string): Promise<Tenant | null>;
-  findByApelido(apelido: string): Promise<Tenant | null>;
-  findById(id: string): Promise<Tenant | null>;
+  create(tenant: TenantType): Promise<PersistedTenant>;
+  findByCnpj(cnpj: string): Promise<PersistedTenant | null>;
+  findByApelido(apelido: string): Promise<PersistedTenant | null>;
+  findById(id: string): Promise<PersistedTenant | null>;
 }

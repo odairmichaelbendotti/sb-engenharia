@@ -1,4 +1,4 @@
-import type { TenantType } from "../../../domain/entities/Tenant.js";
+import { TenantEntity, type TenantType } from "../../../domain/entities/Tenant.js";
 import type { ITenantRepository } from "../../../domain/repositories/ITenantRepository.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 
@@ -19,6 +19,8 @@ export class CreateTenantUseCase {
       throw new DomainError("CNPJ_ALREADY_IN_USE");
     }
 
-    return this.tenantRepository.create(data);
+    const tenantEntity = new TenantEntity(data);
+
+    return this.tenantRepository.create(tenantEntity);
   }
 }

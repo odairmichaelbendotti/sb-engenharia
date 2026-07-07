@@ -1,3 +1,5 @@
+import { DomainError } from "../errors/DomainError.js";
+
 type UserProps = {
   id?: string;
   tenant_id: string;
@@ -18,6 +20,10 @@ export class User {
   public approved: boolean;
 
   constructor(props: UserProps) {
+    if (!props.email.includes("@")) {
+      throw new DomainError("User email is invalid");
+    }
+
     this.id = props.id;
     this.tenant_id = props.tenant_id;
     this.name = props.name;

@@ -1,10 +1,9 @@
-import type { Empenho } from "../../generated/prisma/client.js";
-import type { EmpenhoType } from "../entities/Empenho.js";
+import type { EmpenhoType, PersistedEmpenho } from "../entities/Empenho.js";
 
 export type UpdateStatusDTO = "ATIVO" | "FINALIZADO" | "CANCELADO";
 
 export type empenhosDTO = {
-  empenhos: (Empenho & {
+  empenhos: (PersistedEmpenho & {
     company: {
       id: string;
       name: string;
@@ -20,14 +19,14 @@ export type empenhosDTO = {
 };
 
 export interface IEmpenhoRepository {
-  create(empenho: EmpenhoType): Promise<Empenho>;
-  findByEmpenhoId(empenhoId: string): Promise<Empenho | null>;
+  create(empenho: EmpenhoType): Promise<PersistedEmpenho>;
+  findByEmpenhoId(empenhoId: string): Promise<PersistedEmpenho | null>;
   list(): Promise<empenhosDTO>;
   delete(id: string): Promise<void>;
-  update(empenhoId: string, empenho: EmpenhoType): Promise<Empenho>;
+  update(empenhoId: string, empenho: EmpenhoType): Promise<PersistedEmpenho>;
   updateStatus(
     empenhoId: string,
     status: "ATIVO" | "FINALIZADO" | "CANCELADO",
-  ): Promise<Empenho>;
+  ): Promise<PersistedEmpenho>;
   incrementInvoiceValue(empenhoId: string, value: number): Promise<void>;
 }

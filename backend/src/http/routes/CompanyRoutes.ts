@@ -5,6 +5,8 @@ import { CompanyController } from "../controllers/CompanyController.js";
 import { ListCompaniesUseCase } from "../../application/usecases/company/ListCompaniesUseCase.js";
 import { DeleteCompanyUseCase } from "../../application/usecases/company/DeleteCompanyUseCase.js";
 import { UpdateCompanyUseCase } from "../../application/usecases/company/UpdateCompanyUseCase.js";
+import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
+import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
 
 export const CompanyRoutes = Router();
 
@@ -22,16 +24,29 @@ const companyController = new CompanyController(
   updateCompanyUseCase,
 );
 
-CompanyRoutes.post("/company/create", (req, res) =>
-  companyController.create(req, res),
+const token = new TokenGenerator();
+const authMiddleware = new AuthMiddleware(token);
+
+CompanyRoutes.post(
+  "/company/create",
+  authMiddleware.handle,
+  (req, res) => companyController.create(req, res),
 );
 
-CompanyRoutes.get("/company/list", (_, res) => companyController.list(_, res));
-
-CompanyRoutes.delete("/company/delete/:id", (req, res) =>
-  companyController.delete(req, res),
+CompanyRoutes.get(
+  "/company/list",
+  authMiddleware.handle,
+  (req, res) => companyController.list(req, res),
 );
 
-CompanyRoutes.put("/company/update/:id", (req, res) =>
-  companyController.update(req, res),
+CompanyRoutes.delete(
+  "/company/delete/:id",
+  authMiddleware.handle,
+  (req, res) => companyController.delete(req, res),
+);
+
+CompanyRoutes.put(
+  "/company/update/:id",
+  authMiddleware.handle,
+  (req, res) => companyController.update(req, res),
 );

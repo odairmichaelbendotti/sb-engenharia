@@ -1,8 +1,12 @@
-import type { Company, Empenho } from "../../generated/prisma/client.js";
-import { CompanyEntity, type CompanyType } from "../entities/Company.js";
+import {
+  CompanyEntity,
+  type CompanyType,
+  type PersistedCompany,
+} from "../entities/Company.js";
+import type { PersistedEmpenho } from "../entities/Empenho.js";
 
 export type ListCompaniesResponse = {
-  companies: (Company & { empenhos: Empenho[] })[];
+  companies: (PersistedCompany & { empenhos: PersistedEmpenho[] })[];
   stats: {
     totalCompanies: number;
     totalEmpenhos: number;
@@ -12,10 +16,10 @@ export type ListCompaniesResponse = {
 };
 
 export interface ICompanyRepository {
-  create(company: CompanyEntity): Promise<Company>;
+  create(company: CompanyEntity): Promise<PersistedCompany>;
   verifyCnpj(cnpj: string): Promise<boolean>;
   list(): Promise<ListCompaniesResponse>;
   delete(id: string): Promise<void>;
-  findById(id: string): Promise<Company | null>;
-  update(id: string, company: CompanyType): Promise<Company>;
+  findById(id: string): Promise<PersistedCompany | null>;
+  update(id: string, company: CompanyType): Promise<PersistedCompany>;
 }

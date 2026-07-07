@@ -1,5 +1,5 @@
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
-import type { EmpenhoType } from "../../../domain/entities/Empenho.js";
+import { EmpenhoEntity, type EmpenhoType } from "../../../domain/entities/Empenho.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import { AdminPolicy } from "../../../domain/polices/AdminPolicy.js";
 import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository.js";
@@ -33,19 +33,18 @@ export class CreateEmpenhoUseCase {
       throw new DomainError("You are not authorized to create an empenho");
     }
 
-    // const existingEmpenho = await this.repository.findByEmpenhoId(numero);
-
-    // if (existingEmpenho) {
-    //   throw new DomainError("Empenho already exists");
-    // }
-
-    return this.repository.create({
+    const empenhoEntity = new EmpenhoEntity({
       numero,
       description,
       startAt,
       endAt,
-      value: value * 100,
+      value,
       company_id,
+    });
+
+    return this.repository.create({
+      ...empenhoEntity,
+      value: empenhoEntity.value * 100,
     });
   }
 }

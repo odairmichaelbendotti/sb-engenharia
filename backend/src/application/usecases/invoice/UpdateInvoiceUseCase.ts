@@ -1,16 +1,16 @@
-import type { NotaFiscalType } from "../../../domain/entities/NotaFiscal.js";
-import type { INotaFiscalRepository } from "../../../domain/repositories/INotaFiscalRepository.js";
+import type { InvoiceType } from "../../../domain/entities/Invoice.js";
+import type { IInvoiceRepository } from "../../../domain/repositories/IInvoiceRepository.js";
 
 export class UpdateInvoiceUseCase {
-  constructor(private repository: INotaFiscalRepository) {}
+  constructor(private repository: IInvoiceRepository) {}
 
   async execute({
-    notaFiscal,
+    invoice,
     id,
   }: {
-    notaFiscal: NotaFiscalType;
+    invoice: InvoiceType;
     id: string;
   }) {
-    return this.repository.update(notaFiscal, id);
+    return this.repository.update(invoice, id);
   }
 }

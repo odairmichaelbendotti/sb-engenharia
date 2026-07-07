@@ -1,3 +1,5 @@
+import { DomainError } from "../errors/DomainError.js";
+
 export type CompanyType = {
   name: string;
   cnpj: string;
@@ -7,6 +9,13 @@ export type CompanyType = {
   address: string;
   phone: string;
   email: string;
+};
+
+export type PersistedCompany = CompanyType & {
+  id: string;
+  hasActiveContract: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 export class CompanyEntity {
@@ -20,6 +29,10 @@ export class CompanyEntity {
   public readonly email: string;
 
   constructor(props: CompanyType) {
+    if (props.cnpj.replace(/\D/g, "").length !== 14) {
+      throw new DomainError("Company cnpj must have 14 digits");
+    }
+
     this.name = props.name;
     this.cnpj = props.cnpj;
     this.cep = props.cep;

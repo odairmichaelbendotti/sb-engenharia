@@ -1,13 +1,13 @@
 import type { Request, Response } from "express";
 import { DomainError } from "../../domain/errors/DomainError.js";
-import type { ListInvoicesUseCase } from "../../application/usecases/notaFiscal/ListInvoicesUseCase.js";
-import type { DeleteInvoiceUseCase } from "../../application/usecases/notaFiscal/DeleteInvoiceUseCase.js";
-import { CreateInvoiceUseCase } from "../../application/usecases/notaFiscal/CreateInvoiceUseCase.js";
-import type { UpdateInvoiceUseCase } from "../../application/usecases/notaFiscal/UpdateInvoiceUseCase.js";
+import type { ListInvoicesUseCase } from "../../application/usecases/invoice/ListInvoicesUseCase.js";
+import type { DeleteInvoiceUseCase } from "../../application/usecases/invoice/DeleteInvoiceUseCase.js";
+import { CreateInvoiceUseCase } from "../../application/usecases/invoice/CreateInvoiceUseCase.js";
+import type { UpdateInvoiceUseCase } from "../../application/usecases/invoice/UpdateInvoiceUseCase.js";
 
-export class NotaFiscalController {
+export class InvoiceController {
   constructor(
-    private createNotaFiscal: CreateInvoiceUseCase,
+    private createInvoice: CreateInvoiceUseCase,
     private listInvoices: ListInvoicesUseCase,
     private deleteInvoice: DeleteInvoiceUseCase,
     private updateInvoice: UpdateInvoiceUseCase,
@@ -17,7 +17,7 @@ export class NotaFiscalController {
       req.body;
 
     try {
-      const nf = await this.createNotaFiscal.execute({
+      const invoice = await this.createInvoice.execute({
         numero,
         description,
         vencimento,
@@ -26,9 +26,7 @@ export class NotaFiscalController {
         company_id,
       });
 
-      console.log(nf);
-
-      res.status(201).json(nf);
+      res.status(201).json(invoice);
     } catch (error) {
       if (error instanceof DomainError) {
         return res.status(400).json({ message: error.message });
@@ -37,8 +35,15 @@ export class NotaFiscalController {
     }
   }
   async list(req: Request, res: Response) {
-    const data = await this.listInvoices.execute();
-    res.status(200).json(data);
+    try {
+      const data = await this.listInvoices.execute();
+      res.status(200).json(data);
+    } catch (error) {
+      if (error instanceof DomainError) {
+        return res.status(400).json({ message: error.message });
+      }
+      return res.status(500).json({ message: "Internal server error" });
+    }
   }
   async delete(req: Request, res: Response) {
     const { id } = req.params;
@@ -49,7 +54,7 @@ export class NotaFiscalController {
 
     try {
       await this.deleteInvoice.execute(id);
-      res.status(200).json({ message: "Nota fiscal successfully deleted" });
+      res.status(200).json({ message: "Invoice successfully deleted" });
     } catch (error) {
       if (error instanceof DomainError) {
         return res.status(400).json({ message: error.message });
@@ -64,7 +69,7 @@ export class NotaFiscalController {
 
     try {
       const updated = await this.updateInvoice.execute({
-        notaFiscal: req.body,
+        invoice: req.body,
         id: req.params.id,
       });
       res.status(200).json(updated);

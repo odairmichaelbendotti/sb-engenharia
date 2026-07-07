@@ -1,5 +1,7 @@
-import type { NotaFiscal } from "../../generated/prisma/client.js";
-import type { NotaFiscalType } from "../entities/NotaFiscal.js";
+import type {
+  InvoiceType,
+  PersistedInvoice,
+} from "../entities/Invoice.js";
 
 export type listInvoices = {
   totalCount: number;
@@ -10,13 +12,13 @@ export type listInvoices = {
   expiredValue: number;
   pendingInvoices: number;
   pendingValue: number;
-  allInvoices: NotaFiscal[];
+  allInvoices: PersistedInvoice[];
 };
 
-export interface INotaFiscalRepository {
-  create(notaFiscal: NotaFiscalType): Promise<NotaFiscal>;
-  findByNumber(number: string): Promise<NotaFiscal | null>;
+export interface IInvoiceRepository {
+  create(invoice: InvoiceType): Promise<PersistedInvoice>;
+  findByNumber(number: string): Promise<PersistedInvoice | null>;
   list(): Promise<listInvoices>;
   delete(id: string): Promise<void>;
-  update(notaFiscal: NotaFiscalType, id: string): Promise<NotaFiscalType>;
+  update(invoice: InvoiceType, id: string): Promise<InvoiceType>;
 }

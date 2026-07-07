@@ -1,11 +1,11 @@
-import type { NotaFiscalType } from "../../../domain/entities/NotaFiscal.js";
+import { Invoice, type InvoiceType } from "../../../domain/entities/Invoice.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository.js";
-import type { INotaFiscalRepository } from "../../../domain/repositories/INotaFiscalRepository.js";
+import type { IInvoiceRepository } from "../../../domain/repositories/IInvoiceRepository.js";
 
 export class CreateInvoiceUseCase {
   constructor(
-    private repository: INotaFiscalRepository,
+    private repository: IInvoiceRepository,
     private empenhoRepository: IEmpenhoRepository,
   ) {}
 
@@ -16,7 +16,7 @@ export class CreateInvoiceUseCase {
     value,
     empenho_id,
     company_id,
-  }: NotaFiscalType) {
+  }: InvoiceType) {
     if (value <= 0) {
       throw new DomainError("Value must be greater than 0");
     }
@@ -31,25 +31,30 @@ export class CreateInvoiceUseCase {
       throw new DomainError("Value exceeds empenho limit");
     }
 
-    const notaFiscalExist = await this.repository.findByNumber(numero);
+    const invoiceExist = await this.repository.findByNumber(numero);
 
     if (
-      notaFiscalExist &&
-      notaFiscalExist.company_id === company_id &&
-      notaFiscalExist.empenho_id === empenho_id
+      invoiceExist &&
+      invoiceExist.company_id === company_id &&
+      invoiceExist.empenho_id === empenho_id
     ) {
       throw new DomainError("Nota fiscal already exists");
     }
 
     await this.empenhoRepository.incrementInvoiceValue(empenho_id, value);
 
-    return await this.repository.create({
+    const invoiceEntity = new Invoice({
       numero,
       description,
       vencimento: new Date(vencimento),
-      value: value * 100,
+      value,
       empenho_id,
       company_id,
+    });
+
+    return await this.repository.create({
+      ...invoiceEntity,
+      value: invoiceEntity.value * 100,
     });
   }
 }

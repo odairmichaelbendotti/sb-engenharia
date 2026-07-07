@@ -1,14 +1,17 @@
-import type { CompanyEntity } from "../../../domain/entities/Company.js";
+import type {
+  CompanyEntity,
+  CompanyType,
+  PersistedCompany,
+} from "../../../domain/entities/Company.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import type {
   ICompanyRepository,
   ListCompaniesResponse,
 } from "../../../domain/repositories/ICompanyRepository.js";
-import type { Company, Empenho } from "../../../generated/prisma/client.js";
 import { prisma } from "../../prisma/prisma.js";
 
 export class PrismaCompanyRepository implements ICompanyRepository {
-  async create(company: CompanyEntity): Promise<Company> {
+  async create(company: CompanyEntity): Promise<PersistedCompany> {
     try {
       const newCompany = await prisma.company.create({
         data: {
@@ -97,7 +100,7 @@ export class PrismaCompanyRepository implements ICompanyRepository {
       throw new DomainError("Error deleting company: " + error);
     }
   }
-  async findById(id: string): Promise<Company | null> {
+  async findById(id: string): Promise<PersistedCompany | null> {
     try {
       const company = await prisma.company.findUnique({
         where: { id },
@@ -108,7 +111,7 @@ export class PrismaCompanyRepository implements ICompanyRepository {
       throw new DomainError("Error finding company: " + error);
     }
   }
-  async update(id: string, company: Company & Empenho[]): Promise<Company> {
+  async update(id: string, company: CompanyType): Promise<PersistedCompany> {
     try {
       return await prisma.company.update({
         where: { id },

@@ -22,26 +22,18 @@ export class UpdateEmpenhoUseCase {
   }) {
     const admin = new AdminPolicy().isAdmin(user);
 
-    console.log("-----DATA ABAIXO------");
-    console.log(data);
-
-    try {
-      if (!admin) {
-        throw new Error("User is not authorized to perform this action");
-      }
-
-      if (data.company_id) {
-        const company = await this.findCompanyById.findById(data.company_id);
-
-        if (!company) {
-          throw new Error("Company not found");
-        }
-      }
-
-      return await this.updateEmpenho.update(empenhoId, data);
-    } catch (error) {
-      console.log(error);
-      throw new DomainError("Failed to update empenho");
+    if (!admin) {
+      throw new DomainError("User is not authorized to perform this action");
     }
+
+    if (data.company_id) {
+      const company = await this.findCompanyById.findById(data.company_id);
+
+      if (!company) {
+        throw new DomainError("Company not found");
+      }
+    }
+
+    return await this.updateEmpenho.update(empenhoId, data);
   }
 }

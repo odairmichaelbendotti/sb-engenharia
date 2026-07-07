@@ -1,4 +1,4 @@
-import type { CompanyType } from "../../../domain/entities/Company.js";
+import { CompanyEntity, type CompanyType } from "../../../domain/entities/Company.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import type { ICompanyRepository } from "../../../domain/repositories/ICompanyRepository.js";
 
@@ -34,7 +34,7 @@ export class CreateCompanyUseCase {
       throw new DomainError("CNPJ already exists");
     }
 
-    const company = await this.repository.create({
+    const companyEntity = new CompanyEntity({
       name,
       cnpj,
       cep,
@@ -44,7 +44,9 @@ export class CreateCompanyUseCase {
       phone,
       email,
     });
-    if (!company) throw new Error("Company not created");
+
+    const company = await this.repository.create(companyEntity);
+    if (!company) throw new DomainError("Company not created");
     return company;
   }
 }

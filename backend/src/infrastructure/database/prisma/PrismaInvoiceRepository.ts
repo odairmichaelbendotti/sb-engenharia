@@ -1,40 +1,41 @@
-import type { NotaFiscalType } from "../../../domain/entities/NotaFiscal.js";
+import type {
+  InvoiceType,
+  PersistedInvoice,
+} from "../../../domain/entities/Invoice.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import type {
-  INotaFiscalRepository,
+  IInvoiceRepository,
   listInvoices,
-} from "../../../domain/repositories/INotaFiscalRepository.js";
-import type { NotaFiscal } from "../../../generated/prisma/client.js";
+} from "../../../domain/repositories/IInvoiceRepository.js";
 import { prisma } from "../../prisma/prisma.js";
 
-export class PrismaNotaFiscalRepository implements INotaFiscalRepository {
-  async create(notaFiscal: NotaFiscalType): Promise<NotaFiscal> {
+export class PrismaInvoiceRepository implements IInvoiceRepository {
+  async create(invoice: InvoiceType): Promise<PersistedInvoice> {
     try {
-      const notaFiscalCreated = await prisma.notaFiscal.create({
+      const invoiceCreated = await prisma.invoice.create({
         data: {
-          numero: notaFiscal.numero,
-          description: notaFiscal.description,
-          vencimento: notaFiscal.vencimento,
-          value: notaFiscal.value,
-          empenho: { connect: { id: notaFiscal.empenho_id } },
-          company: { connect: { id: notaFiscal.company_id } },
+          numero: invoice.numero,
+          description: invoice.description,
+          vencimento: invoice.vencimento,
+          value: invoice.value,
+          empenho: { connect: { id: invoice.empenho_id } },
+          company: { connect: { id: invoice.company_id } },
         },
         include: { company: true },
       });
 
-      return notaFiscalCreated;
+      return invoiceCreated;
     } catch (error) {
       throw new DomainError("Erro ao criar nota fiscal");
     }
   }
-  async findByNumber(number: string): Promise<NotaFiscal | null> {
-    const notaFiscal = await prisma.notaFiscal.findFirst({
+  async findByNumber(number: string): Promise<PersistedInvoice | null> {
+    const invoice = await prisma.invoice.findFirst({
       where: {
         numero: number,
       },
     });
-    console.log(notaFiscal);
-    return notaFiscal;
+    return invoice;
   }
   async list(): Promise<listInvoices> {
     try {
@@ -49,24 +50,24 @@ export class PrismaNotaFiscalRepository implements INotaFiscalRepository {
         pendingValue,
         allInvoices,
       ] = await Promise.all([
-        prisma.notaFiscal.count(),
-        prisma.notaFiscal.aggregate({ _sum: { value: true } }),
-        prisma.notaFiscal.count({ where: { status: "PAGO" } }),
-        prisma.notaFiscal.aggregate({
+        prisma.invoice.count(),
+        prisma.invoice.aggregate({ _sum: { value: true } }),
+        prisma.invoice.count({ where: { status: "PAGO" } }),
+        prisma.invoice.aggregate({
           _sum: { value: true },
           where: { status: "PAGO" },
         }),
-        prisma.notaFiscal.count({ where: { status: "VENCIDO" } }),
-        prisma.notaFiscal.aggregate({
+        prisma.invoice.count({ where: { status: "VENCIDO" } }),
+        prisma.invoice.aggregate({
           _sum: { value: true },
           where: { status: "VENCIDO" },
         }),
-        prisma.notaFiscal.count({ where: { status: "PENDENTE" } }),
-        prisma.notaFiscal.aggregate({
+        prisma.invoice.count({ where: { status: "PENDENTE" } }),
+        prisma.invoice.aggregate({
           _sum: { value: true },
           where: { status: "PENDENTE" },
         }),
-        prisma.notaFiscal.findMany({
+        prisma.invoice.findMany({
           include: { company: true },
         }),
       ]);
@@ -92,7 +93,7 @@ export class PrismaNotaFiscalRepository implements INotaFiscalRepository {
   }
   async delete(id: string): Promise<void> {
     try {
-      await prisma.notaFiscal.delete({
+      await prisma.invoice.delete({
         where: {
           id,
         },
@@ -101,25 +102,21 @@ export class PrismaNotaFiscalRepository implements INotaFiscalRepository {
       throw new DomainError("Erro ao deletar nota fiscal");
     }
   }
-  async update(
-    notaFiscal: NotaFiscalType,
-    id: string,
-  ): Promise<NotaFiscalType> {
+  async update(invoice: InvoiceType, id: string): Promise<InvoiceType> {
     const parsedInvoice = {
-      ...notaFiscal,
-      vencimento: new Date(notaFiscal.vencimento),
-      value: notaFiscal.value * 100,
+      ...invoice,
+      vencimento: new Date(invoice.vencimento),
+      value: invoice.value * 100,
     };
 
     try {
-      const updatedInvoice = await prisma.notaFiscal.update({
+      const updatedInvoice = await prisma.invoice.update({
         where: { id },
         data: parsedInvoice,
         include: { company: true },
       });
       return updatedInvoice;
     } catch (error) {
-      console.log(error);
       throw new DomainError("Erro ao atualizar nota fiscal");
     }
   }

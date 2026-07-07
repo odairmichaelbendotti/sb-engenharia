@@ -2,14 +2,17 @@ import type {
   empenhosDTO,
   IEmpenhoRepository,
 } from "../../../domain/repositories/IEmpenhoRepository.js";
-import type { EmpenhoType } from "../../../domain/entities/Empenho.js";
-import type { Empenho } from "../../../generated/prisma/client.js";
+import type {
+  EmpenhoType,
+  PersistedEmpenho,
+} from "../../../domain/entities/Empenho.js";
+import type { Empenho as PrismaEmpenho } from "../../../generated/prisma/client.js";
 import { prisma } from "../../prisma/prisma.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import { formatDate } from "../../../utils/formatDateToInsertDb.js";
 
 export class PrismaEmpenhoRepository implements IEmpenhoRepository {
-  async create(empenho: EmpenhoType): Promise<Empenho> {
+  async create(empenho: EmpenhoType): Promise<PersistedEmpenho> {
     try {
       const empenhoCreated = await prisma.empenho.create({
         data: {
@@ -24,11 +27,10 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
 
       return empenhoCreated;
     } catch (error) {
-      console.log(error);
       throw new DomainError("Error creating empenho");
     }
   }
-  async findByEmpenhoId(empenhoId: string): Promise<Empenho | null> {
+  async findByEmpenhoId(empenhoId: string): Promise<PersistedEmpenho | null> {
     try {
       const empenho = await prisma.empenho.findUnique({
         where: { id: empenhoId },
@@ -36,7 +38,6 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
 
       return empenho;
     } catch (error) {
-      console.log(error);
       throw new DomainError("Error finding empenho");
     }
   }
@@ -78,7 +79,7 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
 
       const formattedEmpenhos = empenhos.map(
         (
-          empenho: Empenho & {
+          empenho: PrismaEmpenho & {
             company: { id: string; name: string; cnpj: string };
           },
         ) => {
@@ -115,7 +116,10 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
       throw new DomainError("Error deleting empenho");
     }
   }
-  async update(empenhoId: string, empenho: EmpenhoType): Promise<Empenho> {
+  async update(
+    empenhoId: string,
+    empenho: EmpenhoType,
+  ): Promise<PersistedEmpenho> {
     try {
       return await prisma.empenho.update({
         where: { id: empenhoId },
@@ -129,16 +133,14 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
         },
       });
     } catch (error) {
-      console.log(error);
       throw new DomainError("Error updating empenho");
     }
   }
   async updateStatus(
     empenhoId: string,
     status: "ATIVO" | "FINALIZADO" | "CANCELADO",
-  ): Promise<Empenho> {
+  ): Promise<PersistedEmpenho> {
     try {
-      console.log(status);
       const empenho = await prisma.empenho.update({
         where: { id: empenhoId },
         data: {
@@ -147,7 +149,6 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
       });
       return empenho;
     } catch (error) {
-      console.log(error);
       throw new DomainError("Error updating empenho status");
     }
   }
@@ -162,7 +163,7 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
         },
       });
     } catch (error) {
-      throw new Error("Error incrementing invoice value");
+      throw new DomainError("Error incrementing invoice value");
     }
   }
 }
