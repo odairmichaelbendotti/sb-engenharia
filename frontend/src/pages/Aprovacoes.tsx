@@ -3,15 +3,12 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Clock,
   Mail,
   Search,
   UserCheck,
-  Users,
   X,
 } from "lucide-react";
 import Breadcrumb from "../components/Breadcrumb";
-import { StatCard } from "../components/StatCard";
 import { getInitials } from "../utils/get-initial";
 import { formatDateTime } from "../utils/format-currency";
 
@@ -87,34 +84,22 @@ const Aprovacoes = () => {
   );
 
   return (
-    <div className="p-4 md:p-8">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
       <Breadcrumb current="Aprovações" />
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-text-primary">Aprovações</h1>
-        <p className="text-text-secondary text-sm mt-1">
-          Solicitações de acesso de novos usuários aguardando liberação.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <div>
+          <h1 className="text-xl font-bold text-text-primary flex items-center gap-2">
+            <UserCheck size={20} className="text-primary-500" />
+            Aprovações
+          </h1>
+          <p className="text-text-secondary text-xs mt-0.5">
+            Solicitações de acesso de novos usuários aguardando liberação
+          </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <StatCard
-          title="Pendentes"
-          value={String(pending.length)}
-          subtitle="aguardando aprovação"
-          icon={<Clock size={22} className="text-white" />}
-          color="bg-warning-text"
-        />
-        <StatCard
-          title="Organizações envolvidas"
-          value={String(new Set(pending.map((u) => u.tenantName)).size)}
-          subtitle="com solicitações abertas"
-          icon={<Users size={22} className="text-white" />}
-          color="bg-primary-500"
-        />
-      </div>
-
-      <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+      <div className="bg-surface border border-border rounded-lg overflow-hidden">
         <div className="px-4 pt-3 pb-2 border-b border-border">
           <div className="relative">
             <Search
