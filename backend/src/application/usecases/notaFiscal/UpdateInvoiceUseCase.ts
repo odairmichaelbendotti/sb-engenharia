@@ -4,7 +4,13 @@ import type { INotaFiscalRepository } from "../../../domain/repositories/INotaFi
 export class UpdateInvoiceUseCase {
   constructor(private repository: INotaFiscalRepository) {}
 
-  async execute(notaFiscal: NotaFiscalType, id: string) {
+  async execute({
+    notaFiscal,
+    id,
+  }: {
+    notaFiscal: NotaFiscalType;
+    id: string;
+  }) {
     return this.repository.update(notaFiscal, id);
   }
 }

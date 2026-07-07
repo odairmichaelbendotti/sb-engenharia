@@ -6,13 +6,15 @@ import { HashGenerator } from "../../infrastructure/cryptography/HashGenerator.j
 import { SignInUseCase } from "../../application/usecases/user/SignInUseCase.js";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
 import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
+import { PrismaTenantRepository } from "../../infrastructure/database/prisma/PrismaTenantRepository.js";
 
 export const UserRoutes = Router();
 
 const repository = new PrismaUserRepository();
 const hash = new HashGenerator();
 const token = new TokenGenerator();
-const signUp = new SignUpUseCase(repository, hash, token);
+const tenantRepository = new PrismaTenantRepository();
+const signUp = new SignUpUseCase(repository, hash, token, tenantRepository);
 const signIn = new SignInUseCase(repository, hash, token);
 const userController = new UserController(signUp, signIn);
 const middleware = new AuthMiddleware(token);

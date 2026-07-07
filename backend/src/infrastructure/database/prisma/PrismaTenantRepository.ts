@@ -19,4 +19,9 @@ export class PrismaTenantRepository implements ITenantRepository {
       where: { cnpj },
     });
   }
+  async findById(id: string): Promise<Tenant | null> {
+    return await prisma.tenant.findUnique({
+      where: { id },
+    });
+  }
 }

@@ -63,7 +63,10 @@ export class NotaFiscalController {
     }
 
     try {
-      const updated = await this.updateInvoice.execute(req.body, req.params.id);
+      const updated = await this.updateInvoice.execute({
+        notaFiscal: req.body,
+        id: req.params.id,
+      });
       res.status(200).json(updated);
     } catch (error) {
       if (error instanceof DomainError) {

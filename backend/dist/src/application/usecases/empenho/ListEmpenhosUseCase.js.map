@@ -1,1 +1,0 @@
-{"version":3,"file":"ListEmpenhosUseCase.js","sourceRoot":"","sources":["../../../../../src/application/usecases/empenho/ListEmpenhosUseCase.ts"],"names":[],"mappings":"AAEA,MAAM,OAAO,mBAAmB;IACV;IAApB,YAAoB,UAA8B;QAA9B,eAAU,GAAV,UAAU,CAAoB;IAAG,CAAC;IAEtD,KAAK,CAAC,OAAO;QACX,OAAO,MAAM,IAAI,CAAC,UAAU,CAAC,IAAI,EAAE,CAAC;IACtC,CAAC;CACF"}

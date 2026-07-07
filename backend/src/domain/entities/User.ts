@@ -1,23 +1,29 @@
 type UserProps = {
   id?: string;
+  tenant_id: string;
   name: string;
   email: string;
   password: string;
+  approved: boolean;
   role?: "MASTER" | "USER" | "EDITOR";
 };
 
 export class User {
   public id?: string | undefined;
+  public tenant_id: string;
   public name: string;
   public readonly email: string;
   public readonly password: string;
   public role: string;
+  public approved: boolean;
 
   constructor(props: UserProps) {
     this.id = props.id;
+    this.tenant_id = props.tenant_id;
     this.name = props.name;
     this.email = props.email;
     this.password = props.password;
     this.role = props.role ?? "USER";
+    this.approved = props.approved;
   }
 }

@@ -16,9 +16,10 @@ export class PrismaUserRepository implements IUserRepository {
       return new User({
         id: user.id,
         name: user.name,
+        approved: user.approved,
+        tenant_id: user.tenant_id,
         email: user.email,
         password: user.password,
-        role: user.role,
       });
     } catch (err) {
       throw new DomainError("Server error");
@@ -29,14 +30,18 @@ export class PrismaUserRepository implements IUserRepository {
       const newUser = await prisma.user.create({
         data: {
           name: user.name,
+          tenant_id: user.tenant_id,
           email: user.email,
           password: user.password,
+          approved: user.approved,
         },
       });
 
       return new User({
         id: newUser.id,
         name: newUser.name,
+        approved: newUser.approved,
+        tenant_id: newUser.tenant_id,
         email: newUser.email,
         password: newUser.password,
       });

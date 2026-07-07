@@ -1,1 +1,0 @@
-{"version":3,"file":"AdminPolicy.js","sourceRoot":"","sources":["../../../../src/domain/polices/AdminPolicy.ts"],"names":[],"mappings":"AAEA,MAAM,OAAO,WAAW;IACtB,OAAO,CAAC,IAAuB;QAC7B,IAAI,IAAI,CAAC,IAAI,KAAK,MAAM,EAAE,CAAC;YACzB,OAAO,KAAK,CAAC;QACf,CAAC;QACD,OAAO,IAAI,CAAC;IACd,CAAC;CACF"}

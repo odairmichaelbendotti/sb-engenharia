@@ -1,1 +1,0 @@
-{"version":3,"file":"DeleteInvoiceUseCase.js","sourceRoot":"","sources":["../../../../../src/application/usecases/notaFiscal/DeleteInvoiceUseCase.ts"],"names":[],"mappings":"AAEA,MAAM,OAAO,oBAAoB;IACX;IAApB,YAAoB,aAAoC;QAApC,kBAAa,GAAb,aAAa,CAAuB;IAAG,CAAC;IAE5D,KAAK,CAAC,OAAO,CAAC,EAAU;QACtB,OAAO,MAAM,IAAI,CAAC,aAAa,CAAC,MAAM,CAAC,EAAE,CAAC,CAAC;IAC7C,CAAC;CACF"}

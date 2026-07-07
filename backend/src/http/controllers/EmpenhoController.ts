@@ -25,7 +25,8 @@ export class EmpenhoController {
         throw new DomainError("User not found");
       }
 
-      const empenho = await this.createEmpenho.execute(user, {
+      const empenho = await this.createEmpenho.execute({
+        user,
         numero,
         description,
         startAt,
@@ -103,11 +104,11 @@ export class EmpenhoController {
       throw new DomainError("All fields are required");
     }
 
-    const editedEmpenho = await this.updateEmpenho.execute(
+    const editedEmpenho = await this.updateEmpenho.execute({
       empenhoId,
-      req.body,
+      data: req.body,
       user,
-    );
+    });
 
     res.status(200).json(editedEmpenho);
 
@@ -137,11 +138,11 @@ export class EmpenhoController {
       throw new DomainError("Status is required");
     }
 
-    const updatedEmpenho = await this.updateStatusEmpenho.execute(
+    const updatedEmpenho = await this.updateStatusEmpenho.execute({
       empenhoId,
       status,
       user,
-    );
+    });
 
     res.status(200).json(updatedEmpenho);
   }

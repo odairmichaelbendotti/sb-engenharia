@@ -11,7 +11,15 @@ export class UpdateEmpenhoUseCase {
     private findCompanyById: ICompanyRepository,
   ) {}
 
-  async execute(empenhoId: string, data: EmpenhoType, user: AuthenticatedUser) {
+  async execute({
+    empenhoId,
+    data,
+    user,
+  }: {
+    empenhoId: string;
+    data: EmpenhoType;
+    user: AuthenticatedUser;
+  }) {
     const admin = new AdminPolicy().isAdmin(user);
 
     console.log("-----DATA ABAIXO------");

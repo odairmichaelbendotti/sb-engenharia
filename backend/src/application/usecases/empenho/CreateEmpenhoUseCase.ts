@@ -7,10 +7,15 @@ import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRe
 export class CreateEmpenhoUseCase {
   constructor(private repository: IEmpenhoRepository) {}
 
-  async execute(
-    user: AuthenticatedUser,
-    { numero, description, startAt, endAt, value, company_id }: EmpenhoType,
-  ) {
+  async execute({
+    user,
+    numero,
+    description,
+    startAt,
+    endAt,
+    value,
+    company_id,
+  }: EmpenhoType & { user: AuthenticatedUser }) {
     if (
       !numero ||
       !description ||

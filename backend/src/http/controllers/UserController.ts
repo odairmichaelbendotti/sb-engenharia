@@ -11,18 +11,21 @@ export class UserController {
 
   async signup(req: Request, res: Response) {
     try {
-      const { name, email, password } = req.body;
+      const { name, email, approved, password, tenant_id } = req.body;
 
-      const { token, createdUser: user } = await this.signUpUseCase.execute(
+      const { token, createdUser: user } = await this.signUpUseCase.execute({
         name,
+        tenant_id,
         email,
         password,
-      );
+        approved,
+      });
 
       const userResponse = {
         id: user.id,
         name: user.name,
         email: user.email,
+        approved: user.approved,
         role: user.role,
       };
 
@@ -32,6 +35,8 @@ export class UserController {
       if (err instanceof DomainError) {
         return res.status(409).json({ message: err.message });
       }
+      console.log(err);
+      return res.status(500).json({ message: "Internal server error" });
     }
   }
   async signin(req: Request, res: Response) {
@@ -48,8 +53,9 @@ export class UserController {
     } catch (err) {
       console.log(err);
       if (err instanceof DomainError) {
-        return res.status(409).json(err.message);
+        return res.status(409).json({ message: err.message });
       }
+      return res.status(500).json({ message: "Internal server error" });
     }
   }
   logout(req: Request, res: Response) {

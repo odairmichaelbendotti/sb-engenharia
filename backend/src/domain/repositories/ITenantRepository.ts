@@ -5,4 +5,5 @@ export interface ITenantRepository {
   create(tenant: TenantType): Promise<Tenant>;
   findByCnpj(cnpj: string): Promise<Tenant | null>;
   findByApelido(apelido: string): Promise<Tenant | null>;
+  findById(id: string): Promise<Tenant | null>;
 }
