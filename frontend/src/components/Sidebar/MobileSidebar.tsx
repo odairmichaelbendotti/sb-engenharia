@@ -1,26 +1,17 @@
 import { useState } from "react";
 import { Menu, X, LogOut } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { adminItems } from "./adm-items";
 import { engItems } from "./eng-items";
+import { gestaoItems } from "./gestao-items";
 import { useUser } from "../../store/user";
 import { getInitials } from "../../utils/get-initial";
+import SidebarGroup from "./SidebarGroup";
 
 const MobileSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useUser();
-
-  function isActive(path: string) {
-    return location.pathname === path;
-  }
-
-  function changeClass(path: string) {
-    return isActive(path)
-      ? "group flex items-center gap-3 bg-primary-100 text-primary-500 py-3 px-3 rounded-md cursor-pointer"
-      : "group flex items-center gap-3 hover:bg-surface-muted text-text-secondary py-3 px-3 rounded-md cursor-pointer";
-  }
 
   function handleLinkClick() {
     setIsOpen(false);
@@ -41,7 +32,7 @@ const MobileSidebar = () => {
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-surface border-b border-border z-40 flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
-          <span className="font-bold text-text-primary text-lg">Gestão</span>
+          <span className="font-bold text-text-primary text-lg">SB Engenharia</span>
         </div>
         <button
           onClick={() => setIsOpen(!isOpen)}
@@ -70,7 +61,7 @@ const MobileSidebar = () => {
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <span className="font-bold text-text-primary text-lg">Gestão</span>
+              <span className="font-bold text-text-primary text-lg">SB Engenharia</span>
             </div>
             <button
               onClick={() => setIsOpen(false)}
@@ -83,53 +74,21 @@ const MobileSidebar = () => {
 
           {/* Navigation */}
           <div className="flex-1 overflow-y-auto">
-            <p className="text-xs text-text-primary font-bold mb-3">Administrativo</p>
-            <div className="space-y-1">
-              {adminItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={changeClass(item.path)}
-                  onClick={handleLinkClick}
-                >
-                  <div
-                    className={`p-2 rounded-md ${
-                      location.pathname === item.path ? "bg-primary-500" : ""
-                    }`}
-                  >
-                    <item.icon
-                      size={20}
-                      color={location.pathname === item.path ? "white" : "gray"}
-                    />
-                  </div>
-                  <p className="text-sm font-medium">{item.label}</p>
-                </Link>
-              ))}
-            </div>
-
-            <p className="mt-6 text-xs text-text-primary font-bold mb-3">Engenharia</p>
-            <div className="space-y-1">
-              {engItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={changeClass(item.path)}
-                  onClick={handleLinkClick}
-                >
-                  <div
-                    className={`p-2 rounded-md ${
-                      location.pathname === item.path ? "bg-primary-500" : ""
-                    }`}
-                  >
-                    <item.icon
-                      size={20}
-                      color={location.pathname === item.path ? "white" : "gray"}
-                    />
-                  </div>
-                  <p className="text-sm font-medium">{item.label}</p>
-                </Link>
-              ))}
-            </div>
+            <SidebarGroup
+              label="Gestão"
+              items={gestaoItems}
+              onNavigate={handleLinkClick}
+            />
+            <SidebarGroup
+              label="Administrativo"
+              items={adminItems}
+              onNavigate={handleLinkClick}
+            />
+            <SidebarGroup
+              label="Engenharia"
+              items={engItems}
+              onNavigate={handleLinkClick}
+            />
           </div>
 
           {/* Footer */}

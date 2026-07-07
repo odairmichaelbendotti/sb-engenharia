@@ -130,7 +130,7 @@ Só uma: `VITE_HOST` (ex.: `http://localhost:4000/api`), lida em `services/api.t
 2. **`EmpenhoPagination.tsx`** existe e está no barrel de `Empenho/`, mas não é usado em `Empenhos.tsx` — a tabela de empenhos não pagina hoje.
 3. Rota `/notasfiscais` não foi renomeada para `/invoices` junto com o componente — mudar a URL pública é uma decisão de produto, não só refactor, perguntar antes.
 4. `src/assets/images/vertical.jpg` não é referenciado em lugar nenhum — asset órfão.
-5. `index.html` e `README.md` ainda são o boilerplate padrão do Vite, não customizados (título "frontend", favicon `vite.svg`).
+5. `README.md` ainda é o boilerplate padrão do Vite, não customizado. (`index.html` já tem título "SB Engenharia" e favicon próprio — resolvido.)
 6. `Company/` é a única pasta de página sem `index.ts`/barrel — inconsistente com `Empenho/`, `Invoice/`, `Obra/`.
 
 ## Convenções a manter
@@ -139,3 +139,4 @@ Só uma: `VITE_HOST` (ex.: `http://localhost:4000/api`), lida em `services/api.t
 - Nomes de props/exports em português quando o domínio é português (`empresa`, `empenho`), mas nomenclatura de código/arquivos em inglês para conceitos técnicos (`Invoice`, não `NotaFiscal` — já foi renomeado propositalmente).
 - Ícones de ordenação/paginação só devem aparecer se a funcionalidade realmente existir — já houve casos de ícone decorativo sem `onClick` (`ArrowUp`/`ArrowDown` em `TableCompanies.tsx`/`EmpenhoTable.tsx`); ao copiar um componente de tabela como modelo, verificar se o sort é real antes de reusar.
 - Qualquer alteração visual de peso (paleta, tipografia, densidade de espaçamento) deve ser proposta e confirmada antes de implementar — ver seção Paleta acima.
+- Navegação interna sempre com `Link` (ou `useNavigate`) de `react-router` — nunca tag `<a href>` crua. Projeto usa React Router v7, não Next.js (não existe `next/link` aqui); `<a>` força reload de página inteira e perde o estado do SPA. Corrigido em `Breadcrumb.tsx`, que usava `<a href="/">`.

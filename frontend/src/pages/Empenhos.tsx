@@ -131,6 +131,12 @@ export default function Empenhos() {
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
           />
+          {searchTerm && (
+            <p className="text-xs text-text-muted mt-2">
+              {filteredEmpenhos.length} resultado
+              {filteredEmpenhos.length !== 1 ? "s" : ""} para "{searchTerm}"
+            </p>
+          )}
         </div>
         <EmpenhoTable
           empenhos={filteredEmpenhos}

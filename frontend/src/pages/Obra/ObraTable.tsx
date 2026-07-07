@@ -2,7 +2,7 @@ import {
   HardHat,
   MapPin,
   Trash2,
-  FileText,
+  Eye,
   CheckCircle2,
   Activity,
   PauseCircle,
@@ -10,11 +10,15 @@ import {
   CalendarClock,
   ArrowUp,
   ArrowDown,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Obra } from "../../../types/obra";
 import type { User } from "../../../types/user";
 import { formatCurrency } from "../../utils/format-currency";
+
+const ITEMS_PER_PAGE = 10;
 
 interface ObraTableProps {
   obras: Obra[];
@@ -122,6 +126,7 @@ function SortIcon({
 export function ObraTable({ obras, onEdit, onDelete, user }: Omit<ObraTableProps, "formatCurrency">) {
   const [sortKey, setSortKey] = useState<SortKey>("dataPrevisaoTermino");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [page, setPage] = useState(1);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -132,18 +137,31 @@ export function ObraTable({ obras, onEdit, onDelete, user }: Omit<ObraTableProps
     }
   };
 
-  const sorted = [...obras].sort((a, b) => {
-    let cmp = 0;
-    if (sortKey === "nome") cmp = a.nome.localeCompare(b.nome);
-    else if (sortKey === "orcamento") cmp = a.orcamento - b.orcamento;
-    else if (sortKey === "valorExecutado") cmp = a.valorExecutado - b.valorExecutado;
-    else {
-      const da = new Date(a.dataPrevisaoTermino).getTime();
-      const db = new Date(b.dataPrevisaoTermino).getTime();
-      cmp = da - db;
-    }
-    return sortDir === "asc" ? cmp : -cmp;
-  });
+  const sorted = useMemo(
+    () =>
+      [...obras].sort((a, b) => {
+        let cmp = 0;
+        if (sortKey === "nome") cmp = a.nome.localeCompare(b.nome);
+        else if (sortKey === "orcamento") cmp = a.orcamento - b.orcamento;
+        else if (sortKey === "valorExecutado")
+          cmp = a.valorExecutado - b.valorExecutado;
+        else {
+          const da = new Date(a.dataPrevisaoTermino).getTime();
+          const db = new Date(b.dataPrevisaoTermino).getTime();
+          cmp = da - db;
+        }
+        return sortDir === "asc" ? cmp : -cmp;
+      }),
+    [obras, sortKey, sortDir],
+  );
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / ITEMS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginated = useMemo(
+    () => sorted.slice(startIndex, startIndex + ITEMS_PER_PAGE),
+    [sorted, startIndex],
+  );
 
   if (obras.length === 0) {
     return (
@@ -156,107 +174,137 @@ export function ObraTable({ obras, onEdit, onDelete, user }: Omit<ObraTableProps
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead className="bg-surface-muted border-b border-border">
-          <tr>
-            <th
-              className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors"
-              onClick={() => handleSort("nome")}
-            >
-              <div className="flex items-center gap-1">Obra <SortIcon k="nome" sortKey={sortKey} sortDir={sortDir} /></div>
-            </th>
-            <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
-              Local
-            </th>
-            <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
-              Status
-            </th>
-            <th
-              className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden lg:table-cell cursor-pointer hover:text-text-primary transition-colors"
-              onClick={() => handleSort("dataPrevisaoTermino")}
-            >
-              <div className="flex items-center gap-1">Previsão <SortIcon k="dataPrevisaoTermino" sortKey={sortKey} sortDir={sortDir} /></div>
-            </th>
-            <th
-              className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors"
-              onClick={() => handleSort("orcamento")}
-            >
-              <div className="flex items-center justify-end gap-1">Orçamento <SortIcon k="orcamento" sortKey={sortKey} sortDir={sortDir} /></div>
-            </th>
-            <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
-              Execução
-            </th>
-            {(user?.role === "MASTER" || user?.role === "EDITOR") && (
-              <th className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase">Ações</th>
-            )}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {sorted.map((obra) => (
-            <tr key={obra.id} className="hover:bg-surface-muted/50 transition-colors group">
-              <td className="py-3 px-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center shrink-0">
-                    <HardHat size={18} className="text-primary-500" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-text-primary text-sm truncate max-w-[180px]">{obra.nome}</p>
-                    <p className="text-xs text-text-muted">{obra.codigo} · {TIPO_MAP[obra.tipo] ?? obra.tipo}</p>
-                  </div>
-                </div>
-              </td>
-              <td className="py-3 px-4 hidden md:table-cell">
-                <div className="flex items-center gap-1.5 text-sm text-text-secondary">
-                  <MapPin size={13} className="text-text-muted shrink-0" />
-                  <span className="truncate max-w-[140px]">{obra.cidade}/{obra.estado}</span>
-                </div>
-                <p className="text-xs text-text-muted truncate max-w-[160px] mt-0.5">{obra.logradouro}</p>
-              </td>
-              <td className="py-3 px-4">
-                <StatusBadge status={obra.status} />
-              </td>
-              <td className="py-3 px-4 hidden lg:table-cell">
-                <div className="flex items-center gap-1.5">
-                  <CalendarClock size={13} className="text-text-muted shrink-0" />
-                  <DeadlineCell date={obra.dataPrevisaoTermino} status={obra.status} />
-                </div>
-              </td>
-              <td className="py-3 px-4 text-right">
-                <p className="font-semibold text-text-primary text-sm">{formatCurrency(obra.orcamento)}</p>
-                <p className="text-xs text-text-muted">Resp.: {obra.responsavelTecnico}</p>
-              </td>
-              <td className="py-3 px-4 hidden md:table-cell">
-                <ProgressCell
-                  orcamento={obra.orcamento}
-                  executado={obra.valorExecutado}
-                  formatCurrency={formatCurrency}
-                />
-              </td>
+    <div>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-surface-muted border-b border-border">
+            <tr>
+              <th
+                className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors"
+                onClick={() => handleSort("nome")}
+              >
+                <div className="flex items-center gap-1">Obra <SortIcon k="nome" sortKey={sortKey} sortDir={sortDir} /></div>
+              </th>
+              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
+                Local
+              </th>
+              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+                Status
+              </th>
+              <th
+                className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden lg:table-cell cursor-pointer hover:text-text-primary transition-colors"
+                onClick={() => handleSort("dataPrevisaoTermino")}
+              >
+                <div className="flex items-center gap-1">Previsão <SortIcon k="dataPrevisaoTermino" sortKey={sortKey} sortDir={sortDir} /></div>
+              </th>
+              <th
+                className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors"
+                onClick={() => handleSort("orcamento")}
+              >
+                <div className="flex items-center justify-end gap-1">Orçamento <SortIcon k="orcamento" sortKey={sortKey} sortDir={sortDir} /></div>
+              </th>
+              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
+                Execução
+              </th>
               {(user?.role === "MASTER" || user?.role === "EDITOR") && (
-                <td className="py-3 px-4">
-                  <div className="flex items-center justify-end gap-1">
-                    <button
-                      onClick={() => onEdit(obra)}
-                      className="p-2 hover:bg-primary-50 cursor-pointer text-text-secondary hover:text-primary-700 rounded-md transition-colors"
-                      title="Gerenciar obra"
-                    >
-                      <FileText size={16} />
-                    </button>
-                    <button
-                      onClick={() => onDelete(obra)}
-                      className="p-2 hover:bg-danger-bg cursor-pointer text-text-secondary hover:text-danger-text rounded-md transition-colors"
-                      title="Excluir obra"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </td>
+                <th className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase">Ações</th>
               )}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {paginated.map((obra) => (
+              <tr key={obra.id} className="hover:bg-surface-muted/50 transition-colors group">
+                <td className="py-3 px-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center shrink-0">
+                      <HardHat size={18} className="text-primary-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-text-primary text-sm truncate max-w-[180px]">{obra.nome}</p>
+                      <p className="text-xs text-text-muted">{obra.codigo} · {TIPO_MAP[obra.tipo] ?? obra.tipo}</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="py-3 px-4 hidden md:table-cell">
+                  <div className="flex items-center gap-1.5 text-sm text-text-secondary">
+                    <MapPin size={13} className="text-text-muted shrink-0" />
+                    <span className="truncate max-w-[140px]">{obra.cidade}/{obra.estado}</span>
+                  </div>
+                  <p className="text-xs text-text-muted truncate max-w-[160px] mt-0.5">{obra.logradouro}</p>
+                </td>
+                <td className="py-3 px-4">
+                  <StatusBadge status={obra.status} />
+                </td>
+                <td className="py-3 px-4 hidden lg:table-cell">
+                  <div className="flex items-center gap-1.5">
+                    <CalendarClock size={13} className="text-text-muted shrink-0" />
+                    <DeadlineCell date={obra.dataPrevisaoTermino} status={obra.status} />
+                  </div>
+                </td>
+                <td className="py-3 px-4 text-right">
+                  <p className="font-semibold text-text-primary text-sm">{formatCurrency(obra.orcamento)}</p>
+                  <p className="text-xs text-text-muted">Resp.: {obra.responsavelTecnico}</p>
+                </td>
+                <td className="py-3 px-4 hidden md:table-cell">
+                  <ProgressCell
+                    orcamento={obra.orcamento}
+                    executado={obra.valorExecutado}
+                    formatCurrency={formatCurrency}
+                  />
+                </td>
+                {(user?.role === "MASTER" || user?.role === "EDITOR") && (
+                  <td className="py-3 px-4">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => onEdit(obra)}
+                        className="p-2 hover:bg-primary-100 cursor-pointer text-text-secondary hover:text-primary-500 rounded-md transition-colors"
+                        title="Gerenciar obra"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button
+                        onClick={() => onDelete(obra)}
+                        className="p-2 hover:bg-danger-bg cursor-pointer text-text-secondary hover:text-danger-text rounded-md transition-colors"
+                        title="Excluir obra"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-surface-muted">
+          <p className="text-sm text-text-secondary">
+            Mostrando {startIndex + 1} a{" "}
+            {Math.min(startIndex + ITEMS_PER_PAGE, sorted.length)} de{" "}
+            {sorted.length} obras
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-2 hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <span className="text-sm text-text-secondary">
+              Página {currentPage} de {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="p-2 hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

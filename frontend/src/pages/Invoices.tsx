@@ -81,6 +81,12 @@ export default function Invoices() {
               className="w-full pl-9 pr-3 py-2 border border-border rounded-lg bg-surface text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
             />
           </div>
+          {searchTerm && (
+            <p className="text-xs text-text-muted mt-2">
+              {filteredInvoices.length} resultado
+              {filteredInvoices.length !== 1 ? "s" : ""} para "{searchTerm}"
+            </p>
+          )}
         </div>
         <InvoiceTable
           allInvoices={filteredInvoices}

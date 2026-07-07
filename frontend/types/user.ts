@@ -2,6 +2,6 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: "USER" | "MASTER" | "EDITOR";
+  role: "USER" | "MASTER" | "EDITOR" | "PLATAFORM_ADMIN";
   approved: boolean;
 }

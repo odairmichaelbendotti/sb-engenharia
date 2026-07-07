@@ -7,6 +7,7 @@ import Invoices from "./pages/Invoices";
 import Empenhos from "./pages/Empenhos";
 import Medicoes from "./pages/Medicoes";
 import Obras from "./pages/Obras";
+import Aprovacoes from "./pages/Aprovacoes";
 import SignIn from "./pages/auth/SignIn";
 import SignUp from "./pages/auth/SignUp";
 
@@ -41,6 +42,10 @@ export const router = createBrowserRouter([
       {
         path: "/obras",
         element: <Obras />,
+      },
+      {
+        path: "/aprovacoes",
+        element: <Aprovacoes />,
       },
     ],
   },
