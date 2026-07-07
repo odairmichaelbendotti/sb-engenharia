@@ -19,11 +19,7 @@ import {
   ObraFilters,
 } from "./Obra";
 import type { ObraFiltersState } from "./Obra";
-
-const formatCurrency = (v: number) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
-    v,
-  );
+import { formatCurrency } from "../utils/format-currency";
 
 export default function Obras() {
   const { data, fetchObras } = useObras();

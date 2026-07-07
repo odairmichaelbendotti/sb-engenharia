@@ -11,7 +11,7 @@ import {
   Banknote,
   Loader,
 } from "lucide-react";
-import type { Invoice } from "./types";
+import type { Invoice, InvoiceFormData } from "../../../types/invoice";
 import { useCompanies } from "../../store/companies";
 import type { Empenho } from "../../../types/empenho";
 import { toast } from "sonner";
@@ -22,19 +22,21 @@ interface EditModalProps {
   setEditInvoice: React.Dispatch<React.SetStateAction<Invoice | null>>;
 }
 
+const emptyFormData: InvoiceFormData = {
+  numero: "",
+  description: "",
+  vencimento: "",
+  value: "",
+  empenho_id: "",
+  company_id: "",
+  status: "PENDENTE",
+};
+
 export default function EditModal({
   editInvoice,
   setEditInvoice,
 }: EditModalProps) {
-  const [formData, setFormData] = useState({
-    numero: "",
-    description: "",
-    vencimento: "",
-    value: "",
-    empenho_id: "",
-    company_id: "",
-    status: "pending",
-  });
+  const [formData, setFormData] = useState<InvoiceFormData>(emptyFormData);
   const [empenhosByCompany, setEmpenhosByCompany] = useState<Empenho[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -51,7 +53,8 @@ export default function EditModal({
         value: editInvoice.value?.toString() || "",
         empenho_id: editInvoice.empenho_id || "",
         company_id: editInvoice.company_id || "",
-        status: editInvoice.status?.toUpperCase() || "PENDING",
+        status: (editInvoice.status?.toUpperCase() ||
+          "PENDENTE") as InvoiceFormData["status"],
       });
 
       // Carrega empenhos da empresa selecionada
@@ -98,14 +101,12 @@ export default function EditModal({
       toast.success("Nota fiscal atualizada com sucesso");
       setEditInvoice(null);
     } catch (error) {
-      console.log("Error:", error);
+      console.error(error);
       toast.error("Erro ao atualizar nota fiscal");
     } finally {
       setIsLoading(false);
     }
   }
-
-  console.log(formData);
 
   if (!editInvoice) return null;
 
@@ -331,7 +332,7 @@ export default function EditModal({
                     onChange={(e) =>
                       setFormData((f) => ({
                         ...f,
-                        status: e.target.value,
+                        status: e.target.value as InvoiceFormData["status"],
                       }))
                     }
                     className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer"

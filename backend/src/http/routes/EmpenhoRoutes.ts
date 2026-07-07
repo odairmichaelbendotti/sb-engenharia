@@ -6,6 +6,7 @@ import { ListEmpenhosUseCase } from "../../application/usecases/empenho/ListEmpe
 import { DeleteEmpenhoUseCase } from "../../application/usecases/empenho/DeleteEmpenhoUseCase.js";
 import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
+import { PrismaUserRepository } from "../../infrastructure/database/prisma/PrismaUserRepository.js";
 import { UpdateEmpenhoUseCase } from "../../application/usecases/empenho/UpdateEmpenhoUseCase.js";
 import { PrismaCompanyRepository } from "../../infrastructure/database/prisma/PrismaCompanyRepository.js";
 import { UpdateStatusEmpenhoUseCase } from "../../application/usecases/empenho/UpdateEmpenhoStatusUseCase.js";
@@ -30,7 +31,8 @@ const empenhoController = new EmpenhoController(
   updateStatusEmpenhoUseCase,
 );
 const token = new TokenGenerator();
-const authMiddleware = new AuthMiddleware(token);
+const userRepository = new PrismaUserRepository();
+const authMiddleware = new AuthMiddleware(token, userRepository);
 
 EmpenhoRoutes.post("/empenho/create", authMiddleware.handle, (req, res) =>
   empenhoController.create(req, res),

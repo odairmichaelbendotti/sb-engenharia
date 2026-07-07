@@ -66,19 +66,14 @@ const RegisterOrEditCompany = ({
       setIsLoading(true);
 
       if (empresaSelecionada) {
-        const updatedCompany = await updateCompany(
-          empresaSelecionada.id,
-          formData,
-        );
-        console.log(updatedCompany);
+        await updateCompany(empresaSelecionada.id, formData);
         toast.success("Empresa editada com sucesso");
       } else {
-        const newCompany = await createCompany(formData);
-        console.log(newCompany);
+        await createCompany(formData);
         toast.success("Empresa cadastrada com sucesso");
       }
     } catch (error) {
-      console.log(error);
+      console.error(error);
       toast.error("Erro ao cadastrar empresa");
     } finally {
       setIsLoading(false);

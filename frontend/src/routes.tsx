@@ -1,8 +1,9 @@
 import { createBrowserRouter } from "react-router";
-import MobileDashboardLayout from "./components/Layouts/MobileDashboardLayout";
+import AppLayout from "./components/Layouts/AppLayout";
+import RequireAuth from "./components/Auth/RequireAuth";
 import Dashboard from "./pages/Dashboard";
 import Empresas from "./pages/Empresas";
-import NotasFiscais from "./pages/NotasFiscais";
+import Invoices from "./pages/Invoices";
 import Empenhos from "./pages/Empenhos";
 import Medicoes from "./pages/Medicoes";
 import Obras from "./pages/Obras";
@@ -11,7 +12,11 @@ import SignUp from "./pages/auth/SignUp";
 
 export const router = createBrowserRouter([
   {
-    element: <MobileDashboardLayout />,
+    element: (
+      <RequireAuth>
+        <AppLayout />
+      </RequireAuth>
+    ),
     children: [
       {
         path: "/",
@@ -23,7 +28,7 @@ export const router = createBrowserRouter([
       },
       {
         path: "/notasfiscais",
-        element: <NotasFiscais />,
+        element: <Invoices />,
       },
       {
         path: "/empenhos",

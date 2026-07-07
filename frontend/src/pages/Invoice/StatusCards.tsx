@@ -1,5 +1,6 @@
 import { CheckCircle2, Clock, FileText, XCircle } from "lucide-react";
 import { StatCard } from "../../components/StatCard";
+import { formatCurrency } from "../../utils/format-currency";
 
 type StatusCardsProps = {
   totalCount: number;
@@ -20,13 +21,6 @@ const StatusCards = ({
   pendingValue,
   expiredValue,
 }: StatusCardsProps) => {
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
-
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
       <StatCard

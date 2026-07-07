@@ -7,7 +7,7 @@ type UserProps = {
   email: string;
   password: string;
   approved: boolean;
-  role?: "MASTER" | "USER" | "EDITOR";
+  role?: "PLATFORM_ADMIN" | "MASTER" | "USER" | "EDITOR";
 };
 
 export class User {

@@ -1,16 +1,8 @@
 import { Outlet } from "react-router";
 import Sidebar from "../Sidebar/Sidebar";
 import MobileSidebar from "../Sidebar/MobileSidebar";
-import { useEffect } from "react";
-import { useUser } from "../../store/user";
 
-const MobileDashboardLayout = () => {
-  const { fetchUser } = useUser();
-
-  useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
-
+const AppLayout = () => {
   return (
     <main className="flex h-screen overflow-hidden bg-background">
       {/* Desktop Sidebar */}
@@ -27,4 +19,4 @@ const MobileDashboardLayout = () => {
   );
 };
 
-export default MobileDashboardLayout;
+export default AppLayout;

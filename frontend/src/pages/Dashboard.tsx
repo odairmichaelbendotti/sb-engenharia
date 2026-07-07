@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
   DollarSign,
   Building2,
@@ -13,8 +13,7 @@ import {
 } from "lucide-react";
 import { StatCard } from "../components/StatCard";
 import Breadcrumb from "../components/Breadcrumb";
-import { useUser } from "../store/user";
-import { useNavigate } from "react-router";
+import { formatCurrency, formatDate, formatDateTime } from "../utils/format-currency";
 
 // Mock data
 const mockData = {
@@ -170,37 +169,8 @@ const mockData = {
   ],
 };
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-};
-
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString("pt-BR");
-};
-
-const formatDateTime = (date: string) => {
-  return new Date(date).toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
-
 export default function Dashboard() {
   const [periodoSelecionado, setPeriodoSelecionado] = useState("mes");
-  const navigate = useNavigate();
-
-  const { user } = useUser();
-
-  useEffect(() => {
-    if (!user) {
-      navigate("/signin");
-    }
-  }, [user, navigate]);
 
   // Métricas calculadas
   const metrics = useMemo(() => {

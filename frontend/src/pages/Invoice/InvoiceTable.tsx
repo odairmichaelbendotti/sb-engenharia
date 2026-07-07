@@ -6,29 +6,20 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
-import { type Invoice } from "../../store/invoices";
+import type { Invoice } from "../../../types/invoice";
+import { formatCurrency, formatDate } from "../../utils/format-currency";
 
-type NotaFiscalTable = {
+type InvoiceTableProps = {
   allInvoices: Invoice[];
   setDeleteInvoice: React.Dispatch<React.SetStateAction<Invoice | null>>;
   setEditInvoice: React.Dispatch<React.SetStateAction<Invoice | null>>;
 };
 
-const NotaFiscalTable = ({
+const InvoiceTable = ({
   allInvoices,
   setDeleteInvoice,
   setEditInvoice,
-}: NotaFiscalTable) => {
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("pt-BR");
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
+}: InvoiceTableProps) => {
 
   return (
     <div>
@@ -61,7 +52,10 @@ const NotaFiscalTable = ({
           </thead>
           <tbody className="divide-y divide-border">
             {allInvoices.map((invoice) => (
-              <tr className="hover:bg-surface-muted/50 transition-colors">
+              <tr
+                key={invoice.id}
+                className="hover:bg-surface-muted/50 transition-colors"
+              >
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center shrink-0">
@@ -136,4 +130,4 @@ const NotaFiscalTable = ({
   );
 };
 
-export default NotaFiscalTable;
+export default InvoiceTable;

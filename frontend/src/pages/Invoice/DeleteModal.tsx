@@ -14,6 +14,7 @@ import {
 import { useInvoice, type Invoice } from "../../store/invoices";
 import { toast } from "sonner";
 import { useState } from "react";
+import { formatCurrency, formatDate } from "../../utils/format-currency";
 
 type DeleteModalProps = {
   deleteInvoice: Invoice | null;
@@ -63,12 +64,6 @@ const getStatusConfig = (status: string) => {
   return configs[status.toUpperCase()] || configs.PENDENTE;
 };
 
-const formatDate = (date: string) => new Date(date).toLocaleDateString("pt-BR");
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
-    value,
-  );
-
 export function DeleteModal({
   deleteInvoice,
   setDeleteInvoice,
@@ -88,9 +83,8 @@ export function DeleteModal({
       toast.success("Nota fiscal excluída com sucesso");
       setDeleteInvoice(null);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       toast.error("Erro ao excluir nota fiscal");
-      throw new Error("Erro ao excluir nota fiscal");
     } finally {
       setIsLoading(false);
     }

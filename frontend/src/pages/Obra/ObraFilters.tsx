@@ -40,10 +40,6 @@ export function ObraFilters({
     onChange({ search: "", status: "", tipo: "" });
   }
 
-  const searchHighlight = filters.search
-    ? `Buscando por: <b>${filters.search}</b>`
-    : "";
-
   return (
     <div className="bg-surface border border-border rounded-xl p-4 mb-4">
       <div className="flex flex-col sm:flex-row gap-3">
@@ -121,11 +117,11 @@ export function ObraFilters({
             <span className="font-semibold text-text-secondary">{total}</span>{" "}
             obras
           </p>
-          {/* ⚠️ BUG: filters.search interpolado sem sanitização */}
-          <p
-            className="text-xs text-text-muted"
-            dangerouslySetInnerHTML={{ __html: searchHighlight }}
-          />
+          {filters.search && (
+            <p className="text-xs text-text-muted">
+              Buscando por: <b>{filters.search}</b>
+            </p>
+          )}
         </div>
       )}
     </div>

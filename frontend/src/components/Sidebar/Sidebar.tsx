@@ -1,6 +1,6 @@
 import { SquareDashedMousePointer, LogOut } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { aminItems } from "./adm-items";
+import { adminItems } from "./adm-items";
 import { engItems } from "./eng-items";
 import { useUser } from "../../store/user";
 import { getInitials } from "../../utils/get-initial";
@@ -46,14 +46,18 @@ const Sidebar = () => {
             Administrativo
           </p>
           <div className="flex-1">
-            {aminItems.map((item) => (
-              <Link to={item.path} className={changeClass(item.path)}>
+            {adminItems.map((item) => (
+              <Link key={item.path} to={item.path} className={changeClass(item.path)}>
                 <div
                   className={`p-2 rounded-md ${location.pathname === item.path ? "bg-primary-500" : ""}`}
                 >
                   <item.icon
                     size={18}
-                    color={location.pathname === item.path ? "white" : "gray"}
+                    className={
+                      location.pathname === item.path
+                        ? "text-white"
+                        : "text-text-secondary"
+                    }
                   />
                 </div>
                 <p className="text-sm">{item.label}</p>
@@ -65,13 +69,17 @@ const Sidebar = () => {
             </p>
             <div>
               {engItems.map((item) => (
-                <Link to={item.path} className={changeClass(item.path)}>
+                <Link key={item.path} to={item.path} className={changeClass(item.path)}>
                   <div
                     className={`p-2 rounded-md ${location.pathname === item.path ? "bg-primary-500" : ""}`}
                   >
                     <item.icon
                       size={18}
-                      color={location.pathname === item.path ? "white" : "gray"}
+                      className={
+                        location.pathname === item.path
+                          ? "text-white"
+                          : "text-text-secondary"
+                      }
                     />
                   </div>
                   <p className="text-sm">{item.label}</p>

@@ -5,11 +5,13 @@ import { useEmpenhos } from "../store/empenhos";
 import type { EmpenhoList } from "../../types/empenho";
 import {
   EmpenhoStats,
+  EmpenhoFilters,
   EmpenhoTable,
   EmpenhoModal,
   DeleteEmpenhoModal,
 } from "./Empenho";
 import { useUser } from "../store/user";
+import { formatCurrency } from "../utils/format-currency";
 
 export default function Empenhos() {
   const [isOpen, setIsOpen] = useState(false);
@@ -20,11 +22,23 @@ export default function Empenhos() {
   const [empenhoToDelete, setEmpenhoToDelete] = useState<EmpenhoList | null>(
     null,
   );
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { fetchListEmpenhos, data } = useEmpenhos();
   const { user } = useUser();
 
   const empenhos = useMemo(() => data?.empenhos || [], [data]);
+
+  const filteredEmpenhos = useMemo(() => {
+    if (!searchTerm) return empenhos;
+    const s = searchTerm.toLowerCase();
+    return empenhos.filter(
+      (empenho) =>
+        empenho.numero.toLowerCase().includes(s) ||
+        empenho.description.toLowerCase().includes(s) ||
+        empenho.company?.name.toLowerCase().includes(s),
+    );
+  }, [empenhos, searchTerm]);
 
   useEffect(() => {
     fetchListEmpenhos();
@@ -50,14 +64,6 @@ export default function Empenhos() {
     };
   }, [data]);
 
-  // Funções utilitárias
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
-
   const handleOpen = (empenho?: EmpenhoList) => {
     setEditingEmpenho(empenho || null);
     setIsOpen(true);
@@ -79,7 +85,6 @@ export default function Empenhos() {
   };
 
   const handleSave = () => {
-    console.log("Salvar empenho:", editingEmpenho?.id);
     handleClose();
   };
 
@@ -119,10 +124,16 @@ export default function Empenhos() {
 
       <EmpenhoStats metrics={metrics} formatCurrency={formatCurrency} />
 
-      {/* Table Container */}
+      {/* Filters + Table */}
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
+        <div className="px-4 pt-3 pb-2 border-b border-border">
+          <EmpenhoFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+          />
+        </div>
         <EmpenhoTable
-          empenhos={empenhos}
+          empenhos={filteredEmpenhos}
           formatCurrency={formatCurrency}
           onEdit={handleOpen}
           onDelete={handleOpenDelete}

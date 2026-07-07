@@ -7,6 +7,7 @@ import { DeleteCompanyUseCase } from "../../application/usecases/company/DeleteC
 import { UpdateCompanyUseCase } from "../../application/usecases/company/UpdateCompanyUseCase.js";
 import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
+import { PrismaUserRepository } from "../../infrastructure/database/prisma/PrismaUserRepository.js";
 
 export const CompanyRoutes = Router();
 
@@ -25,7 +26,8 @@ const companyController = new CompanyController(
 );
 
 const token = new TokenGenerator();
-const authMiddleware = new AuthMiddleware(token);
+const userRepository = new PrismaUserRepository();
+const authMiddleware = new AuthMiddleware(token, userRepository);
 
 CompanyRoutes.post(
   "/company/create",

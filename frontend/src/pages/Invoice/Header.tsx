@@ -1,4 +1,5 @@
 import { DollarSign, FileText, Plus } from "lucide-react";
+import { formatCurrency } from "../../utils/format-currency";
 
 type HeaderProps = {
   totalValue: number;
@@ -6,12 +7,6 @@ type HeaderProps = {
 };
 
 const Header = ({ totalValue, setIsOpen }: HeaderProps) => {
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
       <div>

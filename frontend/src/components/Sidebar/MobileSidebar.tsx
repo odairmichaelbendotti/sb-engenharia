@@ -1,12 +1,16 @@
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
-import { Link, useLocation } from "react-router";
-import { aminItems } from "./adm-items";
+import { Menu, X, LogOut } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router";
+import { adminItems } from "./adm-items";
 import { engItems } from "./eng-items";
+import { useUser } from "../../store/user";
+import { getInitials } from "../../utils/get-initial";
 
 const MobileSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useUser();
 
   function isActive(path: string) {
     return location.pathname === path;
@@ -20,6 +24,16 @@ const MobileSidebar = () => {
 
   function handleLinkClick() {
     setIsOpen(false);
+  }
+
+  async function handleLogout() {
+    try {
+      await logout();
+      setIsOpen(false);
+      navigate("/signin");
+    } catch (error) {
+      console.error("Failed to logout:", error);
+    }
   }
 
   return (
@@ -71,7 +85,7 @@ const MobileSidebar = () => {
           <div className="flex-1 overflow-y-auto">
             <p className="text-xs text-text-primary font-bold mb-3">Administrativo</p>
             <div className="space-y-1">
-              {aminItems.map((item) => (
+              {adminItems.map((item) => (
                 <Link
                   key={item.path}
                   to={item.path}
@@ -122,12 +136,23 @@ const MobileSidebar = () => {
           <div className="border-t border-border pt-4 mt-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
-                OD
+                {getInitials(user?.name || "Usuário")}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-text-primary truncate">Odair</p>
-                <p className="text-xs text-text-secondary truncate">odair@email.com</p>
+                <p className="text-sm font-semibold text-text-primary truncate">
+                  {user?.name || "Usuário"}
+                </p>
+                <p className="text-xs text-text-secondary truncate">
+                  {user?.email || "email@email.com"}
+                </p>
               </div>
+              <button
+                className="p-2 cursor-pointer hover:bg-surface-muted rounded-md transition-colors shrink-0"
+                onClick={handleLogout}
+                aria-label="Sair"
+              >
+                <LogOut size={18} className="text-text-secondary" />
+              </button>
             </div>
           </div>
         </div>

@@ -7,6 +7,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import type { Empenho } from "../../../types/empenho";
+import { formatCurrency, formatDate } from "../../utils/format-currency";
 
 interface EmpenhoDetailsProps {
   empenho: Empenho | null;
@@ -15,8 +16,6 @@ interface EmpenhoDetailsProps {
 
 export function EmpenhoDetails({ empenho, newValue }: EmpenhoDetailsProps) {
   if (!empenho) return null;
-
-  console.log({ empenho, newValue });
 
   const totalPaid = empenho.totalPaid || 0;
   const totalValue = empenho.value || 0;
@@ -29,18 +28,6 @@ export function EmpenhoDetails({ empenho, newValue }: EmpenhoDetailsProps) {
   const totalPercentage =
     totalValue > 0 ? (totalAfterPayment / totalValue) * 100 : 0;
   const remainingValue = totalValue - totalPaid;
-
-  // Formatação de valores
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
-
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("pt-BR");
-  };
 
   // Definir cores baseado no status
   const statusColor =

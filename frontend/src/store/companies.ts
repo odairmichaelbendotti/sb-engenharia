@@ -36,7 +36,9 @@ export const useCompanies = create<CompaniesStore>((set) => ({
   stats: null,
 
   listCompanies: async () => {
-    const response = await defaultFetch("/company/list");
+    const response = await defaultFetch("/company/list", {
+      credentials: "include",
+    });
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || "Failed to fetch companies");
@@ -64,6 +66,7 @@ export const useCompanies = create<CompaniesStore>((set) => ({
   createCompany: async (empresa: CreateCompanyType) => {
     const response = await defaultFetch("/company/create", {
       method: "POST",
+      credentials: "include",
       body: JSON.stringify(empresa),
     });
 
@@ -83,49 +86,41 @@ export const useCompanies = create<CompaniesStore>((set) => ({
     return companyWithEmpenhos;
   },
   deleteCompany: async (id: string) => {
-    try {
-      const response = await defaultFetch(`/company/delete/${id}`, {
-        method: "DELETE",
-      });
+    const response = await defaultFetch(`/company/delete/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
 
-      if (!response.ok) {
-        throw new Error("Erro ao deletar empresa");
-      }
-
-      set((state) => ({
-        companies: state.companies.filter((company) => company.id !== id),
-      }));
-      set((state) => ({
-        stats: state.stats
-          ? { ...state.stats, totalCompanies: state.stats.totalCompanies - 1 }
-          : null,
-      }));
-    } catch (error) {
-      console.log(error);
+    if (!response.ok) {
       throw new Error("Erro ao deletar empresa");
     }
+
+    set((state) => ({
+      companies: state.companies.filter((company) => company.id !== id),
+    }));
+    set((state) => ({
+      stats: state.stats
+        ? { ...state.stats, totalCompanies: state.stats.totalCompanies - 1 }
+        : null,
+    }));
   },
   updateCompany: async (id: string, company: Partial<Empresa>) => {
-    try {
-      const response = await defaultFetch(`/company/update/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(company),
-      });
+    const response = await defaultFetch(`/company/update/${id}`, {
+      method: "PUT",
+      credentials: "include",
+      body: JSON.stringify(company),
+    });
 
-      if (!response.ok) {
-        throw new Error("Erro ao atualizar empresa");
-      }
-
-      const data = (await response.json()) as Empresa;
-
-      set((state) => ({
-        companies: state.companies.map((company) =>
-          company.id === id ? data : company,
-        ),
-      }));
-    } catch (error) {
-      console.log(error);
+    if (!response.ok) {
       throw new Error("Erro ao atualizar empresa");
     }
+
+    const data = (await response.json()) as Empresa;
+
+    set((state) => ({
+      companies: state.companies.map((company) =>
+        company.id === id ? data : company,
+      ),
+    }));
   },
 }));

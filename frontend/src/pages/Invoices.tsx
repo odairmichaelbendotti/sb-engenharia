@@ -1,15 +1,18 @@
 import { useEffect, useState, useMemo } from "react";
 import { Search } from "lucide-react";
 import Breadcrumb from "../components/Breadcrumb";
-import { useInvoice, type Invoice } from "../store/invoices";
-import { AddModal } from "./NotaFiscal/AddModal";
-import NotaFiscalTable from "./NotaFiscal/NotaFiscalTable";
-import { DeleteModal } from "./NotaFiscal/DeleteModal";
-import StatusCards from "./NotaFiscal/StatusCards";
-import Header from "./NotaFiscal/Header";
-import EditModal from "./NotaFiscal/EditModal";
+import { useInvoice } from "../store/invoices";
+import type { Invoice } from "../../types/invoice";
+import {
+  AddModal,
+  InvoiceTable,
+  DeleteModal,
+  StatusCards,
+  Header,
+  EditModal,
+} from "./Invoice";
 
-export default function NotasFiscais() {
+export default function Invoices() {
   const [isOpen, setIsOpen] = useState(false);
   const [deleteInvoice, setDeleteInvoice] = useState<Invoice | null>(null);
   const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
@@ -30,7 +33,7 @@ export default function NotasFiscais() {
 
   useEffect(() => {
     list();
-  }, []);
+  }, [list]);
 
   const filteredInvoices = useMemo(() => {
     if (!searchTerm) return allInvoices;
@@ -79,7 +82,7 @@ export default function NotasFiscais() {
             />
           </div>
         </div>
-        <NotaFiscalTable
+        <InvoiceTable
           allInvoices={filteredInvoices}
           setDeleteInvoice={setDeleteInvoice}
           setEditInvoice={setEditInvoice}

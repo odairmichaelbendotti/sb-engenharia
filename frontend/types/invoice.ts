@@ -1,3 +1,5 @@
+export type InvoiceStatus = "PENDENTE" | "PAGO" | "VENCIDO" | "CANCELADO";
+
 export type Invoice = {
   id: string;
   numero: string;
@@ -42,6 +44,16 @@ export type InvoiceFormData = {
   description: string;
   vencimento: string;
   value: string;
+  empenho_id: string;
+  company_id: string;
+  status: InvoiceStatus;
+};
+
+export type CreateInvoiceProps = {
+  numero: string;
+  description: string;
+  vencimento: string;
+  value: number;
   empenho_id: string;
   company_id: string;
 };

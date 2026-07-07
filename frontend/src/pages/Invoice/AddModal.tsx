@@ -10,7 +10,7 @@ import {
   Banknote,
   CircleAlert,
 } from "lucide-react";
-import type { InvoiceFormData } from "./types";
+import type { InvoiceFormData } from "../../../types/invoice";
 import { useCompanies } from "../../store/companies";
 import type { Empenho } from "../../../types/empenho";
 import { toast } from "sonner";
@@ -22,7 +22,9 @@ interface AddModalProps {
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const initialFormData: InvoiceFormData = {
+type CreateInvoiceFormData = Omit<InvoiceFormData, "status">;
+
+const initialFormData: CreateInvoiceFormData = {
   numero: "",
   description: "",
   vencimento: "",
@@ -86,17 +88,14 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
       toast.success("Nota fiscal criada com sucesso");
       setIsOpen(false);
     } catch (error) {
-      console.log("Error:", error);
+      console.error(error);
       toast.error("Erro ao criar nota fiscal");
       return;
     } finally {
       setIsLoading(false);
     }
 
-    console.log(nf);
-
     setFormData(initialFormData);
-    // onClose();
   }
 
   return (
@@ -313,46 +312,6 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
                   className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
                 />
               </div>
-              {/* <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  <span className="flex items-center gap-1.5">
-                    <Wallet size={14} />
-                    Status
-                  </span>
-                </label>
-                <div className="relative">
-                  <select
-                    value={formData.status}
-                    onChange={(e) =>
-                      setFormData((f) => ({
-                        ...f,
-                        status: e.target.value as InvoiceFormData["status"],
-                      }))
-                    }
-                    className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer"
-                  >
-                    <option value="pending">Pendente</option>
-                    <option value="paid">Pago</option>
-                    <option value="overdue">Vencido</option>
-                    <option value="cancelled">Cancelado</option>
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <svg
-                      className="w-4 h-4 text-text-muted"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              </div> */}
             </div>
           </div>
 

@@ -3,7 +3,7 @@ import { Mail, Lock, Loader } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useUser } from "../../store/user";
 
-export default function SignUp() {
+export default function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -21,7 +21,7 @@ export default function SignUp() {
         navigate("/");
       }
     } catch (err) {
-      console.log(err);
+      console.error(err);
     } finally {
       setIsLoading(false);
     }

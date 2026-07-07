@@ -12,6 +12,7 @@ import type { EmpenhoList } from "../../../types/empenho";
 import { useEmpenhos } from "../../store/empenhos";
 import { toast } from "sonner";
 import { useState } from "react";
+import { formatCurrency, formatDate } from "../../utils/format-currency";
 
 interface DeleteEmpenhoModalProps {
   isOpen: boolean;
@@ -33,7 +34,7 @@ export function DeleteEmpenhoModal({
       toast.success("Empenho excluído com sucesso");
       handleClose();
     } catch (error) {
-      console.log(error);
+      console.error(error);
       toast.error("Erro ao excluir empenho");
     } finally {
       setIsLoading(false);
@@ -43,17 +44,6 @@ export function DeleteEmpenhoModal({
   const { deleteEmpenho } = useEmpenhos();
 
   if (!isOpen || !empenho) return null;
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
-
-  const formatDate = (date: Date | string) => {
-    return new Date(date).toLocaleDateString("pt-BR");
-  };
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">

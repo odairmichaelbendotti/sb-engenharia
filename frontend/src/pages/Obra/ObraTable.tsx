@@ -14,6 +14,7 @@ import {
 import { useState } from "react";
 import type { Obra } from "../../../types/obra";
 import type { User } from "../../../types/user";
+import { formatCurrency } from "../../utils/format-currency";
 
 interface ObraTableProps {
   obras: Obra[];
@@ -101,10 +102,24 @@ function DeadlineCell({ date, status }: { date: Date | string; status: Obra["sta
   );
 }
 
-export function ObraTable({ obras, onEdit, onDelete, user }: Omit<ObraTableProps, "formatCurrency">) {
-  const formatCurrency = (v: number) =>
-    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+function SortIcon({
+  k,
+  sortKey,
+  sortDir,
+}: {
+  k: SortKey;
+  sortKey: SortKey;
+  sortDir: SortDir;
+}) {
+  if (sortKey !== k) return <ArrowUp size={12} className="text-text-muted" />;
+  return sortDir === "asc" ? (
+    <ArrowUp size={12} className="text-primary-500" />
+  ) : (
+    <ArrowDown size={12} className="text-primary-500" />
+  );
+}
 
+export function ObraTable({ obras, onEdit, onDelete, user }: Omit<ObraTableProps, "formatCurrency">) {
   const [sortKey, setSortKey] = useState<SortKey>("dataPrevisaoTermino");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -130,13 +145,6 @@ export function ObraTable({ obras, onEdit, onDelete, user }: Omit<ObraTableProps
     return sortDir === "asc" ? cmp : -cmp;
   });
 
-  const SortIcon = ({ k }: { k: SortKey }) =>
-    sortKey === k ? (
-      sortDir === "asc" ? <ArrowUp size={12} className="text-primary-500" /> : <ArrowDown size={12} className="text-primary-500" />
-    ) : (
-      <ArrowUp size={12} className="text-text-muted" />
-    );
-
   if (obras.length === 0) {
     return (
       <div className="py-16 text-center">
@@ -156,7 +164,7 @@ export function ObraTable({ obras, onEdit, onDelete, user }: Omit<ObraTableProps
               className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors"
               onClick={() => handleSort("nome")}
             >
-              <div className="flex items-center gap-1">Obra <SortIcon k="nome" /></div>
+              <div className="flex items-center gap-1">Obra <SortIcon k="nome" sortKey={sortKey} sortDir={sortDir} /></div>
             </th>
             <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
               Local
@@ -168,13 +176,13 @@ export function ObraTable({ obras, onEdit, onDelete, user }: Omit<ObraTableProps
               className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden lg:table-cell cursor-pointer hover:text-text-primary transition-colors"
               onClick={() => handleSort("dataPrevisaoTermino")}
             >
-              <div className="flex items-center gap-1">Previsão <SortIcon k="dataPrevisaoTermino" /></div>
+              <div className="flex items-center gap-1">Previsão <SortIcon k="dataPrevisaoTermino" sortKey={sortKey} sortDir={sortDir} /></div>
             </th>
             <th
               className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors"
               onClick={() => handleSort("orcamento")}
             >
-              <div className="flex items-center justify-end gap-1">Orçamento <SortIcon k="orcamento" /></div>
+              <div className="flex items-center justify-end gap-1">Orçamento <SortIcon k="orcamento" sortKey={sortKey} sortDir={sortDir} /></div>
             </th>
             <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
               Execução

@@ -20,6 +20,29 @@ export class PrismaUserRepository implements IUserRepository {
         tenant_id: user.tenant_id,
         email: user.email,
         password: user.password,
+        role: user.role,
+      });
+    } catch (err) {
+      throw new DomainError("Server error");
+    }
+  }
+  async findById(id: string): Promise<User | null> {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id },
+      });
+      if (!user) {
+        return null;
+      }
+
+      return new User({
+        id: user.id,
+        name: user.name,
+        approved: user.approved,
+        tenant_id: user.tenant_id,
+        email: user.email,
+        password: user.password,
+        role: user.role,
       });
     } catch (err) {
       throw new DomainError("Server error");

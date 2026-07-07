@@ -12,6 +12,7 @@ import {
 import { useState } from "react";
 import type { EmpenhoList } from "../../../types/empenho";
 import type { User } from "../../../types/user";
+import { formatDate } from "../../utils/format-currency";
 
 interface EmpenhoTableProps {
   empenhos: EmpenhoList[];
@@ -20,13 +21,6 @@ interface EmpenhoTableProps {
   onDelete: (empenho: EmpenhoList) => void;
   user: User | null;
 }
-
-const formatDate = (date: Date | string) => {
-  if (typeof date === "string") {
-    return new Date(date).toLocaleDateString("pt-BR");
-  }
-  return date.toLocaleDateString("pt-BR");
-};
 
 const ProgressBar = ({
   value,

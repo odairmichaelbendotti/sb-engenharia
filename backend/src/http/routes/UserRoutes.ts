@@ -17,7 +17,7 @@ const tenantRepository = new PrismaTenantRepository();
 const signUp = new SignUpUseCase(repository, hash, token, tenantRepository);
 const signIn = new SignInUseCase(repository, hash, token);
 const userController = new UserController(signUp, signIn);
-const middleware = new AuthMiddleware(token);
+const middleware = new AuthMiddleware(token, repository);
 
 UserRoutes.post("/signup", (req: Request, res: Response) => {
   userController.signup(req, res);

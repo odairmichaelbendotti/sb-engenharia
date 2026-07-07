@@ -9,7 +9,7 @@ import {
   FileText,
   Building2,
 } from "lucide-react";
-import { formatCurrency } from "../../utils/format-currency";
+import { formatCurrency, formatDate } from "../../utils/format-currency";
 import type { Empresa } from "../../../types/empresa";
 
 type ModelEmpenhoProps = {
@@ -23,10 +23,6 @@ const ModalEmpenho = ({
   handleClose,
   empresaSelecionada,
 }: ModelEmpenhoProps) => {
-  const formatDate = (dateString: string | Date) => {
-    return new Date(dateString).toLocaleDateString("pt-BR");
-  };
-
   // Ordena empenhos por data de término (mais recente primeiro)
   const empenhosOrdenados = [...empresaSelecionada.empenhos].sort((a, b) => {
     return new Date(b.endAt).getTime() - new Date(a.endAt).getTime();
@@ -96,8 +92,6 @@ const ModalEmpenho = ({
       }
     );
   };
-
-  console.log(empresaSelecionada);
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) handleClose();

@@ -18,7 +18,7 @@ export default function SignUp() {
     if (user) {
       navigate("/");
     }
-  }, []);
+  }, [user, navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,10 +37,10 @@ export default function SignUp() {
     try {
       const response = await signup(name, email, password);
       toast.info(`${response.name.split(" ")[0]}, seja bem-vindo!`);
-      console.log(response);
       navigate("/");
     } catch (error) {
-      console.log(error);
+      console.error(error);
+      toast.error("Erro ao criar conta. Tente novamente.");
     } finally {
       setIsLoading(false);
     }

@@ -42,9 +42,8 @@ export default function Empresas() {
   const { user } = useUser();
 
   useEffect(() => {
-    console.log("componente carregado (empresa.tsx)");
     listCompanies();
-  }, []);
+  }, [listCompanies]);
 
   useEffect(() => {
     setEmpresas(companies);
@@ -111,7 +110,7 @@ export default function Empresas() {
       toast.success("Empresa deletada com sucesso");
     } catch (error) {
       toast.error("Erro ao deletar empresa");
-      console.log(error);
+      console.error(error);
     } finally {
       setIsLoading(false);
     }
