@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { adminItems } from "./adm-items";
 import { engItems } from "./eng-items";
 import { gestaoItems } from "./gestao-items";
+import { plataformaItems } from "./plataforma-items";
 import { useUser } from "../../store/user";
 import { getInitials } from "../../utils/get-initial";
 import SidebarGroup from "./SidebarGroup";
@@ -31,7 +32,10 @@ const Sidebar = () => {
 
         {/* Content section */}
         <div className="flex flex-col h-full mt-8 overflow-y-auto">
-          {(user?.role === "MASTER" || user?.role === "PLATAFORM_ADMIN") && (
+          {user?.role === "PLATFORM_ADMIN" && (
+            <SidebarGroup label="Plataforma" items={plataformaItems} />
+          )}
+          {(user?.role === "MASTER" || user?.role === "PLATFORM_ADMIN") && (
             <SidebarGroup label="Gestão" items={gestaoItems} />
           )}
           <SidebarGroup label="Administrativo" items={adminItems} />

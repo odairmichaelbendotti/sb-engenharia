@@ -53,7 +53,7 @@ export default function PendingApproval() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
       {/* Ambient glow */}
       <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[560px] h-[560px] rounded-full pointer-events-none"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-140 h-140 rounded-full pointer-events-none"
         style={{
           background:
             "radial-gradient(circle, var(--color-primary-100) 0%, transparent 70%)",

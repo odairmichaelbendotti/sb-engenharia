@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Mail, Lock, Loader } from "lucide-react";
+import { Mail, Loader } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useUser } from "../../store/user";
+import PasswordInput from "../../components/PasswordInput";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
@@ -65,16 +66,7 @@ export default function SignIn() {
             <label className="block text-sm font-medium text-text-primary mb-2">
               Senha
             </label>
-            <div className="flex items-center gap-3 px-4 py-2.5 border border-border rounded-lg bg-surface-muted focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent transition">
-              <Lock size={18} className="text-text-muted shrink-0" />
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="flex-1 bg-transparent outline-none text-sm text-text-primary placeholder:text-text-muted"
-              />
-            </div>
+            <PasswordInput value={password} onChange={setPassword} />
           </div>
 
           {/* Submit Button */}

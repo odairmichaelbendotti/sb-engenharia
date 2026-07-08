@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import { adminItems } from "./adm-items";
 import { engItems } from "./eng-items";
 import { gestaoItems } from "./gestao-items";
+import { plataformaItems } from "./plataforma-items";
 import { useUser } from "../../store/user";
 import { getInitials } from "../../utils/get-initial";
 import SidebarGroup from "./SidebarGroup";
@@ -74,11 +75,20 @@ const MobileSidebar = () => {
 
           {/* Navigation */}
           <div className="flex-1 overflow-y-auto">
-            <SidebarGroup
-              label="Gestão"
-              items={gestaoItems}
-              onNavigate={handleLinkClick}
-            />
+            {user?.role === "PLATFORM_ADMIN" && (
+              <SidebarGroup
+                label="Plataforma"
+                items={plataformaItems}
+                onNavigate={handleLinkClick}
+              />
+            )}
+            {(user?.role === "MASTER" || user?.role === "PLATFORM_ADMIN") && (
+              <SidebarGroup
+                label="Gestão"
+                items={gestaoItems}
+                onNavigate={handleLinkClick}
+              />
+            )}
             <SidebarGroup
               label="Administrativo"
               items={adminItems}

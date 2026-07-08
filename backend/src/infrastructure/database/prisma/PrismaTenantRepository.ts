@@ -1,7 +1,11 @@
-import type { PersistedTenant, TenantType } from "../../../domain/entities/Tenant.js";
+import type {
+  PersistedTenant,
+  TenantType,
+} from "../../../domain/entities/Tenant.js";
 import type { ITenantRepository } from "../../../domain/repositories/ITenantRepository.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import { prisma } from "../../prisma/prisma.js";
+import type { Tenant } from "../../../generated/prisma/client.js";
 
 export class PrismaTenantRepository implements ITenantRepository {
   async create(tenant: TenantType): Promise<PersistedTenant> {
@@ -38,6 +42,13 @@ export class PrismaTenantRepository implements ITenantRepository {
       });
     } catch (error) {
       throw new DomainError("Error finding tenant by id");
+    }
+  }
+  async getAll(): Promise<Tenant[]> {
+    try {
+      return await prisma.tenant.findMany();
+    } catch (err) {
+      throw new DomainError("Error getting tenants");
     }
   }
 }

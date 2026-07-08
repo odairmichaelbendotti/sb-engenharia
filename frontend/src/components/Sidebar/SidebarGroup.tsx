@@ -19,24 +19,15 @@ const SidebarGroup = ({ label, items, onNavigate }: SidebarGroupProps) => {
   const location = useLocation();
   const hasActiveItem = items.some((item) => item.path === location.pathname);
   const [manuallyOpen, setManuallyOpen] = useState(hasActiveItem);
-  const isOpen = hasActiveItem || manuallyOpen;
+  const isOpen = manuallyOpen;
 
   return (
     <div className="mt-2">
       <button
         type="button"
-        onClick={() => {
-          if (hasActiveItem) return;
-          setManuallyOpen((prev) => !prev);
-        }}
-        disabled={hasActiveItem}
-        className={`w-full flex items-center justify-between py-2 px-2 rounded-md ${
-          hasActiveItem
-            ? "cursor-default"
-            : "cursor-pointer hover:bg-surface-muted"
-        }`}
+        onClick={() => setManuallyOpen((prev) => !prev)}
+        className="w-full flex items-center justify-between py-2 px-2 rounded-md cursor-pointer hover:bg-surface-muted"
         aria-expanded={isOpen}
-        aria-disabled={hasActiveItem}
       >
         <span className="text-xs text-text-primary font-bold tracking-wide uppercase">
           {label}
