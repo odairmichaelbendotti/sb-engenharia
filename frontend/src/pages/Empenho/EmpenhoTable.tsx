@@ -2,8 +2,6 @@ import {
   Layers2,
   Building2,
   Trash2,
-  ArrowUp,
-  ArrowDown,
   Eye,
   CheckCircle2,
   CircleDashed,
@@ -117,58 +115,29 @@ export function EmpenhoTable({
     [empenhos, startIndex],
   );
 
-  if (empenhos.length === 0) {
-    return (
-      <div className="py-12 text-center">
-        <Layers2 size={48} className="mx-auto text-text-muted mb-4" />
-        <p className="text-text-secondary font-medium">
-          Nenhum empenho encontrado
-        </p>
-        <p className="text-text-muted text-sm mt-1">
-          Tente ajustar os filtros ou cadastre um novo empenho
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-surface-muted border-b border-border">
             <tr>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors">
-                <div className="flex items-center gap-1">
-                  Empenho
-                  <ArrowUp size={12} className="text-text-muted" />
-                </div>
+              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+                Empenho
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors">
-                <div className="flex items-center gap-1">
-                  Empresa
-                  <ArrowUp size={12} className="text-text-muted" />
-                </div>
+              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+                Empresa
               </th>
               <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden lg:table-cell">
                 Descrição
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell cursor-pointer hover:text-text-primary transition-colors">
-                <div className="flex items-center gap-1">
-                  Prazo
-                  <ArrowUp size={12} className="text-text-muted" />
-                </div>
+              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
+                Prazo
               </th>
-              <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors">
-                <div className="flex items-center justify-center gap-1">
-                  Valor
-                  <ArrowDown size={12} className="text-text-muted" />
-                </div>
+              <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+                Valor
               </th>
-              <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors">
-                <div className="flex items-center justify-center gap-1">
-                  Progresso
-                  <ArrowUp size={12} className="text-text-muted" />
-                </div>
+              <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+                Progresso
               </th>
               {(user?.role === "MASTER" || user?.role === "EDITOR") && (
                 <th className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
@@ -269,6 +238,20 @@ export function EmpenhoTable({
           </tbody>
         </table>
       </div>
+
+      {/* Empty State */}
+      {paginatedEmpenhos.length === 0 && (
+        <div className="py-12 text-center">
+          <Layers2 size={48} className="mx-auto text-text-muted mb-4" />
+          <p className="text-text-secondary font-medium">
+            Nenhum empenho encontrado
+          </p>
+          <p className="text-text-muted text-sm mt-1">
+            Tente ajustar os filtros ou cadastre um novo empenho
+          </p>
+        </div>
+      )}
+
       <EmpenhoPagination
         currentPage={currentPage}
         totalPages={totalPages}

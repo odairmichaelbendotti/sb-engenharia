@@ -12,29 +12,27 @@ import {
   FileText,
   MapPinned,
   Hash,
+  Tag,
 } from "lucide-react";
-import type { Empresa } from "../../../types/empresa";
-import { useCompanies } from "../../store/companies";
-import type { CreateCompanyType } from "../../../types/create-company";
+import { useTenants } from "../../store/tenants";
+import type { CreateTenantType } from "../../../types/create-tenant";
 
-type RegisterOrEditCompanyProps = {
+type RegisterTenantProps = {
   isOpen: boolean;
   handleClose: () => void;
-  empresaSelecionada: Empresa | null;
-  formData: CreateCompanyType;
-  setFormData: React.Dispatch<React.SetStateAction<CreateCompanyType>>;
+  formData: CreateTenantType;
+  setFormData: React.Dispatch<React.SetStateAction<CreateTenantType>>;
 };
 
-const RegisterOrEditCompany = ({
+const RegisterTenant = ({
   isOpen,
   handleClose,
-  empresaSelecionada,
   formData,
   setFormData,
-}: RegisterOrEditCompanyProps) => {
+}: RegisterTenantProps) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const { createCompany, updateCompany, findCep } = useCompanies();
+  const { createTenant, findCep } = useTenants();
 
   async function handleFindCep() {
     try {
@@ -64,17 +62,15 @@ const RegisterOrEditCompany = ({
 
     try {
       setIsLoading(true);
-
-      if (empresaSelecionada) {
-        await updateCompany(empresaSelecionada.id, formData);
-        toast.success("Empresa editada com sucesso");
-      } else {
-        await createCompany(formData);
-        toast.success("Empresa cadastrada com sucesso");
-      }
+      await createTenant(formData);
+      toast.success("Organização cadastrada com sucesso");
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao cadastrar empresa");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Erro ao cadastrar organização",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -95,12 +91,10 @@ const RegisterOrEditCompany = ({
             </div>
             <div>
               <h2 className="text-xl font-semibold text-text-primary">
-                {empresaSelecionada ? "Editar Empresa" : "Nova Empresa"}
+                Nova Organização
               </h2>
               <p className="text-sm text-text-secondary">
-                {empresaSelecionada
-                  ? "Atualize os dados da empresa"
-                  : "Preencha os dados para cadastrar uma nova empresa"}
+                Preencha os dados para cadastrar uma nova organização
               </p>
             </div>
           </div>
@@ -113,17 +107,17 @@ const RegisterOrEditCompany = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6">
-          {/* Seção: Dados da Empresa */}
+          {/* Seção: Dados da Organização */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
               <Building size={16} className="text-primary-500" />
-              <span>Dados da Empresa</span>
+              <span>Dados da Organização</span>
               <div className="flex-1 h-px bg-border" />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Nome da Empresa <span className="text-danger-text">*</span>
+                  Nome <span className="text-danger-text">*</span>
                 </label>
                 <div className="relative">
                   <Building2
@@ -138,7 +132,28 @@ const RegisterOrEditCompany = ({
                       setFormData({ ...formData, name: e.target.value })
                     }
                     className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
-                    placeholder="Ex: Construtora Silva Ltda"
+                    placeholder="Ex: 1º Batalhão de Engenharia"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  Apelido <span className="text-danger-text">*</span>
+                </label>
+                <div className="relative">
+                  <Tag
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+                  />
+                  <input
+                    type="text"
+                    required
+                    value={formData.apelido}
+                    onChange={(e) =>
+                      setFormData({ ...formData, apelido: e.target.value })
+                    }
+                    className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
+                    placeholder="Ex: 1º BE"
                   />
                 </div>
               </div>
@@ -165,7 +180,7 @@ const RegisterOrEditCompany = ({
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  E-mail
+                  E-mail <span className="text-danger-text">*</span>
                 </label>
                 <div className="relative">
                   <Mail
@@ -174,18 +189,19 @@ const RegisterOrEditCompany = ({
                   />
                   <input
                     type="email"
+                    required
                     value={formData.email}
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value })
                     }
                     className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
-                    placeholder="contato@empresa.com.br"
+                    placeholder="contato@om.mil.br"
                   />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Telefone
+                  Telefone <span className="text-danger-text">*</span>
                 </label>
                 <div className="relative">
                   <Phone
@@ -194,6 +210,7 @@ const RegisterOrEditCompany = ({
                   />
                   <input
                     type="tel"
+                    required
                     value={formData.phone}
                     onChange={(e) =>
                       setFormData({ ...formData, phone: e.target.value })
@@ -216,7 +233,7 @@ const RegisterOrEditCompany = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  CEP
+                  CEP <span className="text-danger-text">*</span>
                 </label>
                 <div className="relative">
                   <Hash
@@ -225,6 +242,7 @@ const RegisterOrEditCompany = ({
                   />
                   <input
                     type="text"
+                    required
                     value={formData.cep}
                     onBlur={handleFindCep}
                     onChange={(e) =>
@@ -237,7 +255,7 @@ const RegisterOrEditCompany = ({
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Endereço
+                  Endereço <span className="text-danger-text">*</span>
                 </label>
                 <div className="relative">
                   <MapPinned
@@ -246,6 +264,7 @@ const RegisterOrEditCompany = ({
                   />
                   <input
                     type="text"
+                    required
                     value={formData.address}
                     onChange={(e) =>
                       setFormData({ ...formData, address: e.target.value })
@@ -257,7 +276,7 @@ const RegisterOrEditCompany = ({
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Cidade
+                  Cidade <span className="text-danger-text">*</span>
                 </label>
                 <div className="relative">
                   <MapPin
@@ -266,21 +285,23 @@ const RegisterOrEditCompany = ({
                   />
                   <input
                     type="text"
+                    required
                     value={formData.city}
                     onChange={(e) =>
                       setFormData({ ...formData, city: e.target.value })
                     }
                     className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
-                    placeholder="Ex: São Paulo"
+                    placeholder="Ex: Brasília"
                   />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Estado
+                  Estado <span className="text-danger-text">*</span>
                 </label>
                 <div className="relative">
                   <select
+                    required
                     value={formData.state}
                     onChange={(e) =>
                       setFormData({ ...formData, state: e.target.value })
@@ -330,10 +351,8 @@ const RegisterOrEditCompany = ({
             >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
-              ) : empresaSelecionada ? (
-                "Salvar Alterações"
               ) : (
-                "Cadastrar Empresa"
+                "Cadastrar Organização"
               )}
             </button>
           </div>
@@ -343,4 +362,4 @@ const RegisterOrEditCompany = ({
   );
 };
 
-export default RegisterOrEditCompany;
+export default RegisterTenant;

@@ -1,14 +1,31 @@
 import { useEffect, useState } from "react";
-import { Building2, Loader2, Search } from "lucide-react";
-import Breadcrumb from "../components/Breadcrumb";
+import { Building2, Loader2, Plus, Search } from "lucide-react";
 import { useTenants } from "../store/tenants";
+import { useUser } from "../store/user";
 import TenantTable from "./Tenant/TenantTable";
+import RegisterTenant from "./Tenant/RegisterTenant";
+import type { CreateTenantType } from "../../types/create-tenant";
+
+const emptyFormData: CreateTenantType = {
+  name: "",
+  apelido: "",
+  cnpj: "",
+  cep: "",
+  city: "",
+  state: "",
+  address: "",
+  phone: "",
+  email: "",
+};
 
 export default function Organizacoes() {
   const { tenants, listTenants } = useTenants();
+  const { user } = useUser();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [formData, setFormData] = useState<CreateTenantType>(emptyFormData);
 
   useEffect(() => {
     const loadTenants = async () => {
@@ -25,10 +42,18 @@ export default function Organizacoes() {
     loadTenants();
   }, [listTenants]);
 
+  const handleOpen = () => {
+    setFormData(emptyFormData);
+    setIsOpen(true);
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setFormData(emptyFormData);
+  };
+
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
-      <Breadcrumb current="Organizações" />
-
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
           <h1 className="text-xl font-bold text-text-primary flex items-center gap-2">
@@ -39,6 +64,15 @@ export default function Organizacoes() {
             Organizações cadastradas na plataforma
           </p>
         </div>
+        {user?.role === "PLATFORM_ADMIN" && (
+          <button
+            onClick={handleOpen}
+            className="flex items-center cursor-pointer text-white justify-center gap-2 px-4 py-2 bg-primary-500 rounded-md hover:bg-primary-600 transition-colors text-sm font-medium shrink-0"
+          >
+            <Plus size={16} />
+            Nova Organização
+          </button>
+        )}
       </div>
 
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
@@ -80,6 +114,15 @@ export default function Organizacoes() {
           <TenantTable tenants={tenants} searchTerm={searchTerm} />
         )}
       </div>
+
+      {isOpen && (
+        <RegisterTenant
+          isOpen={isOpen}
+          handleClose={handleClose}
+          formData={formData}
+          setFormData={setFormData}
+        />
+      )}
     </div>
   );
 }

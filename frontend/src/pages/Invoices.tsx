@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
 import { Search } from "lucide-react";
-import Breadcrumb from "../components/Breadcrumb";
 import { useInvoice } from "../store/invoices";
 import type { Invoice } from "../../types/invoice";
 import {
@@ -51,9 +50,6 @@ export default function Invoices() {
       {editInvoice && (
         <EditModal editInvoice={editInvoice} setEditInvoice={setEditInvoice} />
       )}
-      {/* Breadcrumb */}
-      <Breadcrumb current="Notas Fiscais" />
-
       {/* Header */}
       <Header totalValue={totalValue} setIsOpen={setIsOpen} />
 

@@ -7,7 +7,6 @@ import {
   FolderOpen,
   AlertCircle,
 } from "lucide-react";
-import Breadcrumb from "../components/Breadcrumb";
 import { useObras } from "../store/obras";
 import { useUser } from "../store/user";
 import type { Obra } from "../../types/obra";
@@ -109,8 +108,6 @@ export default function Obras() {
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
-      <Breadcrumb current="Obras" />
-
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>

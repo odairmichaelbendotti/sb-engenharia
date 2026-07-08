@@ -43,15 +43,14 @@ Duas animações customizadas (`ping-slow`/`ping-slower`), usadas só em `Pendin
 frontend/
   types/                    — tipos compartilhados, FORA de src/ (não está no include do tsconfig.app.json,
                               funciona só porque são importados por arquivos que estão em src/)
-    create-company.ts, empenho.ts, empresa.ts, invoice.ts,
-    list-companies.ts, list-empenhos.ts, obra.ts, user.ts
+    create-company.ts, create-tenant.ts, empenho.ts, empresa.ts, invoice.ts,
+    list-companies.ts, list-empenhos.ts, obra.ts, tenant.ts, user.ts
 
   src/
     main.tsx, routes.tsx, index.css
 
     components/
       StatCard.tsx            — card de estatística compartilhado (variante `compact`)
-      Breadcrumb.tsx           — compartilhado
       Auth/RequireAuth.tsx     — guard de rota (ver seção Auth)
       Layouts/AppLayout.tsx    — só visual: Sidebar + MobileSidebar + Outlet
       Sidebar/                 — Sidebar.tsx (desktop), MobileSidebar.tsx (drawer mobile),
@@ -60,14 +59,20 @@ frontend/
     pages/
       Dashboard.tsx      — ⚠️ ainda usa mockData hardcoded, não busca dos stores reais (pendência conhecida)
       Empresas.tsx, Invoices.tsx, Empenhos.tsx, Obras.tsx  — páginas principais
+      Organizacoes.tsx   — lista tenants (PLATFORM_ADMIN); botão "Nova Organização" só aparece para esse role
+      Aprovacoes.tsx     — lista usuários pendentes (approved: false) reais via API; botões aprovar/recusar
+                           ainda são só efeito visual local (sem endpoint de aprovação no backend)
       Medicoes.tsx       — stub vazio, sem funcionalidade
       auth/              — SignIn.tsx, SignUp.tsx, PendingApproval.tsx
       Company/           — componentes da página Empresas (SEM index.ts/barrel)
       Empenho/           — componentes da página Empenhos (COM index.ts/barrel)
       Invoice/           — componentes da página Invoices (COM index.ts/barrel)
       Obra/              — componentes da página Obras (COM index.ts/barrel)
+      Tenant/            — componentes da página Organizacoes: TenantTable.tsx, RegisterTenant.tsx (modal de
+                           criação — só criar, backend não tem update/delete de tenant ainda)
 
-    store/               — Zustand: user.ts, companies.ts, empenhos.ts, invoices.ts, obras.ts
+    store/               — Zustand: user.ts, companies.ts, empenhos.ts, invoices.ts, obras.ts, tenants.ts,
+                           unapprovedUsers.ts
     services/api.ts      — defaultFetch, wrapper de fetch
     utils/               — format-currency.ts (formatCurrency/formatDate/formatDateTime — usar sempre este,
                            não redefinir localmente), get-initial.ts, estados-brasil.ts
@@ -98,7 +103,8 @@ Sem rota 404/catch-all. `RequireAuth` é elemento pai único de todas as rotas p
 
 Sessão via cookie httpOnly (JWT), **sem persistência local no Zustand** — o estado `user` sempre começa `null` no boot do app e é restaurado chamando `GET /me`.
 
-- **`RequireAuth`** (`components/Auth/RequireAuth.tsx`) — único guard de auth do app. No mount: chama `fetchUser()`; mostra spinner enquanto `checking`; se falhar, `navigate("/signin")`; se `user` existe mas `!user.approved`, renderiza `<PendingApproval />`; senão renderiza `children` (`AppLayout`). **Não duplicar essa checagem em páginas individuais** — já foi removida de `Dashboard.tsx`, que tinha um guard próprio redundante.
+- **`RequireAuth`** (`components/Auth/RequireAuth.tsx`) — único guard de auth do app. Pula `fetchUser()` se `user` já está no store (`useState(!user)` como estado inicial de `checking`, `useEffect` retorna cedo se `user` existe) — do contrário, `navigate("/signin")` se falhar; se `user` existe mas `!user.approved`, renderiza `<PendingApproval />`; senão renderiza `children` (`AppLayout`). **Não duplicar essa checagem em páginas individuais** — já foi removida de `Dashboard.tsx`, que tinha um guard próprio redundante.
+  - O "pular se já tem `user`" corrige uma race condition real: `signin`/`signup` já populam `user` no store antes de navegar para `/`; se `RequireAuth` sempre refizesse `fetchUser()` (`GET /me`) ao montar, essa chamada podia perder a corrida contra a gravação do cookie recém-setado pelo browser e derrubar o usuário de volta para `/signin` logo após um login bem-sucedido ("primeiro login não funciona").
 - **`store/user.ts`** — `signin`/`signup`/`logout`/`fetchUser`. `signin` dispara `toast.error` em falha; os outros não têm toast embutido (é responsabilidade do chamador).
 - **`PendingApproval.tsx`** — tela para `user.approved === false`. Faz polling a cada 15s chamando `fetchUser()` até a conta ser aprovada por um admin (backend, fora deste projeto).
 
@@ -115,8 +121,12 @@ Todos seguem o mesmo formato: `create<T>((set) => ({ ...estado, ...métodos asyn
 | `empenhos.ts` | `data: ListEmpenhos \| null` | `GET /empenho/list`, `DELETE /empenho/delete/:id`, `PUT /empenho/update-status/:id` |
 | `invoices.ts` | campos de `InvoiceDashboard` espalhados no store | `GET /invoices/list`, `POST /invoices/create`, `DELETE /invoices/delete/:id`, `PUT /invoices/update/:id` — **`create`/`delete`/`update` não recalculam os totais do dashboard localmente**, só `list()` traz números atualizados |
 | `obras.ts` | `data: ListObras \| null` | `GET /obra/list`, `POST /obra/create`, `PUT /obra/update/:id`, `PUT /obra/update-status/:id`, `DELETE /obra/delete/:id` |
+| `tenants.ts` | `tenants: Tenant[]` | `GET /tenant/get-all`, `POST /tenant/create` + `findCep` (ViaCEP direto, mesmo padrão de `companies.ts`) — **rota de tenant não exige `credentials: "include"` hoje porque o backend não tem `AuthMiddleware` nela** (ver pendência em `backend/CLAUDE.md`); se isso for corrigido no backend, `listTenants`/`createTenant` também precisam passar a enviar `credentials: "include"` |
+| `unapprovedUsers.ts` | `users: User[]`, `hasLoaded: boolean` | `GET /list-unapproved-users` — `hasLoaded` existe para a página (`Aprovacoes.tsx`) não refazer o fetch toda vez que remonta (ex.: navegar para outra aba e voltar); só busca de novo se `hasLoaded` ainda for `false` |
 
 `services/api.ts` (`defaultFetch`) fixa `Content-Type: application/json`; **`credentials: "include"` não tem default**, precisa ser passado em cada chamada que exige sessão — checar isso ao adicionar uma chamada nova (é a causa mais comum de "por que minha rota autenticada retorna 401").
+
+Padrão de "não refazer fetch ao remontar": como as páginas (`useState` local) desmontam/remontam a cada troca de rota mas os stores Zustand não, uma store pode expor uma flag tipo `hasLoaded` para a página pular o `useEffect` de fetch se os dados já foram carregados antes — usado em `unapprovedUsers.ts`. Nem toda store precisa disso (a maioria refaz fetch a cada mount de propósito, para refletir mudanças de outros usuários); usar com critério.
 
 ## Variáveis de ambiente
 
@@ -127,11 +137,11 @@ Só uma: `VITE_HOST` (ex.: `http://localhost:4000/api`), lida em `services/api.t
 ## Pendências conhecidas (documentadas, não "corrigir de surpresa")
 
 1. **`Dashboard.tsx` usa `mockData` hardcoded** — não busca nada dos stores reais. Se for corrigir, confirmar escopo antes (toca layout inteiro da home).
-2. **`EmpenhoPagination.tsx`** existe e está no barrel de `Empenho/`, mas não é usado em `Empenhos.tsx` — a tabela de empenhos não pagina hoje.
-3. Rota `/notasfiscais` não foi renomeada para `/invoices` junto com o componente — mudar a URL pública é uma decisão de produto, não só refactor, perguntar antes.
-4. `src/assets/images/vertical.jpg` não é referenciado em lugar nenhum — asset órfão.
-5. `README.md` ainda é o boilerplate padrão do Vite, não customizado. (`index.html` já tem título "SB Engenharia" e favicon próprio — resolvido.)
-6. `Company/` é a única pasta de página sem `index.ts`/barrel — inconsistente com `Empenho/`, `Invoice/`, `Obra/`.
+2. Rota `/notasfiscais` não foi renomeada para `/invoices` junto com o componente — mudar a URL pública é uma decisão de produto, não só refactor, perguntar antes.
+3. `src/assets/images/vertical.jpg` não é referenciado em lugar nenhum — asset órfão.
+4. `README.md` ainda é o boilerplate padrão do Vite, não customizado. (`index.html` já tem título "SB Engenharia" e favicon próprio — resolvido.)
+5. `Company/` é a única pasta de página sem `index.ts`/barrel — inconsistente com `Empenho/`, `Invoice/`, `Obra/`.
+6. **`TableCompanies.tsx` ainda tem ícones `ArrowUp`/`ArrowDown` decorativos no header** (colunas Empresa, Empenhos) sem `onClick`/ordenação real — sugerem uma funcionalidade que não existe. O mesmo problema existia em `EmpenhoTable.tsx` e foi corrigido (ícones removidos, headers viraram texto simples); `TableCompanies.tsx` ficou pendente por decisão do usuário — não corrigir de surpresa, mas é candidato natural se for mexer nessa tabela.
 
 ## Convenções a manter
 
@@ -139,4 +149,8 @@ Só uma: `VITE_HOST` (ex.: `http://localhost:4000/api`), lida em `services/api.t
 - Nomes de props/exports em português quando o domínio é português (`empresa`, `empenho`), mas nomenclatura de código/arquivos em inglês para conceitos técnicos (`Invoice`, não `NotaFiscal` — já foi renomeado propositalmente).
 - Ícones de ordenação/paginação só devem aparecer se a funcionalidade realmente existir — já houve casos de ícone decorativo sem `onClick` (`ArrowUp`/`ArrowDown` em `TableCompanies.tsx`/`EmpenhoTable.tsx`); ao copiar um componente de tabela como modelo, verificar se o sort é real antes de reusar.
 - Qualquer alteração visual de peso (paleta, tipografia, densidade de espaçamento) deve ser proposta e confirmada antes de implementar — ver seção Paleta acima.
-- Navegação interna sempre com `Link` (ou `useNavigate`) de `react-router` — nunca tag `<a href>` crua. Projeto usa React Router v7, não Next.js (não existe `next/link` aqui); `<a>` força reload de página inteira e perde o estado do SPA. Corrigido em `Breadcrumb.tsx`, que usava `<a href="/">`.
+- Navegação interna sempre com `Link` (ou `useNavigate`) de `react-router` — nunca tag `<a href>` crua. Projeto usa React Router v7, não Next.js (não existe `next/link` aqui); `<a>` força reload de página inteira e perde o estado do SPA.
+- Não existe mais componente de breadcrumb — foi removido (`components/Breadcrumb.tsx` deletado, uso retirado de todas as páginas) por ocupar espaço vertical sem agregar navegação real além do que a sidebar já oferece. Não reintroduzir sem alinhar antes.
+- Todo elemento clicável (`<button>`, etc.) deve ter a classe `cursor-pointer` — não é automático no Tailwind v4 (Preflight não força `cursor: pointer` em botões, diferente do comportamento nativo esperado). Os botões de fechar (`X`) e "Cancelar" de vários modais (`RegisterOrEditCompany`, `ObraModal`, `DeleteObraModal`, `DeleteCompany`, `DeleteEmpenhoModal`, `EmpenhoModal`, `ModalEmpenho`) estavam sem essa classe — corrigido. Ao criar um modal novo (como `RegisterTenant.tsx`), conferir que **todo** botão (não só o de submit) tem `cursor-pointer`.
+- Tabelas de listagem (`TableCompanies`, `InvoiceTable`, `EmpenhoTable`, etc.) devem sempre renderizar `<table>`/`<thead>` mesmo com lista vazia — o estado vazio é um bloco condicional **depois** de `</table>` (checando o array já paginado), nunca um `return` antecipado que substitui a tabela inteira. `EmpenhoTable.tsx` tinha esse desvio (cabeçalho sumia junto com o corpo quando vazio) e foi corrigido para bater com o padrão das outras tabelas.
+- Componentes de filtro/busca (`EmpenhoFilters`, `FilterCompany`, etc.) devem usar as mesmas classes do input: ícone `size={16}`, `pl-9 pr-3 py-2`, `rounded-lg`, `text-sm`, `focus:border-primary-300 transition-all`. `EmpenhoFilters.tsx` divergia (ícone `18px`, `pl-10 pr-4`, `rounded-md`, sem `text-sm`) e foi corrigido para bater com `FilterCompany.tsx`.

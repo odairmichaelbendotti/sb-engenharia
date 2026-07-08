@@ -51,7 +51,7 @@ export function DeleteEmpenhoModal({
         {/* Close Button */}
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg transition-colors z-10"
+          className="absolute top-4 right-4 p-2 cursor-pointer hover:bg-gray-100 rounded-lg transition-colors z-10"
         >
           <X size={20} className="text-gray-400" />
         </button>

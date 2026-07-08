@@ -129,7 +129,7 @@ const ModalEmpenho = ({
           </div>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-surface-muted rounded-lg transition-colors"
+            className="p-2 cursor-pointer hover:bg-surface-muted rounded-lg transition-colors"
           >
             <X size={20} className="text-text-secondary" />
           </button>

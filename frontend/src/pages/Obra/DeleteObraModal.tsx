@@ -39,7 +39,7 @@ export function DeleteObraModal({ obra, handleClose }: DeleteObraModalProps) {
               <p className="text-sm text-text-secondary">Esta ação não pode ser desfeita</p>
             </div>
           </div>
-          <button onClick={handleClose} className="p-2 hover:bg-surface-muted rounded-lg transition-colors">
+          <button onClick={handleClose} className="p-2 cursor-pointer hover:bg-surface-muted rounded-lg transition-colors">
             <X size={20} className="text-text-secondary" />
           </button>
         </div>
@@ -62,7 +62,7 @@ export function DeleteObraModal({ obra, handleClose }: DeleteObraModalProps) {
             type="button"
             onClick={handleClose}
             disabled={isLoading}
-            className="px-5 py-2.5 text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium disabled:opacity-50"
+            className="px-5 py-2.5 cursor-pointer text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium disabled:opacity-50"
           >
             Cancelar
           </button>

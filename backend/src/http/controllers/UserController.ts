@@ -31,7 +31,12 @@ export class UserController {
         role: user.role,
       };
 
-      res.cookie("auth", token);
+      res.cookie("auth", token, {
+        httpOnly: true,
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 dias, em ms — mesmo prazo do JWT
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      });
       res.status(201).json(userResponse);
     } catch (err) {
       if (err instanceof DomainError) {
@@ -50,7 +55,12 @@ export class UserController {
         password,
       });
 
-      res.cookie("auth", token);
+      res.cookie("auth", token, {
+        httpOnly: true,
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 dias, em ms — mesmo prazo do JWT
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      });
       res.status(200).json(user);
     } catch (err) {
       console.log(err);

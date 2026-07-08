@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { Plus, Layers2, DollarSign } from "lucide-react";
-import Breadcrumb from "../components/Breadcrumb";
 import { useEmpenhos } from "../store/empenhos";
 import type { EmpenhoList } from "../../types/empenho";
 import {
@@ -90,8 +89,6 @@ export default function Empenhos() {
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
-      <Breadcrumb current="Empenhos" />
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>

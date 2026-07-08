@@ -199,7 +199,7 @@ export function EmpenhoModal({
           </div>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-surface-muted rounded-lg transition-colors"
+            className="p-2 cursor-pointer hover:bg-surface-muted rounded-lg transition-colors"
           >
             <X size={20} className="text-text-secondary" />
           </button>
@@ -446,7 +446,7 @@ export function EmpenhoModal({
             <button
               type="button"
               onClick={handleClose}
-              className="px-5 py-2.5 text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium"
+              className="px-5 py-2.5 cursor-pointer text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium"
             >
               Cancelar
             </button>

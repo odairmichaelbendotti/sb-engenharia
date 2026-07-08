@@ -108,11 +108,17 @@ Ver `.env.example`. As que o código de fato lê (não confiar em documentação
 
 Expiração do JWT é hardcoded em `30d` dentro de `TokenGenerator.ts` — não é configurável via env hoje.
 
+O cookie `auth` (setado em `signup`/`signin` no `UserController.ts`) carrega `httpOnly: true`, `maxAge` de 30 dias (alinhado ao `expiresIn` do JWT), `secure`/`sameSite` condicionais a `NODE_ENV`. Antes disso o cookie não tinha `maxAge` — virava cookie de sessão do navegador (some ao fechar a aba), mesmo o JWT interno tendo validade de 30 dias; era a causa de "login não persiste". `res.clearCookie("auth")` no `logout` deve usar os mesmos atributos (`httpOnly`/`secure`/`sameSite`) do `res.cookie` original, senão o navegador pode não remover o cookie corretamente em produção.
+
 ## Autenticação
 
 JWT em cookie httpOnly (`req.cookies.auth`). **`AuthMiddleware` não confia no payload do JWT para dados de perfil** — decodifica só para extrair o `id`, depois busca o usuário **atual no banco** (`IUserRepository.findById`) para montar `req.user`. Isso é deliberado: já houve um bug em que `approved`/`role` vinham congelados do momento do login (via JWT) e nunca refletiam mudanças posteriores feitas por um admin. Qualquer expansão de `AuthenticatedUser` deve continuar vindo do banco, nunca só do token.
 
-`User.approved` — conta só é utilizável depois de aprovada por um admin do tenant. `SignUpUseCase` cria o usuário com `approved: false` por padrão; alguém com role de admin precisa aprovar depois (fluxo de aprovação ainda não tem endpoint dedicado no backend — verificar antes de assumir que existe).
+`User.approved` — conta só é utilizável depois de aprovada por um admin do tenant. `SignUpUseCase` cria o usuário com `approved: false` por padrão.
+
+**Fluxo de aprovação de usuários** (`ListUnapprovedUsersUseCase.ts`, rota `GET /list-unapproved-users` em `UserRoutes.ts`, protegida por `AuthMiddleware`): lista usuários com `approved: false`, com escopo por role — `PLATFORM_ADMIN` vê pendentes de **todas** as tenants (`repository.findUnapproved()` sem filtro), `MASTER` vê só os da própria tenant (`repository.findUnapproved(user.tenant_id)`), qualquer outro role recebe `DomainError("UNAUTHORIZED")`. **Não existe endpoint de aprovação/rejeição ainda** — só listagem. O frontend (`Aprovacoes.tsx`) já consome essa listagem real, mas os botões de aprovar/recusar na tela são só efeito visual local (filtram a lista em memória), sem chamar a API — ver `frontend/CLAUDE.md`.
+
+`IUserRepository.findUnapproved(tenant_id?: string)` — filtro de tenant é opcional e aplicado direto no `where` do Prisma (`tenant_id: undefined` faz o Prisma ignorar a chave, não filtra por string vazia).
 
 ## Pendências conhecidas (não "corrigir sozinho" sem alinhar escopo — já causou retrabalho)
 
@@ -124,6 +130,7 @@ JWT em cookie httpOnly (`req.cookies.auth`). **`AuthMiddleware` não confia no p
 2. Sem testes, sem CI — qualquer mudança precisa ser validada manualmente (`npx tsc --noEmit` no mínimo) antes de considerar concluída.
 3. `express/index.d.ts` tem uma `JwtPayload` local cujo union de `role` não inclui `"PLATFORM_ADMIN"` (diverge de `AuthenticatedUser`) e parece não ser usada em lugar nenhum — candidato a limpeza, mas confirmar antes de remover.
 4. Script `npm run start` aponta para `./env` em vez de `./.env` — nunca testado/usado (fluxo real é sempre `npm run dev`).
+5. **`TenantRoutes.ts` (`POST /tenant/create`, `GET /tenant/get-all`) não tem `AuthMiddleware` nenhum — rota 100% pública hoje**, diferente de todo outro arquivo de rota do projeto (`CompanyRoutes.ts`/`EmpenhoRoutes.ts`/`InvoiceRoutes.ts`/`UserRoutes.ts` sempre montam `AuthMiddleware`). `CreateTenantUseCase` também não recebe `user`/`AuthenticatedUser` nem checa role — qualquer request não autenticada pode criar ou listar tenants. O frontend (`Organizacoes.tsx`) já esconde o botão "Nova Organização" para quem não é `PLATFORM_ADMIN`, mas isso é **só cosmético** — a API continua aceitando de qualquer origem. Corrigir exige: adicionar `AuthMiddleware` em `TenantRoutes.ts` (padrão `CompanyRoutes.ts`) e um check `user.role === "PLATFORM_ADMIN"` dentro de `CreateTenantUseCase` (mais estrito que `AdminPolicy.isAdmin`, que também deixaria `MASTER`/`EDITOR` passarem). Identificado e conscientemente adiado a pedido do usuário — não corrigir "de surpresa", mas também não deixar passar batido se for tocar nesses arquivos.
 
 ## Coisas para NUNCA fazer sem perguntar antes
 
