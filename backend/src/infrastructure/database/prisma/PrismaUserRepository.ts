@@ -67,9 +67,17 @@ export class PrismaUserRepository implements IUserRepository {
         tenant_id: newUser.tenant_id,
         email: newUser.email,
         password: newUser.password,
+        role: newUser.role,
       });
     } catch (err) {
       throw new DomainError("Server error");
     }
+  }
+  async findUnapproved(): Promise<User[]> {
+    return await prisma.user.findMany({
+      where: {
+        approved: false,
+      },
+    });
   }
 }

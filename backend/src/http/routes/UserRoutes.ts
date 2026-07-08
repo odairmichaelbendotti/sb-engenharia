@@ -7,6 +7,7 @@ import { SignInUseCase } from "../../application/usecases/user/SignInUseCase.js"
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
 import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
 import { PrismaTenantRepository } from "../../infrastructure/database/prisma/PrismaTenantRepository.js";
+import { ListUnapprovedUsersUseCase } from "../../application/usecases/user/ListUnapprovedUsersUseCase.js";
 
 export const UserRoutes = Router();
 
@@ -14,9 +15,11 @@ const repository = new PrismaUserRepository();
 const hash = new HashGenerator();
 const token = new TokenGenerator();
 const tenantRepository = new PrismaTenantRepository();
+const unapprovedUsers = new ListUnapprovedUsersUseCase(repository);
+
 const signUp = new SignUpUseCase(repository, hash, token, tenantRepository);
 const signIn = new SignInUseCase(repository, hash, token);
-const userController = new UserController(signUp, signIn);
+const userController = new UserController(signUp, signIn, unapprovedUsers);
 const middleware = new AuthMiddleware(token, repository);
 
 UserRoutes.post("/signup", (req: Request, res: Response) => {
@@ -34,3 +37,19 @@ UserRoutes.post("/logout", (req: Request, res: Response) => {
 UserRoutes.get("/me", middleware.handle, (req: Request, res: Response) => {
   res.json(req.user);
 });
+
+UserRoutes.get(
+  "/list-unapproved-users",
+  middleware.handle,
+  (req: Request, res: Response) => {
+    userController.listUnapprovedUsers(req, res);
+  },
+);
+
+// UserRoutes.patch(
+//   "/user/:id/approve",
+//   middleware.handle,
+//   (req: Request, res: Response) => {
+//     userController.approve(req, res);
+//   },
+// );

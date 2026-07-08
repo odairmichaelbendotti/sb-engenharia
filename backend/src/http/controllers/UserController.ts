@@ -1,3 +1,4 @@
+import type { ListUnapprovedUsersUseCase } from "../../application/usecases/user/ListUnapprovedUsersUseCase.js";
 import type { SignInUseCase } from "../../application/usecases/user/SignInUseCase.js";
 import { SignUpUseCase } from "../../application/usecases/user/SignUpUseCase.js";
 import { DomainError } from "../../domain/errors/DomainError.js";
@@ -7,6 +8,7 @@ export class UserController {
   constructor(
     private signUpUseCase: SignUpUseCase,
     private signInUseCase: SignInUseCase,
+    private listUnapproved: ListUnapprovedUsersUseCase,
   ) {}
 
   async signup(req: Request, res: Response) {
@@ -61,5 +63,17 @@ export class UserController {
   logout(req: Request, res: Response) {
     res.clearCookie("auth");
     res.status(200).json({ message: "Logout successful" });
+  }
+  async listUnapprovedUsers(req: Request, res: Response) {
+    const { user } = req;
+    try {
+      const unapprovedUsers = await this.listUnapproved.execute(user.id);
+      res.json(unapprovedUsers);
+    } catch (err) {
+      if (err instanceof DomainError) {
+        return res.status(403).json({ message: err.message });
+      }
+      return res.status(500).json({ message: "Internal server error" });
+    }
   }
 }

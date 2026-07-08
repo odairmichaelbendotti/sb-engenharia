@@ -1,22 +1,22 @@
 import { DomainError } from "../errors/DomainError.js";
 
 type UserProps = {
-  id?: string;
+  id: string;
   tenant_id: string;
   name: string;
   email: string;
   password: string;
   approved: boolean;
-  role?: "PLATFORM_ADMIN" | "MASTER" | "USER" | "EDITOR";
+  role: "PLATFORM_ADMIN" | "MASTER" | "USER" | "EDITOR";
 };
 
 export class User {
-  public id?: string | undefined;
+  public id: string;
   public tenant_id: string;
   public name: string;
   public readonly email: string;
   public readonly password: string;
-  public role: string;
+  public role: "PLATFORM_ADMIN" | "MASTER" | "USER" | "EDITOR";
   public approved: boolean;
 
   constructor(props: UserProps) {
