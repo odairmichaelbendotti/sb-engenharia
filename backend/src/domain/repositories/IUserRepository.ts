@@ -6,4 +6,5 @@ export interface IUserRepository {
   findById(id: string): Promise<User | null>;
   findUnapproved(): Promise<User[]>;
   approve(userId: string): Promise<User>;
+  disapprove(userId: string): Promise<void>;
 }

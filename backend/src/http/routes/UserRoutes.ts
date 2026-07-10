@@ -9,6 +9,7 @@ import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
 import { PrismaTenantRepository } from "../../infrastructure/database/prisma/PrismaTenantRepository.js";
 import { ListUnapprovedUsersUseCase } from "../../application/usecases/user/ListUnapprovedUsersUseCase.js";
 import { ApproveUserUseCase } from "../../application/usecases/user/ApproveUserUseCase.js";
+import { DisapproveUserUseCase } from "../../application/usecases/user/DisapproveUserUseCase.js";
 
 export const UserRoutes = Router();
 
@@ -18,6 +19,7 @@ const token = new TokenGenerator();
 const tenantRepository = new PrismaTenantRepository();
 const unapprovedUsers = new ListUnapprovedUsersUseCase(repository);
 const approveUser = new ApproveUserUseCase(repository);
+const disaproveUser = new DisapproveUserUseCase(repository);
 
 const signUp = new SignUpUseCase(repository, hash, token, tenantRepository);
 const signIn = new SignInUseCase(repository, hash, token);
@@ -26,6 +28,7 @@ const userController = new UserController(
   signIn,
   unapprovedUsers,
   approveUser,
+  disaproveUser,
 );
 const middleware = new AuthMiddleware(token, repository);
 
@@ -58,5 +61,13 @@ UserRoutes.put(
   middleware.handle,
   (req: Request, res: Response) => {
     userController.approve(req, res);
+  },
+);
+
+UserRoutes.delete(
+  "/user/:id/disapprove",
+  middleware.handle,
+  (req: Request, res: Response) => {
+    userController.disapprove(req, res);
   },
 );

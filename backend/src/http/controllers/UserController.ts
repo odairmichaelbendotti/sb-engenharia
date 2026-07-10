@@ -1,4 +1,5 @@
 import type { ApproveUserUseCase } from "../../application/usecases/user/ApproveUserUseCase.js";
+import type { DisapproveUserUseCase } from "../../application/usecases/user/DisapproveUserUseCase.js";
 import type { ListUnapprovedUsersUseCase } from "../../application/usecases/user/ListUnapprovedUsersUseCase.js";
 import type { SignInUseCase } from "../../application/usecases/user/SignInUseCase.js";
 import { SignUpUseCase } from "../../application/usecases/user/SignUpUseCase.js";
@@ -11,6 +12,7 @@ export class UserController {
     private signInUseCase: SignInUseCase,
     private listUnapproved: ListUnapprovedUsersUseCase,
     private approveUser: ApproveUserUseCase,
+    private disaproveUser: DisapproveUserUseCase,
   ) {}
 
   async signup(req: Request, res: Response) {
@@ -99,6 +101,24 @@ export class UserController {
     try {
       const approvedUser = await this.approveUser.execute({ userId: id, user });
       return res.status(200).json(approvedUser);
+    } catch (err) {
+      if (err instanceof DomainError) {
+        return res.status(500).json({ message: err.message });
+      }
+      return res.status(500).json({ message: "Internal error" });
+    }
+  }
+  async disapprove(req: Request, res: Response) {
+    const { user } = req;
+    const { id } = req.params;
+
+    if (!id || Array.isArray(id)) {
+      throw new DomainError("Invalid user");
+    }
+
+    try {
+      await this.disaproveUser.execute({ userId: id, user });
+      return res.status(204).send();
     } catch (err) {
       if (err instanceof DomainError) {
         return res.status(500).json({ message: err.message });
