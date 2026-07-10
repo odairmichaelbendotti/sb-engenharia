@@ -80,4 +80,12 @@ export class PrismaUserRepository implements IUserRepository {
       },
     });
   }
+  async approve(userId: string): Promise<User> {
+    return await prisma.user.update({
+      where: { id: userId },
+      data: {
+        approved: true,
+      },
+    });
+  }
 }
