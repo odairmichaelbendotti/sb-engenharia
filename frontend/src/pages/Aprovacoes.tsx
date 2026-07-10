@@ -1,28 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
-  Check,
   ChevronLeft,
   ChevronRight,
   Loader2,
-  Mail,
   Search,
   UserCheck,
-  X,
 } from "lucide-react";
-import { getInitials } from "../utils/get-initial";
 import { useUnapprovedUsers } from "../store/unapprovedUsers";
 import type { User } from "../../types/user";
 import { toast } from "sonner";
+import { ApprovalRow, type RowStatus } from "./ApprovalRow";
+import { ConfirmModal } from "../components/ConfirmModal";
 
 const ITEMS_PER_PAGE = 10;
 const RESOLVE_FLASH_MS = 500;
 const COLLAPSE_MS = 250;
 
-type RowStatus = "approving" | "approved" | "rejected";
+type PendingConfirmation = { type: "approve" | "reject"; user: User };
 
 const Aprovacoes = () => {
-  const { users, hasLoaded, listUnapprovedUsers, approveUser } =
+  const { users, hasLoaded, listUnapprovedUsers, approveUser, disapproveUser } =
     useUnapprovedUsers();
   const [pending, setPending] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -30,6 +28,9 @@ const Aprovacoes = () => {
   const [isLoading, setIsLoading] = useState(!hasLoaded);
   const [error, setError] = useState<string | null>(null);
   const [rowStatus, setRowStatus] = useState<Record<string, RowStatus>>({});
+  const [confirmation, setConfirmation] = useState<PendingConfirmation | null>(
+    null,
+  );
 
   async function loadUnapprovedUsers() {
     try {
@@ -87,10 +88,33 @@ const Aprovacoes = () => {
     }
   }
 
-  function handleReject(id: string) {
+  async function handleReject(id: string) {
     if (rowStatus[id]) return;
     setRowStatus((prev) => ({ ...prev, [id]: "rejected" }));
-    removeAfterCollapse(id);
+    try {
+      await disapproveUser(id);
+      window.setTimeout(() => removeAfterCollapse(id), RESOLVE_FLASH_MS);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Erro ao recusar usuário",
+      );
+      setRowStatus((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
+  }
+
+  function handleConfirm() {
+    if (!confirmation) return;
+    const { type, user } = confirmation;
+    setConfirmation(null);
+    if (type === "approve") {
+      handleApprove(user.id);
+    } else {
+      handleReject(user.id);
+    }
   }
 
   const filteredPending = useMemo(() => {
@@ -184,87 +208,20 @@ const Aprovacoes = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {paginatedPending.map((user, index) => {
-                  const status = rowStatus[user.id];
-                  const isResolved = status === "approved" || status === "rejected";
-                  const isBusy = status === "approving";
-                  const flashClass =
-                    status === "approved"
-                      ? "bg-success-bg"
-                      : status === "rejected"
-                        ? "bg-danger-bg"
-                        : "";
-
-                  return (
-                    <tr key={user.id} className="align-top">
-                      <td colSpan={2} className="p-0">
-                        <div
-                          className={`grid transition-[grid-template-rows] duration-250 ease-in ${
-                            isResolved ? "grid-rows-[0fr]" : "grid-rows-[1fr]"
-                          }`}
-                        >
-                          <div className="overflow-hidden">
-                            <div
-                              className={`grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-3 transition-colors duration-300 animate-row-in hover:bg-surface-muted/50 ${flashClass}`}
-                              style={{
-                                animationDelay: `${Math.min(index, 8) * 35}ms`,
-                              }}
-                            >
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
-                                  {getInitials(user.name)}
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="font-medium text-text-primary text-sm truncate">
-                                    {user.name}
-                                  </p>
-                                  <p className="text-xs text-text-secondary flex items-center gap-1 truncate">
-                                    <Mail size={11} />
-                                    {user.email}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center justify-end gap-1">
-                                <button
-                                  onClick={() => handleApprove(user.id)}
-                                  disabled={!!status}
-                                  className="p-2 cursor-pointer hover:bg-success-bg text-text-secondary hover:text-success-text rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-                                  title="Aprovar"
-                                >
-                                  {isBusy ? (
-                                    <Loader2 size={16} className="animate-spin" />
-                                  ) : status === "approved" ? (
-                                    <Check
-                                      size={16}
-                                      className="text-success-text animate-pop"
-                                    />
-                                  ) : (
-                                    <Check size={16} />
-                                  )}
-                                </button>
-                                <button
-                                  onClick={() => handleReject(user.id)}
-                                  disabled={!!status}
-                                  className="p-2 cursor-pointer hover:bg-danger-bg text-text-secondary hover:text-danger-text rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-                                  title="Recusar"
-                                >
-                                  {status === "rejected" ? (
-                                    <X
-                                      size={16}
-                                      className="text-danger-text animate-pop"
-                                    />
-                                  ) : (
-                                    <X size={16} />
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {paginatedPending.map((user, index) => (
+                  <ApprovalRow
+                    key={user.id}
+                    user={user}
+                    index={index}
+                    status={rowStatus[user.id]}
+                    onRequestApprove={(u) =>
+                      setConfirmation({ type: "approve", user: u })
+                    }
+                    onRequestReject={(u) =>
+                      setConfirmation({ type: "reject", user: u })
+                    }
+                  />
+                ))}
               </tbody>
             </table>
           </div>
@@ -315,6 +272,19 @@ const Aprovacoes = () => {
           )}
         </div>
       )}
+
+      <ConfirmModal
+        open={!!confirmation}
+        variant={confirmation?.type === "approve" ? "success" : "danger"}
+        message={
+          confirmation?.type === "approve"
+            ? "Deseja realmente aprovar o usuário?"
+            : "Deseja realmente negar o usuário?"
+        }
+        confirmLabel={confirmation?.type === "approve" ? "Aprovar" : "Negar"}
+        onConfirm={handleConfirm}
+        onCancel={() => setConfirmation(null)}
+      />
     </div>
   );
 };

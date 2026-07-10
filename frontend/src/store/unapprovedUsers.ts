@@ -7,6 +7,7 @@ type UnapprovedUsersStore = {
   hasLoaded: boolean;
   listUnapprovedUsers: () => Promise<void>;
   approveUser: (userId: string) => Promise<void>;
+  disapproveUser: (userId: string) => Promise<void>;
   isFetching: boolean;
 };
 
@@ -46,6 +47,26 @@ export const useUnapprovedUsers = create<UnapprovedUsersStore>((set) => ({
     } catch (err) {
       console.log(err);
       set({ isFetching: false });
+    } finally {
+      set({ isFetching: false });
+    }
+  },
+  disapproveUser: async (userId: string) => {
+    try {
+      set({ isFetching: true });
+      const response = await defaultFetch(`/user/${userId}/disapprove`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to disapprove this user");
+      }
+
+      set((state) => ({
+        users: state.users.filter((user) => user.id !== userId),
+      }));
     } finally {
       set({ isFetching: false });
     }
