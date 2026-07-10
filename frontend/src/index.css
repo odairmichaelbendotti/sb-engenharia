@@ -68,6 +68,8 @@
 
   --animate-ping-slow: ping-slow 2.6s cubic-bezier(0, 0, 0.2, 1) infinite;
   --animate-ping-slower: ping-slow 2.6s cubic-bezier(0, 0, 0.2, 1) infinite 0.9s;
+  --animate-row-in: row-in 0.25s ease-out backwards;
+  --animate-pop: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @keyframes ping-slow {
@@ -79,5 +81,35 @@
   100% {
     transform: scale(1.7);
     opacity: 0;
+  }
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-row-in,
+  .animate-pop {
+    animation: none !important;
   }
 }

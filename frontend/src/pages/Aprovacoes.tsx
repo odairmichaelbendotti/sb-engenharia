@@ -13,16 +13,23 @@ import {
 import { getInitials } from "../utils/get-initial";
 import { useUnapprovedUsers } from "../store/unapprovedUsers";
 import type { User } from "../../types/user";
+import { toast } from "sonner";
 
 const ITEMS_PER_PAGE = 10;
+const RESOLVE_FLASH_MS = 500;
+const COLLAPSE_MS = 250;
+
+type RowStatus = "approving" | "approved" | "rejected";
 
 const Aprovacoes = () => {
-  const { users, hasLoaded, listUnapprovedUsers } = useUnapprovedUsers();
+  const { users, hasLoaded, listUnapprovedUsers, approveUser } =
+    useUnapprovedUsers();
   const [pending, setPending] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(!hasLoaded);
   const [error, setError] = useState<string | null>(null);
+  const [rowStatus, setRowStatus] = useState<Record<string, RowStatus>>({});
 
   async function loadUnapprovedUsers() {
     try {
@@ -50,12 +57,40 @@ const Aprovacoes = () => {
     setPending(users);
   }, [users]);
 
-  function handleApprove(id: string) {
-    setPending((prev) => prev.filter((user) => user.id !== id));
+  function removeAfterCollapse(id: string) {
+    window.setTimeout(() => {
+      setPending((prev) => prev.filter((user) => user.id !== id));
+      setRowStatus((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }, COLLAPSE_MS);
+  }
+
+  async function handleApprove(id: string) {
+    if (rowStatus[id]) return;
+    setRowStatus((prev) => ({ ...prev, [id]: "approving" }));
+    try {
+      await approveUser(id);
+      setRowStatus((prev) => ({ ...prev, [id]: "approved" }));
+      window.setTimeout(() => removeAfterCollapse(id), RESOLVE_FLASH_MS);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Erro ao aprovar usuário",
+      );
+      setRowStatus((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
   }
 
   function handleReject(id: string) {
-    setPending((prev) => prev.filter((user) => user.id !== id));
+    if (rowStatus[id]) return;
+    setRowStatus((prev) => ({ ...prev, [id]: "rejected" }));
+    removeAfterCollapse(id);
   }
 
   const filteredPending = useMemo(() => {
@@ -149,47 +184,87 @@ const Aprovacoes = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {paginatedPending.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="hover:bg-surface-muted/50 transition-colors"
-                  >
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
-                          {getInitials(user.name)}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-medium text-text-primary text-sm truncate">
-                            {user.name}
-                          </p>
-                          <p className="text-xs text-text-secondary flex items-center gap-1 truncate">
-                            <Mail size={11} />
-                            {user.email}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => handleApprove(user.id)}
-                          className="p-2 cursor-pointer hover:bg-success-bg text-text-secondary hover:text-success-text rounded-md transition-colors"
-                          title="Aprovar"
+                {paginatedPending.map((user, index) => {
+                  const status = rowStatus[user.id];
+                  const isResolved = status === "approved" || status === "rejected";
+                  const isBusy = status === "approving";
+                  const flashClass =
+                    status === "approved"
+                      ? "bg-success-bg"
+                      : status === "rejected"
+                        ? "bg-danger-bg"
+                        : "";
+
+                  return (
+                    <tr key={user.id} className="align-top">
+                      <td colSpan={2} className="p-0">
+                        <div
+                          className={`grid transition-[grid-template-rows] duration-250 ease-in ${
+                            isResolved ? "grid-rows-[0fr]" : "grid-rows-[1fr]"
+                          }`}
                         >
-                          <Check size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleReject(user.id)}
-                          className="p-2 cursor-pointer hover:bg-danger-bg text-text-secondary hover:text-danger-text rounded-md transition-colors"
-                          title="Recusar"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          <div className="overflow-hidden">
+                            <div
+                              className={`grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-3 transition-colors duration-300 animate-row-in hover:bg-surface-muted/50 ${flashClass}`}
+                              style={{
+                                animationDelay: `${Math.min(index, 8) * 35}ms`,
+                              }}
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
+                                  {getInitials(user.name)}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-medium text-text-primary text-sm truncate">
+                                    {user.name}
+                                  </p>
+                                  <p className="text-xs text-text-secondary flex items-center gap-1 truncate">
+                                    <Mail size={11} />
+                                    {user.email}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  onClick={() => handleApprove(user.id)}
+                                  disabled={!!status}
+                                  className="p-2 cursor-pointer hover:bg-success-bg text-text-secondary hover:text-success-text rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                                  title="Aprovar"
+                                >
+                                  {isBusy ? (
+                                    <Loader2 size={16} className="animate-spin" />
+                                  ) : status === "approved" ? (
+                                    <Check
+                                      size={16}
+                                      className="text-success-text animate-pop"
+                                    />
+                                  ) : (
+                                    <Check size={16} />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => handleReject(user.id)}
+                                  disabled={!!status}
+                                  className="p-2 cursor-pointer hover:bg-danger-bg text-text-secondary hover:text-danger-text rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                                  title="Recusar"
+                                >
+                                  {status === "rejected" ? (
+                                    <X
+                                      size={16}
+                                      className="text-danger-text animate-pop"
+                                    />
+                                  ) : (
+                                    <X size={16} />
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
