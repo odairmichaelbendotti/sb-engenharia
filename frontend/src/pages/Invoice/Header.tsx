@@ -1,5 +1,6 @@
 import { DollarSign, FileText, Plus } from "lucide-react";
 import { formatCurrency } from "../../utils/format-currency";
+import { usePermission } from "../../hooks/usePermission";
 
 type HeaderProps = {
   totalValue: number;
@@ -7,6 +8,7 @@ type HeaderProps = {
 };
 
 const Header = ({ totalValue, setIsOpen }: HeaderProps) => {
+  const { canCreateAndEditContent } = usePermission();
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
       <div>
@@ -22,17 +24,22 @@ const Header = ({ totalValue, setIsOpen }: HeaderProps) => {
           <div className="flex items-center gap-1 text-xs">
             <DollarSign size={12} className="text-accent-500" />
             <span className="text-text-secondary">Valor total emitido:</span>
-            <span className="font-semibold text-text-primary">{formatCurrency(totalValue)}</span>
+            <span className="font-semibold text-text-primary">
+              {formatCurrency(totalValue)}
+            </span>
           </div>
         </div>
       </div>
-      <button
-        onClick={() => setIsOpen(true)}
-        className="flex items-center justify-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium shrink-0"
-      >
-        <Plus size={16} />
-        Nova Nota Fiscal
-      </button>
+
+      {canCreateAndEditContent && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium shrink-0"
+        >
+          <Plus size={16} />
+          Nova Nota Fiscal
+        </button>
+      )}
     </div>
   );
 };
