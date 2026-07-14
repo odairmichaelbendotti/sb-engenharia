@@ -10,6 +10,7 @@ import { PrismaUserRepository } from "../../infrastructure/database/prisma/Prism
 import { UpdateEmpenhoUseCase } from "../../application/usecases/empenho/UpdateEmpenhoUseCase.js";
 import { PrismaCompanyRepository } from "../../infrastructure/database/prisma/PrismaCompanyRepository.js";
 import { UpdateStatusEmpenhoUseCase } from "../../application/usecases/empenho/UpdateEmpenhoStatusUseCase.js";
+import { RequiredRoles } from "../middleware/RequiredRoles.js";
 
 export const EmpenhoRoutes = Router();
 
@@ -34,8 +35,13 @@ const token = new TokenGenerator();
 const userRepository = new PrismaUserRepository();
 const authMiddleware = new AuthMiddleware(token, userRepository);
 
-EmpenhoRoutes.post("/empenho/create", authMiddleware.handle, (req, res) =>
-  empenhoController.create(req, res),
+const requiredRoles = new RequiredRoles();
+
+EmpenhoRoutes.post(
+  "/empenho/create",
+  authMiddleware.handle,
+  requiredRoles.handle("EDITOR", "MASTER", "PLATFORM_ADMIN"),
+  (req, res) => empenhoController.create(req, res),
 );
 
 EmpenhoRoutes.get("/empenho/list", authMiddleware.handle, (req, res) =>
@@ -45,17 +51,20 @@ EmpenhoRoutes.get("/empenho/list", authMiddleware.handle, (req, res) =>
 EmpenhoRoutes.delete(
   "/empenho/delete/:empenhoId",
   authMiddleware.handle,
+  requiredRoles.handle("EDITOR", "MASTER", "PLATFORM_ADMIN"),
   (req, res) => empenhoController.delete(req, res),
 );
 
 EmpenhoRoutes.put(
   "/empenho/update/:empenhoId",
   authMiddleware.handle,
+  requiredRoles.handle("EDITOR", "MASTER", "PLATFORM_ADMIN"),
   (req, res) => empenhoController.update(req, res),
 );
 
 EmpenhoRoutes.put(
   "/empenho/update-status/:empenhoId",
   authMiddleware.handle,
+  requiredRoles.handle("EDITOR", "MASTER", "PLATFORM_ADMIN"),
   (req, res) => empenhoController.updateStatus(req, res),
 );

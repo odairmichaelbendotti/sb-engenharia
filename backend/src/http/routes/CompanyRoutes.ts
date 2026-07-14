@@ -8,6 +8,7 @@ import { UpdateCompanyUseCase } from "../../application/usecases/company/UpdateC
 import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
 import { PrismaUserRepository } from "../../infrastructure/database/prisma/PrismaUserRepository.js";
+import { RequiredRoles } from "../middleware/RequiredRoles.js";
 
 export const CompanyRoutes = Router();
 
@@ -29,26 +30,29 @@ const token = new TokenGenerator();
 const userRepository = new PrismaUserRepository();
 const authMiddleware = new AuthMiddleware(token, userRepository);
 
+const requiredRoles = new RequiredRoles();
+
 CompanyRoutes.post(
   "/company/create",
   authMiddleware.handle,
+  requiredRoles.handle("EDITOR", "MASTER", "PLATFORM_ADMIN"),
   (req, res) => companyController.create(req, res),
 );
 
-CompanyRoutes.get(
-  "/company/list",
-  authMiddleware.handle,
-  (req, res) => companyController.list(req, res),
+CompanyRoutes.get("/company/list", authMiddleware.handle, (req, res) =>
+  companyController.list(req, res),
 );
 
 CompanyRoutes.delete(
   "/company/delete/:id",
   authMiddleware.handle,
+  requiredRoles.handle("EDITOR", "MASTER", "PLATFORM_ADMIN"),
   (req, res) => companyController.delete(req, res),
 );
 
 CompanyRoutes.put(
   "/company/update/:id",
   authMiddleware.handle,
+  requiredRoles.handle("EDITOR", "MASTER", "PLATFORM_ADMIN"),
   (req, res) => companyController.update(req, res),
 );

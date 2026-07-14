@@ -7,10 +7,12 @@ import { plataformaItems } from "./plataforma-items";
 import { useUser } from "../../store/user";
 import { getInitials } from "../../utils/get-initial";
 import SidebarGroup from "./SidebarGroup";
+import { usePermission } from "../../hooks/usePermission";
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const { user, logout } = useUser();
+  const { canManageOrganization, canApproveUsers } = usePermission();
 
   const handleLogout = async () => {
     try {
@@ -26,16 +28,19 @@ const Sidebar = () => {
       <div className="w-full flex flex-col">
         {/* Logo section */}
         <div className="flex items-center gap-3">
-          <SquareDashedMousePointer size={26} className="text-primary-500 shrink-0" />
+          <SquareDashedMousePointer
+            size={26}
+            className="text-primary-500 shrink-0"
+          />
           <p className="font-bold text-text-primary text-lg">SB Engenharia</p>
         </div>
 
         {/* Content section */}
         <div className="flex flex-col h-full mt-8 overflow-y-auto">
-          {user?.role === "PLATFORM_ADMIN" && (
+          {canManageOrganization && (
             <SidebarGroup label="Plataforma" items={plataformaItems} />
           )}
-          {(user?.role === "MASTER" || user?.role === "PLATFORM_ADMIN") && (
+          {canApproveUsers && (
             <SidebarGroup label="Gestão" items={gestaoItems} />
           )}
           <SidebarGroup label="Administrativo" items={adminItems} />
