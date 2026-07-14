@@ -130,7 +130,9 @@ export default function Obras() {
           </div>
         </div>
 
-        {(user?.role === "MASTER" || user?.role === "EDITOR") && (
+        {(user?.role === "MASTER" ||
+          user?.role === "EDITOR" ||
+          user?.role === "PLATFORM_ADMIN") && (
           <button
             onClick={handleOpenCreate}
             className="flex cursor-pointer items-center justify-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium shrink-0"
@@ -188,7 +190,9 @@ export default function Obras() {
                     : "Nenhuma obra encontrada com os filtros aplicados"}
                 </p>
                 {obras.length === 0 &&
-                  (user?.role === "MASTER" || user?.role === "EDITOR") && (
+                  (user?.role === "MASTER" ||
+                    user?.role === "EDITOR" ||
+                    user?.role === "PLATFORM_ADMIN") && (
                     <button
                       onClick={handleOpenCreate}
                       className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium"

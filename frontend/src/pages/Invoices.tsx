@@ -10,12 +10,15 @@ import {
   Header,
   EditModal,
 } from "./Invoice";
+import { usePermission } from "../hooks/usePermission";
 
 export default function Invoices() {
   const [isOpen, setIsOpen] = useState(false);
   const [deleteInvoice, setDeleteInvoice] = useState<Invoice | null>(null);
   const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // const { canCreateAndEditContent } = usePermission();
 
   const {
     list,
@@ -68,7 +71,10 @@ export default function Invoices() {
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         <div className="px-4 pt-3 pb-2 border-b border-border">
           <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+            <Search
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+            />
             <input
               type="text"
               placeholder="Buscar por número, empresa ou descrição..."

@@ -11,7 +11,7 @@ import RegisterOrEditCompany from "./Company/RegisterOrEditCompany";
 import TableCompanies from "./Company/TableCompanies";
 import FilterCompany from "./Company/FilterCompany";
 import { toast } from "sonner";
-import { useUser } from "../store/user";
+import { usePermission } from "../hooks/usePermission";
 
 export default function Empresas() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -38,7 +38,6 @@ export default function Empresas() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const { companies, listCompanies, stats, deleteCompany } = useCompanies();
-  const { user } = useUser();
 
   useEffect(() => {
     listCompanies();
@@ -102,6 +101,8 @@ export default function Empresas() {
     setEmpresaSelecionada(null);
   };
 
+  const { canCreateAndEditContent } = usePermission();
+
   const handleDelete = async (id: string) => {
     try {
       setIsLoading(true);
@@ -129,7 +130,7 @@ export default function Empresas() {
             Gerencie as empresas cadastradas e seus empenhos
           </p>
         </div>
-        {(user?.role === "EDITOR" || user?.role === "MASTER") && (
+        {canCreateAndEditContent && (
           <button
             onClick={() => handleOpen()}
             className="flex items-center cursor-pointer text-white justify-center gap-2 px-4 py-2 bg-primary-500 rounded-md hover:bg-primary-600 transition-colors text-sm font-medium shrink-0"
@@ -183,7 +184,10 @@ export default function Empresas() {
       {/* Filters + Table */}
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         <div className="px-4 pt-3 pb-2 border-b border-border">
-          <FilterCompany searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+          <FilterCompany
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+          />
         </div>
         <TableCompanies
           empresas={empresas}

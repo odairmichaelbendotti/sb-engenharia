@@ -11,6 +11,7 @@ import {
 } from "./Empenho";
 import { useUser } from "../store/user";
 import { formatCurrency } from "../utils/format-currency";
+import { usePermission } from "../hooks/usePermission";
 
 export default function Empenhos() {
   const [isOpen, setIsOpen] = useState(false);
@@ -87,6 +88,8 @@ export default function Empenhos() {
     handleClose();
   };
 
+  const { canCreateAndEditContent } = usePermission();
+
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -103,12 +106,16 @@ export default function Empenhos() {
             <span className="text-text-muted text-xs">·</span>
             <div className="flex items-center gap-1 text-xs">
               <DollarSign size={12} className="text-accent-500" />
-              <span className="text-text-secondary">Valor total empenhado:</span>
-              <span className="font-semibold text-text-primary">{formatCurrency(metrics.totalValue)}</span>
+              <span className="text-text-secondary">
+                Valor total empenhado:
+              </span>
+              <span className="font-semibold text-text-primary">
+                {formatCurrency(metrics.totalValue)}
+              </span>
             </div>
           </div>
         </div>
-        {(user?.role === "MASTER" || user?.role === "EDITOR") && (
+        {canCreateAndEditContent && (
           <button
             onClick={() => handleOpen()}
             className="flex cursor-pointer items-center justify-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium shrink-0"
