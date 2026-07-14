@@ -1,3 +1,4 @@
+export { default as EmpenhoHeader } from "./EmpenhoHeader";
 export { EmpenhoStats } from "./EmpenhoStats";
 export { EmpenhoFilters } from "./EmpenhoFilters";
 export { EmpenhoTable } from "./EmpenhoTable";

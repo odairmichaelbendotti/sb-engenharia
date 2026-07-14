@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { ShieldCheck, Mail, LogOut, Building2 } from "lucide-react";
 import { useNavigate } from "react-router";
-import { useUser } from "../../store/user";
-import { getInitials } from "../../utils/get-initial";
+import { useUser } from "../../../store/user";
+import { getInitials } from "../../../utils/get-initial";
 
 const POLL_INTERVAL_MS = 15000;
 

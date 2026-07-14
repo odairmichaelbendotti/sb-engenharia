@@ -1,17 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  AlertCircle,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  Search,
-  UserCheck,
-} from "lucide-react";
-import { useUnapprovedUsers } from "../store/unapprovedUsers";
-import type { User } from "../../types/user";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { ApprovalRow, type RowStatus } from "./ApprovalRow";
-import { ConfirmModal } from "../components/ConfirmModal";
+import { useUnapprovedUsers } from "../../store/unapprovedUsers";
+import type { User } from "../../../types/user";
+import type { RowStatus } from "./ApprovalRow";
+import { ConfirmModal } from "../../components/ConfirmModal";
+import ApprovalHeader from "./ApprovalHeader";
+import ApprovalFilters from "./ApprovalFilters";
+import ApprovalTable from "./ApprovalTable";
 
 const ITEMS_PER_PAGE = 10;
 const RESOLVE_FLASH_MS = 500;
@@ -140,17 +136,7 @@ const Aprovacoes = () => {
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <div>
-          <h1 className="text-xl font-bold text-text-primary flex items-center gap-2">
-            <UserCheck size={20} className="text-primary-500" />
-            Aprovações
-          </h1>
-          <p className="text-text-secondary text-xs mt-0.5">
-            Solicitações de acesso de novos usuários aguardando liberação
-          </p>
-        </div>
-      </div>
+      <ApprovalHeader />
 
       {isLoading ? (
         <div className="bg-surface border border-border rounded-lg py-16 flex flex-col items-center justify-center gap-2">
@@ -171,22 +157,13 @@ const Aprovacoes = () => {
       ) : (
         <div className="bg-surface border border-border rounded-lg overflow-hidden">
           <div className="px-4 pt-3 pb-2 border-b border-border">
-            <div className="relative">
-              <Search
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-              />
-              <input
-                type="text"
-                placeholder="Buscar por nome ou e-mail..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full pl-9 pr-3 py-2 border border-border rounded-lg bg-surface text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
-              />
-            </div>
+            <ApprovalFilters
+              searchTerm={searchTerm}
+              onSearchChange={(value) => {
+                setSearchTerm(value);
+                setPage(1);
+              }}
+            />
             {searchTerm && (
               <p className="text-xs text-text-muted mt-2">
                 {filteredPending.length} resultado
@@ -195,81 +172,19 @@ const Aprovacoes = () => {
             )}
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-surface-muted border-b border-border">
-                <tr>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
-                    Usuário
-                  </th>
-                  <th className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {paginatedPending.map((user, index) => (
-                  <ApprovalRow
-                    key={user.id}
-                    user={user}
-                    index={index}
-                    status={rowStatus[user.id]}
-                    onRequestApprove={(u) =>
-                      setConfirmation({ type: "approve", user: u })
-                    }
-                    onRequestReject={(u) =>
-                      setConfirmation({ type: "reject", user: u })
-                    }
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {paginatedPending.length === 0 && (
-            <div className="py-12 text-center">
-              <UserCheck size={48} className="mx-auto text-text-muted mb-4" />
-              <p className="text-text-secondary font-medium">
-                {pending.length === 0
-                  ? "Nenhuma solicitação pendente"
-                  : "Nenhuma solicitação encontrada"}
-              </p>
-              <p className="text-text-muted text-sm mt-1">
-                {pending.length === 0
-                  ? "Novas solicitações de acesso aparecem aqui"
-                  : "Tente ajustar a busca"}
-              </p>
-            </div>
-          )}
-
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-surface-muted">
-              <p className="text-sm text-text-secondary">
-                Mostrando {startIndex + 1} a{" "}
-                {Math.min(startIndex + ITEMS_PER_PAGE, filteredPending.length)}{" "}
-                de {filteredPending.length} solicitações
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="p-2 hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <span className="text-sm text-text-secondary">
-                  Página {currentPage} de {totalPages}
-                </span>
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="p-2 hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
-                >
-                  <ChevronRight size={18} />
-                </button>
-              </div>
-            </div>
-          )}
+          <ApprovalTable
+            paginatedPending={paginatedPending}
+            hasPending={pending.length > 0}
+            rowStatus={rowStatus}
+            onRequestApprove={(u) => setConfirmation({ type: "approve", user: u })}
+            onRequestReject={(u) => setConfirmation({ type: "reject", user: u })}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            startIndex={startIndex}
+            itemsPerPage={ITEMS_PER_PAGE}
+            filteredCount={filteredPending.length}
+            onPageChange={setPage}
+          />
         </div>
       )}
 

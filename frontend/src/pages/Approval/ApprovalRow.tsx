@@ -1,6 +1,6 @@
 import { Check, Loader2, Mail, X } from "lucide-react";
-import { getInitials } from "../utils/get-initial";
-import type { User } from "../../types/user";
+import { getInitials } from "../../utils/get-initial";
+import type { User } from "../../../types/user";
 
 export type RowStatus = "approving" | "approved" | "rejected";
 

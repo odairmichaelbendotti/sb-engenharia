@@ -1,17 +1,16 @@
 import { useState, useEffect } from "react";
-import { Plus, Building2, Layers2 } from "lucide-react";
-import { StatCard } from "../components/StatCard";
-import type { Empresa } from "../../types/empresa";
-import type { CreateCompanyType } from "../../types/create-company";
-import { formatCurrency } from "../utils/format-currency";
-import { useCompanies } from "../store/companies";
-import DeleteCompany from "./Company/DeleteCompany";
-import ModalEmpenho from "./Company/ModalEmpenho";
-import RegisterOrEditCompany from "./Company/RegisterOrEditCompany";
-import TableCompanies from "./Company/TableCompanies";
-import FilterCompany from "./Company/FilterCompany";
+import type { Empresa } from "../../../types/empresa";
+import type { CreateCompanyType } from "../../../types/create-company";
+import { useCompanies } from "../../store/companies";
+import DeleteCompany from "./DeleteCompany";
+import ModalEmpenho from "./ModalEmpenho";
+import RegisterOrEditCompany from "./RegisterOrEditCompany";
+import TableCompanies from "./TableCompanies";
+import FilterCompany from "./FilterCompany";
+import CompanyHeader from "./CompanyHeader";
+import CompanyStats from "./CompanyStats";
 import { toast } from "sonner";
-import { usePermission } from "../hooks/usePermission";
+import { usePermission } from "../../hooks/usePermission";
 
 export default function Empresas() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -119,67 +118,12 @@ export default function Empresas() {
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <div>
-          <h1 className="text-xl font-bold text-text-primary flex items-center gap-2">
-            <Building2 size={20} className="text-primary-500" />
-            Empresas
-          </h1>
-          <p className="text-text-secondary text-xs mt-0.5">
-            Gerencie as empresas cadastradas e seus empenhos
-          </p>
-        </div>
-        {canCreateAndEditContent && (
-          <button
-            onClick={() => handleOpen()}
-            className="flex items-center cursor-pointer text-white justify-center gap-2 px-4 py-2 bg-primary-500 rounded-md hover:bg-primary-600 transition-colors text-sm font-medium shrink-0"
-          >
-            <Plus size={16} />
-            Nova Empresa
-          </button>
-        )}
-      </div>
+      <CompanyHeader
+        canCreateAndEditContent={canCreateAndEditContent}
+        onAdd={() => handleOpen()}
+      />
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-        <StatCard
-          title="Total de Empresas"
-          value={stats?.totalCompanies.toString() || "0"}
-          subtitle="Cadastradas"
-          icon={<Building2 size={18} className="text-primary-500" />}
-          color="bg-primary-100"
-          iconRounded="rounded-lg"
-          compact
-        />
-        <StatCard
-          title="Total de Empenhos"
-          value={stats?.totalEmpenhos.toString() || "0"}
-          subtitle="Vinculados"
-          icon={<Layers2 size={18} className="text-secondary-500" />}
-          color="bg-secondary-100"
-          iconRounded="rounded-lg"
-          compact
-        />
-        <StatCard
-          title="Empenhos Ativos"
-          value={stats?.totalEmpenhosActive.toString() || "0"}
-          subtitle="Em andamento"
-          icon={<Layers2 size={18} className="text-success-text" />}
-          color="bg-success-bg"
-          iconRounded="rounded-lg"
-          compact
-        />
-        <StatCard
-          title="Valor Total"
-          value={formatCurrency(stats?.totalEmpenhosValue || 0)}
-          subtitle="Empenhado"
-          icon={<span className="text-accent-500 font-bold text-sm">R$</span>}
-          color="bg-accent-100"
-          iconRounded="rounded-lg"
-          compact
-        />
-      </div>
+      <CompanyStats stats={stats} />
 
       {/* Filters + Table */}
       <div className="bg-surface border border-border rounded-lg overflow-hidden">

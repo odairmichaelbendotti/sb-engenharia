@@ -1,28 +1,24 @@
 import { useState, useMemo, useEffect } from "react";
-import {
-  Plus,
-  HardHat,
-  DollarSign,
-  Loader2,
-  FolderOpen,
-  AlertCircle,
-} from "lucide-react";
-import { useObras } from "../store/obras";
-import { useUser } from "../store/user";
-import type { Obra } from "../../types/obra";
+import { Loader2, FolderOpen, AlertCircle, Plus } from "lucide-react";
+import { useObras } from "../../store/obras";
+import { useUser } from "../../store/user";
+import { usePermission } from "../../hooks/usePermission";
+import type { Obra } from "../../../types/obra";
 import {
   ObraStats,
   ObraTable,
   ObraModal,
   DeleteObraModal,
   ObraFilters,
-} from "./Obra";
-import type { ObraFiltersState } from "./Obra";
-import { formatCurrency } from "../utils/format-currency";
+} from "./index";
+import type { ObraFiltersState } from "./index";
+import ObraHeader from "./ObraHeader";
+import { formatCurrency } from "../../utils/format-currency";
 
 export default function Obras() {
   const { data, fetchObras } = useObras();
   const { user } = useUser();
+  const { canCreateAndEditContent } = usePermission();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingObra, setEditingObra] = useState<Obra | null>(null);
@@ -108,40 +104,11 @@ export default function Obras() {
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
-      {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <div>
-          <h1 className="text-xl font-bold text-text-primary flex items-center gap-2">
-            <HardHat size={20} className="text-primary-500" />
-            Gerenciador de Obras
-          </h1>
-          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            <p className="text-text-secondary text-xs">
-              Controle e acompanhamento em tempo real
-            </p>
-            <span className="text-text-muted text-xs">·</span>
-            <div className="flex items-center gap-1 text-xs">
-              <DollarSign size={12} className="text-accent-500" />
-              <span className="text-text-secondary">Orçamento total:</span>
-              <span className="font-semibold text-text-primary">
-                {formatCurrency(stats.orcamentoTotal)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {(user?.role === "MASTER" ||
-          user?.role === "EDITOR" ||
-          user?.role === "PLATFORM_ADMIN") && (
-          <button
-            onClick={handleOpenCreate}
-            className="flex cursor-pointer items-center justify-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium shrink-0"
-          >
-            <Plus size={16} />
-            Nova Obra
-          </button>
-        )}
-      </div>
+      <ObraHeader
+        orcamentoTotal={stats.orcamentoTotal}
+        canCreateAndEditContent={canCreateAndEditContent}
+        onAdd={handleOpenCreate}
+      />
 
       {/* Loading State */}
       {isLoading ? (
@@ -189,18 +156,15 @@ export default function Obras() {
                     ? "Nenhuma obra cadastrada"
                     : "Nenhuma obra encontrada com os filtros aplicados"}
                 </p>
-                {obras.length === 0 &&
-                  (user?.role === "MASTER" ||
-                    user?.role === "EDITOR" ||
-                    user?.role === "PLATFORM_ADMIN") && (
-                    <button
-                      onClick={handleOpenCreate}
-                      className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium"
-                    >
-                      <Plus size={16} />
-                      Criar primeira obra
-                    </button>
-                  )}
+                {obras.length === 0 && canCreateAndEditContent && (
+                  <button
+                    onClick={handleOpenCreate}
+                    className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium"
+                  >
+                    <Plus size={16} />
+                    Criar primeira obra
+                  </button>
+                )}
               </div>
             ) : (
               <ObraTable

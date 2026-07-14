@@ -1,3 +1,4 @@
+export { default as ObraHeader } from "./ObraHeader";
 export { ObraStats } from "./ObraStats";
 export { ObraTable } from "./ObraTable";
 export { ObraModal } from "./ObraModal";

@@ -1,16 +1,16 @@
 import { createBrowserRouter } from "react-router";
 import AppLayout from "./components/Layouts/AppLayout";
 import RequireAuth from "./components/Auth/RequireAuth";
-import Dashboard from "./pages/Dashboard";
-import Empresas from "./pages/Empresas";
-import Invoices from "./pages/Invoices";
-import Empenhos from "./pages/Empenhos";
-import Medicoes from "./pages/Medicoes";
-import Obras from "./pages/Obras";
-import Aprovacoes from "./pages/Aprovacoes";
-import Organizacoes from "./pages/Organizacoes";
-import SignIn from "./pages/auth/SignIn";
-import SignUp from "./pages/auth/SignUp";
+import Dashboard from "./pages/Dashboard/page";
+import Empresas from "./pages/Company/page";
+import Invoices from "./pages/Invoice/page";
+import Empenhos from "./pages/Empenho/page";
+import Medicoes from "./pages/Medicoes/page";
+import Obras from "./pages/Obra/page";
+import Aprovacoes from "./pages/Approval/page";
+import Organizacoes from "./pages/Tenant/page";
+import SignIn from "./pages/auth/SignIn/page";
+import SignUp from "./pages/auth/SignUp/page";
 
 export const router = createBrowserRouter([
   {

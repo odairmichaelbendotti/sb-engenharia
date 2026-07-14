@@ -1,0 +1,47 @@
+import { Plus, Layers2, DollarSign } from "lucide-react";
+import { formatCurrency } from "../../utils/format-currency";
+
+type EmpenhoHeaderProps = {
+  totalValue: number;
+  canCreateAndEditContent: boolean;
+  onAdd: () => void;
+};
+
+export default function EmpenhoHeader({
+  totalValue,
+  canCreateAndEditContent,
+  onAdd,
+}: EmpenhoHeaderProps) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      <div>
+        <h1 className="text-xl font-bold text-text-primary flex items-center gap-2">
+          <Layers2 size={20} className="text-primary-500" />
+          Empenhos
+        </h1>
+        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+          <p className="text-text-secondary text-xs">
+            Gerencie os empenhos e acompanhe o vínculo com empresas
+          </p>
+          <span className="text-text-muted text-xs">·</span>
+          <div className="flex items-center gap-1 text-xs">
+            <DollarSign size={12} className="text-accent-500" />
+            <span className="text-text-secondary">Valor total empenhado:</span>
+            <span className="font-semibold text-text-primary">
+              {formatCurrency(totalValue)}
+            </span>
+          </div>
+        </div>
+      </div>
+      {canCreateAndEditContent && (
+        <button
+          onClick={onAdd}
+          className="flex cursor-pointer items-center justify-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium shrink-0"
+        >
+          <Plus size={16} />
+          Novo Empenho
+        </button>
+      )}
+    </div>
+  );
+}

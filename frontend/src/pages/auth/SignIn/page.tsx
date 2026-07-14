@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Mail, Loader } from "lucide-react";
 import { useNavigate } from "react-router";
-import { useUser } from "../../store/user";
-import PasswordInput from "../../components/PasswordInput";
+import { useUser } from "../../../store/user";
+import PasswordInput from "../PasswordInput";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");

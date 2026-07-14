@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Building2, ChevronDown } from "lucide-react";
-import type { Tenant } from "../../types/tenant";
+import type { Tenant } from "../../../types/tenant";
 
 type TenantSelectProps = {
   tenants: Tenant[];

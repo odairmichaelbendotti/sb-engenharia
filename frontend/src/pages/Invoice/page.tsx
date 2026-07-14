@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
-import { Search } from "lucide-react";
-import { useInvoice } from "../store/invoices";
-import type { Invoice } from "../../types/invoice";
+import { useInvoice } from "../../store/invoices";
+import type { Invoice } from "../../../types/invoice";
 import {
   AddModal,
   InvoiceTable,
@@ -9,16 +8,14 @@ import {
   StatusCards,
   Header,
   EditModal,
-} from "./Invoice";
-import { usePermission } from "../hooks/usePermission";
+  InvoiceFilters,
+} from "./index";
 
 export default function Invoices() {
   const [isOpen, setIsOpen] = useState(false);
   const [deleteInvoice, setDeleteInvoice] = useState<Invoice | null>(null);
   const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-
-  // const { canCreateAndEditContent } = usePermission();
 
   const {
     list,
@@ -70,19 +67,7 @@ export default function Invoices() {
       {/* Filters + Table */}
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         <div className="px-4 pt-3 pb-2 border-b border-border">
-          <div className="relative">
-            <Search
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-            />
-            <input
-              type="text"
-              placeholder="Buscar por número, empresa ou descrição..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-border rounded-lg bg-surface text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
-            />
-          </div>
+          <InvoiceFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} />
           {searchTerm && (
             <p className="text-xs text-text-muted mt-2">
               {filteredInvoices.length} resultado

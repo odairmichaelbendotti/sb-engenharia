@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { Building2, Loader2, Plus, Search } from "lucide-react";
-import { useTenants } from "../store/tenants";
-import { useUser } from "../store/user";
-import TenantTable from "./Tenant/TenantTable";
-import RegisterTenant from "./Tenant/RegisterTenant";
-import type { CreateTenantType } from "../../types/create-tenant";
+import { Loader2 } from "lucide-react";
+import { useTenants } from "../../store/tenants";
+import { usePermission } from "../../hooks/usePermission";
+import TenantTable from "./TenantTable";
+import RegisterTenant from "./RegisterTenant";
+import TenantHeader from "./TenantHeader";
+import TenantFilters from "./TenantFilters";
+import type { CreateTenantType } from "../../../types/create-tenant";
 
 const emptyFormData: CreateTenantType = {
   name: "",
@@ -20,7 +22,7 @@ const emptyFormData: CreateTenantType = {
 
 export default function Organizacoes() {
   const { tenants, listTenants } = useTenants();
-  const { user } = useUser();
+  const { canManageOrganization } = usePermission();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -54,42 +56,14 @@ export default function Organizacoes() {
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <div>
-          <h1 className="text-xl font-bold text-text-primary flex items-center gap-2">
-            <Building2 size={20} className="text-primary-500" />
-            Organizações
-          </h1>
-          <p className="text-text-secondary text-xs mt-0.5">
-            Organizações cadastradas na plataforma
-          </p>
-        </div>
-        {user?.role === "PLATFORM_ADMIN" && (
-          <button
-            onClick={handleOpen}
-            className="flex items-center cursor-pointer text-white justify-center gap-2 px-4 py-2 bg-primary-500 rounded-md hover:bg-primary-600 transition-colors text-sm font-medium shrink-0"
-          >
-            <Plus size={16} />
-            Nova Organização
-          </button>
-        )}
-      </div>
+      <TenantHeader
+        canManageOrganization={canManageOrganization}
+        onAdd={handleOpen}
+      />
 
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
         <div className="px-4 pt-3 pb-2 border-b border-border">
-          <div className="relative">
-            <Search
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-            />
-            <input
-              type="text"
-              placeholder="Buscar por nome, apelido, CNPJ ou cidade..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-border rounded-lg bg-surface text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
-            />
-          </div>
+          <TenantFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} />
         </div>
 
         {isLoading && (

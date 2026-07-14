@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Loader2 } from "lucide-react";
 import { useUser } from "../../store/user";
-import PendingApproval from "../../pages/auth/PendingApproval";
+import PendingApproval from "../../pages/auth/PendingApproval/page";
 
 const RequireAuth = ({ children }: { children: React.ReactNode }) => {
   const { user, fetchUser } = useUser();
