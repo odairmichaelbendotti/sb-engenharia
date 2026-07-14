@@ -46,7 +46,7 @@ infrastructure/
 http/
   controllers/    — um por domínio (Company, Empenho, Invoice, Tenant, User)
   routes/         — um arquivo por domínio, monta manualmente repository → usecase → controller → middleware
-  middleware/      — AuthMiddleware
+  middleware/      — AuthMiddleware, RequiredRoles
 ```
 
 ### Injeção de dependência
@@ -81,7 +81,9 @@ Inconsistência conhecida (não é convenção, é ruído): algumas mensagens de
 - **Use cases com 2+ parâmetros recebem um único objeto**, nunca posicionais (isso já causou um bug real de troca de argumentos silenciosa em `SignInUseCase`, corrigido). Use cases com 0-1 parâmetro simples (`delete(id)`) não precisam de objeto.
 - Domain entities validam invariantes básicas no construtor (ex.: `User` valida formato de e-mail, `Empenho`/`Invoice` validam `value > 0`) e lançam `DomainError` se violadas.
 - Toda entidade tem um `XType` (dados de entrada) e, quando necessário para responder à API, um `PersistedX` (dados + `id`/`createdAt`/`updatedAt`).
-- Autorização por role é feita **dentro dos use cases** via `AdminPolicy` (`isAdmin(user)` — tudo que não é `"USER"` conta como admin), não em middleware de rota. Não existe `RoleMiddleware`.
+- Autorização por role agora é feita em **dois lugares que coexistem, não um substitui o outro**:
+  - **`RequiredRoles` middleware** (`http/middleware/RequiredRoles.ts`), montado igual ao `AuthMiddleware` (instanciado por arquivo de rota, sem container) e encadeado **depois** de `authMiddleware.handle`: `requiredRoles.handle("EDITOR", "MASTER", "PLATFORM_ADMIN")`. É a forma padrão para novas rotas de mutação — usado hoje em create/update/delete de `CompanyRoutes.ts`/`InvoiceRoutes.ts`, create/update/updateStatus/delete de `EmpenhoRoutes.ts`, e create/get-all de `TenantRoutes.ts` (só `"PLATFORM_ADMIN"`). Rotas de listagem (`GET .../list`) continuam só com `AuthMiddleware`, sem restrição de role. **`handle()` precisa terminar com `next()` no branch de sucesso** — sem isso a requisição fica pendurada sem resposta (bug real já corrigido nesta sessão); ao copiar esse middleware como modelo, não esquecer o `next()`.
+  - `AdminPolicy` (`isAdmin(user)` — tudo que não é `"USER"` conta como admin) continua sendo checado **dentro dos use cases** de `empenho/` (`CreateEmpenhoUseCase`, `UpdateEmpenhoUseCase`, `UpdateEmpenhoStatusUseCase`, `DeleteEmpenhoUseCase`) — é uma checagem redundante com o `RequiredRoles` da rota (o use case nunca é chamado por um role fora da lista do middleware), mas não foi removida; não remover sem confirmar, já que é a única barreira dentro do use case caso a rota mude no futuro.
 
 ## Schema Prisma (resumo)
 
@@ -130,7 +132,7 @@ JWT em cookie httpOnly (`req.cookies.auth`). **`AuthMiddleware` não confia no p
 2. Sem testes, sem CI — qualquer mudança precisa ser validada manualmente (`npx tsc --noEmit` no mínimo) antes de considerar concluída.
 3. `express/index.d.ts` tem uma `JwtPayload` local cujo union de `role` não inclui `"PLATFORM_ADMIN"` (diverge de `AuthenticatedUser`) e parece não ser usada em lugar nenhum — candidato a limpeza, mas confirmar antes de remover.
 4. Script `npm run start` aponta para `./env` em vez de `./.env` — nunca testado/usado (fluxo real é sempre `npm run dev`).
-5. **`TenantRoutes.ts` (`POST /tenant/create`, `GET /tenant/get-all`) não tem `AuthMiddleware` nenhum — rota 100% pública hoje**, diferente de todo outro arquivo de rota do projeto (`CompanyRoutes.ts`/`EmpenhoRoutes.ts`/`InvoiceRoutes.ts`/`UserRoutes.ts` sempre montam `AuthMiddleware`). `CreateTenantUseCase` também não recebe `user`/`AuthenticatedUser` nem checa role — qualquer request não autenticada pode criar ou listar tenants. O frontend (`Organizacoes.tsx`) já esconde o botão "Nova Organização" para quem não é `PLATFORM_ADMIN`, mas isso é **só cosmético** — a API continua aceitando de qualquer origem. Corrigir exige: adicionar `AuthMiddleware` em `TenantRoutes.ts` (padrão `CompanyRoutes.ts`) e um check `user.role === "PLATFORM_ADMIN"` dentro de `CreateTenantUseCase` (mais estrito que `AdminPolicy.isAdmin`, que também deixaria `MASTER`/`EDITOR` passarem). Identificado e conscientemente adiado a pedido do usuário — não corrigir "de surpresa", mas também não deixar passar batido se for tocar nesses arquivos.
+5. ~~`TenantRoutes.ts` sem `AuthMiddleware`~~ — **resolvido**: `TenantRoutes.ts` agora monta `AuthMiddleware` + `requiredRoles.handle("PLATFORM_ADMIN")` em `POST /tenant/create` e `GET /tenant/get-all`, no mesmo padrão manual de DI dos outros arquivos de rota. `CreateTenantUseCase` em si continua sem checar `user`/role internamente — a única barreira é a rota; se o use case algum dia for chamado fora do HTTP (job, script), a checagem de role precisa ser adicionada lá também.
 
 ## Coisas para NUNCA fazer sem perguntar antes
 

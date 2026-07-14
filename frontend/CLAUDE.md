@@ -56,6 +56,17 @@ frontend/
       Sidebar/                 — Sidebar.tsx (desktop), MobileSidebar.tsx (drawer mobile),
                                   adm-items.ts + eng-items.ts (itens de menu)
 
+    hooks/
+      usePermission.ts        — deriva flags de UI a partir de `user.role`: `canCreateAndEditContent`
+                                 (EDITOR/MASTER/PLATFORM_ADMIN), `canManageOrganization` (PLATFORM_ADMIN),
+                                 `canApproveUsers` (MASTER/PLATFORM_ADMIN). Usado em `Sidebar.tsx` e nos
+                                 headers de página (`Company/`, `Empenho/`, `Invoice/`, `Obra/`, `Tenant/`)
+                                 para esconder ações de criar/editar/aprovar. **Checagem só de UI** — o
+                                 backend tem que aplicar a mesma regra via `RequiredRoles` (ver
+                                 `backend/CLAUDE.md`); não confiar só nesse hook para segurança real. Ao
+                                 checar role em um componente novo, usar este hook em vez de comparar
+                                 `user?.role === "X"` inline.
+
     pages/
       Dashboard.tsx      — ⚠️ ainda usa mockData hardcoded, não busca dos stores reais (pendência conhecida)
       Empresas.tsx, Invoices.tsx, Empenhos.tsx, Obras.tsx  — páginas principais
@@ -121,7 +132,7 @@ Todos seguem o mesmo formato: `create<T>((set) => ({ ...estado, ...métodos asyn
 | `empenhos.ts` | `data: ListEmpenhos \| null` | `GET /empenho/list`, `DELETE /empenho/delete/:id`, `PUT /empenho/update-status/:id` |
 | `invoices.ts` | campos de `InvoiceDashboard` espalhados no store | `GET /invoices/list`, `POST /invoices/create`, `DELETE /invoices/delete/:id`, `PUT /invoices/update/:id` — **`create`/`delete`/`update` não recalculam os totais do dashboard localmente**, só `list()` traz números atualizados |
 | `obras.ts` | `data: ListObras \| null` | `GET /obra/list`, `POST /obra/create`, `PUT /obra/update/:id`, `PUT /obra/update-status/:id`, `DELETE /obra/delete/:id` |
-| `tenants.ts` | `tenants: Tenant[]` | `GET /tenant/get-all`, `POST /tenant/create` + `findCep` (ViaCEP direto, mesmo padrão de `companies.ts`) — **rota de tenant não exige `credentials: "include"` hoje porque o backend não tem `AuthMiddleware` nela** (ver pendência em `backend/CLAUDE.md`); se isso for corrigido no backend, `listTenants`/`createTenant` também precisam passar a enviar `credentials: "include"` |
+| `tenants.ts` | `tenants: Tenant[]` | `GET /tenant/get-all`, `POST /tenant/create` + `findCep` (ViaCEP direto, mesmo padrão de `companies.ts`) — backend agora exige `AuthMiddleware` + role `PLATFORM_ADMIN` nas duas rotas (ver `backend/CLAUDE.md`), então `listTenants` e `createTenant` sempre enviam `credentials: "include"` |
 | `unapprovedUsers.ts` | `users: User[]`, `hasLoaded: boolean` | `GET /list-unapproved-users` — `hasLoaded` existe para a página (`Aprovacoes.tsx`) não refazer o fetch toda vez que remonta (ex.: navegar para outra aba e voltar); só busca de novo se `hasLoaded` ainda for `false` |
 
 `services/api.ts` (`defaultFetch`) fixa `Content-Type: application/json`; **`credentials: "include"` não tem default**, precisa ser passado em cada chamada que exige sessão — checar isso ao adicionar uma chamada nova (é a causa mais comum de "por que minha rota autenticada retorna 401").

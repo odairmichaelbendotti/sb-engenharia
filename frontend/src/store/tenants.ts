@@ -30,7 +30,9 @@ export const useTenants = create<TenantsStore>((set) => ({
   tenants: [],
 
   listTenants: async () => {
-    const response = await defaultFetch("/tenant/get-all");
+    const response = await defaultFetch("/tenant/get-all", {
+      credentials: "include",
+    });
 
     if (!response.ok) {
       const error = await response.json();
