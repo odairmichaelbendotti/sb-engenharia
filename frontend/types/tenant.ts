@@ -12,3 +12,8 @@ export interface Tenant {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface TenantOption {
+  id: string;
+  name: string;
+}

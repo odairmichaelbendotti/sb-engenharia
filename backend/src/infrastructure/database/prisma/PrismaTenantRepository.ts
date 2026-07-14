@@ -51,4 +51,13 @@ export class PrismaTenantRepository implements ITenantRepository {
       throw new DomainError("Error getting tenants");
     }
   }
+  async getPublicOptions(): Promise<Array<{ id: string; name: string }>> {
+    try {
+      return await prisma.tenant.findMany({
+        select: { id: true, name: true },
+      });
+    } catch (err) {
+      throw new DomainError("Error getting tenants");
+    }
+  }
 }

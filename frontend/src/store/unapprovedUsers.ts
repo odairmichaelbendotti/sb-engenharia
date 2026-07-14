@@ -1,9 +1,9 @@
 import { create } from "zustand";
-import type { User } from "../../types/user";
+import type { UnapprovedUser } from "../../types/user";
 import { defaultFetch } from "../services/api";
 
 type UnapprovedUsersStore = {
-  users: User[];
+  users: UnapprovedUser[];
   hasLoaded: boolean;
   listUnapprovedUsers: () => Promise<void>;
   approveUser: (userId: string) => Promise<void>;
@@ -25,7 +25,7 @@ export const useUnapprovedUsers = create<UnapprovedUsersStore>((set) => ({
       throw new Error(error.message || "Failed to fetch unapproved users");
     }
 
-    const data = (await response.json()) as User[];
+    const data = (await response.json()) as UnapprovedUser[];
     set({ users: data, hasLoaded: true });
   },
   approveUser: async (userId: string) => {

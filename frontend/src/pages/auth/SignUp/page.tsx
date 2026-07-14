@@ -16,7 +16,7 @@ export default function SignUp() {
   const [isLoading, setIsLoading] = useState(false);
 
   const { user, signup } = useUser();
-  const { tenants, listTenants } = useTenants();
+  const { tenantOptions, listTenantOptions } = useTenants();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,11 +26,11 @@ export default function SignUp() {
   }, [user, navigate]);
 
   useEffect(() => {
-    listTenants().catch((error) => {
+    listTenantOptions().catch((error) => {
       console.error(error);
       toast.error("Erro ao carregar organizações");
     });
-  }, [listTenants]);
+  }, [listTenantOptions]);
 
   function handleNextStep(e: React.FormEvent) {
     e.preventDefault();
@@ -110,7 +110,7 @@ export default function SignUp() {
 
         {step === 2 && (
           <SignUpStepTwo
-            tenants={tenants}
+            tenants={tenantOptions}
             tenantId={tenantId}
             setTenantId={setTenantId}
             isLoading={isLoading}

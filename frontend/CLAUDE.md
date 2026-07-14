@@ -45,6 +45,10 @@ frontend/
                               funciona só porque são importados por arquivos que estão em src/)
     create-company.ts, create-tenant.ts, empenho.ts, empresa.ts, invoice.ts,
     list-companies.ts, list-empenhos.ts, obra.ts, tenant.ts, user.ts
+    — `tenant.ts` exporta `Tenant` (completo, uso admin) e `TenantOption` ({ id, name }, dropdown de
+      signup, vem de `GET /tenant/list-public`)
+    — `user.ts` exporta `User` (genérico, usuário logado) e `UnapprovedUser extends User` (com
+      `tenant: { name }`, só o retorno de `GET /list-unapproved-users` tem esse campo)
 
   src/
     main.tsx, routes.tsx, index.css
@@ -71,8 +75,15 @@ frontend/
       Dashboard.tsx      — ⚠️ ainda usa mockData hardcoded, não busca dos stores reais (pendência conhecida)
       Empresas.tsx, Invoices.tsx, Empenhos.tsx, Obras.tsx  — páginas principais
       Organizacoes.tsx   — lista tenants (PLATFORM_ADMIN); botão "Nova Organização" só aparece para esse role
-      Aprovacoes.tsx     — lista usuários pendentes (approved: false) reais via API; botões aprovar/recusar
-                           ainda são só efeito visual local (sem endpoint de aprovação no backend)
+      Approval/          — página Aprovações: lista usuários pendentes (approved: false) via API, com
+                           nome da organização (tenant) e e-mail de cada um. Botões aprovar/recusar chamam
+                           a API de verdade (`PUT /user/:id/approve`, `DELETE /user/:id/disapprove`), não
+                           são mais só efeito visual local. `ApprovalTable.tsx`/`ApprovalRow.tsx` seguem o
+                           mesmo padrão de tabela real (`<td>` por coluna) de `EmpenhoTable`/`InvoiceTable`
+                           — não usar mais o truque antigo de `<td colSpan>` + CSS grid interno pra simular
+                           colunas, foi abandonado por destoar visualmente do resto do app. Organização é
+                           renderizada como badge neutro (`bg-surface-muted`, `border-border`), no mesmo
+                           estilo do badge de Status do `InvoiceTable` mas sem cor semântica.
       Medicoes.tsx       — stub vazio, sem funcionalidade
       auth/              — SignIn.tsx, SignUp.tsx, PendingApproval.tsx
       Company/           — componentes da página Empresas (SEM index.ts/barrel)
@@ -132,8 +143,8 @@ Todos seguem o mesmo formato: `create<T>((set) => ({ ...estado, ...métodos asyn
 | `empenhos.ts` | `data: ListEmpenhos \| null` | `GET /empenho/list`, `DELETE /empenho/delete/:id`, `PUT /empenho/update-status/:id` |
 | `invoices.ts` | campos de `InvoiceDashboard` espalhados no store | `GET /invoices/list`, `POST /invoices/create`, `DELETE /invoices/delete/:id`, `PUT /invoices/update/:id` — **`create`/`delete`/`update` não recalculam os totais do dashboard localmente**, só `list()` traz números atualizados |
 | `obras.ts` | `data: ListObras \| null` | `GET /obra/list`, `POST /obra/create`, `PUT /obra/update/:id`, `PUT /obra/update-status/:id`, `DELETE /obra/delete/:id` |
-| `tenants.ts` | `tenants: Tenant[]` | `GET /tenant/get-all`, `POST /tenant/create` + `findCep` (ViaCEP direto, mesmo padrão de `companies.ts`) — backend agora exige `AuthMiddleware` + role `PLATFORM_ADMIN` nas duas rotas (ver `backend/CLAUDE.md`), então `listTenants` e `createTenant` sempre enviam `credentials: "include"` |
-| `unapprovedUsers.ts` | `users: User[]`, `hasLoaded: boolean` | `GET /list-unapproved-users` — `hasLoaded` existe para a página (`Aprovacoes.tsx`) não refazer o fetch toda vez que remonta (ex.: navegar para outra aba e voltar); só busca de novo se `hasLoaded` ainda for `false` |
+| `tenants.ts` | `tenants: Tenant[]`, `tenantOptions: TenantOption[]` | `GET /tenant/get-all` (`listTenants`), `POST /tenant/create` (`createTenant`) + `findCep` (ViaCEP direto, mesmo padrão de `companies.ts`) — backend exige `AuthMiddleware` + role `PLATFORM_ADMIN` nessas duas, então sempre enviam `credentials: "include"`. `listTenantOptions` chama `GET /tenant/list-public` **sem** `credentials` (rota pública, usada só pelo dropdown do `SignUp`, antes de existir sessão) |
+| `unapprovedUsers.ts` | `users: UnapprovedUser[]`, `hasLoaded: boolean` | `GET /list-unapproved-users` (inclui `tenant.name` de cada usuário), `PUT /user/:id/approve`, `DELETE /user/:id/disapprove` — `hasLoaded` existe para a página (`Approval/page.tsx`) não refazer o fetch toda vez que remonta (ex.: navegar para outra aba e voltar); só busca de novo se `hasLoaded` ainda for `false` |
 
 `services/api.ts` (`defaultFetch`) fixa `Content-Type: application/json`; **`credentials: "include"` não tem default**, precisa ser passado em cada chamada que exige sessão — checar isso ao adicionar uma chamada nova (é a causa mais comum de "por que minha rota autenticada retorna 401").
 
@@ -162,6 +173,7 @@ Só uma: `VITE_HOST` (ex.: `http://localhost:4000/api`), lida em `services/api.t
 - Qualquer alteração visual de peso (paleta, tipografia, densidade de espaçamento) deve ser proposta e confirmada antes de implementar — ver seção Paleta acima.
 - Navegação interna sempre com `Link` (ou `useNavigate`) de `react-router` — nunca tag `<a href>` crua. Projeto usa React Router v7, não Next.js (não existe `next/link` aqui); `<a>` força reload de página inteira e perde o estado do SPA.
 - Não existe mais componente de breadcrumb — foi removido (`components/Breadcrumb.tsx` deletado, uso retirado de todas as páginas) por ocupar espaço vertical sem agregar navegação real além do que a sidebar já oferece. Não reintroduzir sem alinhar antes.
-- Todo elemento clicável (`<button>`, etc.) deve ter a classe `cursor-pointer` — não é automático no Tailwind v4 (Preflight não força `cursor: pointer` em botões, diferente do comportamento nativo esperado). Os botões de fechar (`X`) e "Cancelar" de vários modais (`RegisterOrEditCompany`, `ObraModal`, `DeleteObraModal`, `DeleteCompany`, `DeleteEmpenhoModal`, `EmpenhoModal`, `ModalEmpenho`) estavam sem essa classe — corrigido. Ao criar um modal novo (como `RegisterTenant.tsx`), conferir que **todo** botão (não só o de submit) tem `cursor-pointer`.
+- **Todo `<button>` (e qualquer elemento clicável) deve ter a classe `cursor-pointer` do Tailwind.** Não é automático no Tailwind v4 (Preflight não força `cursor: pointer` em botões, diferente do comportamento nativo esperado do HTML). Os botões de fechar (`X`) e "Cancelar" de vários modais (`RegisterOrEditCompany`, `ObraModal`, `DeleteObraModal`, `DeleteCompany`, `DeleteEmpenhoModal`, `EmpenhoModal`, `ModalEmpenho`) estavam sem essa classe — corrigido. Ao criar um componente novo com botão (modal, linha de tabela, paginação), conferir que **todo** botão (não só o de submit/ação principal) tem `cursor-pointer`.
+  - Os botões de paginação (seta anterior/próxima, ícones `ChevronLeft`/`ChevronRight`) em `TableCompanies.tsx`, `InvoiceTable.tsx`, `ObraTable.tsx`, `TenantTable.tsx`, `EmpenhoPagination.tsx` e `ApprovalTable.tsx` tinham esse mesmo gap (só `disabled:cursor-not-allowed`, sem `cursor-pointer` pro estado habilitado) — encontrado e corrigido nesta sessão nos 6 arquivos (12 botões). Se copiar esse bloco de paginação como modelo pra uma tabela nova, já sai com `cursor-pointer`.
 - Tabelas de listagem (`TableCompanies`, `InvoiceTable`, `EmpenhoTable`, etc.) devem sempre renderizar `<table>`/`<thead>` mesmo com lista vazia — o estado vazio é um bloco condicional **depois** de `</table>` (checando o array já paginado), nunca um `return` antecipado que substitui a tabela inteira. `EmpenhoTable.tsx` tinha esse desvio (cabeçalho sumia junto com o corpo quando vazio) e foi corrigido para bater com o padrão das outras tabelas.
 - Componentes de filtro/busca (`EmpenhoFilters`, `FilterCompany`, etc.) devem usar as mesmas classes do input: ícone `size={16}`, `pl-9 pr-3 py-2`, `rounded-lg`, `text-sm`, `focus:border-primary-300 transition-all`. `EmpenhoFilters.tsx` divergia (ícone `18px`, `pl-10 pr-4`, `rounded-md`, sem `text-sm`) e foi corrigido para bater com `FilterCompany.tsx`.

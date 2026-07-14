@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { defaultFetch } from "../services/api";
-import type { Tenant } from "../../types/tenant";
+import type { Tenant, TenantOption } from "../../types/tenant";
 import type { CreateTenantType } from "../../types/create-tenant";
 
 type findCepType = {
@@ -21,13 +21,16 @@ type findCepType = {
 
 type TenantsStore = {
   tenants: Tenant[];
+  tenantOptions: TenantOption[];
   listTenants: () => Promise<void>;
+  listTenantOptions: () => Promise<void>;
   createTenant: (tenant: CreateTenantType) => Promise<Tenant>;
   findCep: (cep: string) => Promise<findCepType>;
 };
 
 export const useTenants = create<TenantsStore>((set) => ({
   tenants: [],
+  tenantOptions: [],
 
   listTenants: async () => {
     const response = await defaultFetch("/tenant/get-all", {
@@ -41,6 +44,18 @@ export const useTenants = create<TenantsStore>((set) => ({
 
     const data = (await response.json()) as Tenant[];
     set({ tenants: data });
+  },
+
+  listTenantOptions: async () => {
+    const response = await defaultFetch("/tenant/list-public");
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || "Failed to fetch tenants");
+    }
+
+    const data = (await response.json()) as TenantOption[];
+    set({ tenantOptions: data });
   },
 
   createTenant: async (tenant: CreateTenantType) => {

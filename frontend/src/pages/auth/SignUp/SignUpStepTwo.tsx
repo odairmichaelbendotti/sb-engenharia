@@ -1,9 +1,9 @@
 import { ArrowLeft, Loader, ShieldCheck } from "lucide-react";
 import TenantSelect from "../TenantSelect";
-import type { Tenant } from "../../../../types/tenant";
+import type { TenantOption } from "../../../../types/tenant";
 
 type SignUpStepTwoProps = {
-  tenants: Tenant[];
+  tenants: TenantOption[];
   tenantId: string;
   setTenantId: (value: string) => void;
   isLoading: boolean;

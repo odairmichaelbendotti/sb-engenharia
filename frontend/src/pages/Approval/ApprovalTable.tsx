@@ -1,13 +1,13 @@
 import { ChevronLeft, ChevronRight, UserCheck } from "lucide-react";
-import type { User } from "../../../types/user";
+import type { UnapprovedUser } from "../../../types/user";
 import { ApprovalRow, type RowStatus } from "./ApprovalRow";
 
 type ApprovalTableProps = {
-  paginatedPending: User[];
+  paginatedPending: UnapprovedUser[];
   hasPending: boolean;
   rowStatus: Record<string, RowStatus>;
-  onRequestApprove: (user: User) => void;
-  onRequestReject: (user: User) => void;
+  onRequestApprove: (user: UnapprovedUser) => void;
+  onRequestReject: (user: UnapprovedUser) => void;
   currentPage: number;
   totalPages: number;
   startIndex: number;
@@ -38,17 +38,22 @@ export default function ApprovalTable({
               <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Usuário
               </th>
+              <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+                E-mail
+              </th>
+              <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+                Organização
+              </th>
               <th className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Ações
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {paginatedPending.map((user, index) => (
+            {paginatedPending.map((user) => (
               <ApprovalRow
                 key={user.id}
                 user={user}
-                index={index}
                 status={rowStatus[user.id]}
                 onRequestApprove={onRequestApprove}
                 onRequestReject={onRequestReject}
@@ -85,7 +90,7 @@ export default function ApprovalTable({
             <button
               onClick={() => onPageChange((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-2 hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
+              className="p-2 hover:bg-surface cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
             >
               <ChevronLeft size={18} />
             </button>
@@ -95,7 +100,7 @@ export default function ApprovalTable({
             <button
               onClick={() => onPageChange((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-2 hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
+              className="p-2 hover:bg-surface cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
             >
               <ChevronRight size={18} />
             </button>

@@ -78,6 +78,7 @@ export class PrismaUserRepository implements IUserRepository {
       where: {
         approved: false,
       },
+      include: { tenant: { select: { name: true } } },
     });
   }
   async approve(userId: string): Promise<User> {

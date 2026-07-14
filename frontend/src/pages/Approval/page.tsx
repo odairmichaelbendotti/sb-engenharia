@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useUnapprovedUsers } from "../../store/unapprovedUsers";
-import type { User } from "../../../types/user";
+import type { UnapprovedUser } from "../../../types/user";
 import type { RowStatus } from "./ApprovalRow";
 import { ConfirmModal } from "../../components/ConfirmModal";
 import ApprovalHeader from "./ApprovalHeader";
@@ -13,12 +13,12 @@ const ITEMS_PER_PAGE = 10;
 const RESOLVE_FLASH_MS = 500;
 const COLLAPSE_MS = 250;
 
-type PendingConfirmation = { type: "approve" | "reject"; user: User };
+type PendingConfirmation = { type: "approve" | "reject"; user: UnapprovedUser };
 
 const Aprovacoes = () => {
   const { users, hasLoaded, listUnapprovedUsers, approveUser, disapproveUser } =
     useUnapprovedUsers();
-  const [pending, setPending] = useState<User[]>([]);
+  const [pending, setPending] = useState<UnapprovedUser[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(!hasLoaded);
