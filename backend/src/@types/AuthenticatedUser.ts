@@ -4,4 +4,5 @@ export interface AuthenticatedUser {
   email: string;
   role: "PLATFORM_ADMIN" | "MASTER" | "EDITOR" | "USER";
   approved: boolean;
+  tenant_id: string;
 }

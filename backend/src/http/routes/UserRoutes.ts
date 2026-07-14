@@ -10,6 +10,8 @@ import { PrismaTenantRepository } from "../../infrastructure/database/prisma/Pri
 import { ListUnapprovedUsersUseCase } from "../../application/usecases/user/ListUnapprovedUsersUseCase.js";
 import { ApproveUserUseCase } from "../../application/usecases/user/ApproveUserUseCase.js";
 import { DisapproveUserUseCase } from "../../application/usecases/user/DisapproveUserUseCase.js";
+import { ListUsersUseCase } from "../../application/usecases/user/ListUsersUseCase.js";
+import { UpdateUserRoleUseCase } from "../../application/usecases/user/UpdateUserRoleUseCase.js";
 
 export const UserRoutes = Router();
 
@@ -20,6 +22,8 @@ const tenantRepository = new PrismaTenantRepository();
 const unapprovedUsers = new ListUnapprovedUsersUseCase(repository);
 const approveUser = new ApproveUserUseCase(repository);
 const disaproveUser = new DisapproveUserUseCase(repository);
+const listUsers = new ListUsersUseCase(repository);
+const updateUserRole = new UpdateUserRoleUseCase(repository);
 
 const signUp = new SignUpUseCase(repository, hash, token, tenantRepository);
 const signIn = new SignInUseCase(repository, hash, token);
@@ -29,6 +33,8 @@ const userController = new UserController(
   unapprovedUsers,
   approveUser,
   disaproveUser,
+  listUsers,
+  updateUserRole,
 );
 const middleware = new AuthMiddleware(token, repository);
 
@@ -69,5 +75,21 @@ UserRoutes.delete(
   middleware.handle,
   (req: Request, res: Response) => {
     userController.disapprove(req, res);
+  },
+);
+
+UserRoutes.get(
+  "/list/users",
+  middleware.handle,
+  (req: Request, res: Response) => {
+    userController.list(req, res);
+  },
+);
+
+UserRoutes.put(
+  "/user/:id/role",
+  middleware.handle,
+  (req: Request, res: Response) => {
+    userController.updateRole(req, res);
   },
 );

@@ -1,6 +1,10 @@
 import { User } from "../../../domain/entities/User.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
-import type { IUserRepository } from "../../../domain/repositories/IUserRepository.js";
+import type {
+  IUserRepository,
+  ListUserType,
+} from "../../../domain/repositories/IUserRepository.js";
+import type { UserRole } from "../../../generated/prisma/enums.js";
 import { prisma } from "../../prisma/prisma.js";
 
 export class PrismaUserRepository implements IUserRepository {
@@ -92,6 +96,24 @@ export class PrismaUserRepository implements IUserRepository {
   async disapprove(userId: string): Promise<void> {
     await prisma.user.delete({
       where: { id: userId },
+    });
+  }
+  async list({ tenant_id, page }: ListUserType): Promise<User[]> {
+    const pageSize = 10;
+    const skip = (page - 1) * pageSize;
+
+    if (tenant_id)
+      return await prisma.user.findMany({
+        where: { tenant_id },
+        skip,
+        take: pageSize,
+      });
+    return await prisma.user.findMany({ skip, take: pageSize });
+  }
+  async updateRole(userId: string, role: UserRole): Promise<User> {
+    return await prisma.user.update({
+      where: { id: userId },
+      data: { role },
     });
   }
 }

@@ -8,6 +8,7 @@ import Empenhos from "./pages/Empenho/page";
 import Medicoes from "./pages/Medicoes/page";
 import Obras from "./pages/Obra/page";
 import Aprovacoes from "./pages/Approval/page";
+import Usuarios from "./pages/Users/page";
 import Organizacoes from "./pages/Tenant/page";
 import SignIn from "./pages/auth/SignIn/page";
 import SignUp from "./pages/auth/SignUp/page";
@@ -47,6 +48,10 @@ export const router = createBrowserRouter([
       {
         path: "/aprovacoes",
         element: <Aprovacoes />,
+      },
+      {
+        path: "/usuarios",
+        element: <Usuarios />,
       },
       {
         path: "/organizacoes",

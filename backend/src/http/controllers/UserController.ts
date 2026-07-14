@@ -5,6 +5,11 @@ import type { SignInUseCase } from "../../application/usecases/user/SignInUseCas
 import { SignUpUseCase } from "../../application/usecases/user/SignUpUseCase.js";
 import { DomainError } from "../../domain/errors/DomainError.js";
 import { type Request, type Response } from "express";
+import type { User } from "../../generated/prisma/client.js";
+import type { ListUsersUseCase } from "../../application/usecases/user/ListUsersUseCase.js";
+import type { UpdateUserRoleUseCase } from "../../application/usecases/user/UpdateUserRoleUseCase.js";
+
+const VALID_ROLES = ["USER", "EDITOR", "MASTER", "PLATFORM_ADMIN"];
 
 export class UserController {
   constructor(
@@ -13,6 +18,8 @@ export class UserController {
     private listUnapproved: ListUnapprovedUsersUseCase,
     private approveUser: ApproveUserUseCase,
     private disaproveUser: DisapproveUserUseCase,
+    private listUserUseCase: ListUsersUseCase,
+    private updateUserRole: UpdateUserRoleUseCase,
   ) {}
 
   async signup(req: Request, res: Response) {
@@ -124,6 +131,59 @@ export class UserController {
         return res.status(500).json({ message: err.message });
       }
       return res.status(500).json({ message: "Internal error" });
+    }
+  }
+  async list(req: Request, res: Response) {
+    const { page } = req.query;
+    const { user } = req;
+
+    if (!page) {
+      return res.status(403).json({ message: "parameter not found" });
+    }
+
+    if (user.role === "MASTER") {
+      const users = await this.listUserUseCase.execute({
+        tenant_id: user.tenant_id,
+        page: Number(page),
+      });
+      return res.status(200).json(users);
+    }
+
+    if (user.role === "PLATFORM_ADMIN") {
+      const users = await this.listUserUseCase.execute({
+        tenant_id: undefined,
+        page: Number(page),
+      });
+      return res.status(200).json(users);
+    }
+
+    return res.status(403).json({ message: "Unauthorized" });
+  }
+  async updateRole(req: Request, res: Response) {
+    const { user } = req;
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!id || Array.isArray(id)) {
+      return res.status(400).json({ message: "Invalid user" });
+    }
+
+    if (!role || !VALID_ROLES.includes(role)) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+
+    try {
+      const updatedUser = await this.updateUserRole.execute({
+        userId: id,
+        role,
+        user,
+      });
+      return res.status(200).json(updatedUser);
+    } catch (err) {
+      if (err instanceof DomainError) {
+        return res.status(403).json({ message: err.message });
+      }
+      return res.status(500).json({ message: "Internal server error" });
     }
   }
 }
