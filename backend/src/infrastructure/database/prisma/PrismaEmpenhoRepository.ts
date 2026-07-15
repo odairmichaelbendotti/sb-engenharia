@@ -41,8 +41,10 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
       throw new DomainError("Error finding empenho");
     }
   }
-  async list(): Promise<empenhosDTO> {
+  async list(tenant_id?: string): Promise<empenhosDTO> {
     try {
+      const tenantFilter = tenant_id ? { tenant_id } : {};
+
       const [
         empenhos,
         totalEmpenhos,
@@ -53,6 +55,7 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
         completedEmpenhosAmount,
       ] = await Promise.all([
         prisma.empenho.findMany({
+          where: tenantFilter,
           include: {
             company: {
               select: {
@@ -63,16 +66,21 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
             },
           },
         }),
-        prisma.empenho.count(),
-        prisma.empenho.aggregate({ _sum: { value: true } }),
-        prisma.empenho.count({ where: { status: "ATIVO" } }),
+        prisma.empenho.count({ where: tenantFilter }),
         prisma.empenho.aggregate({
-          where: { status: "ATIVO" },
+          where: tenantFilter,
           _sum: { value: true },
         }),
-        prisma.empenho.count({ where: { status: "FINALIZADO" } }),
+        prisma.empenho.count({ where: { ...tenantFilter, status: "ATIVO" } }),
         prisma.empenho.aggregate({
-          where: { status: "FINALIZADO" },
+          where: { ...tenantFilter, status: "ATIVO" },
+          _sum: { value: true },
+        }),
+        prisma.empenho.count({
+          where: { ...tenantFilter, status: "FINALIZADO" },
+        }),
+        prisma.empenho.aggregate({
+          where: { ...tenantFilter, status: "FINALIZADO" },
           _sum: { value: true },
         }),
       ]);

@@ -3,6 +3,7 @@ import { DomainError } from "../../../domain/errors/DomainError.js";
 import type {
   IUserRepository,
   ListUserType,
+  UnapprovedUserDTO,
 } from "../../../domain/repositories/IUserRepository.js";
 import type { UserRole } from "../../../generated/prisma/enums.js";
 import { prisma } from "../../prisma/prisma.js";
@@ -77,12 +78,21 @@ export class PrismaUserRepository implements IUserRepository {
       throw new DomainError("Server error");
     }
   }
-  async findUnapproved(): Promise<User[]> {
+  async findUnapproved(): Promise<UnapprovedUserDTO[]> {
     return await prisma.user.findMany({
       where: {
         approved: false,
       },
-      include: { tenant: { select: { name: true } } },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        approved: true,
+        tenant_id: true,
+        createdAt: true,
+        tenant: { select: { name: true } },
+      },
     });
   }
   async approve(userId: string): Promise<User> {

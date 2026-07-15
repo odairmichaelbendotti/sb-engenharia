@@ -36,7 +36,13 @@ export class InvoiceController {
   }
   async list(req: Request, res: Response) {
     try {
-      const data = await this.listInvoices.execute();
+      const { user } = req;
+
+      if (!user) {
+        throw new DomainError("User not found");
+      }
+
+      const data = await this.listInvoices.execute(user);
       res.status(200).json(data);
     } catch (error) {
       if (error instanceof DomainError) {

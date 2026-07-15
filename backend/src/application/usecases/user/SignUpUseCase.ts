@@ -18,13 +18,11 @@ export class SignUpUseCase {
     tenant_id,
     email,
     password,
-    approved,
   }: {
     name: string;
     tenant_id: string;
     email: string;
     password: string;
-    approved: boolean;
   }) {
     const userExists = await this.repository.findByEmail(email);
 
@@ -43,7 +41,7 @@ export class SignUpUseCase {
       name,
       tenant_id,
       email,
-      approved,
+      approved: false,
       password: hashedPassword,
     });
 

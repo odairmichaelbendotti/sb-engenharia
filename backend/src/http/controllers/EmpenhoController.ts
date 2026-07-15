@@ -45,7 +45,13 @@ export class EmpenhoController {
   }
   async list(req: Request, res: Response) {
     try {
-      const empenhos = await this.listEmpenhos.execute();
+      const { user } = req;
+
+      if (!user) {
+        throw new DomainError("User not found");
+      }
+
+      const empenhos = await this.listEmpenhos.execute(user);
       res.status(200).json(empenhos);
     } catch (error) {
       if (error instanceof DomainError) {

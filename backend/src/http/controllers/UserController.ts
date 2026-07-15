@@ -24,14 +24,13 @@ export class UserController {
 
   async signup(req: Request, res: Response) {
     try {
-      const { name, email, approved, password, tenant_id } = req.body;
+      const { name, email, password, tenant_id } = req.body;
 
       const { token, createdUser: user } = await this.signUpUseCase.execute({
         name,
         tenant_id,
         email,
         password,
-        approved,
       });
 
       const userResponse = {

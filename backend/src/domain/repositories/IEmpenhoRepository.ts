@@ -21,7 +21,7 @@ export type empenhosDTO = {
 export interface IEmpenhoRepository {
   create(empenho: EmpenhoType): Promise<PersistedEmpenho>;
   findByEmpenhoId(empenhoId: string): Promise<PersistedEmpenho | null>;
-  list(): Promise<empenhosDTO>;
+  list(tenant_id?: string): Promise<empenhosDTO>;
   delete(id: string): Promise<void>;
   update(empenhoId: string, empenho: EmpenhoType): Promise<PersistedEmpenho>;
   updateStatus(

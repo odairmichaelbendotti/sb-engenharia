@@ -37,8 +37,10 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
     });
     return invoice;
   }
-  async list(): Promise<listInvoices> {
+  async list(tenant_id?: string): Promise<listInvoices> {
     try {
+      const tenantFilter = tenant_id ? { empenho: { tenant_id } } : {};
+
       const [
         totalCount,
         totalValue,
@@ -50,24 +52,32 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
         pendingValue,
         allInvoices,
       ] = await Promise.all([
-        prisma.invoice.count(),
-        prisma.invoice.aggregate({ _sum: { value: true } }),
-        prisma.invoice.count({ where: { status: "PAGO" } }),
+        prisma.invoice.count({ where: tenantFilter }),
         prisma.invoice.aggregate({
+          where: tenantFilter,
           _sum: { value: true },
-          where: { status: "PAGO" },
         }),
-        prisma.invoice.count({ where: { status: "VENCIDO" } }),
+        prisma.invoice.count({ where: { ...tenantFilter, status: "PAGO" } }),
         prisma.invoice.aggregate({
           _sum: { value: true },
-          where: { status: "VENCIDO" },
+          where: { ...tenantFilter, status: "PAGO" },
         }),
-        prisma.invoice.count({ where: { status: "PENDENTE" } }),
+        prisma.invoice.count({
+          where: { ...tenantFilter, status: "VENCIDO" },
+        }),
         prisma.invoice.aggregate({
           _sum: { value: true },
-          where: { status: "PENDENTE" },
+          where: { ...tenantFilter, status: "VENCIDO" },
+        }),
+        prisma.invoice.count({
+          where: { ...tenantFilter, status: "PENDENTE" },
+        }),
+        prisma.invoice.aggregate({
+          _sum: { value: true },
+          where: { ...tenantFilter, status: "PENDENTE" },
         }),
         prisma.invoice.findMany({
+          where: tenantFilter,
           include: { company: true },
         }),
       ]);

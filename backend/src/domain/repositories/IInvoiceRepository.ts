@@ -18,7 +18,7 @@ export type listInvoices = {
 export interface IInvoiceRepository {
   create(invoice: InvoiceType): Promise<PersistedInvoice>;
   findByNumber(number: string): Promise<PersistedInvoice | null>;
-  list(): Promise<listInvoices>;
+  list(tenant_id?: string): Promise<listInvoices>;
   delete(id: string): Promise<void>;
   update(invoice: InvoiceType, id: string): Promise<InvoiceType>;
 }
