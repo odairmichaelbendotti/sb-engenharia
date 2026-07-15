@@ -8,7 +8,7 @@ type HeaderProps = {
 };
 
 const Header = ({ totalValue, setIsOpen }: HeaderProps) => {
-  const { canCreateAndEditContent } = usePermission();
+  const { canEditAdministrativo } = usePermission();
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
       <div>
@@ -31,7 +31,7 @@ const Header = ({ totalValue, setIsOpen }: HeaderProps) => {
         </div>
       </div>
 
-      {canCreateAndEditContent && (
+      {canEditAdministrativo && (
         <button
           onClick={() => setIsOpen(true)}
           className="flex items-center justify-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium shrink-0"

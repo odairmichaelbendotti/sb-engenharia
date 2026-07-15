@@ -61,15 +61,22 @@ frontend/
                                   adm-items.ts + eng-items.ts (itens de menu)
 
     hooks/
-      usePermission.ts        — deriva flags de UI a partir de `user.role`: `canCreateAndEditContent`
-                                 (EDITOR/MASTER/PLATFORM_ADMIN), `canManageOrganization` (PLATFORM_ADMIN),
-                                 `canApproveUsers` (MASTER/PLATFORM_ADMIN). Usado em `Sidebar.tsx` e nos
-                                 headers de página (`Company/`, `Empenho/`, `Invoice/`, `Obra/`, `Tenant/`)
-                                 para esconder ações de criar/editar/aprovar. **Checagem só de UI** — o
-                                 backend tem que aplicar a mesma regra via `RequiredRoles` (ver
-                                 `backend/CLAUDE.md`); não confiar só nesse hook para segurança real. Ao
-                                 checar role em um componente novo, usar este hook em vez de comparar
-                                 `user?.role === "X"` inline.
+      usePermission.ts        — deriva flags de UI a partir de `user.role`, com base numa matriz de acesso
+                                 por **domínio de negócio** (`engenharia` vs `administrativo`, mesma matriz
+                                 do backend, ver `backend/CLAUDE.md`): `canViewAdministrativo`/
+                                 `canEditAdministrativo`, `canViewEngenharia`/`canEditEngenharia`,
+                                 `canManageOrganization` (só `PLATFORM_ADMIN`), `canApproveUsers` (`MASTER`/
+                                 `PLATFORM_ADMIN`). `canCreateAndEditContent` também existe, mas é **alias
+                                 legado só para `Obra`/`Medições`** (mesmo valor de `canEditEngenharia`) —
+                                 esse domínio ficou fora da mudança de RBAC de 2026-07-15 por decisão
+                                 explícita do usuário (ver "RBAC por domínio" abaixo); não usar esse alias
+                                 em código novo, usar `canEditEngenharia` diretamente. Usado em `Sidebar.tsx`/
+                                 `MobileSidebar.tsx` e nos headers/tabelas de página (`Company/`, `Empenho/`,
+                                 `Invoice/`, `Obra/`, `Tenant/`) para esconder ações de criar/editar/aprovar
+                                 e grupos inteiros de menu. **Checagem só de UI** — o backend aplica a mesma
+                                 matriz via `RequireDomainAccess` (ver `backend/CLAUDE.md`); não confiar só
+                                 nesse hook para segurança real. Ao checar role em um componente novo, usar
+                                 este hook em vez de comparar `user?.role === "X"` inline.
 
     pages/
       Dashboard.tsx      — ⚠️ ainda usa mockData hardcoded, não busca dos stores reais (pendência conhecida)
@@ -108,18 +115,18 @@ Cada página principal (Empresas/Empenhos/Invoices/Obras) tem uma pasta companio
 <RequireAuth>
   <AppLayout />           {/* Sidebar/MobileSidebar + <Outlet/> */}
 </RequireAuth>
-  ├─ / → Dashboard
-  ├─ /empresas → Empresas
-  ├─ /notasfiscais → Invoices   {/* rota NÃO foi renomeada junto com o componente */}
-  ├─ /empenhos → Empenhos
-  ├─ /medicoes → Medicoes
-  └─ /obras → Obras
+  ├─ / → Dashboard                                              {/* sem guard de role, de propósito */}
+  ├─ /empresas → RequireRole(canViewAdministrativo) → Empresas
+  ├─ /notasfiscais → RequireRole(canViewAdministrativo) → Invoices   {/* rota NÃO foi renomeada junto com o componente */}
+  ├─ /empenhos → RequireRole(canViewAdministrativo) → Empenhos
+  ├─ /medicoes → Medicoes                                        {/* sem guard — ver "RBAC por domínio" abaixo */}
+  └─ /obras → Obras                                              {/* sem guard — ver "RBAC por domínio" abaixo */}
 
 /signin → SignIn      (fora do RequireAuth)
 /signup → SignUp      (fora do RequireAuth)
 ```
 
-Sem rota 404/catch-all. `RequireAuth` é elemento pai único de todas as rotas protegidas — monta uma vez por navegação vinda de fora do grupo (ex.: de `/signin` para `/`), não remonta ao navegar entre páginas já dentro do grupo.
+Sem rota 404/catch-all. `RequireAuth` é elemento pai único de todas as rotas protegidas — monta uma vez por navegação vinda de fora do grupo (ex.: de `/signin` para `/`), não remonta ao navegar entre páginas já dentro do grupo. `RequireRole` (`components/Auth/RequireRole.tsx`) é o guard genérico por permissão, aninhado dentro de `RequireAuth` — recebe um predicado `allow={(p) => ...}` sobre o retorno de `usePermission()` e faz `<Navigate to="/" replace />` se falhar.
 
 ## Autenticação e sessão
 
@@ -155,6 +162,31 @@ Padrão de "não refazer fetch ao remontar": como as páginas (`useState` local)
 Só uma: `VITE_HOST` (ex.: `http://localhost:4000/api`), lida em `services/api.ts`. Ver `.env.example`.
 
 **`frontend/.env` estava versionado no git até esta sessão** — foi removido do tracking (`git rm --cached`) e adicionado ao `.gitignore`; o arquivo continua no disco para uso local. Não versionar `.env` de novo, mesmo que o valor pareça inofensivo.
+
+## RBAC por domínio (implementado em 2026-07-15)
+
+`UserRole` tem 6 valores agora (`PLATFORM_ADMIN`, `MASTER`, `COORDENACAO`, `ENGENHARIA`, `ADMINISTRATIVO`, `USER` — `EDITOR` foi removido), espelhando o backend (ver seção equivalente em `backend/CLAUDE.md`). Matriz de acesso por domínio de negócio, em `hooks/usePermission.ts`:
+
+| Role | Engenharia | Administrativo |
+|---|---|---|
+| USER | view | view |
+| ENGENHARIA | edit | nenhum |
+| ADMINISTRATIVO | nenhum | edit |
+| COORDENACAO | edit | edit |
+| MASTER | edit | edit |
+| PLATFORM_ADMIN | edit | edit |
+
+O que mudou de fato:
+- `types/user.ts` — união de `role` atualizada para os 6 valores novos.
+- `hooks/usePermission.ts` — reescrito, expõe `canViewAdministrativo`/`canEditAdministrativo`/`canViewEngenharia`/`canEditEngenharia` além de `canManageOrganization`/`canApproveUsers` (sem mudança). `canCreateAndEditContent` continua existindo só como alias de `canEditEngenharia`, usado exclusivamente por `Obra/`/`Medicoes` (ver "Escopo desta mudança" abaixo).
+- `src/routes.tsx` — `/empresas`, `/notasfiscais`, `/empenhos` agora usam `RequireRole allow={(p) => p.canViewAdministrativo}`.
+- `Sidebar.tsx`/`MobileSidebar.tsx` — o grupo "Administrativo" só aparece se `canViewAdministrativo`. `MobileSidebar.tsx` passou a importar `usePermission()` só para essa checagem (as de "Plataforma"/"Gestão" continuam inline, não foram tocadas).
+- `role-labels.ts`, `Users/page.tsx` (`assignableRoles`) — atualizados para os 6 valores; `MASTER` continua sem poder conceder `PLATFORM_ADMIN` (regra do backend, inalterada).
+- `Company/page.tsx`, `Empenho/page.tsx`, `Invoice/Header.tsx`, `TableCompanies.tsx`, `EmpenhoTable.tsx` — todo uso de `canCreateAndEditContent`/checagem inline de role nesses arquivos (domínio Administrativo) foi trocado por `canEditAdministrativo`. `EmpenhoTable.tsx` não recebe mais `user` como prop — usa `usePermission()` internamente, igual `TableCompanies.tsx`.
+
+### Escopo desta mudança: Obra/Medições e Dashboard ficaram de fora
+
+Por decisão explícita do usuário, `Obra`/`Medicoes` **não** ganharam guard de rota nem gate de sidebar, e o `Dashboard` (`/`) continua sem checagem de role — nenhum desses três teve comportamento novo. Único motivo pelo qual `Obra/page.tsx`/`ObraHeader.tsx`/`ObraTable.tsx` foram tocados: o literal `"EDITOR"` (removido do tipo `role`) quebrava a compilação em `ObraTable.tsx` — foi trocado pelo sucessor natural `"ENGENHARIA"` (troca mínima de token, sem mudar a lógica de quem vê o quê). Se um dia esse domínio ganhar backend de verdade (ver pendência conhecida em `backend/CLAUDE.md`), replicar aqui o mesmo padrão já aplicado em Company/Empenho/Invoice (`RequireRole` na rota, gate no grupo "Engenharia" da sidebar, `canEditEngenharia` nos botões).
 
 ## Pendências conhecidas (documentadas, não "corrigir de surpresa")
 

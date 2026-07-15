@@ -2,7 +2,7 @@ interface JwtPayload {
   id: string;
   name: string;
   email: string;
-  role: "MASTER" | "EDITOR" | "USER";
+  role: "PLATFORM_ADMIN" | "MASTER" | "COORDENACAO" | "ENGENHARIA" | "ADMINISTRATIVO" | "USER";
 }
 
 declare namespace Express {

@@ -35,11 +35,12 @@ export default function Empresas() {
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isListLoading, setIsListLoading] = useState(true);
 
   const { companies, listCompanies, stats, deleteCompany } = useCompanies();
 
   useEffect(() => {
-    listCompanies();
+    listCompanies().finally(() => setIsListLoading(false));
   }, [listCompanies]);
 
   useEffect(() => {
@@ -100,7 +101,7 @@ export default function Empresas() {
     setEmpresaSelecionada(null);
   };
 
-  const { canCreateAndEditContent } = usePermission();
+  const { canEditAdministrativo } = usePermission();
 
   const handleDelete = async (id: string) => {
     try {
@@ -119,7 +120,7 @@ export default function Empresas() {
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
       <CompanyHeader
-        canCreateAndEditContent={canCreateAndEditContent}
+        canCreateAndEditContent={canEditAdministrativo}
         onAdd={() => handleOpen()}
       />
 
@@ -135,9 +136,11 @@ export default function Empresas() {
         </div>
         <TableCompanies
           empresas={empresas}
+          isLoading={isListLoading}
           handleOpenEmpenhos={handleOpenEmpenhos}
           handleOpen={handleOpen}
           handleOpenDelete={handleOpenDelete}
+          onAdd={() => handleOpen()}
           searchTerm={searchTerm}
         />
       </div>

@@ -6,21 +6,24 @@ import {
   CheckCircle2,
   CircleDashed,
   Clock,
+  Loader2,
+  Plus,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { EmpenhoList } from "../../../types/empenho";
-import type { User } from "../../../types/user";
 import { formatDate } from "../../utils/format-currency";
+import { usePermission } from "../../hooks/usePermission";
 import { EmpenhoPagination } from "./EmpenhoPagination";
 
 const ITEMS_PER_PAGE = 10;
 
 interface EmpenhoTableProps {
   empenhos: EmpenhoList[];
+  isLoading?: boolean;
   formatCurrency: (value: number) => string;
   onEdit: (empenho: EmpenhoList) => void;
   onDelete: (empenho: EmpenhoList) => void;
-  user: User | null;
+  onAdd?: () => void;
 }
 
 const ProgressBar = ({
@@ -100,11 +103,13 @@ const ProgressBar = ({
 
 export function EmpenhoTable({
   empenhos,
+  isLoading = false,
   formatCurrency,
   onEdit,
   onDelete,
-  user,
+  onAdd,
 }: EmpenhoTableProps) {
+  const { canEditAdministrativo } = usePermission();
   const [page, setPage] = useState(1);
 
   const totalPages = Math.max(1, Math.ceil(empenhos.length / ITEMS_PER_PAGE));
@@ -139,7 +144,7 @@ export function EmpenhoTable({
               <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Progresso
               </th>
-              {(user?.role === "MASTER" || user?.role === "EDITOR") && (
+              {canEditAdministrativo && (
                 <th className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
                   Ações
                 </th>
@@ -212,7 +217,7 @@ export function EmpenhoTable({
                     />
                   </td>
 
-                  {(user?.role === "MASTER" || user?.role === "EDITOR") && (
+                  {canEditAdministrativo && (
                     <td className="py-3 px-4">
                       <div className="flex items-center justify-end gap-1">
                         <button
@@ -240,17 +245,37 @@ export function EmpenhoTable({
       </div>
 
       {/* Empty State */}
-      {paginatedEmpenhos.length === 0 && (
-        <div className="py-12 text-center">
-          <Layers2 size={48} className="mx-auto text-text-muted mb-4" />
-          <p className="text-text-secondary font-medium">
-            Nenhum empenho encontrado
-          </p>
-          <p className="text-text-muted text-sm mt-1">
-            Tente ajustar os filtros ou cadastre um novo empenho
-          </p>
-        </div>
-      )}
+      {paginatedEmpenhos.length === 0 &&
+        (isLoading ? (
+          <div className="py-12 text-center">
+            <Loader2
+              size={32}
+              className="mx-auto text-primary-500 animate-spin mb-3"
+            />
+            <p className="text-text-secondary text-sm">
+              Carregando empenhos...
+            </p>
+          </div>
+        ) : (
+          <div className="py-12 text-center">
+            <Layers2 size={48} className="mx-auto text-text-muted mb-4" />
+            <p className="text-text-secondary font-medium">
+              Nenhum empenho encontrado
+            </p>
+            <p className="text-text-muted text-sm mt-1">
+              Tente ajustar os filtros ou cadastre um novo empenho
+            </p>
+            {onAdd && (
+              <button
+                onClick={onAdd}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-md cursor-pointer transition-colors"
+              >
+                <Plus size={16} />
+                Cadastrar empenho
+              </button>
+            )}
+          </div>
+        ))}
 
       <EmpenhoPagination
         currentPage={currentPage}

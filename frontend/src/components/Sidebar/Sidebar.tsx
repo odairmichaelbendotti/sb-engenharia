@@ -1,10 +1,12 @@
-import { SquareDashedMousePointer, LogOut } from "lucide-react";
+import { useEffect } from "react";
+import { SquareDashedMousePointer, LogOut, Building2 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { adminItems } from "./adm-items";
 import { engItems } from "./eng-items";
 import { gestaoItems } from "./gestao-items";
 import { plataformaItems } from "./plataforma-items";
 import { useUser } from "../../store/user";
+import { useTenants } from "../../store/tenants";
 import { getInitials } from "../../utils/get-initial";
 import SidebarGroup from "./SidebarGroup";
 import { usePermission } from "../../hooks/usePermission";
@@ -12,7 +14,17 @@ import { usePermission } from "../../hooks/usePermission";
 const Sidebar = () => {
   const navigate = useNavigate();
   const { user, logout } = useUser();
-  const { canManageOrganization, canApproveUsers } = usePermission();
+  const { canManageOrganization, canApproveUsers, canViewAdministrativo } =
+    usePermission();
+  const { tenantOptions, listTenantOptions } = useTenants();
+
+  useEffect(() => {
+    if (tenantOptions.length === 0) {
+      listTenantOptions().catch(() => {});
+    }
+  }, [tenantOptions.length, listTenantOptions]);
+
+  const tenantName = tenantOptions.find((t) => t.id === user?.tenant_id)?.name;
 
   const handleLogout = async () => {
     try {
@@ -35,15 +47,24 @@ const Sidebar = () => {
           <p className="font-bold text-text-primary text-lg">SB Engenharia</p>
         </div>
 
+        {tenantName && (
+          <span className="mt-3 self-start inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border bg-surface-muted text-text-secondary border-border whitespace-nowrap">
+            <Building2 size={12} />
+            {tenantName}
+          </span>
+        )}
+
         {/* Content section */}
-        <div className="flex flex-col h-full mt-8 overflow-y-auto">
+        <div className="flex flex-col h-full mt-6 overflow-y-auto">
           {canManageOrganization && (
             <SidebarGroup label="Plataforma" items={plataformaItems} />
           )}
           {canApproveUsers && (
             <SidebarGroup label="Gestão" items={gestaoItems} />
           )}
-          <SidebarGroup label="Administrativo" items={adminItems} />
+          {canViewAdministrativo && (
+            <SidebarGroup label="Administrativo" items={adminItems} />
+          )}
           <SidebarGroup label="Engenharia" items={engItems} />
         </div>
 

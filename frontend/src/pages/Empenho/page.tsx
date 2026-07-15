@@ -9,7 +9,6 @@ import {
   DeleteEmpenhoModal,
 } from "./index";
 import EmpenhoHeader from "./EmpenhoHeader";
-import { useUser } from "../../store/user";
 import { formatCurrency } from "../../utils/format-currency";
 import { usePermission } from "../../hooks/usePermission";
 
@@ -23,9 +22,9 @@ export default function Empenhos() {
     null,
   );
   const [searchTerm, setSearchTerm] = useState("");
+  const [isListLoading, setIsListLoading] = useState(true);
 
   const { fetchListEmpenhos, data } = useEmpenhos();
-  const { user } = useUser();
 
   const empenhos = useMemo(() => data?.empenhos || [], [data]);
 
@@ -41,7 +40,7 @@ export default function Empenhos() {
   }, [empenhos, searchTerm]);
 
   useEffect(() => {
-    fetchListEmpenhos();
+    fetchListEmpenhos().finally(() => setIsListLoading(false));
   }, [fetchListEmpenhos]);
 
   // Métricas
@@ -88,13 +87,13 @@ export default function Empenhos() {
     handleClose();
   };
 
-  const { canCreateAndEditContent } = usePermission();
+  const { canEditAdministrativo } = usePermission();
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
       <EmpenhoHeader
         totalValue={metrics.totalValue}
-        canCreateAndEditContent={canCreateAndEditContent}
+        canCreateAndEditContent={canEditAdministrativo}
         onAdd={() => handleOpen()}
       />
 
@@ -116,10 +115,11 @@ export default function Empenhos() {
         </div>
         <EmpenhoTable
           empenhos={filteredEmpenhos}
+          isLoading={isListLoading}
           formatCurrency={formatCurrency}
           onEdit={handleOpen}
           onDelete={handleOpenDelete}
-          user={user}
+          onAdd={() => handleOpen()}
         />
       </div>
 

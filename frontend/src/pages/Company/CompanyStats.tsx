@@ -45,6 +45,7 @@ export default function CompanyStats({ stats }: CompanyStatsProps) {
         color="bg-accent-100"
         iconRounded="rounded-lg"
         compact
+        emphasize
       />
     </div>
   );

@@ -9,7 +9,14 @@ import type { User } from "../../generated/prisma/client.js";
 import type { ListUsersUseCase } from "../../application/usecases/user/ListUsersUseCase.js";
 import type { UpdateUserRoleUseCase } from "../../application/usecases/user/UpdateUserRoleUseCase.js";
 
-const VALID_ROLES = ["USER", "EDITOR", "MASTER", "PLATFORM_ADMIN"];
+const VALID_ROLES = [
+  "USER",
+  "ENGENHARIA",
+  "ADMINISTRATIVO",
+  "COORDENACAO",
+  "MASTER",
+  "PLATFORM_ADMIN",
+];
 
 export class UserController {
   constructor(

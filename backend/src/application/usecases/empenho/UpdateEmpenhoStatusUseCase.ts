@@ -1,6 +1,6 @@
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
-import { AdminPolicy } from "../../../domain/polices/AdminPolicy.js";
+import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import type {
   IEmpenhoRepository,
   UpdateStatusDTO,
@@ -18,8 +18,12 @@ export class UpdateStatusEmpenhoUseCase {
     status: UpdateStatusDTO;
     user: AuthenticatedUser;
   }) {
-    const isAdmin = new AdminPolicy().isAdmin(user);
-    if (!isAdmin) throw new DomainError("User can't update empenho status");
+    const canEdit = new DomainAccessPolicy().can(
+      user.role,
+      "administrativo",
+      "edit",
+    );
+    if (!canEdit) throw new DomainError("User can't update empenho status");
 
     return this.repository.updateStatus(empenhoId, status);
   }

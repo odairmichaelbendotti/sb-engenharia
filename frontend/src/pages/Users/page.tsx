@@ -40,10 +40,17 @@ const Usuarios = () => {
 
   const assignableRoles = useMemo((): User["role"][] => {
     if (currentUser?.role === "PLATFORM_ADMIN") {
-      return ["USER", "EDITOR", "MASTER", "PLATFORM_ADMIN"];
+      return [
+        "USER",
+        "ENGENHARIA",
+        "ADMINISTRATIVO",
+        "COORDENACAO",
+        "MASTER",
+        "PLATFORM_ADMIN",
+      ];
     }
     if (currentUser?.role === "MASTER") {
-      return ["USER", "EDITOR", "MASTER"];
+      return ["USER", "ENGENHARIA", "ADMINISTRATIVO", "COORDENACAO", "MASTER"];
     }
     return [];
   }, [currentUser?.role]);

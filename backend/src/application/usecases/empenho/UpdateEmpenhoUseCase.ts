@@ -1,7 +1,7 @@
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
 import type { EmpenhoType } from "../../../domain/entities/Empenho.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
-import { AdminPolicy } from "../../../domain/polices/AdminPolicy.js";
+import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import type { ICompanyRepository } from "../../../domain/repositories/ICompanyRepository.js";
 import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository.js";
 
@@ -20,9 +20,13 @@ export class UpdateEmpenhoUseCase {
     data: EmpenhoType;
     user: AuthenticatedUser;
   }) {
-    const admin = new AdminPolicy().isAdmin(user);
+    const canEdit = new DomainAccessPolicy().can(
+      user.role,
+      "administrativo",
+      "edit",
+    );
 
-    if (!admin) {
+    if (!canEdit) {
       throw new DomainError("User is not authorized to perform this action");
     }
 

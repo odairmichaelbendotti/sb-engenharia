@@ -5,31 +5,37 @@ import {
   ChevronRight,
   Edit2,
   Layers2,
+  Loader2,
   Mail,
   MapPin,
   Phone,
+  Plus,
   Trash2,
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
 import type { Empresa } from "../../../types/empresa";
-import { useUser } from "../../store/user";
+import { usePermission } from "../../hooks/usePermission";
 
 const ITEMS_PER_PAGE = 10;
 
 type TableCompaniesProps = {
   empresas: Empresa[];
+  isLoading?: boolean;
   handleOpenEmpenhos: (empresa: Empresa) => void;
   handleOpen: (empresa: Empresa) => void;
   handleOpenDelete: (empresa: Empresa) => void;
+  onAdd?: () => void;
   searchTerm: string;
 };
 
 const TableCompanies = ({
   empresas,
+  isLoading = false,
   handleOpenEmpenhos,
   handleOpen,
   handleOpenDelete,
+  onAdd,
   searchTerm,
 }: TableCompaniesProps) => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -43,7 +49,7 @@ const TableCompanies = ({
     );
   }, [empresas, searchTerm]);
 
-  const { user } = useUser();
+  const { canEditAdministrativo } = usePermission();
 
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const totalPages = Math.ceil(filteredEmpresas.length / ITEMS_PER_PAGE);
@@ -79,7 +85,7 @@ const TableCompanies = ({
                   <ArrowDown size={12} className="text-text-muted" />
                 </div>
               </th>
-              {(user?.role === "EDITOR" || user?.role === "MASTER") && (
+              {canEditAdministrativo && (
                 <th className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
                   Ações
                 </th>
@@ -144,7 +150,7 @@ const TableCompanies = ({
                     {empresa.empenhos.length !== 1 ? "s" : ""}
                   </button>
                 </td>
-                {(user?.role === "EDITOR" || user?.role === "MASTER") && (
+                {canEditAdministrativo && (
                   <td className="py-3 px-4">
                     <div className="flex items-center justify-end gap-1">
                       <button
@@ -171,17 +177,37 @@ const TableCompanies = ({
       </div>
 
       {/* Empty State */}
-      {paginatedEmpresas.length === 0 && (
-        <div className="py-12 text-center">
-          <Building2 size={48} className="mx-auto text-text-muted mb-4" />
-          <p className="text-text-secondary font-medium">
-            Nenhuma empresa encontrada
-          </p>
-          <p className="text-text-muted text-sm mt-1">
-            Tente ajustar os filtros ou cadastre uma nova empresa
-          </p>
-        </div>
-      )}
+      {paginatedEmpresas.length === 0 &&
+        (isLoading ? (
+          <div className="py-12 text-center">
+            <Loader2
+              size={32}
+              className="mx-auto text-primary-500 animate-spin mb-3"
+            />
+            <p className="text-text-secondary text-sm">
+              Carregando empresas...
+            </p>
+          </div>
+        ) : (
+          <div className="py-12 text-center">
+            <Building2 size={48} className="mx-auto text-text-muted mb-4" />
+            <p className="text-text-secondary font-medium">
+              Nenhuma empresa encontrada
+            </p>
+            <p className="text-text-muted text-sm mt-1">
+              Tente ajustar os filtros ou cadastre uma nova empresa
+            </p>
+            {onAdd && (
+              <button
+                onClick={onAdd}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-md cursor-pointer transition-colors"
+              >
+                <Plus size={16} />
+                Cadastrar empresa
+              </button>
+            )}
+          </div>
+        ))}
 
       {/* Pagination */}
       {totalPages > 1 && (

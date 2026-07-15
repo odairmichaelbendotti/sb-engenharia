@@ -81,13 +81,14 @@ Inconsistência conhecida (não é convenção, é ruído): algumas mensagens de
 - **Use cases com 2+ parâmetros recebem um único objeto**, nunca posicionais (isso já causou um bug real de troca de argumentos silenciosa em `SignInUseCase`, corrigido). Use cases com 0-1 parâmetro simples (`delete(id)`) não precisam de objeto.
 - Domain entities validam invariantes básicas no construtor (ex.: `User` valida formato de e-mail, `Empenho`/`Invoice` validam `value > 0`) e lançam `DomainError` se violadas.
 - Toda entidade tem um `XType` (dados de entrada) e, quando necessário para responder à API, um `PersistedX` (dados + `id`/`createdAt`/`updatedAt`).
-- Autorização por role agora é feita em **dois lugares que coexistem, não um substitui o outro**:
-  - **`RequiredRoles` middleware** (`http/middleware/RequiredRoles.ts`), montado igual ao `AuthMiddleware` (instanciado por arquivo de rota, sem container) e encadeado **depois** de `authMiddleware.handle`: `requiredRoles.handle("EDITOR", "MASTER", "PLATFORM_ADMIN")`. É a forma padrão para novas rotas de mutação — usado hoje em create/update/delete de `CompanyRoutes.ts`/`InvoiceRoutes.ts`, create/update/updateStatus/delete de `EmpenhoRoutes.ts`, e create/get-all de `TenantRoutes.ts` (só `"PLATFORM_ADMIN"`). Rotas de listagem (`GET .../list`) continuam só com `AuthMiddleware`, sem restrição de role. **`handle()` precisa terminar com `next()` no branch de sucesso** — sem isso a requisição fica pendurada sem resposta (bug real já corrigido nesta sessão); ao copiar esse middleware como modelo, não esquecer o `next()`.
-  - `AdminPolicy` (`isAdmin(user)` — tudo que não é `"USER"` conta como admin) continua sendo checado **dentro dos use cases** de `empenho/` (`CreateEmpenhoUseCase`, `UpdateEmpenhoUseCase`, `UpdateEmpenhoStatusUseCase`, `DeleteEmpenhoUseCase`) — é uma checagem redundante com o `RequiredRoles` da rota (o use case nunca é chamado por um role fora da lista do middleware), mas não foi removida; não remover sem confirmar, já que é a única barreira dentro do use case caso a rota mude no futuro.
+- Autorização por role é feita em **dois middlewares com propósitos diferentes, não um substitui o outro** (desde a mudança para RBAC por domínio de 2026-07-15, ver seção própria abaixo):
+  - **`RequireDomainAccess` middleware** (`http/middleware/RequireDomainAccess.ts`), montado igual ao `AuthMiddleware` (instanciado por arquivo de rota, sem container) e encadeado **depois** de `authMiddleware.handle`: `requireDomainAccess.handle("administrativo", "edit")` ou `handle("administrativo", "view")`. Delega pra `DomainAccessPolicy` (`domain/polices/DomainAccessPolicy.ts`) a matriz role×domínio×ação. É a forma padrão para rotas de recurso de negócio (Company/Empenho/Invoice hoje, domínio `administrativo`) — usado em **todos** os métodos, inclusive os GETs de listagem (`GET /company/list`, `/empenho/list`, `/invoices/list`), que antes só tinham `AuthMiddleware` sem checagem nenhuma de role.
+  - **`RequiredRoles` middleware** (`http/middleware/RequiredRoles.ts`) continua existindo para checagens que **não são de domínio de negócio** — hoje só `TenantRoutes.ts` (`requiredRoles.handle("PLATFORM_ADMIN")` em `create`/`get-all`). Mesmo padrão de montagem manual do `RequireDomainAccess`. **`handle()` precisa terminar com `next()` no branch de sucesso** — sem isso a requisição fica pendurada sem resposta (bug real já corrigido antes); ao copiar qualquer um dos dois middlewares como modelo, não esquecer o `next()`.
+  - `AdminPolicy` (`isAdmin(user)` — tudo que não é `"USER"` conta como admin) **foi removida** — os use cases de `empenho/` (`CreateEmpenhoUseCase`, `UpdateEmpenhoUseCase`, `UpdateEmpenhoStatusUseCase`, `DeleteEmpenhoUseCase`) agora chamam `new DomainAccessPolicy().can(user.role, "administrativo", "edit")` diretamente, ainda como checagem redundante com o `RequireDomainAccess` da rota (o use case nunca é chamado por um role fora do que o middleware já filtrou), mas mantida como última barreira caso a rota mude no futuro — mesmo racional que já existia com `AdminPolicy`.
 
 ## Schema Prisma (resumo)
 
-Models: `Tenant`, `User`, `Company`, `Empenho`, `Invoice`. Enums: `UserRole` (`PLATFORM_ADMIN`, `MASTER`, `EDITOR`, `USER`), `EmpenhoStatus`, `EmpenhoCategory`, `InvoiceStatus`.
+Models: `Tenant`, `User`, `Company`, `Empenho`, `Invoice`. Enums: `UserRole` (`PLATFORM_ADMIN`, `MASTER`, `COORDENACAO`, `ENGENHARIA`, `ADMINISTRATIVO`, `USER` — ver seção "RBAC por domínio" abaixo), `EmpenhoStatus`, `EmpenhoCategory`, `InvoiceStatus`.
 
 - **Multi-tenant**: `Tenant` é o topo da hierarquia (uma organização/OM). `User.tenant_id` é obrigatório. `Empenho.tenant_id` também é obrigatório no schema — mas ver pendência abaixo, isso ainda não está implementado na camada de aplicação.
 - **`Invoice`** usa `@@map("nota_fiscal")` — preserva o nome físico da tabela no banco após o rename de `NotaFiscal` para `Invoice` no código/model, sem exigir migration de rename.
@@ -129,6 +130,49 @@ JWT em cookie httpOnly (`req.cookies.auth`). **`AuthMiddleware` não confia no p
 
 Depois de `TenantRoutes.ts` passar a exigir `AuthMiddleware` + `PLATFORM_ADMIN` em `GET /tenant/get-all` (ver pendência #5 abaixo), o formulário de cadastro (`SignUp.tsx`, sem usuário autenticado ainda) ficou sem como listar as organizações pro dropdown. Solução: nova rota **pública** `GET /tenant/list-public` (sem `AuthMiddleware`), montada em `TenantRoutes.ts` via `ListTenantOptionsUseCase` → `ITenantRepository.getPublicOptions()` → `prisma.tenant.findMany({ select: { id: true, name: true } })`. Só expõe `id`/`name` — nunca os campos sensíveis do `Tenant` (`cnpj`, `cep`, `address`, `phone`, `email`), que só saem pela rota protegida `GET /tenant/get-all`. Se precisar de mais campos públicos no dropdown de signup no futuro, expandir o `select` do `getPublicOptions`, não trocar `list-public` para reusar `getAll`.
 
+## RBAC por domínio (implementado em 2026-07-15)
+
+`UserRole` tem 6 valores, substituindo `EDITOR` por três roles que expressam acesso por **domínio de negócio** em vez de "pode editar tudo":
+
+```prisma
+enum UserRole {
+  PLATFORM_ADMIN
+  MASTER
+  COORDENACAO     // vê e edita Engenharia + Administrativo
+  ENGENHARIA      // vê e edita só Engenharia (Obra, Medição)
+  ADMINISTRATIVO  // vê e edita só Administrativo (Company, Empenho, Invoice)
+  USER            // vê os dois domínios, edita nenhum
+}
+```
+
+Domínios e recursos:
+- **Engenharia**: `Obra` (ainda sem backend — só o frontend/`obras.ts` chama rotas `/obra/*` que não existem no servidor), futura `Medicao`. Fora do escopo desta mudança por decisão do usuário — ver "O que ficou de fora" abaixo.
+- **Administrativo**: `Company`, `Empenho`, `Invoice`.
+
+Matriz de acesso (`view` = listar/ler; `edit` = criar/editar/excluir, implica `view`), em `DomainAccessPolicy` (`domain/polices/DomainAccessPolicy.ts`):
+
+| Role | Engenharia | Administrativo |
+|---|---|---|
+| USER | view | view |
+| ENGENHARIA | edit | nenhum |
+| ADMINISTRATIVO | nenhum | edit |
+| COORDENACAO | edit | edit |
+| MASTER | edit | edit |
+| PLATFORM_ADMIN | edit | edit |
+
+`PLATFORM_ADMIN` e `MASTER` não mudaram de comportamento fora da matriz acima — `PLATFORM_ADMIN` continua o único role com `canManageOrganization` (único que vê/gerencia `Tenant`) e `MASTER` continua o que aprova/reprova cadastro de usuário (`canApproveUsers`), nenhum dos dois foi tocado por esta mudança.
+
+O que foi implementado:
+- `CompanyRoutes.ts`/`EmpenhoRoutes.ts`/`InvoiceRoutes.ts` — todos os métodos (inclusive os GETs de listagem, que antes não tinham nenhuma checagem de role) passaram a usar `RequireDomainAccess.handle("administrativo", "view" | "edit")` no lugar de `RequiredRoles.handle("EDITOR", "MASTER", "PLATFORM_ADMIN")`.
+- `CreateEmpenhoUseCase`/`UpdateEmpenhoUseCase`/`UpdateEmpenhoStatusUseCase`/`DeleteEmpenhoUseCase` — trocaram `AdminPolicy.isAdmin()` por `DomainAccessPolicy.can(user.role, "administrativo", "edit")`. `AdminPolicy` foi removida (não tinha mais nenhum uso).
+- `UpdateUserRoleUseCase` — sem mudança de lógica, só passou a aceitar os 3 valores novos de role (tipo vem do enum gerado do Prisma). `MASTER` continua sem poder conceder `PLATFORM_ADMIN`.
+- `UserController.ts` (`VALID_ROLES`), `AuthenticatedUser.ts`, `domain/entities/User.ts`, `@types/express/index.d.ts` — união de `role` atualizada nos 6 valores novos.
+- **Migração de dados**: usuários hoje com role `EDITOR` viram `ADMINISTRATIVO` (preserva exatamente o que já podiam editar). Escrita em `backend/prisma/manual-migrations/2026-07-15-role-domains.sql` — recria o tipo `UserRole` no Postgres (não dá pra usar `ALTER TYPE ... DROP VALUE`), com `UPDATE` de EDITOR→ADMINISTRATIVO embutido antes da troca de tipo. **Ainda não foi rodada contra o Supabase remoto** — falta confirmação explícita do usuário antes de aplicar (ver "Coisas para NUNCA fazer sem perguntar antes"). Até isso rodar, o banco real ainda tem o enum antigo (`EDITOR` em vez dos 3 novos valores) e o app vai quebrar contra produção — `npx prisma generate` já foi rodado localmente (só lê `schema.prisma`, não toca no banco), então o client TS já reflete o schema novo.
+
+### O que ficou de fora (decisão explícita do usuário, 2026-07-15)
+
+`Obra`/`Medicao` continuam sem model/rotas no backend — não fazem parte desta mudança. Consequência prática: o RBAC de domínio `administrativo` já vale de verdade (protege Company/Empenho/Invoice no servidor); o de `engenharia` só existe na matriz/policy, mas não protege nada ainda porque não há rota nenhuma de Obra no backend para aplicar `RequireDomainAccess("engenharia", ...)`. Se esse domínio ganhar backend no futuro, replicar exatamente o padrão já usado em `CompanyRoutes.ts`/`EmpenhoRoutes.ts`/`InvoiceRoutes.ts`.
+
 ## Pendências conhecidas (não "corrigir sozinho" sem alinhar escopo — já causou retrabalho)
 
 1. **`Empenho` não tem `category`/`tenant_id` na camada de aplicação**, embora o schema Prisma já exija os dois campos. Isso quebra `npm run build` hoje com:
@@ -146,7 +190,7 @@ Depois de `TenantRoutes.ts` passar a exigir `AuthMiddleware` + `PLATFORM_ADMIN` 
 
 ## Coisas para NUNCA fazer sem perguntar antes
 
-- Rodar `prisma db push` ou `prisma migrate` contra `DATABASE_URL` — é um banco Supabase remoto real, não local.
+- Rodar `prisma db push`, `prisma migrate` ou qualquer SQL manual (inclusive `backend/prisma/manual-migrations/2026-07-15-role-domains.sql`, ainda pendente de aplicar) contra `DATABASE_URL` — é um banco Supabase remoto real, não local.
 - Reintroduzir parâmetros posicionais em use cases com 2+ argumentos.
 - Lançar `Error` genérico ou `InfrastructureError` em repository — sempre `DomainError`.
 - Assumir que campos de `AuthenticatedUser` podem vir só do JWT sem consultar o banco.

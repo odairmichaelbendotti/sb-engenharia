@@ -1,18 +1,30 @@
-import { useState } from "react";
-import { Menu, X, LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Menu, X, LogOut, Building2 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { adminItems } from "./adm-items";
 import { engItems } from "./eng-items";
 import { gestaoItems } from "./gestao-items";
 import { plataformaItems } from "./plataforma-items";
 import { useUser } from "../../store/user";
+import { useTenants } from "../../store/tenants";
 import { getInitials } from "../../utils/get-initial";
 import SidebarGroup from "./SidebarGroup";
+import { usePermission } from "../../hooks/usePermission";
 
 const MobileSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const { user, logout } = useUser();
+  const { canViewAdministrativo } = usePermission();
+  const { tenantOptions, listTenantOptions } = useTenants();
+
+  useEffect(() => {
+    if (tenantOptions.length === 0) {
+      listTenantOptions().catch(() => {});
+    }
+  }, [tenantOptions.length, listTenantOptions]);
+
+  const tenantName = tenantOptions.find((t) => t.id === user?.tenant_id)?.name;
 
   function handleLinkClick() {
     setIsOpen(false);
@@ -73,6 +85,13 @@ const MobileSidebar = () => {
             </button>
           </div>
 
+          {tenantName && (
+            <span className="mb-4 self-start inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border bg-surface-muted text-text-secondary border-border whitespace-nowrap">
+              <Building2 size={12} />
+              {tenantName}
+            </span>
+          )}
+
           {/* Navigation */}
           <div className="flex-1 overflow-y-auto">
             {user?.role === "PLATFORM_ADMIN" && (
@@ -89,11 +108,13 @@ const MobileSidebar = () => {
                 onNavigate={handleLinkClick}
               />
             )}
-            <SidebarGroup
-              label="Administrativo"
-              items={adminItems}
-              onNavigate={handleLinkClick}
-            />
+            {canViewAdministrativo && (
+              <SidebarGroup
+                label="Administrativo"
+                items={adminItems}
+                onNavigate={handleLinkClick}
+              />
+            )}
             <SidebarGroup
               label="Engenharia"
               items={engItems}

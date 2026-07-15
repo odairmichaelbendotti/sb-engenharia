@@ -26,6 +26,7 @@ export function EmpenhoStats({ metrics, formatCurrency }: EmpenhoStatsProps) {
         color="bg-primary-100"
         iconRounded="rounded-lg"
         compact
+        emphasize
       />
       <StatCard
         title="Ativos"

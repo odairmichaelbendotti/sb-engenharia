@@ -10,8 +10,10 @@ datasource db {
 enum UserRole {
   PLATFORM_ADMIN // Estado maior
   MASTER // Comandantes da OM
-  EDITOR
-  USER
+  COORDENACAO // vê e edita Engenharia + Administrativo
+  ENGENHARIA // vê e edita só Engenharia (Obra, Medição)
+  ADMINISTRATIVO // vê e edita só Administrativo (Company, Empenho, Invoice)
+  USER // vê os dois domínios, edita nenhum
 }
 
 model Tenant {

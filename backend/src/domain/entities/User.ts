@@ -7,7 +7,7 @@ type UserProps = {
   email: string;
   password: string;
   approved: boolean;
-  role: "PLATFORM_ADMIN" | "MASTER" | "USER" | "EDITOR";
+  role: "PLATFORM_ADMIN" | "MASTER" | "COORDENACAO" | "ENGENHARIA" | "ADMINISTRATIVO" | "USER";
 };
 
 export class User {
@@ -16,7 +16,7 @@ export class User {
   public name: string;
   public readonly email: string;
   public readonly password: string;
-  public role: "PLATFORM_ADMIN" | "MASTER" | "USER" | "EDITOR";
+  public role: "PLATFORM_ADMIN" | "MASTER" | "COORDENACAO" | "ENGENHARIA" | "ADMINISTRATIVO" | "USER";
   public approved: boolean;
 
   constructor(props: UserProps) {

@@ -1,7 +1,7 @@
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
 import { EmpenhoEntity, type EmpenhoType } from "../../../domain/entities/Empenho.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
-import { AdminPolicy } from "../../../domain/polices/AdminPolicy.js";
+import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository.js";
 
 export class CreateEmpenhoUseCase {
@@ -27,9 +27,13 @@ export class CreateEmpenhoUseCase {
       throw new DomainError("All fields are required");
     }
 
-    const isAdmin = new AdminPolicy().isAdmin(user);
+    const canEdit = new DomainAccessPolicy().can(
+      user.role,
+      "administrativo",
+      "edit",
+    );
 
-    if (!isAdmin) {
+    if (!canEdit) {
       throw new DomainError("You are not authorized to create an empenho");
     }
 

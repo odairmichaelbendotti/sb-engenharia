@@ -24,7 +24,7 @@ type findCepType = {
 type CompaniesStore = {
   companies: Empresa[];
   stats: StatsCompany | null;
-  listCompanies: () => void;
+  listCompanies: () => Promise<void>;
   createCompany: (empresa: CreateCompanyType) => Promise<Empresa>;
   deleteCompany: (id: string) => Promise<void>;
   updateCompany: (id: string, empresa: CreateCompanyType) => Promise<void>;

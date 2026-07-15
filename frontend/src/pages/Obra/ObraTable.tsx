@@ -284,7 +284,7 @@ export function ObraTable({
               <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
                 Execução
               </th>
-              {(user?.role === "MASTER" || user?.role === "EDITOR") && (
+              {(user?.role === "MASTER" || user?.role === "ENGENHARIA") && (
                 <th className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
                   Ações
                 </th>
@@ -353,7 +353,7 @@ export function ObraTable({
                     formatCurrency={formatCurrency}
                   />
                 </td>
-                {(user?.role === "MASTER" || user?.role === "EDITOR") && (
+                {(user?.role === "MASTER" || user?.role === "ENGENHARIA") && (
                   <td className="py-3 px-4">
                     <div className="flex items-center justify-end gap-1">
                       <button

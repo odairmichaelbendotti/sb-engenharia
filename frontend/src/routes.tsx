@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router";
 import AppLayout from "./components/Layouts/AppLayout";
 import RequireAuth from "./components/Auth/RequireAuth";
+import RequireRole from "./components/Auth/RequireRole";
 import Dashboard from "./pages/Dashboard/page";
 import Empresas from "./pages/Company/page";
 import Invoices from "./pages/Invoice/page";
@@ -27,15 +28,27 @@ export const router = createBrowserRouter([
       },
       {
         path: "/empresas",
-        element: <Empresas />,
+        element: (
+          <RequireRole allow={(p) => p.canViewAdministrativo}>
+            <Empresas />
+          </RequireRole>
+        ),
       },
       {
         path: "/notasfiscais",
-        element: <Invoices />,
+        element: (
+          <RequireRole allow={(p) => p.canViewAdministrativo}>
+            <Invoices />
+          </RequireRole>
+        ),
       },
       {
         path: "/empenhos",
-        element: <Empenhos />,
+        element: (
+          <RequireRole allow={(p) => p.canViewAdministrativo}>
+            <Empenhos />
+          </RequireRole>
+        ),
       },
       {
         path: "/medicoes",
@@ -47,15 +60,27 @@ export const router = createBrowserRouter([
       },
       {
         path: "/aprovacoes",
-        element: <Aprovacoes />,
+        element: (
+          <RequireRole allow={(p) => p.canApproveUsers}>
+            <Aprovacoes />
+          </RequireRole>
+        ),
       },
       {
         path: "/usuarios",
-        element: <Usuarios />,
+        element: (
+          <RequireRole allow={(p) => p.canApproveUsers}>
+            <Usuarios />
+          </RequireRole>
+        ),
       },
       {
         path: "/organizacoes",
-        element: <Organizacoes />,
+        element: (
+          <RequireRole allow={(p) => p.canManageOrganization}>
+            <Organizacoes />
+          </RequireRole>
+        ),
       },
     ],
   },

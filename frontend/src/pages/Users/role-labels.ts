@@ -3,6 +3,8 @@ import type { User } from "../../../types/user";
 export const ROLE_LABELS: Record<User["role"], string> = {
   PLATFORM_ADMIN: "Admin da Plataforma",
   MASTER: "Master",
-  EDITOR: "Editor",
+  COORDENACAO: "Coordenação",
+  ENGENHARIA: "Engenharia",
+  ADMINISTRATIVO: "Administrativo",
   USER: "Usuário",
 };
