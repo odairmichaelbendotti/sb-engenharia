@@ -38,10 +38,12 @@ export class SignUpUseCase {
 
     const hashedPassword = await this.hashGenerator.generate(password);
     const user = new User({
+      id: "",
       name,
       tenant_id,
       email,
       approved: false,
+      role: "USER",
       password: hashedPassword,
     });
 
