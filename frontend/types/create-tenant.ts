@@ -8,4 +8,6 @@ export interface CreateTenantType {
   address: string;
   phone: string;
   email: string;
+  latitude: string;
+  longitude: string;
 }

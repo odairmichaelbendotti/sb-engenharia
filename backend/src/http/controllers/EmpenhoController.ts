@@ -17,7 +17,7 @@ export class EmpenhoController {
 
   async create(req: Request, res: Response) {
     try {
-      const { numero, description, startAt, endAt, value, company_id } =
+      const { numero, description, category, startAt, endAt, value, contrato_id } =
         req.body;
       const { user } = req;
 
@@ -29,10 +29,11 @@ export class EmpenhoController {
         user,
         numero,
         description,
+        category,
         startAt,
         endAt,
         value,
-        company_id,
+        contrato_id,
       });
 
       res.status(201).json(empenho);
@@ -89,7 +90,7 @@ export class EmpenhoController {
   async update(req: Request, res: Response) {
     try {
       const { empenhoId } = req.params;
-      const { numero, description, startAt, endAt, value, company_id } =
+      const { numero, description, category, startAt, endAt, value, contrato_id } =
         req.body;
       const { user } = req;
 
@@ -104,10 +105,11 @@ export class EmpenhoController {
       if (
         !numero ||
         !description ||
+        !category ||
         !startAt ||
         !endAt ||
         !value ||
-        !company_id
+        !contrato_id
       ) {
         throw new DomainError("All fields are required");
       }

@@ -35,26 +35,26 @@ const DeleteCompany = ({
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl border border-gray-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200 relative">
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-gray-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200 relative">
         {/* Close Button */}
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 p-2 cursor-pointer hover:bg-gray-100 rounded-lg transition-colors z-10"
+          className="absolute top-3 right-3 p-1.5 cursor-pointer hover:bg-gray-100 rounded-lg transition-colors z-10"
         >
-          <X size={20} className="text-gray-400" />
+          <X size={18} className="text-gray-400" />
         </button>
 
         {/* Warning Banner */}
-        <div className="bg-red-50 border-b border-red-100 px-6 py-4">
+        <div className="bg-red-50 border-b border-red-100 px-5 py-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center shrink-0">
-              <AlertTriangle size={22} className="text-red-600" />
+            <div className="w-9 h-9 bg-red-100 rounded-full flex items-center justify-center shrink-0">
+              <AlertTriangle size={19} className="text-red-600" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-red-900">
+              <h2 className="text-base font-semibold text-red-900">
                 Excluir Empresa Permanentemente
               </h2>
-              <p className="text-sm text-red-700">
+              <p className="text-xs text-red-700">
                 Esta ação não poderá ser desfeita
               </p>
             </div>
@@ -62,24 +62,24 @@ const DeleteCompany = ({
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-5">
           {/* Company Info Card */}
-          <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center shrink-0">
-                <Building2 size={24} className="text-primary-600" />
+          <div className="bg-gray-50 rounded-xl p-3.5 mb-4 border border-gray-100">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center shrink-0">
+                <Building2 size={20} className="text-primary-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500 mb-0.5">Razão Social</p>
-                <p className="text-xl font-bold text-gray-900">
+                <p className="text-xs text-gray-500 mb-0.5">Razão Social</p>
+                <p className="text-base font-bold text-gray-900">
                   {empresaParaDeletar.name}
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-200">
               <div className="flex items-center gap-2">
-                <Hash size={16} className="text-gray-400" />
+                <Hash size={14} className="text-gray-400" />
                 <div>
                   <p className="text-xs text-gray-500">CNPJ</p>
                   <p className="text-sm font-medium text-gray-800">
@@ -88,7 +88,7 @@ const DeleteCompany = ({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Layers2 size={16} className="text-gray-400" />
+                <Layers2 size={14} className="text-gray-400" />
                 <div>
                   <p className="text-xs text-gray-500">Empenhos Vinculados</p>
                   <p className="text-sm font-medium text-gray-800">
@@ -101,52 +101,41 @@ const DeleteCompany = ({
           </div>
 
           {/* Warning Box */}
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-amber-800">
-              <span className="font-semibold">Atenção:</span>{" "}
-              {empresaParaDeletar.empenhos.length > 0 ? (
-                <>
-                  Esta empresa possui {empresaParaDeletar.empenhos.length}{" "}
-                  empenho
-                  {empresaParaDeletar.empenhos.length !== 1 ? "s" : ""}{" "}
-                  vinculado
-                  {empresaParaDeletar.empenhos.length !== 1 ? "s" : ""}. Ao
-                  excluir a empresa, todos os empenhos, notas fiscais e
-                  pagamentos associados também serão permanentemente removidos.
-                </>
-              ) : (
-                <>
-                  Ao excluir esta empresa, todos os dados associados serão
-                  permanentemente removidos do sistema. Certifique-se de que não
-                  há pendências.
-                </>
-              )}
+          {empresaParaDeletar.empenhos.length > 0 ? (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3.5 mb-4">
+              <p className="text-xs text-red-800">
+                <span className="font-semibold">Atenção:</span> esta empresa
+                possui {empresaParaDeletar.empenhos.length} empenho
+                {empresaParaDeletar.empenhos.length !== 1 ? "s" : ""} vinculado
+                {empresaParaDeletar.empenhos.length !== 1 ? "s" : ""}. Exclua ou
+                realoque os contratos/empenhos antes de excluir a empresa.
+              </p>
+            </div>
+          ) : (
+            <p className="text-center text-gray-600 text-sm mb-4">
+              Deseja realmente prosseguir com a exclusão?
             </p>
-          </div>
-
-          <p className="text-center text-gray-600 text-sm mb-6">
-            Deseja realmente prosseguir com a exclusão?
-          </p>
+          )}
         </div>
 
         {/* Footer Actions */}
-        <div className="flex gap-3 p-6 pt-0">
+        <div className="flex gap-3 p-5 pt-0">
           <button
             onClick={handleClose}
-            className="flex-1 px-5 py-3 cursor-pointer text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors font-medium"
+            className="flex-1 px-4 py-2.5 cursor-pointer text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors font-medium text-sm"
           >
             Cancelar
           </button>
           <button
             onClick={() => handleDelete(empresaParaDeletar.id)}
-            disabled={isLoading}
-            className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isLoading || empresaParaDeletar.empenhos.length > 0}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-medium text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
-              <Loader className="animate-spin" size={18} />
+              <Loader className="animate-spin" size={16} />
             ) : (
               <>
-                <Trash2 size={18} />
+                <Trash2 size={16} />
                 Sim, Excluir Empresa
               </>
             )}

@@ -1,8 +1,18 @@
-import { Outlet } from "react-router";
+import { Navigate, Outlet, useLocation } from "react-router";
 import Sidebar from "../Sidebar/Sidebar";
 import MobileSidebar from "../Sidebar/MobileSidebar";
+import { useUser } from "../../store/user";
+
+const EMPRESA_HOME = "/mapa-obras";
 
 const AppLayout = () => {
+  const { user } = useUser();
+  const location = useLocation();
+
+  if (user?.role === "EMPRESA" && location.pathname !== EMPRESA_HOME) {
+    return <Navigate to={EMPRESA_HOME} replace />;
+  }
+
   return (
     <main className="flex h-screen overflow-hidden bg-background">
       {/* Desktop Sidebar */}

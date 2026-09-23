@@ -8,9 +8,10 @@ import {
   EmpenhoModal,
   DeleteEmpenhoModal,
 } from "./index";
-import EmpenhoHeader from "./EmpenhoHeader";
 import { formatCurrency } from "../../utils/format-currency";
 import { usePermission } from "../../hooks/usePermission";
+import { PageHeader } from "../../components/PageHeader";
+import { Layers2, DollarSign } from "lucide-react";
 
 export default function Empenhos() {
   const [isOpen, setIsOpen] = useState(false);
@@ -35,7 +36,8 @@ export default function Empenhos() {
       (empenho) =>
         empenho.numero.toLowerCase().includes(s) ||
         empenho.description.toLowerCase().includes(s) ||
-        empenho.company?.name.toLowerCase().includes(s),
+        empenho.contrato?.identificador.toLowerCase().includes(s) ||
+        empenho.contrato?.company.name.toLowerCase().includes(s),
     );
   }, [empenhos, searchTerm]);
 
@@ -91,10 +93,13 @@ export default function Empenhos() {
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
-      <EmpenhoHeader
-        totalValue={metrics.totalValue}
-        canCreateAndEditContent={canEditAdministrativo}
-        onAdd={() => handleOpen()}
+      <PageHeader
+        icon={Layers2}
+        title="Empenhos"
+        stat={{ icon: DollarSign, label: "Valor total empenhado", value: formatCurrency(metrics.totalValue) }}
+        canAct={canEditAdministrativo}
+        actionLabel="Novo Empenho"
+        onAction={() => handleOpen()}
       />
 
       <EmpenhoStats metrics={metrics} formatCurrency={formatCurrency} />

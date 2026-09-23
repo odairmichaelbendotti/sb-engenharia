@@ -12,10 +12,12 @@ import {
 } from "lucide-react";
 import type { InvoiceFormData } from "../../../types/invoice";
 import { useCompanies } from "../../store/companies";
+import { useObras } from "../../store/obras";
 import type { Empenho } from "../../../types/empenho";
 import { toast } from "sonner";
 import { useInvoice } from "../../store/invoices";
 import { EmpenhoDetails } from "./EmpenhoDetails";
+import { maskCurrency, parseCurrencyMask } from "../../utils/masks";
 
 interface AddModalProps {
   isOpen: boolean;
@@ -31,6 +33,7 @@ const initialFormData: CreateInvoiceFormData = {
   value: "",
   empenho_id: "",
   company_id: "",
+  obra_id: "",
 };
 
 export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
@@ -41,9 +44,10 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
 
   const { companies } = useCompanies();
   const { create } = useInvoice();
+  const { obraOptionsForInvoice, fetchObraOptionsForInvoice } = useObras();
 
   function handleChangeCompany(companyId: string) {
-    setFormData((f) => ({ ...f, company_id: companyId, empenho_id: "" }));
+    setFormData((f) => ({ ...f, company_id: companyId, empenho_id: "", obra_id: "" }));
     const company = companies.find((c) => c.id === companyId);
     if (company) {
       setEmpenhosByCompany(company.empenhos);
@@ -55,7 +59,7 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
   function handleChangeEmpenho(
     e: React.ChangeEvent<HTMLSelectElement, HTMLSelectElement>,
   ) {
-    setFormData((f) => ({ ...f, empenho_id: e.target.value }));
+    setFormData((f) => ({ ...f, empenho_id: e.target.value, obra_id: "" }));
 
     const empenho = empenhosByCompany.find(
       (f) => f.id.toString() === e.target.value,
@@ -64,6 +68,7 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
     if (!empenho) return setSelectedEmpenho(null);
 
     setSelectedEmpenho(empenho);
+    fetchObraOptionsForInvoice(e.target.value).catch(() => {});
   }
 
   if (!isOpen) return null;
@@ -76,9 +81,10 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
       numero: formData.numero,
       description: formData.description,
       vencimento: formData.vencimento,
-      value: Number(Number(formData.value).toFixed(2)),
+      value: parseCurrencyMask(formData.value),
       empenho_id: formData.empenho_id,
       company_id: formData.company_id,
+      obra_id: formData.obra_id || undefined,
     };
 
     try {
@@ -171,12 +177,12 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
                     R$
                   </span>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     required
-                    step="0.01"
                     value={formData.value}
                     onChange={(e) =>
-                      setFormData((f) => ({ ...f, value: e.target.value }))
+                      setFormData((f) => ({ ...f, value: maskCurrency(e.target.value) }))
                     }
                     placeholder="0,00"
                     className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
@@ -266,6 +272,28 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
                     </svg>
                   </div>
                 </div>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  Obra (opcional)
+                </label>
+                <select
+                  disabled={!formData.empenho_id}
+                  value={formData.obra_id}
+                  onChange={(e) => setFormData((f) => ({ ...f, obra_id: e.target.value }))}
+                  className={`w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer ${!formData.empenho_id ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  <option value="">
+                    {!formData.empenho_id
+                      ? "Primeiro selecione o empenho"
+                      : "Nenhuma obra específica"}
+                  </option>
+                  {obraOptionsForInvoice.map((obra) => (
+                    <option key={obra.id} value={obra.id}>
+                      {obra.identificacaoPatrimonial} — {obra.nome}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>

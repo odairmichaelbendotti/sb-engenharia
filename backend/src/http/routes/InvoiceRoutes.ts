@@ -6,6 +6,7 @@ import { DeleteInvoiceUseCase } from "../../application/usecases/invoice/DeleteI
 import { CreateInvoiceUseCase } from "../../application/usecases/invoice/CreateInvoiceUseCase.js";
 import { UpdateInvoiceUseCase } from "../../application/usecases/invoice/UpdateInvoiceUseCase.js";
 import { PrismaEmpenhoRepository } from "../../infrastructure/database/prisma/PrismaEmpenhoRepository.js";
+import { PrismaObraRepository } from "../../infrastructure/database/prisma/PrismaObraRepository.js";
 import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
 import { PrismaUserRepository } from "../../infrastructure/database/prisma/PrismaUserRepository.js";
@@ -15,7 +16,8 @@ export const InvoiceRoutes = Router();
 
 const repository = new PrismaInvoiceRepository();
 const empenhoRepository = new PrismaEmpenhoRepository();
-const createInvoice = new CreateInvoiceUseCase(repository, empenhoRepository);
+const obraRepository = new PrismaObraRepository();
+const createInvoice = new CreateInvoiceUseCase(repository, empenhoRepository, obraRepository);
 const listInvoices = new ListInvoicesUseCase(repository);
 const deleteInvoice = new DeleteInvoiceUseCase(repository);
 const updateInvoice = new UpdateInvoiceUseCase(repository);

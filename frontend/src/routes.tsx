@@ -6,11 +6,15 @@ import Dashboard from "./pages/Dashboard/page";
 import Empresas from "./pages/Company/page";
 import Invoices from "./pages/Invoice/page";
 import Empenhos from "./pages/Empenho/page";
+import Contratos from "./pages/Contrato/page";
+import OrdensServico from "./pages/OrdemServico/page";
 import Medicoes from "./pages/Medicoes/page";
 import Obras from "./pages/Obra/page";
+import MapaObras from "./pages/MapaObras/page";
 import Aprovacoes from "./pages/Approval/page";
 import Usuarios from "./pages/Users/page";
 import Organizacoes from "./pages/Tenant/page";
+import TenantSummaryDetail from "./pages/Tenant/TenantSummaryDetail";
 import SignIn from "./pages/auth/SignIn/page";
 import SignUp from "./pages/auth/SignUp/page";
 
@@ -51,12 +55,32 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: "/contratos",
+        element: (
+          <RequireRole allow={(p) => p.canViewAdministrativo}>
+            <Contratos />
+          </RequireRole>
+        ),
+      },
+      {
+        path: "/ordens-servico",
+        element: (
+          <RequireRole allow={(p) => p.canViewAdministrativo}>
+            <OrdensServico />
+          </RequireRole>
+        ),
+      },
+      {
         path: "/medicoes",
         element: <Medicoes />,
       },
       {
         path: "/obras",
         element: <Obras />,
+      },
+      {
+        path: "/mapa-obras",
+        element: <MapaObras />,
       },
       {
         path: "/aprovacoes",
@@ -79,6 +103,14 @@ export const router = createBrowserRouter([
         element: (
           <RequireRole allow={(p) => p.canManageOrganization}>
             <Organizacoes />
+          </RequireRole>
+        ),
+      },
+      {
+        path: "/organizacoes/:tenantId",
+        element: (
+          <RequireRole allow={(p) => p.canManageOrganization}>
+            <TenantSummaryDetail />
           </RequireRole>
         ),
       },

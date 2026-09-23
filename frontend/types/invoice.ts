@@ -11,6 +11,7 @@ export type Invoice = {
   updatedAt: string;
   empenho_id: string;
   company_id: string;
+  obra_id?: string | null;
   company: {
     id: string;
     name: string;
@@ -46,6 +47,7 @@ export type InvoiceFormData = {
   value: string;
   empenho_id: string;
   company_id: string;
+  obra_id: string;
   status: InvoiceStatus;
 };
 
@@ -56,4 +58,5 @@ export type CreateInvoiceProps = {
   value: number;
   empenho_id: string;
   company_id: string;
+  obra_id?: string;
 };

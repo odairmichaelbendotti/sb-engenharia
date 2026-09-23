@@ -1,8 +1,7 @@
 import {
   HardHat,
-  MapPin,
   Trash2,
-  Eye,
+  Edit2,
   CheckCircle2,
   Activity,
   PauseCircle,
@@ -15,8 +14,8 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Obra } from "../../../types/obra";
-import type { User } from "../../../types/user";
 import { formatCurrency } from "../../utils/format-currency";
+import { usePermission } from "../../hooks/usePermission";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -25,7 +24,6 @@ interface ObraTableProps {
   formatCurrency: (v: number) => string;
   onEdit: (obra: Obra) => void;
   onDelete: (obra: Obra) => void;
-  user: User | null;
 }
 
 const STATUS_MAP = {
@@ -65,6 +63,7 @@ const TIPO_MAP: Record<string, string> = {
   AMPLIACAO: "Ampliação",
   PAVIMENTACAO: "Pavimentação",
   SANEAMENTO: "Saneamento",
+  MANUTENCAO_PREDIAL: "Manutenção Predial",
   OUTRO: "Outro",
 };
 
@@ -184,8 +183,8 @@ export function ObraTable({
   obras,
   onEdit,
   onDelete,
-  user,
 }: Omit<ObraTableProps, "formatCurrency">) {
+  const { canEditEngenharia } = usePermission();
   const [sortKey, setSortKey] = useState<SortKey>("dataPrevisaoTermino");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [page, setPage] = useState(1);
@@ -204,7 +203,7 @@ export function ObraTable({
       [...obras].sort((a, b) => {
         let cmp = 0;
         if (sortKey === "nome") cmp = a.nome.localeCompare(b.nome);
-        else if (sortKey === "orcamento") cmp = a.orcamento - b.orcamento;
+        else if (sortKey === "orcamento") cmp = a.ordemServico.valor - b.ordemServico.valor;
         else if (sortKey === "valorExecutado")
           cmp = a.valorExecutado - b.valorExecutado;
         else {
@@ -253,9 +252,6 @@ export function ObraTable({
                   Obra <SortIcon k="nome" sortKey={sortKey} sortDir={sortDir} />
                 </div>
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
-                Local
-              </th>
               <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Status
               </th>
@@ -284,7 +280,7 @@ export function ObraTable({
               <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
                 Execução
               </th>
-              {(user?.role === "MASTER" || user?.role === "ENGENHARIA") && (
+              {canEditEngenharia && (
                 <th className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
                   Ações
                 </th>
@@ -303,25 +299,19 @@ export function ObraTable({
                       <HardHat size={18} className="text-primary-500" />
                     </div>
                     <div className="min-w-0">
-                      <p className="font-semibold text-text-primary text-sm truncate max-w-45">
-                        {obra.nome}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <span className="inline-block px-1.5 py-0.5 rounded bg-primary-100 text-primary-700 text-xs font-semibold shrink-0">
+                          {obra.identificacaoPatrimonial}
+                        </span>
+                        <p className="font-semibold text-text-primary text-sm truncate max-w-32">
+                          {obra.nome}
+                        </p>
+                      </div>
                       <p className="text-xs text-text-muted">
-                        {obra.codigo} · {TIPO_MAP[obra.tipo] ?? obra.tipo}
+                        {TIPO_MAP[obra.tipo] ?? obra.tipo}
                       </p>
                     </div>
                   </div>
-                </td>
-                <td className="py-3 px-4 hidden md:table-cell">
-                  <div className="flex items-center gap-1.5 text-sm text-text-secondary">
-                    <MapPin size={13} className="text-text-muted shrink-0" />
-                    <span className="truncate max-w-35">
-                      {obra.cidade}/{obra.estado}
-                    </span>
-                  </div>
-                  <p className="text-xs text-text-muted truncate max-w-40 mt-0.5">
-                    {obra.logradouro}
-                  </p>
                 </td>
                 <td className="py-3 px-4">
                   <StatusBadge status={obra.status} />
@@ -340,7 +330,7 @@ export function ObraTable({
                 </td>
                 <td className="py-3 px-4 text-right">
                   <p className="font-semibold text-text-primary text-sm">
-                    {formatCurrency(obra.orcamento)}
+                    {formatCurrency(obra.ordemServico.valor)}
                   </p>
                   <p className="text-xs text-text-muted">
                     Resp.: {obra.responsavelTecnico}
@@ -348,12 +338,12 @@ export function ObraTable({
                 </td>
                 <td className="py-3 px-4 hidden md:table-cell">
                   <ProgressCell
-                    orcamento={obra.orcamento}
+                    orcamento={obra.ordemServico.valor}
                     executado={obra.valorExecutado}
                     formatCurrency={formatCurrency}
                   />
                 </td>
-                {(user?.role === "MASTER" || user?.role === "ENGENHARIA") && (
+                {canEditEngenharia && (
                   <td className="py-3 px-4">
                     <div className="flex items-center justify-end gap-1">
                       <button
@@ -361,7 +351,7 @@ export function ObraTable({
                         className="p-2 hover:bg-primary-100 cursor-pointer text-text-secondary hover:text-primary-500 rounded-md transition-colors"
                         title="Gerenciar obra"
                       >
-                        <Eye size={16} />
+                        <Edit2 size={16} />
                       </button>
                       <button
                         onClick={() => onDelete(obra)}

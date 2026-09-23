@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useTenants } from "../../store/tenants";
 import type { CreateTenantType } from "../../../types/create-tenant";
+import { maskCnpj, maskPhone, maskCep, onlyDigits } from "../../utils/masks";
 
 type RegisterTenantProps = {
   isOpen: boolean;
@@ -36,7 +37,7 @@ const RegisterTenant = ({
 
   async function handleFindCep() {
     try {
-      const response = await findCep(formData.cep);
+      const response = await findCep(onlyDigits(formData.cep));
       if (response) {
         setFormData({
           ...formData,
@@ -60,9 +61,16 @@ const RegisterTenant = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const payload: CreateTenantType = {
+      ...formData,
+      cnpj: onlyDigits(formData.cnpj),
+      phone: onlyDigits(formData.phone),
+      cep: onlyDigits(formData.cep),
+    };
+
     try {
       setIsLoading(true);
-      await createTenant(formData);
+      await createTenant(payload);
       toast.success("Organização cadastrada com sucesso");
     } catch (error) {
       console.error(error);
@@ -171,7 +179,7 @@ const RegisterTenant = ({
                     required
                     value={formData.cnpj}
                     onChange={(e) =>
-                      setFormData({ ...formData, cnpj: e.target.value })
+                      setFormData({ ...formData, cnpj: maskCnpj(e.target.value) })
                     }
                     className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
                     placeholder="00.000.000/0000-00"
@@ -213,7 +221,7 @@ const RegisterTenant = ({
                     required
                     value={formData.phone}
                     onChange={(e) =>
-                      setFormData({ ...formData, phone: e.target.value })
+                      setFormData({ ...formData, phone: maskPhone(e.target.value) })
                     }
                     className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
                     placeholder="(00) 00000-0000"
@@ -246,7 +254,7 @@ const RegisterTenant = ({
                     value={formData.cep}
                     onBlur={handleFindCep}
                     onChange={(e) =>
-                      setFormData({ ...formData, cep: e.target.value })
+                      setFormData({ ...formData, cep: maskCep(e.target.value) })
                     }
                     className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
                     placeholder="00000-000"
@@ -330,6 +338,50 @@ const RegisterTenant = ({
                       />
                     </svg>
                   </div>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  Latitude <span className="text-danger-text">*</span>
+                </label>
+                <div className="relative">
+                  <MapPin
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+                  />
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    value={formData.latitude}
+                    onChange={(e) =>
+                      setFormData({ ...formData, latitude: e.target.value })
+                    }
+                    className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
+                    placeholder="-27.6754"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  Longitude <span className="text-danger-text">*</span>
+                </label>
+                <div className="relative">
+                  <MapPin
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+                  />
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    value={formData.longitude}
+                    onChange={(e) =>
+                      setFormData({ ...formData, longitude: e.target.value })
+                    }
+                    className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
+                    placeholder="-48.5663"
+                  />
                 </div>
               </div>
             </div>

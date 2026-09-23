@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import type { Tenant } from "../../../types/tenant";
 import { formatDate } from "../../utils/format-currency";
+import { maskCnpj, maskPhone, onlyDigits } from "../../utils/masks";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -22,11 +23,12 @@ const TenantTable = ({ tenants, searchTerm }: TenantTableProps) => {
 
   const filteredTenants = useMemo(() => {
     const term = searchTerm.toLowerCase();
+    const digits = onlyDigits(searchTerm);
     return tenants.filter(
       (tenant) =>
         tenant.name.toLowerCase().includes(term) ||
         tenant.apelido.toLowerCase().includes(term) ||
-        tenant.cnpj.includes(searchTerm) ||
+        (digits !== "" && tenant.cnpj.includes(digits)) ||
         tenant.city.toLowerCase().includes(term),
     );
   }, [tenants, searchTerm]);
@@ -83,7 +85,7 @@ const TenantTable = ({ tenants, searchTerm }: TenantTableProps) => {
                   </div>
                 </td>
                 <td className="py-3 px-4 text-sm text-text-secondary hidden md:table-cell">
-                  {tenant.cnpj}
+                  {maskCnpj(tenant.cnpj)}
                 </td>
                 <td className="py-3 px-4 hidden lg:table-cell">
                   <div className="flex items-center gap-1 text-sm text-text-secondary">
@@ -97,7 +99,7 @@ const TenantTable = ({ tenants, searchTerm }: TenantTableProps) => {
                   <div className="text-xs text-text-secondary">
                     <p className="flex items-center gap-1">
                       <Phone size={12} />
-                      {tenant.phone}
+                      {maskPhone(tenant.phone)}
                     </p>
                     <p className="flex items-center gap-1 text-xs mt-1">
                       <Mail size={12} />

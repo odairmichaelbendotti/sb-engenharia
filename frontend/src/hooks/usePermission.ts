@@ -11,8 +11,11 @@ const ROLE_DOMAIN_ACCESS: Record<
   ENGENHARIA: { engenharia: "edit", administrativo: "none" },
   ADMINISTRATIVO: { engenharia: "none", administrativo: "edit" },
   COORDENACAO: { engenharia: "edit", administrativo: "edit" },
-  MASTER: { engenharia: "edit", administrativo: "edit" },
-  PLATFORM_ADMIN: { engenharia: "edit", administrativo: "edit" },
+  // MASTER e PLATFORM_ADMIN só visualizam Engenharia (Obra) — edição fica
+  // restrita a ENGENHARIA/COORDENACAO, por decisão explícita do usuário.
+  MASTER: { engenharia: "view", administrativo: "edit" },
+  PLATFORM_ADMIN: { engenharia: "view", administrativo: "edit" },
+  EMPRESA: { engenharia: "view", administrativo: "none" },
 };
 
 export function usePermission() {
@@ -33,5 +36,9 @@ export function usePermission() {
     canCreateAndEditContent: access.engenharia === "edit",
     canManageOrganization: role === "PLATFORM_ADMIN",
     canApproveUsers: role === "MASTER" || role === "PLATFORM_ADMIN",
+    // Login da empresa contratada — só enxerga o Mapa de Obras, filtrado pela
+    // própria empresa. Ver AppLayout.tsx (redireciona qualquer outra rota) e
+    // Sidebar/MobileSidebar (só mostram o item Mapa de Obras).
+    isEmpresaRestricted: role === "EMPRESA",
   };
 }

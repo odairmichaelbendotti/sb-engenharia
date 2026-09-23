@@ -34,6 +34,7 @@ export class AuthMiddleware {
       role: currentUser.role as AuthenticatedUser["role"],
       approved: currentUser.approved,
       tenant_id: currentUser.tenant_id,
+      company_id: currentUser.company_id,
     };
 
     req.user = user;

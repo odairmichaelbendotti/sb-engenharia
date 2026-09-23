@@ -1,73 +1,68 @@
-import { useState, useMemo } from "react";
-import { mockData } from "./mockData";
-import DashboardHeader from "./DashboardHeader";
+import { Link } from "react-router";
+import { LayoutDashboard, Building2, Loader2 } from "lucide-react";
+import { PageHeader } from "../../components/PageHeader";
+import { useDashboardData } from "./useDashboardData";
+import DashboardCascade from "./DashboardCascade";
 import DashboardStats from "./DashboardStats";
-import ActiveEmpenhosTable from "./ActiveEmpenhosTable";
-import RecentInvoicesTable from "./RecentInvoicesTable";
-import RecentActivities from "./RecentActivities";
-import PendingInvoices from "./PendingInvoices";
+import DashboardAttention from "./DashboardAttention";
+import DashboardActivity from "./DashboardActivity";
+import DashboardTenantSummary from "./DashboardTenantSummary";
 
 export default function Dashboard() {
-  const [periodoSelecionado, setPeriodoSelecionado] = useState("mes");
-
-  // Métricas calculadas
-  const metrics = useMemo(() => {
-    const totalEmpresas = mockData.empresas.length;
-    const totalEmpenhos = mockData.empenhos.length + 5; // +5 concluídos/cancelados
-    const totalNF = mockData.notasFiscais.length + 1;
-    const valorEmpenhosAtivos = mockData.empenhos.reduce(
-      (sum, e) => sum + e.valor,
-      0,
-    );
-    const valorTotalEmpenhos = valorEmpenhosAtivos + 120000 + 45000 + 75000; // inclui concluídos
-    const valorNFPago = mockData.notasFiscais
-      .filter((nf) => nf.status === "paid")
-      .reduce((sum, nf) => sum + nf.value, 0);
-    const valorNFPendente = mockData.notasFiscais
-      .filter((nf) => nf.status === "pending" || nf.status === "overdue")
-      .reduce((sum, nf) => sum + nf.value, 0);
-
-    return {
-      totalEmpresas,
-      totalEmpenhos,
-      totalNF,
-      valorEmpenhosAtivos,
-      valorTotalEmpenhos,
-      valorNFPago,
-      valorNFPendente,
-      empenhosConcluidos: 2,
-      empenhosCancelados: 1,
-    };
-  }, []);
+  const {
+    isLoading,
+    tenantName,
+    canViewAdministrativo,
+    canViewEngenharia,
+    canManageOrganization,
+    tenantsSummary,
+    cascade,
+    kpis,
+    attention,
+    activity,
+  } = useDashboardData();
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
-      <DashboardHeader
-        periodoSelecionado={periodoSelecionado}
-        onPeriodoChange={setPeriodoSelecionado}
-      />
+      <PageHeader icon={LayoutDashboard} title={tenantName ?? "Dashboard"} />
 
-      <DashboardStats
-        totalEmpresas={metrics.totalEmpresas}
-        totalEmpenhos={metrics.totalEmpenhos}
-        valorEmpenhosAtivos={metrics.valorEmpenhosAtivos}
-        totalNF={metrics.totalNF}
-      />
+      {canManageOrganization && (
+        <Link
+          to="/organizacoes"
+          className="inline-flex items-center gap-1.5 text-sm text-primary-600 hover:underline mb-3"
+        >
+          <Building2 size={14} />
+          Ver organizações
+        </Link>
+      )}
 
-      {/* Grid principal com tabelas */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Coluna principal - 2/3 */}
-        <div className="lg:col-span-2 space-y-6">
-          <ActiveEmpenhosTable empenhos={mockData.empenhos} />
-          <RecentInvoicesTable notasFiscais={mockData.notasFiscais} />
+      {isLoading ? (
+        <div className="bg-surface border border-border rounded-lg p-12 flex flex-col items-center justify-center">
+          <Loader2 size={32} className="text-primary-500 animate-spin mb-3" />
+          <p className="text-text-secondary text-sm">Carregando dashboard...</p>
         </div>
+      ) : (
+        <>
+          {canManageOrganization && <DashboardTenantSummary entries={tenantsSummary} />}
 
-        {/* Coluna lateral - 1/3 */}
-        <div className="space-y-6">
-          <RecentActivities atividades={mockData.atividades} />
-          <PendingInvoices notasFiscais={mockData.notasFiscais} />
-        </div>
-      </div>
+          <DashboardCascade steps={cascade.steps} gaps={cascade.gaps} />
+
+          <DashboardStats
+            canViewAdministrativo={canViewAdministrativo}
+            canViewEngenharia={canViewEngenharia}
+            empresasComContratoAtivo={kpis.empresasComContratoAtivo}
+            notasPendentesVencidas={kpis.notasPendentesVencidas}
+            saldoEmpenhosAtivo={kpis.saldoEmpenhosAtivo}
+            orcamentoObras={kpis.orcamentoObras}
+            valorExecutadoObras={kpis.valorExecutadoObras}
+          />
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <DashboardAttention items={attention} />
+            <DashboardActivity items={activity} />
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Edit2,
+  KeyRound,
   Layers2,
   Loader2,
   Mail,
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 import type { Empresa } from "../../../types/empresa";
 import { usePermission } from "../../hooks/usePermission";
+import { maskCnpj, maskPhone, onlyDigits } from "../../utils/masks";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -25,6 +27,7 @@ type TableCompaniesProps = {
   handleOpenEmpenhos: (empresa: Empresa) => void;
   handleOpen: (empresa: Empresa) => void;
   handleOpenDelete: (empresa: Empresa) => void;
+  handleOpenAccess: (empresa: Empresa) => void;
   onAdd?: () => void;
   searchTerm: string;
 };
@@ -35,16 +38,18 @@ const TableCompanies = ({
   handleOpenEmpenhos,
   handleOpen,
   handleOpenDelete,
+  handleOpenAccess,
   onAdd,
   searchTerm,
 }: TableCompaniesProps) => {
   const [currentPage, setCurrentPage] = useState(1);
 
   const filteredEmpresas = useMemo(() => {
+    const digits = onlyDigits(searchTerm);
     return empresas.filter(
       (empresa) =>
         empresa.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        empresa.cnpj.includes(searchTerm) ||
+        (digits !== "" && empresa.cnpj.includes(digits)) ||
         empresa.city.toLowerCase().includes(searchTerm.toLowerCase()),
     );
   }, [empresas, searchTerm]);
@@ -108,13 +113,13 @@ const TableCompanies = ({
                         {empresa.name}
                       </p>
                       <p className="text-xs text-text-secondary md:hidden">
-                        {empresa.cnpj}
+                        {maskCnpj(empresa.cnpj)}
                       </p>
                     </div>
                   </div>
                 </td>
                 <td className="py-3 px-4 text-sm text-text-secondary hidden md:table-cell">
-                  {empresa.cnpj}
+                  {maskCnpj(empresa.cnpj)}
                 </td>
                 <td className="py-3 px-4 hidden lg:table-cell">
                   <div className="flex items-center gap-1 text-sm text-text-secondary">
@@ -128,7 +133,7 @@ const TableCompanies = ({
                   <div className="text-xs text-text-secondary">
                     <p className="flex items-center gap-1">
                       <Phone size={12} />
-                      {empresa.phone}
+                      {maskPhone(empresa.phone)}
                     </p>
                     <p className="flex items-center gap-1 text-xs mt-1">
                       <Mail size={12} />
@@ -153,6 +158,13 @@ const TableCompanies = ({
                 {canEditAdministrativo && (
                   <td className="py-3 px-4">
                     <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => handleOpenAccess(empresa)}
+                        className="p-2 cursor-pointer hover:bg-secondary-100 text-text-secondary hover:text-secondary-500 rounded-md transition-colors"
+                        title="Criar acesso"
+                      >
+                        <KeyRound size={16} />
+                      </button>
                       <button
                         onClick={() => handleOpen(empresa)}
                         className="p-2 cursor-pointer hover:bg-primary-100 text-text-secondary hover:text-primary-500 rounded-md transition-colors"

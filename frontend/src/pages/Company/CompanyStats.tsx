@@ -18,6 +18,7 @@ export default function CompanyStats({ stats }: CompanyStatsProps) {
         color="bg-primary-100"
         iconRounded="rounded-lg"
         compact
+        emphasize
       />
       <StatCard
         title="Total de Empenhos"
@@ -45,7 +46,6 @@ export default function CompanyStats({ stats }: CompanyStatsProps) {
         color="bg-accent-100"
         iconRounded="rounded-lg"
         compact
-        emphasize
       />
     </div>
   );

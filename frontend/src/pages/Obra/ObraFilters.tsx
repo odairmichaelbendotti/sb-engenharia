@@ -25,6 +25,7 @@ const TIPO_OPTIONS: { value: ObraTipo | ""; label: string }[] = [
   { value: "AMPLIACAO", label: "Ampliação" },
   { value: "PAVIMENTACAO", label: "Pavimentação" },
   { value: "SANEAMENTO", label: "Saneamento" },
+  { value: "MANUTENCAO_PREDIAL", label: "Manutenção Predial" },
   { value: "OUTRO", label: "Outro" },
 ];
 const selectClass =
@@ -51,7 +52,7 @@ export function ObraFilters({
           />
           <input
             type="text"
-            placeholder="Buscar por nome, código ou responsável..."
+            placeholder="Buscar por nome, identificação patrimonial ou responsável..."
             value={filters.search}
             onChange={(e) => onChange({ ...filters, search: e.target.value })}
             className="w-full pl-9 pr-3 py-2 border border-border rounded-lg bg-surface text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"

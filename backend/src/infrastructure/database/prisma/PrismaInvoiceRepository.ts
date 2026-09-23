@@ -5,6 +5,7 @@ import type {
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import type {
   IInvoiceRepository,
+  InvoiceSummaryByTenant,
   listInvoices,
 } from "../../../domain/repositories/IInvoiceRepository.js";
 import { prisma } from "../../prisma/prisma.js";
@@ -20,6 +21,7 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
           value: invoice.value,
           empenho: { connect: { id: invoice.empenho_id } },
           company: { connect: { id: invoice.company_id } },
+          ...(invoice.obra_id ? { obra: { connect: { id: invoice.obra_id } } } : {}),
         },
         include: { company: true },
       });
@@ -101,6 +103,32 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
       throw new DomainError("Erro ao listar notas fiscais");
     }
   }
+  async summaryByTenant(): Promise<InvoiceSummaryByTenant[]> {
+    try {
+      const invoices = await prisma.invoice.findMany({
+        where: { status: { in: ["PENDENTE", "VENCIDO"] } },
+        select: { value: true, empenho: { select: { tenant_id: true } } },
+      });
+
+      const byTenant = new Map<string, InvoiceSummaryByTenant>();
+      for (const inv of invoices) {
+        const tenant_id = inv.empenho.tenant_id;
+        const entry = byTenant.get(tenant_id) ?? {
+          tenant_id,
+          pendentesVencidasCount: 0,
+          pendentesVencidasValor: 0,
+        };
+        entry.pendentesVencidasCount += 1;
+        entry.pendentesVencidasValor += inv.value / 100;
+        byTenant.set(tenant_id, entry);
+      }
+
+      return Array.from(byTenant.values());
+    } catch (error) {
+      throw new DomainError("Erro ao resumir notas fiscais por tenant");
+    }
+  }
+
   async delete(id: string): Promise<void> {
     try {
       await prisma.invoice.delete({
@@ -116,7 +144,8 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
     const parsedInvoice = {
       ...invoice,
       vencimento: new Date(invoice.vencimento),
-      value: invoice.value * 100,
+      value: Math.round(invoice.value * 100),
+      obra_id: invoice.obra_id ?? null,
     };
 
     try {

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import type { Empenho } from "../../../types/empenho";
 import { formatCurrency, formatDate } from "../../utils/format-currency";
+import { parseCurrencyMask } from "../../utils/masks";
 
 interface EmpenhoDetailsProps {
   empenho: Empenho | null;
@@ -19,7 +20,7 @@ export function EmpenhoDetails({ empenho, newValue }: EmpenhoDetailsProps) {
 
   const totalPaid = empenho.totalPaid || 0;
   const totalValue = empenho.value || 0;
-  const newValueNum = Number(newValue) || 0;
+  const newValueNum = parseCurrencyMask(newValue);
   const totalAfterPayment = totalPaid + newValueNum;
   const exceedsLimit = totalAfterPayment > totalValue;
 

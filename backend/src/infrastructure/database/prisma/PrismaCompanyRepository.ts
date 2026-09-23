@@ -57,20 +57,24 @@ export class PrismaCompanyRepository implements ICompanyRepository {
         totalEmpenhosActive,
         totalEmpenhosValue,
       ] = await Promise.all([
-        prisma.company.findMany({ include: { empenhos: true } }),
+        prisma.company.findMany({ include: { contratos: { include: { empenhos: true } } } }),
         prisma.company.count(),
         prisma.empenho.count(),
         prisma.empenho.count({ where: { status: "ATIVO" } }),
         prisma.empenho.aggregate({ _sum: { value: true } }),
       ]);
 
-      // Aqui vou dividir o valor do empenho de cada empresa por 100
+      // Empenho não pertence mais diretamente à Company (agora vive em Contrato) —
+      // achatamos os empenhos de todos os contratos da empresa pra manter a mesma
+      // forma que o frontend de Empresas já espera (company.empenhos).
       const companiesWithDividedValue = companies.map((company) => ({
         ...company,
-        empenhos: company.empenhos.map((empenho) => ({
-          ...empenho,
-          value: empenho.value / 100,
-        })),
+        empenhos: company.contratos.flatMap((contrato) =>
+          contrato.empenhos.map((empenho) => ({
+            ...empenho,
+            value: empenho.value / 100,
+          })),
+        ),
       }));
 
       return {
@@ -89,6 +93,20 @@ export class PrismaCompanyRepository implements ICompanyRepository {
     }
   }
   async delete(id: string): Promise<void> {
+    const contratos = await prisma.contrato.findMany({
+      where: { company_id: id },
+      select: { status: true },
+    });
+
+    if (contratos.length > 0) {
+      const hasActive = contratos.some((contrato) => contrato.status === "ATIVO");
+      throw new DomainError(
+        hasActive
+          ? "Não é possível excluir a empresa: existem contratos ativos vinculados a ela."
+          : "Não é possível excluir a empresa: existem contratos vinculados a ela.",
+      );
+    }
+
     try {
       await prisma.company.delete({
         where: { id },
@@ -96,6 +114,11 @@ export class PrismaCompanyRepository implements ICompanyRepository {
     } catch (error: any) {
       if (error.code === "P2025") {
         throw new DomainError("Company not found");
+      }
+      if (error.code === "P2003") {
+        throw new DomainError(
+          "Não é possível excluir a empresa: existem registros vinculados a ela.",
+        );
       }
       throw new DomainError("Error deleting company: " + error);
     }
@@ -125,7 +148,6 @@ export class PrismaCompanyRepository implements ICompanyRepository {
           name: company.name,
           updatedAt: new Date(),
         },
-        include: { empenhos: true },
       });
     } catch (error) {
       throw new DomainError("Error editing company: " + error);

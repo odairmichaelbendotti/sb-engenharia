@@ -13,7 +13,7 @@ export class InvoiceController {
     private updateInvoice: UpdateInvoiceUseCase,
   ) {}
   async create(req: Request, res: Response) {
-    const { numero, description, vencimento, value, empenho_id, company_id } =
+    const { numero, description, vencimento, value, empenho_id, company_id, obra_id } =
       req.body;
 
     try {
@@ -24,6 +24,7 @@ export class InvoiceController {
         value,
         empenho_id,
         company_id,
+        obra_id: obra_id || undefined,
       });
 
       res.status(201).json(invoice);

@@ -6,11 +6,14 @@ import DeleteCompany from "./DeleteCompany";
 import ModalEmpenho from "./ModalEmpenho";
 import RegisterOrEditCompany from "./RegisterOrEditCompany";
 import TableCompanies from "./TableCompanies";
+import { CreateCompanyAccessModal } from "./CreateCompanyAccessModal";
 import FilterCompany from "./FilterCompany";
-import CompanyHeader from "./CompanyHeader";
 import CompanyStats from "./CompanyStats";
 import { toast } from "sonner";
 import { usePermission } from "../../hooks/usePermission";
+import { maskCnpj, maskPhone, maskCep } from "../../utils/masks";
+import { PageHeader } from "../../components/PageHeader";
+import { Building2 } from "lucide-react";
 
 export default function Empresas() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -33,6 +36,10 @@ export default function Empresas() {
   const [empresaParaDeletar, setEmpresaParaDeletar] = useState<Empresa | null>(
     null,
   );
+  const [isAccessOpen, setIsAccessOpen] = useState(false);
+  const [empresaParaAcesso, setEmpresaParaAcesso] = useState<Empresa | null>(
+    null,
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isListLoading, setIsListLoading] = useState(true);
@@ -52,12 +59,12 @@ export default function Empresas() {
       setEmpresaSelecionada(empresa);
       setFormData({
         name: empresa.name,
-        cnpj: empresa.cnpj,
-        cep: empresa.cep,
+        cnpj: maskCnpj(empresa.cnpj),
+        cep: maskCep(empresa.cep),
         address: empresa.address,
         city: empresa.city,
         state: empresa.state,
-        phone: empresa.phone,
+        phone: maskPhone(empresa.phone),
         email: empresa.email,
       });
     } else {
@@ -101,6 +108,16 @@ export default function Empresas() {
     setEmpresaSelecionada(null);
   };
 
+  const handleOpenAccess = (empresa: Empresa) => {
+    setEmpresaParaAcesso(empresa);
+    setIsAccessOpen(true);
+  };
+
+  const handleCloseAccess = () => {
+    setIsAccessOpen(false);
+    setEmpresaParaAcesso(null);
+  };
+
   const { canEditAdministrativo } = usePermission();
 
   const handleDelete = async (id: string) => {
@@ -109,7 +126,9 @@ export default function Empresas() {
       await deleteCompany(id);
       toast.success("Empresa deletada com sucesso");
     } catch (error) {
-      toast.error("Erro ao deletar empresa");
+      const message =
+        error instanceof Error ? error.message : "Erro ao deletar empresa";
+      toast.error(message);
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -119,9 +138,12 @@ export default function Empresas() {
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
-      <CompanyHeader
-        canCreateAndEditContent={canEditAdministrativo}
-        onAdd={() => handleOpen()}
+      <PageHeader
+        icon={Building2}
+        title="Empresas"
+        canAct={canEditAdministrativo}
+        actionLabel="Nova Empresa"
+        onAction={() => handleOpen()}
       />
 
       <CompanyStats stats={stats} />
@@ -140,6 +162,7 @@ export default function Empresas() {
           handleOpenEmpenhos={handleOpenEmpenhos}
           handleOpen={handleOpen}
           handleOpenDelete={handleOpenDelete}
+          handleOpenAccess={handleOpenAccess}
           onAdd={() => handleOpen()}
           searchTerm={searchTerm}
         />
@@ -173,6 +196,14 @@ export default function Empresas() {
           empresaParaDeletar={empresaParaDeletar}
           handleDelete={handleDelete}
           isLoading={isLoading}
+        />
+      )}
+
+      {/* Modal - Criar Acesso da Empresa */}
+      {isAccessOpen && empresaParaAcesso && (
+        <CreateCompanyAccessModal
+          empresa={empresaParaAcesso}
+          handleClose={handleCloseAccess}
         />
       )}
     </div>

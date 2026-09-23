@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { defaultFetch } from "../services/api";
-import type { Tenant, TenantOption } from "../../types/tenant";
+import type { Tenant, TenantOption, TenantSummaryEntry } from "../../types/tenant";
 import type { CreateTenantType } from "../../types/create-tenant";
 
 type findCepType = {
@@ -19,18 +19,31 @@ type findCepType = {
   unidade: string;
 };
 
+type MyTenant = {
+  id: string;
+  name: string;
+  latitude: number | null;
+  longitude: number | null;
+};
+
 type TenantsStore = {
   tenants: Tenant[];
   tenantOptions: TenantOption[];
+  myTenant: MyTenant | null;
+  tenantsSummary: TenantSummaryEntry[];
   listTenants: () => Promise<void>;
   listTenantOptions: () => Promise<void>;
   createTenant: (tenant: CreateTenantType) => Promise<Tenant>;
   findCep: (cep: string) => Promise<findCepType>;
+  fetchMyTenant: () => Promise<void>;
+  fetchTenantsSummary: () => Promise<void>;
 };
 
 export const useTenants = create<TenantsStore>((set) => ({
   tenants: [],
   tenantOptions: [],
+  myTenant: null,
+  tenantsSummary: [],
 
   listTenants: async () => {
     const response = await defaultFetch("/tenant/get-all", {
@@ -73,6 +86,34 @@ export const useTenants = create<TenantsStore>((set) => ({
     const data = (await response.json()) as Tenant;
     set((state) => ({ tenants: [...state.tenants, data] }));
     return data;
+  },
+
+  fetchMyTenant: async () => {
+    const response = await defaultFetch("/tenant/me", {
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || "Failed to fetch tenant location");
+    }
+
+    const data = (await response.json()) as MyTenant;
+    set({ myTenant: data });
+  },
+
+  fetchTenantsSummary: async () => {
+    const response = await defaultFetch("/tenant/summary", {
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || "Failed to fetch tenants summary");
+    }
+
+    const data = (await response.json()) as TenantSummaryEntry[];
+    set({ tenantsSummary: data });
   },
 
   findCep: async (cep: string): Promise<findCepType> => {

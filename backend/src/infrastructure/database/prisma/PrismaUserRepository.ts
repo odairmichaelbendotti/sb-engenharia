@@ -26,6 +26,7 @@ export class PrismaUserRepository implements IUserRepository {
         email: user.email,
         password: user.password,
         role: user.role,
+        company_id: user.company_id,
       });
     } catch (err) {
       throw new DomainError("Server error");
@@ -48,6 +49,7 @@ export class PrismaUserRepository implements IUserRepository {
         email: user.email,
         password: user.password,
         role: user.role,
+        company_id: user.company_id,
       });
     } catch (err) {
       throw new DomainError("Server error");
@@ -62,6 +64,8 @@ export class PrismaUserRepository implements IUserRepository {
           email: user.email,
           password: user.password,
           approved: user.approved,
+          role: user.role,
+          company_id: user.company_id,
         },
       });
 
@@ -73,6 +77,7 @@ export class PrismaUserRepository implements IUserRepository {
         email: newUser.email,
         password: newUser.password,
         role: newUser.role,
+        company_id: newUser.company_id,
       });
     } catch (err) {
       throw new DomainError("Server error");

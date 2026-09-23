@@ -16,6 +16,7 @@ import {
 import type { Empresa } from "../../../types/empresa";
 import { useCompanies } from "../../store/companies";
 import type { CreateCompanyType } from "../../../types/create-company";
+import { maskCnpj, maskPhone, maskCep, onlyDigits } from "../../utils/masks";
 
 type RegisterOrEditCompanyProps = {
   isOpen: boolean;
@@ -38,7 +39,7 @@ const RegisterOrEditCompany = ({
 
   async function handleFindCep() {
     try {
-      const response = await findCep(formData.cep);
+      const response = await findCep(onlyDigits(formData.cep));
       if (response) {
         setFormData({
           ...formData,
@@ -62,14 +63,21 @@ const RegisterOrEditCompany = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const payload: CreateCompanyType = {
+      ...formData,
+      cnpj: onlyDigits(formData.cnpj),
+      phone: onlyDigits(formData.phone),
+      cep: onlyDigits(formData.cep),
+    };
+
     try {
       setIsLoading(true);
 
       if (empresaSelecionada) {
-        await updateCompany(empresaSelecionada.id, formData);
+        await updateCompany(empresaSelecionada.id, payload);
         toast.success("Empresa editada com sucesso");
       } else {
-        await createCompany(formData);
+        await createCompany(payload);
         toast.success("Empresa cadastrada com sucesso");
       }
     } catch (error) {
@@ -156,7 +164,7 @@ const RegisterOrEditCompany = ({
                     required
                     value={formData.cnpj}
                     onChange={(e) =>
-                      setFormData({ ...formData, cnpj: e.target.value })
+                      setFormData({ ...formData, cnpj: maskCnpj(e.target.value) })
                     }
                     className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
                     placeholder="00.000.000/0000-00"
@@ -196,7 +204,7 @@ const RegisterOrEditCompany = ({
                     type="tel"
                     value={formData.phone}
                     onChange={(e) =>
-                      setFormData({ ...formData, phone: e.target.value })
+                      setFormData({ ...formData, phone: maskPhone(e.target.value) })
                     }
                     className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
                     placeholder="(00) 00000-0000"
@@ -228,7 +236,7 @@ const RegisterOrEditCompany = ({
                     value={formData.cep}
                     onBlur={handleFindCep}
                     onChange={(e) =>
-                      setFormData({ ...formData, cep: e.target.value })
+                      setFormData({ ...formData, cep: maskCep(e.target.value) })
                     }
                     className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
                     placeholder="00000-000"

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import { Loader } from "lucide-react";
 import { useUser } from "../../../store/user";
 import { useTenants } from "../../../store/tenants";
 import { toast } from "sonner";
@@ -14,16 +15,30 @@ export default function SignUp() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [tenantId, setTenantId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
 
-  const { user, signup } = useUser();
+  const { signup, fetchUser } = useUser();
   const { tenantOptions, listTenantOptions } = useTenants();
   const navigate = useNavigate();
 
+  // Se já existe cookie de sessão válido, não faz sentido mostrar o
+  // formulário de cadastro — cai direto no dashboard.
   useEffect(() => {
-    if (user) {
-      navigate("/");
-    }
-  }, [user, navigate]);
+    let cancelled = false;
+
+    fetchUser()
+      .then(() => {
+        if (!cancelled) navigate("/", { replace: true });
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setCheckingSession(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchUser, navigate]);
 
   useEffect(() => {
     listTenantOptions().catch((error) => {
@@ -31,6 +46,14 @@ export default function SignUp() {
       toast.error("Erro ao carregar organizações");
     });
   }, [listTenantOptions]);
+
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader size={32} className="animate-spin text-primary-500" />
+      </div>
+    );
+  }
 
   function handleNextStep(e: React.FormEvent) {
     e.preventDefault();

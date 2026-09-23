@@ -7,4 +7,5 @@ export const ROLE_LABELS: Record<User["role"], string> = {
   ENGENHARIA: "Engenharia",
   ADMINISTRATIVO: "Administrativo",
   USER: "Usuário",
+  EMPRESA: "Empresa",
 };

@@ -14,6 +14,7 @@ enum UserRole {
   ENGENHARIA // vê e edita só Engenharia (Obra, Medição)
   ADMINISTRATIVO // vê e edita só Administrativo (Company, Empenho, Invoice)
   USER // vê os dois domínios, edita nenhum
+  EMPRESA // login da empresa contratada — só vê Mapa de Obras, filtrado pelo próprio company_id
 }
 
 model Tenant {
@@ -27,11 +28,16 @@ model Tenant {
   address   String
   phone     String
   email     String
+  latitude  Float?
+  longitude Float?
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 
-  empenhos Empenho[]
-  users    User[]
+  users         User[]
+  obras         Obra[]
+  contratos     Contrato[]
+  empenhos      Empenho[]
+  ordensServico OrdemServico[]
 }
 
 model User {
@@ -46,6 +52,9 @@ model User {
 
   tenant_id String
   tenant    Tenant @relation(fields: [tenant_id], references: [id])
+
+  company_id String?
+  company    Company? @relation(fields: [company_id], references: [id])
 }
 
 model Company {
@@ -62,7 +71,52 @@ model Company {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @default(now())
 
-  empenhos Empenho[]
+  invoices  Invoice[]
+  contratos Contrato[]
+  users     User[]
+}
+
+enum ObraStatus {
+  EM_ANDAMENTO
+  CONCLUIDA
+  PARALISADA
+  CANCELADA
+}
+
+enum ObraTipo {
+  CONSTRUCAO
+  REFORMA
+  AMPLIACAO
+  PAVIMENTACAO
+  SANEAMENTO
+  MANUTENCAO_PREDIAL
+  OUTRO
+}
+
+model Obra {
+  id                     String     @id @default(uuid())
+  nome                   String
+  identificacaoPatrimonial String   @default("E-00")
+  tipo                   ObraTipo
+  status              ObraStatus @default(EM_ANDAMENTO)
+  descricao           String
+  latitude            Float?
+  longitude           Float?
+  valorExecutado      Int        @default(0)
+  dataInicio          DateTime
+  dataPrevisaoTermino DateTime
+  dataConclusao       DateTime?
+  responsavelTecnico  String
+  anotacoes           String?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @default(now())
+
+  tenant_id String
+  tenant    Tenant @relation(fields: [tenant_id], references: [id])
+
+  ordemServico_id String       @unique
+  ordemServico    OrdemServico @relation(fields: [ordemServico_id], references: [id])
+
   invoices Invoice[]
 }
 
@@ -83,6 +137,35 @@ enum EmpenhoCategory {
   OUTROS
 }
 
+enum ContratoStatus {
+  ATIVO
+  FINALIZADO
+  CANCELADO
+}
+
+model Contrato {
+  id             String         @id @default(uuid())
+  identificador  String
+  descricaoCurta String
+  valor          Int
+  dataInicio     DateTime
+  dataFim        DateTime
+  status         ContratoStatus @default(ATIVO)
+  cor            String         @default("#4478b6")
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @default(now())
+
+  tenant_id String
+  tenant    Tenant @relation(fields: [tenant_id], references: [id])
+
+  company_id String
+  company    Company @relation(fields: [company_id], references: [id])
+
+  empenhos Empenho[]
+
+  @@unique([identificador, tenant_id])
+}
+
 model Empenho {
   id          String        @id @default(uuid())
   numero      String        @unique
@@ -99,9 +182,35 @@ model Empenho {
   tenant_id String
   tenant    Tenant @relation(fields: [tenant_id], references: [id])
 
-  company_id String
-  company    Company   @relation(fields: [company_id], references: [id])
-  invoices   Invoice[]
+  contrato_id String
+  contrato    Contrato  @relation(fields: [contrato_id], references: [id])
+  invoices      Invoice[]
+  ordensServico OrdemServico[]
+}
+
+enum OrdemServicoStatus {
+  ATIVO
+  FINALIZADO
+  CANCELADO
+}
+
+model OrdemServico {
+  id        String             @id @default(uuid())
+  numero    String
+  valor     Int
+  status    OrdemServicoStatus @default(ATIVO)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @default(now())
+
+  tenant_id String
+  tenant    Tenant @relation(fields: [tenant_id], references: [id])
+
+  empenho_id String
+  empenho    Empenho @relation(fields: [empenho_id], references: [id])
+
+  obra Obra?
+
+  @@unique([numero, tenant_id])
 }
 
 enum InvoiceStatus {
@@ -126,6 +235,9 @@ model Invoice {
 
   company_id String
   company    Company @relation(fields: [company_id], references: [id])
+
+  obra_id String?
+  obra    Obra?   @relation(fields: [obra_id], references: [id])
 
   @@map("nota_fiscal")
 }

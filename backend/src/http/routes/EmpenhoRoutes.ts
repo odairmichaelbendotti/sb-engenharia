@@ -8,22 +8,22 @@ import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
 import { PrismaUserRepository } from "../../infrastructure/database/prisma/PrismaUserRepository.js";
 import { UpdateEmpenhoUseCase } from "../../application/usecases/empenho/UpdateEmpenhoUseCase.js";
-import { PrismaCompanyRepository } from "../../infrastructure/database/prisma/PrismaCompanyRepository.js";
+import { PrismaContratoRepository } from "../../infrastructure/database/prisma/PrismaContratoRepository.js";
 import { UpdateStatusEmpenhoUseCase } from "../../application/usecases/empenho/UpdateEmpenhoStatusUseCase.js";
 import { RequireDomainAccess } from "../middleware/RequireDomainAccess.js";
 
 export const EmpenhoRoutes = Router();
 
 const repository = new PrismaEmpenhoRepository();
-const createEmpenhoUseCase = new CreateEmpenhoUseCase(repository);
+const contratoRepository = new PrismaContratoRepository();
+const createEmpenhoUseCase = new CreateEmpenhoUseCase(repository, contratoRepository);
 const listEmpenhosUseCase = new ListEmpenhosUseCase(repository);
 const deleteEmpenhoUseCase = new DeleteEmpenhoUseCase(repository);
-const findCompanyById = new PrismaCompanyRepository();
 const updateEmpenhoUseCase = new UpdateEmpenhoUseCase(
   repository,
-  findCompanyById,
+  contratoRepository,
 );
-const updateStatusEmpenhoUseCase = new UpdateStatusEmpenhoUseCase(repository);
+const updateStatusEmpenhoUseCase = new UpdateStatusEmpenhoUseCase(repository, contratoRepository);
 const empenhoController = new EmpenhoController(
   createEmpenhoUseCase,
   listEmpenhosUseCase,

@@ -1,6 +1,8 @@
-import { CircleDollarSign, Hotel } from "lucide-react";
+import { Hotel, MapPin } from "lucide-react";
 
 export const engItems = [
-  { path: "/medicoes", label: "Medições", icon: CircleDollarSign },
+  // Medições ocultado temporariamente do menu (a pedido do usuário) — página segue existindo, só não é linkada.
+  // { path: "/medicoes", label: "Medições", icon: CircleDollarSign },
   { path: "/obras", label: "Obras", icon: Hotel },
+  { path: "/mapa-obras", label: "Mapa de Obras", icon: MapPin },
 ];

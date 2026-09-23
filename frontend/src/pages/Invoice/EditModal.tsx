@@ -13,9 +13,11 @@ import {
 } from "lucide-react";
 import type { Invoice, InvoiceFormData } from "../../../types/invoice";
 import { useCompanies } from "../../store/companies";
+import { useObras } from "../../store/obras";
 import type { Empenho } from "../../../types/empenho";
 import { toast } from "sonner";
 import { useInvoice } from "../../store/invoices";
+import { maskCurrency, formatValueToCurrencyMask, parseCurrencyMask } from "../../utils/masks";
 
 interface EditModalProps {
   editInvoice: Invoice | null;
@@ -29,6 +31,7 @@ const emptyFormData: InvoiceFormData = {
   value: "",
   empenho_id: "",
   company_id: "",
+  obra_id: "",
   status: "PENDENTE",
 };
 
@@ -42,6 +45,7 @@ export default function EditModal({
 
   const { companies } = useCompanies();
   const { update } = useInvoice();
+  const { obraOptionsForInvoice, fetchObraOptionsForInvoice } = useObras();
 
   // Inicializa formData quando editInvoice muda
   useEffect(() => {
@@ -50,9 +54,10 @@ export default function EditModal({
         numero: editInvoice.numero || "",
         description: editInvoice.description || "",
         vencimento: editInvoice.vencimento || "",
-        value: editInvoice.value?.toString() || "",
+        value: formatValueToCurrencyMask(editInvoice.value || 0),
         empenho_id: editInvoice.empenho_id || "",
         company_id: editInvoice.company_id || "",
+        obra_id: editInvoice.obra_id || "",
         status: (editInvoice.status?.toUpperCase() ||
           "PENDENTE") as InvoiceFormData["status"],
       });
@@ -62,17 +67,26 @@ export default function EditModal({
       if (company) {
         setEmpenhosByCompany(company.empenhos);
       }
+      if (editInvoice.empenho_id) {
+        fetchObraOptionsForInvoice(editInvoice.empenho_id).catch(() => {});
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editInvoice, companies]);
 
   function handleChangeCompany(companyId: string) {
-    setFormData((f) => ({ ...f, company_id: companyId, empenho_id: "" }));
+    setFormData((f) => ({ ...f, company_id: companyId, empenho_id: "", obra_id: "" }));
     const company = companies.find((c) => c.id === companyId);
     if (company) {
       setEmpenhosByCompany(company.empenhos);
     } else {
       setEmpenhosByCompany([]);
     }
+  }
+
+  function handleChangeEmpenho(empenhoId: string) {
+    setFormData((f) => ({ ...f, empenho_id: empenhoId, obra_id: "" }));
+    fetchObraOptionsForInvoice(empenhoId).catch(() => {});
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -89,9 +103,10 @@ export default function EditModal({
       numero: formData.numero,
       description: formData.description,
       vencimento: formData.vencimento,
-      value: Number(formData.value),
+      value: parseCurrencyMask(formData.value),
       empenho_id: formData.empenho_id,
       company_id: formData.company_id,
+      obra_id: formData.obra_id || undefined,
       status: formData.status,
     };
 
@@ -176,12 +191,12 @@ export default function EditModal({
                     R$
                   </span>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     required
-                    step="0.01"
                     value={formData.value}
                     onChange={(e) =>
-                      setFormData((f) => ({ ...f, value: e.target.value }))
+                      setFormData((f) => ({ ...f, value: maskCurrency(e.target.value) }))
                     }
                     placeholder="0,00"
                     className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
@@ -241,9 +256,7 @@ export default function EditModal({
                   <select
                     disabled={!formData.company_id && true}
                     value={formData.empenho_id}
-                    onChange={(e) =>
-                      setFormData((f) => ({ ...f, empenho_id: e.target.value }))
-                    }
+                    onChange={(e) => handleChangeEmpenho(e.target.value)}
                     className={`w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer ${empenhosByCompany.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     <option value="">
@@ -273,6 +286,28 @@ export default function EditModal({
                     </svg>
                   </div>
                 </div>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  Obra (opcional)
+                </label>
+                <select
+                  disabled={!formData.empenho_id}
+                  value={formData.obra_id}
+                  onChange={(e) => setFormData((f) => ({ ...f, obra_id: e.target.value }))}
+                  className={`w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer ${!formData.empenho_id ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  <option value="">
+                    {!formData.empenho_id
+                      ? "Primeiro selecione o empenho"
+                      : "Nenhuma obra específica"}
+                  </option>
+                  {obraOptionsForInvoice.map((obra) => (
+                    <option key={obra.id} value={obra.id}>
+                      {obra.identificacaoPatrimonial} — {obra.nome}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>

@@ -7,7 +7,8 @@ type UserProps = {
   email: string;
   password: string;
   approved: boolean;
-  role: "PLATFORM_ADMIN" | "MASTER" | "COORDENACAO" | "ENGENHARIA" | "ADMINISTRATIVO" | "USER";
+  role: "PLATFORM_ADMIN" | "MASTER" | "COORDENACAO" | "ENGENHARIA" | "ADMINISTRATIVO" | "USER" | "EMPRESA";
+  company_id?: string | null;
 };
 
 export class User {
@@ -16,8 +17,9 @@ export class User {
   public name: string;
   public readonly email: string;
   public readonly password: string;
-  public role: "PLATFORM_ADMIN" | "MASTER" | "COORDENACAO" | "ENGENHARIA" | "ADMINISTRATIVO" | "USER";
+  public role: "PLATFORM_ADMIN" | "MASTER" | "COORDENACAO" | "ENGENHARIA" | "ADMINISTRATIVO" | "USER" | "EMPRESA";
   public approved: boolean;
+  public company_id: string | null;
 
   constructor(props: UserProps) {
     if (!props.email.includes("@")) {
@@ -31,5 +33,6 @@ export class User {
     this.password = props.password;
     this.role = props.role ?? "USER";
     this.approved = props.approved;
+    this.company_id = props.company_id ?? null;
   }
 }

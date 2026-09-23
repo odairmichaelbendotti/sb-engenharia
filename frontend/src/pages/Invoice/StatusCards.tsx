@@ -31,6 +31,7 @@ const StatusCards = ({
         color="bg-primary-100"
         iconRounded="rounded-lg"
         compact
+        emphasize
       />
       <StatCard
         title="Pendentes"

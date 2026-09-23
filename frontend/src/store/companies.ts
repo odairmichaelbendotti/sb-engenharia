@@ -1,6 +1,10 @@
 import { create } from "zustand";
 import { defaultFetch } from "../services/api";
-import type { Empresa } from "../../types/empresa";
+import type {
+  Empresa,
+  CreateCompanyAccessPayload,
+  CreateCompanyAccessResult,
+} from "../../types/empresa";
 import type { CreateCompanyType } from "../../types/create-company";
 import type { ListCompanies } from "../../types/list-companies";
 import type { StatsCompany } from "../../types/list-companies";
@@ -29,6 +33,10 @@ type CompaniesStore = {
   deleteCompany: (id: string) => Promise<void>;
   updateCompany: (id: string, empresa: CreateCompanyType) => Promise<void>;
   findCep: (cep: string) => Promise<findCepType>;
+  createCompanyAccess: (
+    companyId: string,
+    payload: CreateCompanyAccessPayload,
+  ) => Promise<CreateCompanyAccessResult>;
 };
 
 export const useCompanies = create<CompaniesStore>((set) => ({
@@ -92,7 +100,8 @@ export const useCompanies = create<CompaniesStore>((set) => ({
     });
 
     if (!response.ok) {
-      throw new Error("Erro ao deletar empresa");
+      const error = await response.json();
+      throw new Error(error.message || "Erro ao deletar empresa");
     }
 
     set((state) => ({
@@ -122,5 +131,19 @@ export const useCompanies = create<CompaniesStore>((set) => ({
         company.id === id ? data : company,
       ),
     }));
+  },
+  createCompanyAccess: async (companyId, payload) => {
+    const response = await defaultFetch(`/company/${companyId}/create-access`, {
+      method: "POST",
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || "Erro ao criar acesso da empresa");
+    }
+
+    return data as CreateCompanyAccessResult;
   },
 }));

@@ -8,8 +8,11 @@ const ROLE_DOMAIN_ACCESS: Record<UserRole, Record<BusinessDomain, AccessLevel>> 
   ENGENHARIA: { engenharia: "edit", administrativo: "none" },
   ADMINISTRATIVO: { engenharia: "none", administrativo: "edit" },
   COORDENACAO: { engenharia: "edit", administrativo: "edit" },
-  MASTER: { engenharia: "edit", administrativo: "edit" },
-  PLATFORM_ADMIN: { engenharia: "edit", administrativo: "edit" },
+  // MASTER e PLATFORM_ADMIN só visualizam Engenharia (Obra) — edição fica
+  // restrita a ENGENHARIA/COORDENACAO, por decisão explícita do usuário.
+  MASTER: { engenharia: "view", administrativo: "edit" },
+  PLATFORM_ADMIN: { engenharia: "view", administrativo: "edit" },
+  EMPRESA: { engenharia: "view", administrativo: "none" },
 };
 
 export class DomainAccessPolicy {

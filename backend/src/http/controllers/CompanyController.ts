@@ -4,6 +4,7 @@ import { DomainError } from "../../domain/errors/DomainError.js";
 import type { ListCompaniesUseCase } from "../../application/usecases/company/ListCompaniesUseCase.js";
 import type { DeleteCompanyUseCase } from "../../application/usecases/company/DeleteCompanyUseCase.js";
 import type { UpdateCompanyUseCase } from "../../application/usecases/company/UpdateCompanyUseCase.js";
+import type { CreateCompanyAccessUseCase } from "../../application/usecases/company/CreateCompanyAccessUseCase.js";
 
 export class CompanyController {
   constructor(
@@ -11,6 +12,7 @@ export class CompanyController {
     private listCompanies: ListCompaniesUseCase,
     private deleteCompany: DeleteCompanyUseCase,
     private updateCompany: UpdateCompanyUseCase,
+    private createCompanyAccess: CreateCompanyAccessUseCase,
   ) {}
 
   async create(req: Request, res: Response) {
@@ -123,6 +125,39 @@ export class CompanyController {
       } else {
         res.status(500).json({ message: "Internal server error" });
       }
+    }
+  }
+  async createAccess(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { user } = req;
+      if (!id || Array.isArray(id)) throw new DomainError("Invalid company id");
+      if (!user) throw new DomainError("User not found");
+
+      const { name, email } = req.body;
+
+      const result = await this.createCompanyAccess.execute({
+        user,
+        companyId: id,
+        name,
+        email,
+      });
+
+      res.status(201).json({
+        user: {
+          id: result.user.id,
+          name: result.user.name,
+          email: result.user.email,
+          role: result.user.role,
+          company_id: result.user.company_id,
+        },
+        password: result.password,
+      });
+    } catch (error) {
+      if (error instanceof DomainError) {
+        return res.status(400).json({ message: error.message });
+      }
+      return res.status(500).json({ message: "Internal server error" });
     }
   }
 }

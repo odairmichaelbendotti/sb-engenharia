@@ -5,29 +5,38 @@ import { CompanyController } from "../controllers/CompanyController.js";
 import { ListCompaniesUseCase } from "../../application/usecases/company/ListCompaniesUseCase.js";
 import { DeleteCompanyUseCase } from "../../application/usecases/company/DeleteCompanyUseCase.js";
 import { UpdateCompanyUseCase } from "../../application/usecases/company/UpdateCompanyUseCase.js";
+import { CreateCompanyAccessUseCase } from "../../application/usecases/company/CreateCompanyAccessUseCase.js";
 import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
 import { PrismaUserRepository } from "../../infrastructure/database/prisma/PrismaUserRepository.js";
+import { HashGenerator } from "../../infrastructure/cryptography/HashGenerator.js";
 import { RequireDomainAccess } from "../middleware/RequireDomainAccess.js";
 
 export const CompanyRoutes = Router();
 
 const repository = new PrismaCompanyRepository();
+const userRepository = new PrismaUserRepository();
+const hashGenerator = new HashGenerator();
 
 const createCompanyUseCase = new CreateCompanyUseCase(repository);
 const listCompaniesUseCase = new ListCompaniesUseCase(repository);
 const deleteCompanyUseCase = new DeleteCompanyUseCase(repository);
 const updateCompanyUseCase = new UpdateCompanyUseCase(repository);
+const createCompanyAccessUseCase = new CreateCompanyAccessUseCase(
+  repository,
+  userRepository,
+  hashGenerator,
+);
 
 const companyController = new CompanyController(
   createCompanyUseCase,
   listCompaniesUseCase,
   deleteCompanyUseCase,
   updateCompanyUseCase,
+  createCompanyAccessUseCase,
 );
 
 const token = new TokenGenerator();
-const userRepository = new PrismaUserRepository();
 const authMiddleware = new AuthMiddleware(token, userRepository);
 
 const requireDomainAccess = new RequireDomainAccess();
@@ -58,4 +67,11 @@ CompanyRoutes.put(
   authMiddleware.handle,
   requireDomainAccess.handle("administrativo", "edit"),
   (req, res) => companyController.update(req, res),
+);
+
+CompanyRoutes.post(
+  "/company/:id/create-access",
+  authMiddleware.handle,
+  requireDomainAccess.handle("administrativo", "edit"),
+  (req, res) => companyController.createAccess(req, res),
 );

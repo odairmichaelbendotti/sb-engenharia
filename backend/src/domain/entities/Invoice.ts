@@ -7,6 +7,7 @@ export type InvoiceType = {
   value: number;
   empenho_id: string;
   company_id: string;
+  obra_id?: string | null | undefined;
 };
 
 export type PersistedInvoice = InvoiceType & {
@@ -23,6 +24,7 @@ export class Invoice {
   public value: number;
   public empenho_id: string;
   public company_id: string;
+  public obra_id: string | null;
 
   constructor(props: InvoiceType) {
     if (props.value <= 0) {
@@ -35,5 +37,6 @@ export class Invoice {
     this.value = props.value;
     this.empenho_id = props.empenho_id;
     this.company_id = props.company_id;
+    this.obra_id = props.obra_id ?? null;
   }
 }

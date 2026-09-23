@@ -40,7 +40,8 @@ export const useEmpenhos = create<EmpenhosState>((set) => ({
     });
 
     if (!response.ok) {
-      throw new Error("Erro ao deletar empenho");
+      const error = await response.json();
+      throw new Error(error.message || "Erro ao deletar empenho");
     }
 
     set((state) => {

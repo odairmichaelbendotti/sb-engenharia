@@ -5,7 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
-  Eye,
+  Edit2,
   FileText,
   Trash2,
   XCircle,
@@ -139,7 +139,7 @@ const InvoiceTable = ({
                         title="Gerenciar"
                         onClick={() => setEditInvoice(invoice)}
                       >
-                        <Eye size={16} />
+                        <Edit2 size={16} />
                       </button>
                       <button
                         className="p-2 hover:bg-danger-bg cursor-pointer text-text-secondary hover:text-danger-text rounded-md transition-colors"

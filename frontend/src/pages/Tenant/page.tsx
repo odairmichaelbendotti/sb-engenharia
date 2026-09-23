@@ -18,6 +18,8 @@ const emptyFormData: CreateTenantType = {
   address: "",
   phone: "",
   email: "",
+  latitude: "",
+  longitude: "",
 };
 
 export default function Organizacoes() {

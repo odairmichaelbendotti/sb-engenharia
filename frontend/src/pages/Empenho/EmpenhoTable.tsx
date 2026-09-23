@@ -2,10 +2,7 @@ import {
   Layers2,
   Building2,
   Trash2,
-  Eye,
-  CheckCircle2,
-  CircleDashed,
-  Clock,
+  Edit2,
   Loader2,
   Plus,
 } from "lucide-react";
@@ -25,81 +22,6 @@ interface EmpenhoTableProps {
   onDelete: (empenho: EmpenhoList) => void;
   onAdd?: () => void;
 }
-
-const ProgressBar = ({
-  value,
-  totalPaid,
-  status,
-  formatCurrency,
-}: {
-  value: number;
-  totalPaid: number;
-  status: string;
-  formatCurrency: (value: number) => string;
-}) => {
-  const [showTooltip, setShowTooltip] = useState(false);
-
-  const isFinalizado = status.toLowerCase() === "finalizado";
-  const paidValue = totalPaid ?? 0;
-  const rawPercentage = (paidValue / value) * 100;
-  const percentage = isFinalizado
-    ? 100
-    : Math.min(100, Math.max(paidValue > 0 ? 1 : 0, Math.round(rawPercentage)));
-
-  const isComplete = percentage === 100;
-  const isZero = paidValue === 0;
-
-  const getBarColor = () => {
-    if (isFinalizado || isComplete) return "bg-emerald-500";
-    if (isZero) return "bg-gray-400";
-    return "bg-blue-500";
-  };
-
-  const getIcon = () => {
-    if (isFinalizado || isComplete) {
-      return <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />;
-    }
-    if (isZero) {
-      return <CircleDashed size={16} className="text-gray-400 shrink-0" />;
-    }
-    return <Clock size={16} className="text-blue-500 shrink-0" />;
-  };
-
-  const getStatusText = () => {
-    if (isFinalizado) return "Finalizado";
-    if (isZero) return "Não iniciado";
-    const realPercentage = Math.round(rawPercentage);
-    return `${realPercentage > 0 ? realPercentage : "< 1"}% pago`;
-  };
-
-  return (
-    <div
-      className="relative w-full min-w-0"
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-    >
-      <div className="flex items-center gap-2 w-full">
-        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden min-w-0">
-          <div
-            className={`h-full rounded-full transition-all duration-300 ${getBarColor()}`}
-            style={{ width: `${percentage}%` }}
-          />
-        </div>
-        {getIcon()}
-      </div>
-
-      {showTooltip && (
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-md whitespace-nowrap z-10 shadow-lg">
-          <div className="font-medium">{getStatusText()}</div>
-          <div className="text-gray-300">
-            {formatCurrency(paidValue)} / {formatCurrency(value)}
-          </div>
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800" />
-        </div>
-      )}
-    </div>
-  );
-};
 
 export function EmpenhoTable({
   empenhos,
@@ -130,7 +52,7 @@ export function EmpenhoTable({
                 Empenho
               </th>
               <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
-                Empresa
+                Contrato
               </th>
               <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden lg:table-cell">
                 Descrição
@@ -141,8 +63,8 @@ export function EmpenhoTable({
               <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Valor
               </th>
-              <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
-                Progresso
+              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+                Saldo
               </th>
               {canEditAdministrativo && (
                 <th className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
@@ -181,9 +103,14 @@ export function EmpenhoTable({
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
                       <Building2 size={14} className="text-text-muted" />
-                      <span className="text-sm text-text-primary">
-                        {empenho.company.name}
-                      </span>
+                      <div>
+                        <span className="text-sm text-text-primary">
+                          {empenho.contrato.identificador}
+                        </span>
+                        <p className="text-xs text-text-secondary">
+                          {empenho.contrato.company.name}
+                        </p>
+                      </div>
                     </div>
                   </td>
                   <td className="py-3 px-4 text-sm text-text-secondary hidden lg:table-cell">
@@ -208,13 +135,29 @@ export function EmpenhoTable({
                       {formatCurrency(empenho.value)}
                     </p>
                   </td>
-                  <td className="py-3 px-4">
-                    <ProgressBar
-                      value={empenho.value}
-                      totalPaid={empenho.totalPaid}
-                      status={empenho.status}
-                      formatCurrency={formatCurrency}
-                    />
+                  <td className="py-3 px-4 min-w-40">
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between gap-2 text-xs">
+                        <span
+                          className={`font-semibold ${empenho.saldoDisponivel <= 0 ? "text-danger-text" : "text-text-primary"}`}
+                        >
+                          {formatCurrency(empenho.saldoDisponivel)}
+                        </span>
+                        <span className="text-text-muted shrink-0">de {formatCurrency(empenho.value)}</span>
+                      </div>
+                      <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            empenho.saldoDisponivel <= 0
+                              ? "bg-danger-text"
+                              : empenho.valorComprometido / empenho.value >= 0.8
+                                ? "bg-warning-text"
+                                : "bg-primary-500"
+                          }`}
+                          style={{ width: `${Math.min(100, (empenho.valorComprometido / empenho.value) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
                   </td>
 
                   {canEditAdministrativo && (
@@ -225,7 +168,7 @@ export function EmpenhoTable({
                           className="p-2 hover:bg-primary-100 cursor-pointer text-text-secondary hover:text-primary-500 rounded-md transition-colors"
                           title="Gerenciar"
                         >
-                          <Eye size={16} />
+                          <Edit2 size={16} />
                         </button>
                         <button
                           onClick={() => onDelete(empenho)}

@@ -10,10 +10,14 @@ export type TenantType = {
   address: string;
   phone: string;
   email: string;
+  latitude: number;
+  longitude: number;
 };
 
-export type PersistedTenant = TenantType & {
+export type PersistedTenant = Omit<TenantType, "latitude" | "longitude"> & {
   id: string;
+  latitude: number | null;
+  longitude: number | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -28,9 +32,14 @@ export class TenantEntity {
   public readonly address: string;
   public readonly phone: string;
   public readonly email: string;
+  public readonly latitude: number;
+  public readonly longitude: number;
   constructor(props: TenantType) {
     if (props.cnpj.replace(/\D/g, "").length !== 14) {
       throw new DomainError("Tenant cnpj must have 14 digits");
+    }
+    if (props.latitude < -90 || props.latitude > 90 || props.longitude < -180 || props.longitude > 180) {
+      throw new DomainError("Tenant latitude/longitude out of range");
     }
 
     this.name = props.name;
@@ -42,5 +51,7 @@ export class TenantEntity {
     this.address = props.address;
     this.phone = props.phone;
     this.email = props.email;
+    this.latitude = props.latitude;
+    this.longitude = props.longitude;
   }
 }

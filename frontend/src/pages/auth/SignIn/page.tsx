@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Mail, Loader } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useUser } from "../../../store/user";
@@ -8,9 +8,37 @@ export default function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
 
-  const { signin } = useUser();
+  const { signin, fetchUser } = useUser();
   const navigate = useNavigate();
+
+  // Se já existe cookie de sessão válido, não faz sentido mostrar o
+  // formulário de login de novo — cai direto no dashboard.
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchUser()
+      .then(() => {
+        if (!cancelled) navigate("/", { replace: true });
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setCheckingSession(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchUser, navigate]);
+
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader size={32} className="animate-spin text-primary-500" />
+      </div>
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     setIsLoading(true);

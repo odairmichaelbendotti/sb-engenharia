@@ -8,9 +8,11 @@ export interface User {
     | "ADMINISTRATIVO"
     | "COORDENACAO"
     | "MASTER"
-    | "PLATFORM_ADMIN";
+    | "PLATFORM_ADMIN"
+    | "EMPRESA";
   approved: boolean;
   tenant_id: string;
+  company_id: string | null;
 }
 
 export interface UnapprovedUser extends User {

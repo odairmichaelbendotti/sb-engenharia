@@ -14,8 +14,12 @@ import { usePermission } from "../../hooks/usePermission";
 const Sidebar = () => {
   const navigate = useNavigate();
   const { user, logout } = useUser();
-  const { canManageOrganization, canApproveUsers, canViewAdministrativo } =
-    usePermission();
+  const {
+    canManageOrganization,
+    canApproveUsers,
+    canViewAdministrativo,
+    isEmpresaRestricted,
+  } = usePermission();
   const { tenantOptions, listTenantOptions } = useTenants();
 
   useEffect(() => {
@@ -56,16 +60,25 @@ const Sidebar = () => {
 
         {/* Content section */}
         <div className="flex flex-col h-full mt-6 overflow-y-auto">
-          {canManageOrganization && (
-            <SidebarGroup label="Plataforma" items={plataformaItems} />
+          {isEmpresaRestricted ? (
+            <SidebarGroup
+              label="Engenharia"
+              items={engItems.filter((item) => item.path === "/mapa-obras")}
+            />
+          ) : (
+            <>
+              {canManageOrganization && (
+                <SidebarGroup label="Plataforma" items={plataformaItems} />
+              )}
+              {canApproveUsers && (
+                <SidebarGroup label="Gestão" items={gestaoItems} />
+              )}
+              {canViewAdministrativo && (
+                <SidebarGroup label="Administrativo" items={adminItems} />
+              )}
+              <SidebarGroup label="Engenharia" items={engItems} />
+            </>
           )}
-          {canApproveUsers && (
-            <SidebarGroup label="Gestão" items={gestaoItems} />
-          )}
-          {canViewAdministrativo && (
-            <SidebarGroup label="Administrativo" items={adminItems} />
-          )}
-          <SidebarGroup label="Engenharia" items={engItems} />
         </div>
 
         {/* Footer here */}

@@ -6,6 +6,9 @@ import cors from "cors";
 import { EmpenhoRoutes } from "./src/http/routes/EmpenhoRoutes.js";
 import { InvoiceRoutes } from "./src/http/routes/InvoiceRoutes.js";
 import { TenantRoutes } from "./src/http/routes/TenantRoutes.js";
+import { ObraRoutes } from "./src/http/routes/ObraRoutes.js";
+import { ContratoRoutes } from "./src/http/routes/ContratoRoutes.js";
+import { OrdemServicoRoutes } from "./src/http/routes/OrdemServicoRoutes.js";
 
 const app = express();
 
@@ -25,6 +28,9 @@ app.use("/api", CompanyRoutes);
 app.use("/api", EmpenhoRoutes);
 app.use("/api", InvoiceRoutes);
 app.use("/api", TenantRoutes);
+app.use("/api", ObraRoutes);
+app.use("/api", ContratoRoutes);
+app.use("/api", OrdemServicoRoutes);
 
 app.listen(process.env.PORT, () => {
   console.log(

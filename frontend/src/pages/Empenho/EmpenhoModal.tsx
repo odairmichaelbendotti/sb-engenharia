@@ -3,7 +3,8 @@ import {
   X,
   Receipt,
   Hash,
-  Building2,
+  FileSignature,
+  Tag,
   AlignLeft,
   CalendarDays,
   CheckCircle2,
@@ -11,12 +12,14 @@ import {
   Activity,
   AlertCircle,
 } from "lucide-react";
-import { useCompanies } from "../../store/companies";
+import { useContratos } from "../../store/contratos";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { defaultFetch } from "../../services/api";
 import { useEmpenhos } from "../../store/empenhos";
-import type { EmpenhoList } from "../../../types/empenho";
+import { formatCurrency } from "../../utils/format-currency";
+import { maskCurrency, formatValueToCurrencyMask, parseCurrencyMask } from "../../utils/masks";
+import type { EmpenhoList, EmpenhoCategory } from "../../../types/empenho";
 
 interface EmpenhoModalProps {
   isOpen: boolean;
@@ -28,26 +31,40 @@ interface EmpenhoModalProps {
 interface FormState {
   numero: string;
   description: string;
+  category: EmpenhoCategory | "";
   startAt: string;
   endAt: string;
   value: string;
-  company_id: string;
+  contrato_id: string;
 }
+
+const CATEGORY_OPTIONS: { value: EmpenhoCategory; label: string }[] = [
+  { value: "MANUTENCAO_PREDIAL", label: "Manutenção Predial" },
+  { value: "ALIMENTACAO", label: "Alimentação" },
+  { value: "HOSPITALAR", label: "Hospitalar" },
+  { value: "COMBUSTIVEL", label: "Combustível" },
+  { value: "TECNOLOGIA", label: "Tecnologia" },
+  { value: "LIMPEZA_CONSERVACAO", label: "Limpeza e Conservação" },
+  { value: "SEGURANCA_VIGILANCIA", label: "Segurança e Vigilância" },
+  { value: "OUTROS", label: "Outros" },
+];
 
 export function EmpenhoModal({
   isOpen,
   empenho,
   handleClose,
 }: EmpenhoModalProps) {
-  const { companies, listCompanies } = useCompanies();
+  const { data: contratosData, fetchContratos } = useContratos();
+  const contratos = contratosData?.contratos ?? [];
   const [isLoading, setIsLoading] = useState(false);
   const [formState, setFormState] = useState<FormState>({
     numero: "",
     description: "",
+    category: "",
     startAt: "",
     endAt: "",
     value: "",
-    company_id: "",
+    contrato_id: "",
   });
 
   const { fetchListEmpenhos, updateStatus } = useEmpenhos();
@@ -57,10 +74,19 @@ export function EmpenhoModal({
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen && companies.length === 0) {
-      listCompanies();
+    if (isOpen && contratos.length === 0) {
+      fetchContratos();
     }
-  }, [isOpen, companies.length, listCompanies]);
+  }, [isOpen, contratos.length, fetchContratos]);
+
+  const selectedContrato = contratos.find((c) => c.id === formState.contrato_id);
+  // Ao editar um empenho que já pertence ao contrato selecionado, o saldo já
+  // calculado no store desconta o valor atual desse empenho — soma de volta pra
+  // refletir o que o backend realmente considera disponível nessa edição.
+  const saldoDisponivelParaEmpenho =
+    selectedContrato && empenho && empenho.contrato_id === selectedContrato.id
+      ? selectedContrato.saldoDisponivel + empenho.value
+      : (selectedContrato?.saldoDisponivel ?? 0);
 
   useEffect(() => {
     if (empenho) {
@@ -76,19 +102,21 @@ export function EmpenhoModal({
       setFormState({
         numero: empenho.numero.toString(),
         description: empenho.description,
+        category: empenho.category,
         startAt: formatDate(empenho.startAt),
         endAt: formatDate(empenho.endAt),
-        value: empenho.value.toString(),
-        company_id: empenho.company_id,
+        value: formatValueToCurrencyMask(empenho.value),
+        contrato_id: empenho.contrato_id,
       });
     } else {
       setFormState({
         numero: "",
         description: "",
+        category: "",
         startAt: "",
         endAt: "",
         value: "",
-        company_id: "",
+        contrato_id: "",
       });
     }
   }, [empenho]);
@@ -101,27 +129,25 @@ export function EmpenhoModal({
     const { name, value } = e.target;
     setFormState((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: name === "value" ? maskCurrency(value) : value,
     }));
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    if (!formState.numero || !formState.description || !formState.value) {
+    if (!formState.numero || !formState.description || !formState.category || !formState.value) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
-    if (!formState.company_id) {
-      toast.error("Selecione uma empresa");
+    if (!formState.contrato_id) {
+      toast.error("Selecione um contrato");
       return;
     }
 
-    const numericValue = parseFloat(
-      String(formState.value).replace(/\./g, "").replace(",", "."),
-    );
-    if (isNaN(numericValue) || numericValue <= 0) {
+    const numericValue = parseCurrencyMask(formState.value);
+    if (numericValue <= 0) {
       toast.error("Valor deve ser um número válido maior que zero");
       return;
     }
@@ -131,13 +157,15 @@ export function EmpenhoModal({
       return;
     }
 
+    const payload = { ...formState, value: numericValue };
+
     try {
       setIsLoading(true);
 
       if (empenho) {
         const response = await defaultFetch(`/empenho/update/${empenho.id}`, {
           method: "PUT",
-          body: JSON.stringify(formState),
+          body: JSON.stringify(payload),
           credentials: "include",
         });
 
@@ -153,7 +181,7 @@ export function EmpenhoModal({
       } else {
         const response = await defaultFetch("/empenho/create", {
           method: "POST",
-          body: JSON.stringify(formState),
+          body: JSON.stringify(payload),
           credentials: "include",
         });
 
@@ -243,44 +271,65 @@ export function EmpenhoModal({
                   </span>
                   <input
                     type="text"
+                    inputMode="numeric"
                     name="value"
                     value={formState.value}
                     onChange={handleChange}
                     placeholder="0,00"
-                    step="0.01"
                     className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
                   />
                 </div>
               </div>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                Categoria <span className="text-danger-text">*</span>
+              </label>
+              <div className="relative">
+                <Tag size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                <select
+                  name="category"
+                  value={formState.category}
+                  onChange={handleChange}
+                  className="w-full pl-10 pr-10 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all appearance-none cursor-pointer"
+                >
+                  <option value="">Selecione uma categoria</option>
+                  {CATEGORY_OPTIONS.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
 
-          {/* Seção: Empresa */}
+          {/* Seção: Contrato */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-              <Building2 size={16} className="text-primary-500" />
-              <span>Empresa</span>
+              <FileSignature size={16} className="text-primary-500" />
+              <span>Contrato</span>
               <div className="flex-1 h-px bg-border" />
             </div>
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                Empresa <span className="text-danger-text">*</span>
+                Contrato <span className="text-danger-text">*</span>
               </label>
               <div className="relative">
-                <Building2
+                <FileSignature
                   size={16}
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
                 />
                 <select
-                  name="company_id"
-                  value={formState.company_id}
+                  name="contrato_id"
+                  value={formState.contrato_id}
                   onChange={handleChange}
                   className="w-full pl-10 pr-10 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all appearance-none cursor-pointer"
                 >
-                  <option value="">Selecione uma empresa</option>
-                  {companies.map((empresa) => (
-                    <option key={empresa.id} value={empresa.id}>
-                      {empresa.name} - {empresa.cnpj}
+                  <option value="">Selecione um contrato</option>
+                  {contratos.map((contrato) => (
+                    <option key={contrato.id} value={contrato.id}>
+                      {contrato.identificador} — {contrato.descricaoCurta} ({contrato.company.name})
                     </option>
                   ))}
                 </select>
@@ -300,6 +349,15 @@ export function EmpenhoModal({
                   </svg>
                 </div>
               </div>
+              {selectedContrato && (
+                <p className="text-xs text-text-muted mt-1.5">
+                  Saldo disponível:{" "}
+                  <span className={saldoDisponivelParaEmpenho <= 0 ? "text-danger-text font-medium" : "text-success-text font-medium"}>
+                    {formatCurrency(saldoDisponivelParaEmpenho)}
+                  </span>{" "}
+                  de {formatCurrency(selectedContrato.valor)}
+                </p>
+              )}
             </div>
           </div>
 

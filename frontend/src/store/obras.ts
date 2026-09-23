@@ -1,10 +1,12 @@
 import { create } from "zustand";
-import type { ListObras, Obra, ObraStatus, CreateObraPayload } from "../../types/obra";
+import type { ListObras, Obra, ObraStatus, CreateObraPayload, ObraOptionForInvoice } from "../../types/obra";
 import { defaultFetch } from "../services/api";
 
 type ObrasState = {
   data: ListObras | null;
+  obraOptionsForInvoice: ObraOptionForInvoice[];
   fetchObras: () => Promise<void>;
+  fetchObraOptionsForInvoice: (empenhoId: string) => Promise<void>;
   createObra: (payload: CreateObraPayload) => Promise<Obra>;
   updateObra: (id: string, payload: Partial<CreateObraPayload>) => Promise<Obra>;
   updateObraStatus: (id: string, status: ObraStatus) => Promise<void>;
@@ -13,12 +15,27 @@ type ObrasState = {
 
 export const useObras = create<ObrasState>((set) => ({
   data: null,
+  obraOptionsForInvoice: [],
 
   fetchObras: async () => {
     const response = await defaultFetch("/obra/list", { credentials: "include" });
     if (!response.ok) throw new Error("Erro ao carregar obras");
     const data: ListObras = await response.json();
     set({ data });
+  },
+
+  fetchObraOptionsForInvoice: async (empenhoId) => {
+    if (!empenhoId) {
+      set({ obraOptionsForInvoice: [] });
+      return;
+    }
+    const response = await defaultFetch(
+      `/obra/list-for-invoice?empenho_id=${empenhoId}`,
+      { credentials: "include" },
+    );
+    if (!response.ok) throw new Error("Erro ao carregar obras disponíveis");
+    const options: ObraOptionForInvoice[] = await response.json();
+    set({ obraOptionsForInvoice: options });
   },
 
   createObra: async (payload) => {

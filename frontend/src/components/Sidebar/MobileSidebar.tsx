@@ -15,7 +15,7 @@ const MobileSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const { user, logout } = useUser();
-  const { canViewAdministrativo } = usePermission();
+  const { canViewAdministrativo, isEmpresaRestricted } = usePermission();
   const { tenantOptions, listTenantOptions } = useTenants();
 
   useEffect(() => {
@@ -94,32 +94,42 @@ const MobileSidebar = () => {
 
           {/* Navigation */}
           <div className="flex-1 overflow-y-auto">
-            {user?.role === "PLATFORM_ADMIN" && (
+            {isEmpresaRestricted ? (
               <SidebarGroup
-                label="Plataforma"
-                items={plataformaItems}
+                label="Engenharia"
+                items={engItems.filter((item) => item.path === "/mapa-obras")}
                 onNavigate={handleLinkClick}
               />
+            ) : (
+              <>
+                {user?.role === "PLATFORM_ADMIN" && (
+                  <SidebarGroup
+                    label="Plataforma"
+                    items={plataformaItems}
+                    onNavigate={handleLinkClick}
+                  />
+                )}
+                {(user?.role === "MASTER" || user?.role === "PLATFORM_ADMIN") && (
+                  <SidebarGroup
+                    label="Gestão"
+                    items={gestaoItems}
+                    onNavigate={handleLinkClick}
+                  />
+                )}
+                {canViewAdministrativo && (
+                  <SidebarGroup
+                    label="Administrativo"
+                    items={adminItems}
+                    onNavigate={handleLinkClick}
+                  />
+                )}
+                <SidebarGroup
+                  label="Engenharia"
+                  items={engItems}
+                  onNavigate={handleLinkClick}
+                />
+              </>
             )}
-            {(user?.role === "MASTER" || user?.role === "PLATFORM_ADMIN") && (
-              <SidebarGroup
-                label="Gestão"
-                items={gestaoItems}
-                onNavigate={handleLinkClick}
-              />
-            )}
-            {canViewAdministrativo && (
-              <SidebarGroup
-                label="Administrativo"
-                items={adminItems}
-                onNavigate={handleLinkClick}
-              />
-            )}
-            <SidebarGroup
-              label="Engenharia"
-              items={engItems}
-              onNavigate={handleLinkClick}
-            />
           </div>
 
           {/* Footer */}

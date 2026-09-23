@@ -6,10 +6,13 @@ import {
   InvoiceTable,
   DeleteModal,
   StatusCards,
-  Header,
   EditModal,
   InvoiceFilters,
 } from "./index";
+import { PageHeader } from "../../components/PageHeader";
+import { usePermission } from "../../hooks/usePermission";
+import { formatCurrency } from "../../utils/format-currency";
+import { FileText, DollarSign } from "lucide-react";
 
 export default function Invoices() {
   const [isOpen, setIsOpen] = useState(false);
@@ -29,6 +32,8 @@ export default function Invoices() {
     pendingValue,
     allInvoices,
   } = useInvoice();
+
+  const { canEditAdministrativo } = usePermission();
 
   useEffect(() => {
     list();
@@ -51,7 +56,14 @@ export default function Invoices() {
         <EditModal editInvoice={editInvoice} setEditInvoice={setEditInvoice} />
       )}
       {/* Header */}
-      <Header totalValue={totalValue} setIsOpen={setIsOpen} />
+      <PageHeader
+        icon={FileText}
+        title="Notas Fiscais"
+        stat={{ icon: DollarSign, label: "Valor total emitido", value: formatCurrency(totalValue) }}
+        canAct={canEditAdministrativo}
+        actionLabel="Nova Nota Fiscal"
+        onAction={() => setIsOpen(true)}
+      />
 
       {/* Stats Cards */}
       <StatusCards

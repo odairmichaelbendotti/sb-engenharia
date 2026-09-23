@@ -9,6 +9,8 @@ export interface Tenant {
   address: string;
   phone: string;
   email: string;
+  latitude: number | null;
+  longitude: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -16,4 +18,21 @@ export interface Tenant {
 export interface TenantOption {
   id: string;
   name: string;
+}
+
+export type TenantSummaryStats = {
+  contratosAtivos: number;
+  empenhosAtivos: number;
+  empenhosAtivosValor: number;
+  osAtivas: number;
+  obrasEmAndamento: number;
+  orcamentoTotal: number;
+  valorExecutadoTotal: number;
+  notasPendentesVencidasCount: number;
+  notasPendentesVencidasValor: number;
+};
+
+export interface TenantSummaryEntry {
+  tenant: { id: string; name: string };
+  stats: TenantSummaryStats;
 }

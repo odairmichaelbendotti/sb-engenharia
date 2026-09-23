@@ -6,19 +6,20 @@ import {
   MapPin,
   CalendarDays,
   User,
-  DollarSign,
   Loader,
   Activity,
   CheckCircle2,
   PauseCircle,
   XCircle,
   FileText,
+  FileSignature,
+  Layers2,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useObras } from "../../store/obras";
+import { useOrdensServico } from "../../store/ordensServico";
 import type { Obra, ObraStatus, CreateObraPayload } from "../../../types/obra";
-import { estadosBrasil } from "../../utils/estados-brasil";
 
 interface ObraModalProps {
   obra: Obra | null;
@@ -31,6 +32,7 @@ const TIPOS = [
   { value: "AMPLIACAO", label: "Ampliação" },
   { value: "PAVIMENTACAO", label: "Pavimentação" },
   { value: "SANEAMENTO", label: "Saneamento" },
+  { value: "MANUTENCAO_PREDIAL", label: "Manutenção Predial" },
   { value: "OUTRO", label: "Outro" },
 ];
 
@@ -43,13 +45,11 @@ const STATUS_OPTIONS: { value: ObraStatus; label: string; icon: React.ElementTyp
 
 type FormState = {
   nome: string;
-  codigo: string;
+  identificacaoPatrimonial: string;
   tipo: string;
   descricao: string;
-  logradouro: string;
-  cidade: string;
-  estado: string;
-  orcamento: string;
+  latitude: string;
+  longitude: string;
   dataInicio: string;
   dataPrevisaoTermino: string;
   responsavelTecnico: string;
@@ -58,13 +58,11 @@ type FormState = {
 
 const emptyForm: FormState = {
   nome: "",
-  codigo: "",
+  identificacaoPatrimonial: "",
   tipo: "CONSTRUCAO",
   descricao: "",
-  logradouro: "",
-  cidade: "",
-  estado: "",
-  orcamento: "",
+  latitude: "",
+  longitude: "",
   dataInicio: "",
   dataPrevisaoTermino: "",
   responsavelTecnico: "",
@@ -105,23 +103,27 @@ const iconInputClass =
 
 export function ObraModal({ obra, handleClose }: ObraModalProps) {
   const { createObra, updateObra, updateObraStatus, fetchObras } = useObras();
+  const { options: ordemServicoOptions, fetchOrdemServicoOptions } = useOrdensServico();
   const [isLoading, setIsLoading] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState<ObraStatus | null>(null);
   const [currentStatus, setCurrentStatus] = useState<ObraStatus>(obra?.status ?? "EM_ANDAMENTO");
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [ordemServicoId, setOrdemServicoId] = useState("");
+
+  useEffect(() => {
+    if (!obra) fetchOrdemServicoOptions();
+  }, [obra, fetchOrdemServicoOptions]);
 
   useEffect(() => {
     if (obra) {
       setCurrentStatus(obra.status);
       setForm({
         nome: obra.nome,
-        codigo: obra.codigo,
+        identificacaoPatrimonial: obra.identificacaoPatrimonial,
         tipo: obra.tipo,
         descricao: obra.descricao,
-        logradouro: obra.logradouro,
-        cidade: obra.cidade,
-        estado: obra.estado,
-        orcamento: obra.orcamento.toString(),
+        latitude: obra.latitude !== undefined ? String(obra.latitude) : "",
+        longitude: obra.longitude !== undefined ? String(obra.longitude) : "",
         dataInicio: toDateInput(obra.dataInicio),
         dataPrevisaoTermino: toDateInput(obra.dataPrevisaoTermino),
         responsavelTecnico: obra.responsavelTecnico,
@@ -155,14 +157,19 @@ export function ObraModal({ obra, handleClose }: ObraModalProps) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!form.nome || !form.codigo || !form.orcamento || !form.dataInicio || !form.dataPrevisaoTermino || !form.responsavelTecnico) {
+    if (
+      !form.nome ||
+      !form.identificacaoPatrimonial ||
+      !form.dataInicio ||
+      !form.dataPrevisaoTermino ||
+      !form.responsavelTecnico
+    ) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
-    const orcamentoNum = parseFloat(form.orcamento.replace(/\./g, "").replace(",", "."));
-    if (isNaN(orcamentoNum) || orcamentoNum <= 0) {
-      toast.error("Orçamento inválido");
+    if (!obra && !ordemServicoId) {
+      toast.error("Selecione a ordem de serviço vinculada a esta obra");
       return;
     }
 
@@ -171,19 +178,25 @@ export function ObraModal({ obra, handleClose }: ObraModalProps) {
       return;
     }
 
+    const latitudeNum = form.latitude.trim() ? parseFloat(form.latitude) : undefined;
+    const longitudeNum = form.longitude.trim() ? parseFloat(form.longitude) : undefined;
+    if ((latitudeNum !== undefined && isNaN(latitudeNum)) || (longitudeNum !== undefined && isNaN(longitudeNum))) {
+      toast.error("Latitude/Longitude inválidas");
+      return;
+    }
+
     const payload: CreateObraPayload = {
       nome: form.nome,
-      codigo: form.codigo,
+      identificacaoPatrimonial: form.identificacaoPatrimonial,
       tipo: form.tipo as CreateObraPayload["tipo"],
       descricao: form.descricao,
-      logradouro: form.logradouro,
-      cidade: form.cidade,
-      estado: form.estado,
-      orcamento: orcamentoNum.toString(),
+      latitude: latitudeNum?.toString(),
+      longitude: longitudeNum?.toString(),
       dataInicio: form.dataInicio,
       dataPrevisaoTermino: form.dataPrevisaoTermino,
       responsavelTecnico: form.responsavelTecnico,
       anotacoes: form.anotacoes || undefined,
+      ...(obra ? {} : { ordemServico_id: ordemServicoId }),
     };
 
     try {
@@ -242,14 +255,14 @@ export function ObraModal({ obra, handleClose }: ObraModalProps) {
                   className={inputClass}
                 />
               </InputField>
-              <InputField label="Código / ART" required>
+              <InputField label="Identificação Patrimonial" required>
                 <div className="relative">
                   <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
                   <input
-                    name="codigo"
-                    value={form.codigo}
+                    name="identificacaoPatrimonial"
+                    value={form.identificacaoPatrimonial}
                     onChange={handleChange}
-                    placeholder="OB-2025-001"
+                    placeholder="E-027"
                     className={iconInputClass}
                   />
                 </div>
@@ -278,54 +291,71 @@ export function ObraModal({ obra, handleClose }: ObraModalProps) {
             </div>
           </div>
 
-          {/* Localização */}
+          {/* Vínculo com Ordem de Serviço */}
+          <div className="space-y-4">
+            <SectionTitle icon={FileSignature} label="Ordem de Serviço" />
+            {obra ? (
+              <div className="bg-surface-muted rounded-lg p-4 border border-border flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center shrink-0">
+                  <Layers2 size={18} className="text-primary-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-text-primary">{obra.ordemServico.numero}</p>
+                  <p className="text-xs text-text-secondary">
+                    Empenho {obra.ordemServico.empenho.numero} — {obra.ordemServico.empenho.contrato.identificador} (vínculo fixo, não editável)
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <InputField label="Ordem de Serviço" required>
+                <select
+                  value={ordemServicoId}
+                  onChange={(e) => setOrdemServicoId(e.target.value)}
+                  className={`${inputClass} cursor-pointer`}
+                >
+                  <option value="">Selecione uma ordem de serviço</option>
+                  {ordemServicoOptions.map((os) => (
+                    <option key={os.id} value={os.id}>
+                      {os.numero} — Empenho {os.empenho.numero} — {os.empenho.contrato.identificador}
+                    </option>
+                  ))}
+                </select>
+                {ordemServicoOptions.length === 0 && (
+                  <p className="text-xs text-warning-text mt-1">
+                    Não há ordens de serviço disponíveis para vincular. Cadastre uma em Administrativo &gt; Ordens de Serviço.
+                  </p>
+                )}
+              </InputField>
+            )}
+          </div>
+
+          {/* Localização (coordenadas do mapa — endereço vem do tenant) */}
           <div className="space-y-4">
             <SectionTitle icon={MapPin} label="Localização" />
-            <InputField label="Logradouro">
-              <input
-                name="logradouro"
-                value={form.logradouro}
-                onChange={handleChange}
-                placeholder="Rua, número, bairro"
-                className={inputClass}
-              />
-            </InputField>
             <div className="grid grid-cols-2 gap-4">
-              <InputField label="Cidade">
+              <InputField label="Latitude">
                 <input
-                  name="cidade"
-                  value={form.cidade}
+                  type="number"
+                  step="any"
+                  name="latitude"
+                  value={form.latitude}
                   onChange={handleChange}
-                  placeholder="Ex.: São Paulo"
+                  placeholder="-15.7801"
                   className={inputClass}
                 />
               </InputField>
-              <InputField label="Estado">
-                <select name="estado" value={form.estado} onChange={handleChange} className={inputClass}>
-                  <option value="">Selecione</option>
-                  {estadosBrasil.map((uf) => (
-                    <option key={uf} value={uf}>{uf}</option>
-                  ))}
-                </select>
+              <InputField label="Longitude">
+                <input
+                  type="number"
+                  step="any"
+                  name="longitude"
+                  value={form.longitude}
+                  onChange={handleChange}
+                  placeholder="-47.9292"
+                  className={inputClass}
+                />
               </InputField>
             </div>
-          </div>
-
-          {/* Financeiro */}
-          <div className="space-y-4">
-            <SectionTitle icon={DollarSign} label="Financeiro" />
-            <InputField label="Orçamento Total (R$)" required>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-medium text-sm">R$</span>
-                <input
-                  name="orcamento"
-                  value={form.orcamento}
-                  onChange={handleChange}
-                  placeholder="0,00"
-                  className={iconInputClass}
-                />
-              </div>
-            </InputField>
           </div>
 
           {/* Cronograma */}

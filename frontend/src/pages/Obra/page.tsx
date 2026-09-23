@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Loader2, FolderOpen, AlertCircle, Plus } from "lucide-react";
 import { useObras } from "../../store/obras";
-import { useUser } from "../../store/user";
 import { usePermission } from "../../hooks/usePermission";
 import type { Obra } from "../../../types/obra";
 import {
@@ -17,7 +16,6 @@ import { formatCurrency } from "../../utils/format-currency";
 
 export default function Obras() {
   const { data, fetchObras } = useObras();
-  const { user } = useUser();
   const { canCreateAndEditContent } = usePermission();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -68,9 +66,8 @@ export default function Obras() {
       const matchSearch =
         !search ||
         o.nome.toLowerCase().includes(search) ||
-        o.codigo.toLowerCase().includes(search) ||
-        o.responsavelTecnico.toLowerCase().includes(search) ||
-        o.cidade.toLowerCase().includes(search);
+        o.identificacaoPatrimonial.toLowerCase().includes(search) ||
+        o.responsavelTecnico.toLowerCase().includes(search);
       const matchStatus = !filters.status || o.status === filters.status;
       const matchTipo = !filters.tipo || o.tipo === filters.tipo;
       return matchSearch && matchStatus && matchTipo;
@@ -171,7 +168,6 @@ export default function Obras() {
                 obras={filteredObras}
                 onEdit={handleOpenEdit}
                 onDelete={handleOpenDelete}
-                user={user}
               />
             )}
           </div>
