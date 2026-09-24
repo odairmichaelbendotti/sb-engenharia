@@ -51,6 +51,7 @@ UserRoutes.post("/logout", (req: Request, res: Response) => {
 });
 
 UserRoutes.get("/me", middleware.handle, (req: Request, res: Response) => {
+  res.set("Cache-Control", "no-store");
   res.json(req.user);
 });
 

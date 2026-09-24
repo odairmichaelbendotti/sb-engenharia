@@ -74,7 +74,7 @@ export const useUser = create<UserStore>((set) => ({
     });
 
     if (!response.ok) {
-      throw new Error("Failed to fetch user");
+      throw new Error(`Failed to fetch user (${response.status})`);
     }
 
     const data: User = await response.json();

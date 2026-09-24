@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ShieldCheck, Mail, LogOut, Building2 } from "lucide-react";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { useUser } from "../../../store/user";
 import { getInitials } from "../../../utils/get-initial";
 
@@ -45,6 +46,13 @@ export default function PendingApproval() {
     setChecking(true);
     try {
       await fetchUser();
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error instanceof Error
+          ? `Não foi possível verificar: ${error.message}`
+          : "Não foi possível verificar agora",
+      );
     } finally {
       setChecking(false);
       setLastCheckedAt(new Date());
