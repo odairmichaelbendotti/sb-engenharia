@@ -69,29 +69,29 @@ const TableCompanies = ({
         <table className="w-full">
           <thead className="bg-surface-muted border-b border-border">
             <tr>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors">
                 <div className="flex items-center gap-1">
                   Empresa
                   <ArrowUp size={12} className="text-text-muted" />
                 </div>
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
                 CNPJ
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden lg:table-cell">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase hidden lg:table-cell">
                 Localização
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden sm:table-cell">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase hidden sm:table-cell">
                 Contato
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors">
                 <div className="flex items-center gap-1">
                   Empenhos
                   <ArrowDown size={12} className="text-text-muted" />
                 </div>
               </th>
               {canEditAdministrativo && (
-                <th className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+                <th className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                   Ações
                 </th>
               )}
@@ -103,7 +103,7 @@ const TableCompanies = ({
                 key={empresa.id}
                 className="hover:bg-surface-muted/50 transition-colors"
               >
-                <td className="py-3 px-4">
+                <td className="py-2.5 px-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center shrink-0">
                       <Building2 size={18} className="text-primary-500" />
@@ -118,10 +118,10 @@ const TableCompanies = ({
                     </div>
                   </div>
                 </td>
-                <td className="py-3 px-4 text-sm text-text-secondary hidden md:table-cell">
+                <td className="py-2.5 px-4 text-sm text-text-secondary hidden md:table-cell">
                   {maskCnpj(empresa.cnpj)}
                 </td>
-                <td className="py-3 px-4 hidden lg:table-cell">
+                <td className="py-2.5 px-4 hidden lg:table-cell">
                   <div className="flex items-center gap-1 text-sm text-text-secondary">
                     <MapPin size={14} />
                     <span>
@@ -129,7 +129,7 @@ const TableCompanies = ({
                     </span>
                   </div>
                 </td>
-                <td className="py-3 px-4 hidden sm:table-cell">
+                <td className="py-2.5 px-4 hidden sm:table-cell">
                   <div className="text-xs text-text-secondary">
                     <p className="flex items-center gap-1">
                       <Phone size={12} />
@@ -141,7 +141,7 @@ const TableCompanies = ({
                     </p>
                   </div>
                 </td>
-                <td className="py-3 px-4">
+                <td className="py-2.5 px-4">
                   <button
                     onClick={() => handleOpenEmpenhos(empresa)}
                     className={`cursor-pointer inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
@@ -156,7 +156,7 @@ const TableCompanies = ({
                   </button>
                 </td>
                 {canEditAdministrativo && (
-                  <td className="py-3 px-4">
+                  <td className="py-2.5 px-4">
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => handleOpenAccess(empresa)}
@@ -191,7 +191,7 @@ const TableCompanies = ({
       {/* Empty State */}
       {paginatedEmpresas.length === 0 &&
         (isLoading ? (
-          <div className="py-12 text-center">
+          <div className="py-8 text-center">
             <Loader2
               size={32}
               className="mx-auto text-primary-500 animate-spin mb-3"
@@ -201,8 +201,8 @@ const TableCompanies = ({
             </p>
           </div>
         ) : (
-          <div className="py-12 text-center">
-            <Building2 size={48} className="mx-auto text-text-muted mb-4" />
+          <div className="py-8 text-center">
+            <Building2 size={32} className="mx-auto text-text-muted mb-3" />
             <p className="text-text-secondary font-medium">
               Nenhuma empresa encontrada
             </p>

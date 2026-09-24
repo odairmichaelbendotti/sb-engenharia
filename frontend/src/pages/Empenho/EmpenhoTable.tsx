@@ -48,26 +48,26 @@ export function EmpenhoTable({
         <table className="w-full">
           <thead className="bg-surface-muted border-b border-border">
             <tr>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Empenho
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Contrato
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden lg:table-cell">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase hidden lg:table-cell">
                 Descrição
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
                 Prazo
               </th>
-              <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Valor
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Saldo
               </th>
               {canEditAdministrativo && (
-                <th className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+                <th className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                   Ações
                 </th>
               )}
@@ -85,7 +85,7 @@ export function EmpenhoTable({
                   key={empenho.id}
                   className="hover:bg-surface-muted/50 transition-colors"
                 >
-                  <td className="py-3 px-4">
+                  <td className="py-2.5 px-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center shrink-0">
                         <Layers2 size={18} className="text-primary-500" />
@@ -100,7 +100,7 @@ export function EmpenhoTable({
                       </div>
                     </div>
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-2.5 px-4">
                     <div className="flex items-center gap-2">
                       <Building2 size={14} className="text-text-muted" />
                       <div>
@@ -113,10 +113,10 @@ export function EmpenhoTable({
                       </div>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-sm text-text-secondary hidden lg:table-cell">
+                  <td className="py-2.5 px-4 text-sm text-text-secondary hidden lg:table-cell">
                     <p className="truncate max-w-50">{empenho.description}</p>
                   </td>
-                  <td className="py-3 px-4 hidden md:table-cell">
+                  <td className="py-2.5 px-4 hidden md:table-cell">
                     <div className="text-sm">
                       <span
                         className={
@@ -130,12 +130,12 @@ export function EmpenhoTable({
                       )}
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-right">
+                  <td className="py-2.5 px-4 text-right">
                     <p className="font-semibold text-text-primary text-sm">
                       {formatCurrency(empenho.value)}
                     </p>
                   </td>
-                  <td className="py-3 px-4 min-w-40">
+                  <td className="py-2.5 px-4 min-w-40">
                     <div className="space-y-1">
                       <div className="flex items-center justify-between gap-2 text-xs">
                         <span
@@ -161,7 +161,7 @@ export function EmpenhoTable({
                   </td>
 
                   {canEditAdministrativo && (
-                    <td className="py-3 px-4">
+                    <td className="py-2.5 px-4">
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => onEdit(empenho)}
@@ -190,7 +190,7 @@ export function EmpenhoTable({
       {/* Empty State */}
       {paginatedEmpenhos.length === 0 &&
         (isLoading ? (
-          <div className="py-12 text-center">
+          <div className="py-8 text-center">
             <Loader2
               size={32}
               className="mx-auto text-primary-500 animate-spin mb-3"
@@ -200,8 +200,8 @@ export function EmpenhoTable({
             </p>
           </div>
         ) : (
-          <div className="py-12 text-center">
-            <Layers2 size={48} className="mx-auto text-text-muted mb-4" />
+          <div className="py-8 text-center">
+            <Layers2 size={32} className="mx-auto text-text-muted mb-3" />
             <p className="text-text-secondary font-medium">
               Nenhum empenho encontrado
             </p>

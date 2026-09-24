@@ -32,7 +32,7 @@ export function ApprovalRow({
         isResolved ? "opacity-0" : "opacity-100"
       }`}
     >
-      <td className="py-3 px-4">
+      <td className="py-2.5 px-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
             {getInitials(user.name)}
@@ -42,16 +42,16 @@ export function ApprovalRow({
           </p>
         </div>
       </td>
-      <td className="py-3 px-4 text-center text-sm text-text-secondary">
+      <td className="py-2.5 px-4 text-center text-sm text-text-secondary">
         {user.email}
       </td>
-      <td className="py-3 px-4 text-center">
+      <td className="py-2.5 px-4 text-center">
         <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border bg-surface-muted text-text-secondary border-border whitespace-nowrap">
           <Building2 size={12} />
           {user.tenant.name}
         </span>
       </td>
-      <td className="py-3 px-4">
+      <td className="py-2.5 px-4">
         <div className="flex items-center justify-end gap-1">
           <button
             onClick={() => onRequestApprove(user)}

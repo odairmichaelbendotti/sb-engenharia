@@ -15,16 +15,17 @@ export type CascadeStep = {
   href: string;
 };
 
-export type CascadeGap = {
-  label: string;
-  count: number;
-};
-
 export type AttentionItem = {
   id: string;
   label: string;
   meta: string;
   href: string;
+};
+
+export type AttentionGroup = {
+  key: string;
+  label: string;
+  items: AttentionItem[];
 };
 
 export type ActivityItem = {
@@ -37,9 +38,16 @@ export type ActivityItem = {
 };
 
 const ACTIVITY_LIMIT = 8;
+const EMPENHO_WARNING_DAYS = 30;
 
 export function useDashboardData() {
-  const { canViewAdministrativo, canViewEngenharia, canManageOrganization } = usePermission();
+  const {
+    canViewAdministrativo,
+    canViewEngenharia,
+    canEditAdministrativo,
+    canEditEngenharia,
+    canManageOrganization,
+  } = usePermission();
 
   const { myTenant, fetchMyTenant, tenantsSummary, fetchTenantsSummary } = useTenants();
   const { data: contratosData, fetchContratos } = useContratos();
@@ -50,23 +58,30 @@ export function useDashboardData() {
   const { list: fetchInvoices } = invoice;
 
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadError, setHasLoadError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
-    const tasks: Promise<unknown>[] = [fetchMyTenant()];
-    if (canViewAdministrativo) {
-      tasks.push(fetchContratos(), fetchListEmpenhos(), fetchOrdensServico(), fetchInvoices());
-    }
-    if (canViewEngenharia) {
-      tasks.push(fetchObras());
-    }
+    // PLATFORM_ADMIN recebe as listagens de todas as organizações; o dashboard
+    // dele usa só o resumo agregado por organização.
+    const tasks: Promise<unknown>[] = [];
     if (canManageOrganization) {
       tasks.push(fetchTenantsSummary());
+    } else {
+      tasks.push(fetchMyTenant());
+      if (canViewAdministrativo) {
+        tasks.push(fetchContratos(), fetchListEmpenhos(), fetchOrdensServico(), fetchInvoices());
+      }
+      if (canViewEngenharia) {
+        tasks.push(fetchObras());
+      }
     }
 
-    Promise.allSettled(tasks).finally(() => {
-      if (!cancelled) setIsLoading(false);
+    Promise.allSettled(tasks).then((results) => {
+      if (cancelled) return;
+      setHasLoadError(results.some((r) => r.status === "rejected"));
+      setIsLoading(false);
     });
 
     return () => {
@@ -79,18 +94,6 @@ export function useDashboardData() {
   const empenhos = useMemo(() => empenhosData?.empenhos ?? [], [empenhosData]);
   const ordensServico = useMemo(() => osData?.ordensServico ?? [], [osData]);
   const obras = useMemo(() => obrasData?.obras ?? [], [obrasData]);
-
-  const osEmpenhoIds = useMemo(() => new Set(ordensServico.map((os) => os.empenho.id)), [ordensServico]);
-
-  const empenhosSemOS = useMemo(
-    () => empenhos.filter((e) => e.status === "ATIVO" && !osEmpenhoIds.has(e.id)),
-    [empenhos, osEmpenhoIds],
-  );
-
-  const osSemObra = useMemo(
-    () => ordensServico.filter((os) => os.status === "ATIVO" && !os.obra),
-    [ordensServico],
-  );
 
   const cascade = useMemo(() => {
     const steps: CascadeStep[] = [];
@@ -109,26 +112,8 @@ export function useDashboardData() {
         href: "/obras",
       });
     }
-
-    const gaps: CascadeGap[] = [];
-    if (canViewAdministrativo) {
-      gaps.push({ label: "empenhos sem OS", count: empenhosSemOS.length });
-    }
-    if (canViewAdministrativo && canViewEngenharia) {
-      gaps.push({ label: "OS sem obra", count: osSemObra.length });
-    }
-
-    return { steps, gaps };
-  }, [
-    canViewAdministrativo,
-    canViewEngenharia,
-    contratosData,
-    empenhosData,
-    osData,
-    obrasData,
-    empenhosSemOS.length,
-    osSemObra.length,
-  ]);
+    return steps;
+  }, [canViewAdministrativo, canViewEngenharia, contratosData, empenhosData, osData, obrasData]);
 
   const kpis = useMemo(() => {
     const empresasComContratoAtivo = canViewAdministrativo
@@ -152,69 +137,73 @@ export function useDashboardData() {
     };
   }, [canViewAdministrativo, contratos, empenhos, obrasData, invoice.pendingInvoices, invoice.expiredCount, invoice.pendingValue, invoice.expiredValue]);
 
+  // Só entra aqui o que o usuário consegue resolver — quem só visualiza um
+  // domínio não recebe pendências dele.
   const attention = useMemo(() => {
-    const items: AttentionItem[] = [];
+    const groups: AttentionGroup[] = [];
 
-    if (canViewAdministrativo) {
-      for (const e of empenhos) {
-        if (e.status !== "ATIVO") continue;
-        const days = getDaysRemaining(e.endAt);
-        if (days > 30) continue;
-        items.push({
+    if (canEditAdministrativo) {
+      const empenhosVencendo = empenhos
+        .filter((e) => e.status === "ATIVO")
+        .map((e) => ({ e, days: getDaysRemaining(e.endAt) }))
+        .filter(({ days }) => days <= EMPENHO_WARNING_DAYS)
+        .sort((a, b) => a.days - b.days)
+        .map(({ e, days }) => ({
           id: `empenho-${e.id}`,
           label: `Empenho ${e.numero}`,
           meta: days < 0 ? `vencido há ${Math.abs(days)}d` : days === 0 ? "vence hoje" : `vence em ${days}d`,
           href: "/empenhos",
-        });
-      }
+        }));
+      groups.push({ key: "empenhos-vencendo", label: "Empenhos vencidos ou vencendo em 30 dias", items: empenhosVencendo });
 
-      for (const inv of invoice.allInvoices) {
-        if (inv.status !== "VENCIDO") continue;
-        items.push({
-          id: `invoice-${inv.id}`,
-          label: `Nota fiscal ${inv.numero}`,
-          meta: "vencida",
-          href: "/notasfiscais",
-        });
-      }
+      groups.push({
+        key: "notas-vencidas",
+        label: "Notas fiscais vencidas",
+        items: invoice.allInvoices
+          .filter((inv) => inv.status === "VENCIDO")
+          .map((inv) => ({ id: `invoice-${inv.id}`, label: `Nota fiscal ${inv.numero}`, meta: "vencida", href: "/notasfiscais" })),
+      });
 
-      for (const e of empenhosSemOS) {
-        items.push({
-          id: `empenho-sem-os-${e.id}`,
-          label: `Empenho ${e.numero}`,
-          meta: "sem ordem de serviço vinculada",
-          href: "/empenhos",
-        });
-      }
+      const osEmpenhoIds = new Set(ordensServico.map((os) => os.empenho.id));
+      groups.push({
+        key: "empenhos-sem-os",
+        label: "Empenhos ativos sem ordem de serviço",
+        items: empenhos
+          .filter((e) => e.status === "ATIVO" && !osEmpenhoIds.has(e.id))
+          .map((e) => ({ id: `empenho-sem-os-${e.id}`, label: `Empenho ${e.numero}`, meta: "sem OS", href: "/empenhos" })),
+      });
     }
 
-    if (canViewAdministrativo && canViewEngenharia) {
-      for (const os of osSemObra) {
-        items.push({
-          id: `os-sem-obra-${os.id}`,
-          label: `OS ${os.numero}`,
-          meta: "sem obra vinculada",
-          href: "/ordens-servico",
+    if (canEditEngenharia) {
+      if (canViewAdministrativo) {
+        groups.push({
+          key: "os-sem-obra",
+          label: "Ordens de serviço ativas sem obra",
+          items: ordensServico
+            .filter((os) => os.status === "ATIVO" && !os.obra)
+            .map((os) => ({ id: `os-sem-obra-${os.id}`, label: `OS ${os.numero}`, meta: "sem obra", href: "/ordens-servico" })),
         });
       }
+
+      groups.push({
+        key: "obras-atrasadas",
+        label: "Obras com prazo vencido",
+        items: obras
+          .filter((o) => o.status === "EM_ANDAMENTO")
+          .map((o) => ({ o, days: getDaysRemaining(o.dataPrevisaoTermino) }))
+          .filter(({ days }) => days < 0)
+          .sort((a, b) => a.days - b.days)
+          .map(({ o, days }) => ({
+            id: `obra-${o.id}`,
+            label: `Obra ${o.identificacaoPatrimonial}`,
+            meta: `atrasada ${Math.abs(days)}d`,
+            href: "/obras",
+          })),
+      });
     }
 
-    if (canViewEngenharia) {
-      for (const o of obras) {
-        if (o.status !== "EM_ANDAMENTO") continue;
-        const days = getDaysRemaining(o.dataPrevisaoTermino);
-        if (days >= 0) continue;
-        items.push({
-          id: `obra-${o.id}`,
-          label: `Obra ${o.identificacaoPatrimonial}`,
-          meta: `prazo vencido há ${Math.abs(days)}d`,
-          href: "/obras",
-        });
-      }
-    }
-
-    return items;
-  }, [canViewAdministrativo, canViewEngenharia, empenhos, invoice.allInvoices, empenhosSemOS, osSemObra, obras]);
+    return groups.filter((g) => g.items.length > 0);
+  }, [canEditAdministrativo, canEditEngenharia, canViewAdministrativo, empenhos, invoice.allInvoices, ordensServico, obras]);
 
   const activity = useMemo(() => {
     const items: ActivityItem[] = [];
@@ -247,10 +236,12 @@ export function useDashboardData() {
 
   return {
     isLoading,
+    hasLoadError,
     tenantName: myTenant?.name ?? null,
     canViewAdministrativo,
     canViewEngenharia,
     canManageOrganization,
+    engenhariaFirst: canEditEngenharia && !canEditAdministrativo,
     tenantsSummary,
     cascade,
     kpis,

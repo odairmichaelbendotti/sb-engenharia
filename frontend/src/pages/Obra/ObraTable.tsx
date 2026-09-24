@@ -226,8 +226,8 @@ export function ObraTable({
 
   if (obras.length === 0) {
     return (
-      <div className="py-16 text-center">
-        <HardHat size={48} className="mx-auto text-text-muted mb-4" />
+      <div className="py-10 text-center">
+        <HardHat size={32} className="mx-auto text-text-muted mb-3" />
         <p className="text-text-secondary font-medium">
           Nenhuma obra encontrada
         </p>
@@ -245,18 +245,18 @@ export function ObraTable({
           <thead className="bg-surface-muted border-b border-border">
             <tr>
               <th
-                className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors"
+                className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors"
                 onClick={() => handleSort("nome")}
               >
                 <div className="flex items-center gap-1">
                   Obra <SortIcon k="nome" sortKey={sortKey} sortDir={sortDir} />
                 </div>
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Status
               </th>
               <th
-                className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden lg:table-cell cursor-pointer hover:text-text-primary transition-colors"
+                className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase hidden lg:table-cell cursor-pointer hover:text-text-primary transition-colors"
                 onClick={() => handleSort("dataPrevisaoTermino")}
               >
                 <div className="flex items-center gap-1">
@@ -269,7 +269,7 @@ export function ObraTable({
                 </div>
               </th>
               <th
-                className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors"
+                className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors"
                 onClick={() => handleSort("orcamento")}
               >
                 <div className="flex items-center justify-end gap-1">
@@ -277,11 +277,11 @@ export function ObraTable({
                   <SortIcon k="orcamento" sortKey={sortKey} sortDir={sortDir} />
                 </div>
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
                 Execução
               </th>
               {canEditEngenharia && (
-                <th className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+                <th className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                   Ações
                 </th>
               )}
@@ -293,7 +293,7 @@ export function ObraTable({
                 key={obra.id}
                 className="hover:bg-surface-muted/50 transition-colors group"
               >
-                <td className="py-3 px-4">
+                <td className="py-2.5 px-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center shrink-0">
                       <HardHat size={18} className="text-primary-500" />
@@ -313,10 +313,10 @@ export function ObraTable({
                     </div>
                   </div>
                 </td>
-                <td className="py-3 px-4">
+                <td className="py-2.5 px-4">
                   <StatusBadge status={obra.status} />
                 </td>
-                <td className="py-3 px-4 hidden lg:table-cell">
+                <td className="py-2.5 px-4 hidden lg:table-cell">
                   <div className="flex items-center gap-1.5">
                     <CalendarClock
                       size={13}
@@ -328,7 +328,7 @@ export function ObraTable({
                     />
                   </div>
                 </td>
-                <td className="py-3 px-4 text-right">
+                <td className="py-2.5 px-4 text-right">
                   <p className="font-semibold text-text-primary text-sm">
                     {formatCurrency(obra.ordemServico.valor)}
                   </p>
@@ -336,7 +336,7 @@ export function ObraTable({
                     Resp.: {obra.responsavelTecnico}
                   </p>
                 </td>
-                <td className="py-3 px-4 hidden md:table-cell">
+                <td className="py-2.5 px-4 hidden md:table-cell">
                   <ProgressCell
                     orcamento={obra.ordemServico.valor}
                     executado={obra.valorExecutado}
@@ -344,7 +344,7 @@ export function ObraTable({
                   />
                 </td>
                 {canEditEngenharia && (
-                  <td className="py-3 px-4">
+                  <td className="py-2.5 px-4">
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => onEdit(obra)}

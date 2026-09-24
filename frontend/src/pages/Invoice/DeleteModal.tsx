@@ -111,7 +111,7 @@ export function DeleteModal({
         </div>
 
         {/* Conteúdo */}
-        <div className="p-6">
+        <div className="p-5">
           {/* Card da NF */}
           <div className="bg-surface-muted rounded-lg border border-border p-4 mb-6">
             <div className="flex items-start justify-between mb-3">

@@ -170,8 +170,8 @@ Só uma: `VITE_HOST` (ex.: `http://localhost:4000/api`), lida em `services/api.t
 | Role | Engenharia | Administrativo |
 |---|---|---|
 | USER | view | view |
-| ENGENHARIA | edit | nenhum |
-| ADMINISTRATIVO | nenhum | edit |
+| ENGENHARIA | edit | view |
+| ADMINISTRATIVO | view | edit |
 | COORDENACAO | edit | edit |
 | MASTER | edit | edit |
 | PLATFORM_ADMIN | edit | edit |

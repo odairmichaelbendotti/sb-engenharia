@@ -18,7 +18,7 @@ type DashboardActivityProps = {
 export default function DashboardActivity({ items }: DashboardActivityProps) {
   return (
     <div className="bg-surface border border-border rounded-xl overflow-hidden">
-      <div className="p-4 border-b border-border">
+      <div className="px-4 py-3 border-b border-border">
         <h3 className="font-semibold text-text-primary flex items-center gap-2">
           <Clock size={18} className="text-primary-500" />
           Atividade recente
@@ -27,7 +27,7 @@ export default function DashboardActivity({ items }: DashboardActivityProps) {
       </div>
 
       {items.length === 0 ? (
-        <p className="p-6 text-center text-sm text-text-secondary">Nenhum registro ainda</p>
+        <p className="p-4 text-center text-sm text-text-secondary">Nenhum registro ainda</p>
       ) : (
         <ul className="divide-y divide-border">
           {items.map((item) => {
@@ -36,7 +36,7 @@ export default function DashboardActivity({ items }: DashboardActivityProps) {
               <li key={item.id}>
                 <Link
                   to={item.href}
-                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-muted transition-colors"
+                  className="flex items-center gap-3 px-4 py-2 hover:bg-surface-muted transition-colors"
                 >
                   <div className="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center shrink-0">
                     <Icon size={14} className="text-primary-500" />

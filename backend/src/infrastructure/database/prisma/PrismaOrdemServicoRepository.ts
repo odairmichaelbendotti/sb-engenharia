@@ -63,22 +63,23 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
     }
   }
 
-  async list(tenant_id: string): Promise<ListOrdensServicoResponse> {
+  async list(tenant_id?: string): Promise<ListOrdensServicoResponse> {
+    const tenantFilter = tenant_id ? { tenant_id } : {};
     try {
       const [ordensServico, total, ativas, finalizadas, canceladas, valorAgg] = await Promise.all([
         prisma.ordemServico.findMany({
-          where: { tenant_id },
+          where: tenantFilter,
           orderBy: { createdAt: "desc" },
           include: {
             empenho: { select: EMPENHO_INFO_SELECT },
             obra: { select: { id: true, nome: true, status: true } },
           },
         }),
-        prisma.ordemServico.count({ where: { tenant_id } }),
-        prisma.ordemServico.count({ where: { tenant_id, status: "ATIVO" } }),
-        prisma.ordemServico.count({ where: { tenant_id, status: "FINALIZADO" } }),
-        prisma.ordemServico.count({ where: { tenant_id, status: "CANCELADO" } }),
-        prisma.ordemServico.aggregate({ where: { tenant_id }, _sum: { valor: true } }),
+        prisma.ordemServico.count({ where: tenantFilter }),
+        prisma.ordemServico.count({ where: { ...tenantFilter, status: "ATIVO" } }),
+        prisma.ordemServico.count({ where: { ...tenantFilter, status: "FINALIZADO" } }),
+        prisma.ordemServico.count({ where: { ...tenantFilter, status: "CANCELADO" } }),
+        prisma.ordemServico.aggregate({ where: tenantFilter, _sum: { valor: true } }),
       ]);
 
       return {

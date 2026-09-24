@@ -51,7 +51,7 @@ export default function Invoices() {
   }, [allInvoices, searchTerm]);
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-5 max-w-7xl mx-auto">
       {editInvoice && (
         <EditModal editInvoice={editInvoice} setEditInvoice={setEditInvoice} />
       )}

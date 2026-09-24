@@ -137,7 +137,7 @@ export default function Empresas() {
   };
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-5 max-w-7xl mx-auto">
       <PageHeader
         icon={Building2}
         title="Empresas"

@@ -59,7 +59,7 @@ export class ObraController {
       }
 
       const data = await this.listObras.execute({
-        tenant_id: user.tenant_id,
+        tenant_id: user.role === "PLATFORM_ADMIN" ? undefined : user.tenant_id,
         company_id: user.role === "EMPRESA" ? user.company_id! : undefined,
         includeInvoices: new DomainAccessPolicy().can(user.role, "administrativo", "view"),
       });

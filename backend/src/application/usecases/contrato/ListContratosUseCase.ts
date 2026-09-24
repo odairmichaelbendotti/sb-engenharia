@@ -5,6 +5,8 @@ export class ListContratosUseCase {
   constructor(private repository: IContratoRepository) {}
 
   async execute(user: AuthenticatedUser) {
-    return this.repository.list(user.tenant_id);
+    const tenant_id =
+      user.role === "PLATFORM_ADMIN" ? undefined : user.tenant_id;
+    return this.repository.list(tenant_id);
   }
 }

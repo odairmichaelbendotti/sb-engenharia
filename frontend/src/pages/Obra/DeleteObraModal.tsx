@@ -29,7 +29,7 @@ export function DeleteObraModal({ obra, handleClose }: DeleteObraModalProps) {
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-surface rounded-2xl w-full max-w-md shadow-2xl border border-border">
-        <div className="flex items-center justify-between p-6 border-b border-border">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-danger-bg rounded-xl flex items-center justify-center">
               <AlertTriangle size={20} className="text-danger-text" />
@@ -44,7 +44,7 @@ export function DeleteObraModal({ obra, handleClose }: DeleteObraModalProps) {
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-5 space-y-4">
           <div className="bg-danger-bg border border-danger-border rounded-lg p-4">
             <p className="text-sm text-danger-text font-medium">
               Você está prestes a excluir permanentemente a obra:

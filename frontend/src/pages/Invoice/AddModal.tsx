@@ -108,7 +108,7 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-surface rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl border border-border">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border bg-linear-to-r from-primary-50/50 to-transparent shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-linear-to-r from-primary-50/50 to-transparent shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
               <Receipt size={20} className="text-primary-600" />
@@ -130,7 +130,7 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6">
+        <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-5">
           {/* Empenho Selecionado */}
           {selectedEmpenho && (
             <EmpenhoDetails

@@ -8,7 +8,7 @@ export class ListObrasUseCase {
     company_id,
     includeInvoices,
   }: {
-    tenant_id: string;
+    tenant_id: string | undefined;
     company_id?: string;
     includeInvoices?: boolean;
   }) {

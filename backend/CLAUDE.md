@@ -126,6 +126,10 @@ JWT em cookie httpOnly (`req.cookies.auth`). **`AuthMiddleware` não confia no p
 - **Nenhum dos dois use cases acima confere se o usuário-alvo pertence à mesma tenant de quem está aprovando/recusando.** Um `MASTER` só *vê* pendentes da própria tenant na listagem, mas se souber o `id` de um usuário pendente de outra tenant, `ApproveUserUseCase`/`DisapproveUserUseCase` aceitam normalmente — só checam o role de quem chama, não o `tenant_id` do alvo. Identificado nesta sessão, não corrigido — confirmar escopo antes de mexer.
 - `UserController.listUnapprovedUsers` faz `res.json(unapprovedUsers)` direto do retorno do Prisma, sem mapear campos — isso inclui o **hash de senha** (`password`) de cada usuário pendente na resposta JSON. Vaza pro frontend (mesmo que a UI não mostre). Identificado nesta sessão, não corrigido.
 
+## Escopo das listagens por tenant
+
+`PLATFORM_ADMIN` é o dono da plataforma e enxerga **todas** as organizações: as listagens de Contrato, Empenho, OrdemServico, Obra e Invoice passam `tenant_id = undefined` quando `user.role === "PLATFORM_ADMIN"` (o repository vira filtro vazio). Todos os outros roles veem só a própria tenant. Ao criar uma listagem nova, seguir esse padrão — antes era inconsistente (Empenho/Invoice globais, o resto não) e isso bagunçava o Dashboard. Escritas (update/delete) continuam checando `existing.tenant_id !== user.tenant_id`, ou seja, o PLATFORM_ADMIN ainda não consegue editar registros de outra organização.
+
 ## Cadastro de tenants no signup (rota pública)
 
 Depois de `TenantRoutes.ts` passar a exigir `AuthMiddleware` + `PLATFORM_ADMIN` em `GET /tenant/get-all` (ver pendência #5 abaixo), o formulário de cadastro (`SignUp.tsx`, sem usuário autenticado ainda) ficou sem como listar as organizações pro dropdown. Solução: nova rota **pública** `GET /tenant/list-public` (sem `AuthMiddleware`), montada em `TenantRoutes.ts` via `ListTenantOptionsUseCase` → `ITenantRepository.getPublicOptions()` → `prisma.tenant.findMany({ select: { id: true, name: true } })`. Só expõe `id`/`name` — nunca os campos sensíveis do `Tenant` (`cnpj`, `cep`, `address`, `phone`, `email`), que só saem pela rota protegida `GET /tenant/get-all`. Se precisar de mais campos públicos no dropdown de signup no futuro, expandir o `select` do `getPublicOptions`, não trocar `list-public` para reusar `getAll`.
@@ -154,8 +158,8 @@ Matriz de acesso (`view` = listar/ler; `edit` = criar/editar/excluir, implica `v
 | Role | Engenharia | Administrativo |
 |---|---|---|
 | USER | view | view |
-| ENGENHARIA | edit | nenhum |
-| ADMINISTRATIVO | nenhum | edit |
+| ENGENHARIA | edit | view |
+| ADMINISTRATIVO | view | edit |
 | COORDENACAO | edit | edit |
 | MASTER | edit | edit |
 | PLATFORM_ADMIN | edit | edit |

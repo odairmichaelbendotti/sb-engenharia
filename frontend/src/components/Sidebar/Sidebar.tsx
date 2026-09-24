@@ -18,6 +18,7 @@ const Sidebar = () => {
     canManageOrganization,
     canApproveUsers,
     canViewAdministrativo,
+    canViewEngenharia,
     isEmpresaRestricted,
   } = usePermission();
   const { tenantOptions, listTenantOptions } = useTenants();
@@ -76,7 +77,9 @@ const Sidebar = () => {
               {canViewAdministrativo && (
                 <SidebarGroup label="Administrativo" items={adminItems} />
               )}
-              <SidebarGroup label="Engenharia" items={engItems} />
+              {canViewEngenharia && (
+                <SidebarGroup label="Engenharia" items={engItems} />
+              )}
             </>
           )}
         </div>

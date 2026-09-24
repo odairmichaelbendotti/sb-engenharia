@@ -35,16 +35,16 @@ export default function ApprovalTable({
         <table className="w-full">
           <thead className="bg-surface-muted border-b border-border">
             <tr>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Usuário
               </th>
-              <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                 E-mail
               </th>
-              <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Organização
               </th>
-              <th className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Ações
               </th>
             </tr>
@@ -64,8 +64,8 @@ export default function ApprovalTable({
       </div>
 
       {paginatedPending.length === 0 && (
-        <div className="py-12 text-center">
-          <UserCheck size={48} className="mx-auto text-text-muted mb-4" />
+        <div className="py-8 text-center">
+          <UserCheck size={32} className="mx-auto text-text-muted mb-3" />
           <p className="text-text-secondary font-medium">
             {!hasPending
               ? "Nenhuma solicitação pendente"

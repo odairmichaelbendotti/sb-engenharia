@@ -76,11 +76,12 @@ export class PrismaContratoRepository implements IContratoRepository {
     }
   }
 
-  async list(tenant_id: string): Promise<ListContratosResponse> {
+  async list(tenant_id?: string): Promise<ListContratosResponse> {
+    const tenantFilter = tenant_id ? { tenant_id } : {};
     try {
       const [contratos, total, ativos, finalizados, cancelados, valorAgg] = await Promise.all([
         prisma.contrato.findMany({
-          where: { tenant_id },
+          where: tenantFilter,
           orderBy: { createdAt: "desc" },
           include: {
             company: { select: { id: true, name: true, cnpj: true } },
@@ -95,11 +96,11 @@ export class PrismaContratoRepository implements IContratoRepository {
             },
           },
         }),
-        prisma.contrato.count({ where: { tenant_id } }),
-        prisma.contrato.count({ where: { tenant_id, status: "ATIVO" } }),
-        prisma.contrato.count({ where: { tenant_id, status: "FINALIZADO" } }),
-        prisma.contrato.count({ where: { tenant_id, status: "CANCELADO" } }),
-        prisma.contrato.aggregate({ where: { tenant_id }, _sum: { valor: true } }),
+        prisma.contrato.count({ where: tenantFilter }),
+        prisma.contrato.count({ where: { ...tenantFilter, status: "ATIVO" } }),
+        prisma.contrato.count({ where: { ...tenantFilter, status: "FINALIZADO" } }),
+        prisma.contrato.count({ where: { ...tenantFilter, status: "CANCELADO" } }),
+        prisma.contrato.aggregate({ where: tenantFilter, _sum: { valor: true } }),
       ]);
 
       return {

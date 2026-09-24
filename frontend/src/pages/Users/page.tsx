@@ -72,16 +72,16 @@ const Usuarios = () => {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-5 max-w-7xl mx-auto">
       <UsersHeader />
 
       {isLoading ? (
-        <div className="bg-surface border border-border rounded-lg py-16 flex flex-col items-center justify-center gap-2">
+        <div className="bg-surface border border-border rounded-lg py-10 flex flex-col items-center justify-center gap-2">
           <Loader2 size={24} className="animate-spin text-primary-500" />
           <p className="text-text-secondary text-sm">Carregando...</p>
         </div>
       ) : error ? (
-        <div className="bg-surface border border-border rounded-lg py-16 flex flex-col items-center justify-center gap-2">
+        <div className="bg-surface border border-border rounded-lg py-10 flex flex-col items-center justify-center gap-2">
           <AlertCircle size={24} className="text-danger-text" />
           <p className="text-text-secondary text-sm">{error}</p>
           <button

@@ -106,7 +106,7 @@ const ModalEmpenho = ({
     >
       <div className="bg-surface rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border border-border overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border bg-linear-to-r from-primary-50/50 to-transparent shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-linear-to-r from-primary-50/50 to-transparent shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
               <Building2 size={20} className="text-primary-600" />
@@ -196,7 +196,7 @@ const ModalEmpenho = ({
             </div>
           ) : (
             <div className="text-center py-8">
-              <Layers2 size={48} className="mx-auto text-text-muted mb-4" />
+              <Layers2 size={32} className="mx-auto text-text-muted mb-3" />
               <p className="text-text-secondary font-medium">
                 Nenhum empenho vinculado
               </p>

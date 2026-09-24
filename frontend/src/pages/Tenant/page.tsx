@@ -57,7 +57,7 @@ export default function Organizacoes() {
   };
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-5 max-w-7xl mx-auto">
       <TenantHeader
         canManageOrganization={canManageOrganization}
         onAdd={handleOpen}
@@ -69,13 +69,13 @@ export default function Organizacoes() {
         </div>
 
         {isLoading && (
-          <div className="py-12 flex items-center justify-center">
+          <div className="py-8 flex items-center justify-center">
             <Loader2 size={28} className="animate-spin text-primary-500" />
           </div>
         )}
 
         {!isLoading && error && (
-          <div className="py-12 text-center">
+          <div className="py-8 text-center">
             <p className="text-danger-text font-medium">{error}</p>
             <button
               onClick={() => listTenants()}

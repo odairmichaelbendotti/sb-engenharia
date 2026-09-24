@@ -74,7 +74,7 @@ export type ObraSummaryByTenant = {
 
 export interface IObraRepository {
   create(obra: ObraEntity): Promise<PersistedObra & ObraOrdemServicoInfo>;
-  list(tenant_id: string, company_id?: string, includeInvoices?: boolean): Promise<ListObrasResponse>;
+  list(tenant_id: string | undefined, company_id?: string, includeInvoices?: boolean): Promise<ListObrasResponse>;
   listOptionsForInvoice(tenant_id: string, empenho_id: string): Promise<ObraOptionForInvoice[]>;
   /** Obras em andamento + orçamento/executado, agrupados por tenant — resumo multi-institucional do PLATFORM_ADMIN. */
   summaryByTenant(): Promise<ObraSummaryByTenant[]>;

@@ -61,23 +61,23 @@ export function OrdemServicoTable({
         <table className="w-full">
           <thead className="bg-surface-muted border-b border-border">
             <tr>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Ordem de Serviço
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Empenho / Contrato
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
                 Obra vinculada
               </th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Valor
               </th>
-              <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Status
               </th>
               {canEditAdministrativo && (
-                <th className="text-right py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+                <th className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                   Ações
                 </th>
               )}
@@ -86,7 +86,7 @@ export function OrdemServicoTable({
           <tbody className="divide-y divide-border">
             {paginatedOrdensServico.map((os) => (
               <tr key={os.id} className="hover:bg-surface-muted/50 transition-colors">
-                <td className="py-3 px-4">
+                <td className="py-2.5 px-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center shrink-0">
                       <ClipboardList size={18} className="text-primary-500" />
@@ -94,7 +94,7 @@ export function OrdemServicoTable({
                     <p className="font-medium text-text-primary text-sm">{os.numero}</p>
                   </div>
                 </td>
-                <td className="py-3 px-4">
+                <td className="py-2.5 px-4">
                   <div className="flex items-center gap-2">
                     <FileSignature size={14} className="text-text-muted" />
                     <div>
@@ -105,7 +105,7 @@ export function OrdemServicoTable({
                     </div>
                   </div>
                 </td>
-                <td className="py-3 px-4 hidden md:table-cell">
+                <td className="py-2.5 px-4 hidden md:table-cell">
                   {os.obra ? (
                     <div className="inline-flex items-center gap-1.5 text-sm text-text-primary">
                       <HardHat size={14} className="text-text-muted" />
@@ -121,12 +121,12 @@ export function OrdemServicoTable({
                     </span>
                   )}
                 </td>
-                <td className="py-3 px-4">
+                <td className="py-2.5 px-4">
                   <span className="text-sm font-semibold text-text-primary">
                     {formatCurrency(os.valor)}
                   </span>
                 </td>
-                <td className="py-3 px-4 text-center">
+                <td className="py-2.5 px-4 text-center">
                   <span
                     className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium border ${STATUS_CLASS[os.status]}`}
                   >
@@ -135,7 +135,7 @@ export function OrdemServicoTable({
                 </td>
 
                 {canEditAdministrativo && (
-                  <td className="py-3 px-4">
+                  <td className="py-2.5 px-4">
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => onEdit(os)}
@@ -163,13 +163,13 @@ export function OrdemServicoTable({
       {/* Empty State */}
       {paginatedOrdensServico.length === 0 &&
         (isLoading ? (
-          <div className="py-12 text-center">
+          <div className="py-8 text-center">
             <Loader2 size={32} className="mx-auto text-primary-500 animate-spin mb-3" />
             <p className="text-text-secondary text-sm">Carregando ordens de serviço...</p>
           </div>
         ) : (
-          <div className="py-12 text-center">
-            <ClipboardList size={48} className="mx-auto text-text-muted mb-4" />
+          <div className="py-8 text-center">
+            <ClipboardList size={32} className="mx-auto text-text-muted mb-3" />
             <p className="text-text-secondary font-medium">Nenhuma ordem de serviço encontrada</p>
             <p className="text-text-muted text-sm mt-1">
               Tente ajustar os filtros ou cadastre uma nova ordem de serviço

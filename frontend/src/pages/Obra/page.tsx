@@ -100,7 +100,7 @@ export default function Obras() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-5 max-w-7xl mx-auto">
       <ObraHeader
         orcamentoTotal={stats.orcamentoTotal}
         canCreateAndEditContent={canCreateAndEditContent}
@@ -109,14 +109,14 @@ export default function Obras() {
 
       {/* Loading State */}
       {isLoading ? (
-        <div className="bg-surface border border-border rounded-lg p-12 flex flex-col items-center justify-center">
-          <Loader2 size={48} className="text-primary-500 animate-spin mb-4" />
+        <div className="bg-surface border border-border rounded-lg p-8 flex flex-col items-center justify-center">
+          <Loader2 size={32} className="text-primary-500 animate-spin mb-3" />
           <p className="text-text-secondary text-sm">Carregando obras...</p>
         </div>
       ) : error ? (
         /* Error State */
-        <div className="bg-surface border border-border rounded-lg p-12 flex flex-col items-center justify-center">
-          <AlertCircle size={48} className="text-danger-text mb-4" />
+        <div className="bg-surface border border-border rounded-lg p-8 flex flex-col items-center justify-center">
+          <AlertCircle size={32} className="text-danger-text mb-3" />
           <p className="text-text-secondary text-sm mb-4">{error}</p>
           <button
             onClick={() => {
@@ -124,7 +124,7 @@ export default function Obras() {
               setIsLoading(true);
               fetchObras().finally(() => setIsLoading(false));
             }}
-            className="px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium"
+            className="cursor-pointer px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium"
           >
             Tentar novamente
           </button>
@@ -146,8 +146,8 @@ export default function Obras() {
             </div>
             {filteredObras.length === 0 ? (
               /* Empty State */
-              <div className="p-12 flex flex-col items-center justify-center">
-                <FolderOpen size={48} className="text-text-muted mb-4" />
+              <div className="p-8 flex flex-col items-center justify-center">
+                <FolderOpen size={32} className="text-text-muted mb-3" />
                 <p className="text-text-secondary text-sm mb-2">
                   {obras.length === 0
                     ? "Nenhuma obra cadastrada"
@@ -156,7 +156,7 @@ export default function Obras() {
                 {obras.length === 0 && canCreateAndEditContent && (
                   <button
                     onClick={handleOpenCreate}
-                    className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium"
+                    className="mt-3 cursor-pointer flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium"
                   >
                     <Plus size={16} />
                     Criar primeira obra

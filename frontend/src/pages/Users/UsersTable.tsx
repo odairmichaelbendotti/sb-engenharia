@@ -28,16 +28,16 @@ export default function UsersTable({
         <table className="w-full">
           <thead className="bg-surface-muted border-b border-border">
             <tr>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Usuário
               </th>
-              <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                 E-mail
               </th>
-              <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Papel
               </th>
-              <th className="text-center py-3 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Status
               </th>
             </tr>
@@ -54,7 +54,7 @@ export default function UsersTable({
                   key={user.id}
                   className="hover:bg-surface-muted/50 transition-colors"
                 >
-                  <td className="py-3 px-4">
+                  <td className="py-2.5 px-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
                         {getInitials(user.name)}
@@ -64,10 +64,10 @@ export default function UsersTable({
                       </p>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-center text-sm text-text-secondary">
+                  <td className="py-2.5 px-4 text-center text-sm text-text-secondary">
                     {user.email}
                   </td>
-                  <td className="py-3 px-4 text-center">
+                  <td className="py-2.5 px-4 text-center">
                     {canEditRole ? (
                       <select
                         value={user.role}
@@ -95,7 +95,7 @@ export default function UsersTable({
                       </span>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-center">
+                  <td className="py-2.5 px-4 text-center">
                     <span
                       className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium border whitespace-nowrap ${
                         user.approved
@@ -114,8 +114,8 @@ export default function UsersTable({
       </div>
 
       {users.length === 0 && (
-        <div className="py-12 text-center">
-          <UsersIcon size={48} className="mx-auto text-text-muted mb-4" />
+        <div className="py-8 text-center">
+          <UsersIcon size={32} className="mx-auto text-text-muted mb-3" />
           <p className="text-text-secondary font-medium">Nenhum usuário encontrado</p>
         </div>
       )}

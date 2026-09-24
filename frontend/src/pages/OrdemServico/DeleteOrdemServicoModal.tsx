@@ -71,7 +71,7 @@ export function DeleteOrdemServicoModal({
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="p-5">
           <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
             <div className="flex items-start gap-3 mb-4">
               <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center shrink-0">
@@ -118,7 +118,7 @@ export function DeleteOrdemServicoModal({
           )}
         </div>
 
-        <div className="flex gap-3 p-6 pt-0">
+        <div className="flex gap-3 p-5 pt-0">
           <button
             onClick={() => handleClose()}
             className="flex-1 px-5 py-3 cursor-pointer text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors font-medium"

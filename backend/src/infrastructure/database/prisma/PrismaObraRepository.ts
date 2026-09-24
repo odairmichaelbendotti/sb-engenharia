@@ -99,10 +99,10 @@ export class PrismaObraRepository implements IObraRepository {
     }
   }
 
-  async list(tenant_id: string, company_id?: string, includeInvoices?: boolean): Promise<ListObrasResponse> {
+  async list(tenant_id: string | undefined, company_id?: string, includeInvoices?: boolean): Promise<ListObrasResponse> {
     try {
       const baseWhere = {
-        tenant_id,
+        ...(tenant_id ? { tenant_id } : {}),
         ...(company_id
           ? { ordemServico: { empenho: { contrato: { company_id } } } }
           : {}),

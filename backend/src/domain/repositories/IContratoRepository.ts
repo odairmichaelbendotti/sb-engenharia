@@ -54,7 +54,7 @@ export type ContratoActiveCountByTenant = {
 export interface IContratoRepository {
   create(contrato: ContratoEntity): Promise<ContratoListItem>;
   verifyIdentificador(identificador: string, tenant_id: string): Promise<boolean>;
-  list(tenant_id: string): Promise<ListContratosResponse>;
+  list(tenant_id?: string): Promise<ListContratosResponse>;
   /** Contagem de contratos ativos, agrupada por tenant — usado no resumo multi-institucional do PLATFORM_ADMIN. */
   countActiveByTenant(): Promise<ContratoActiveCountByTenant[]>;
   listOptionsForObra(tenant_id: string): Promise<ContratoOption[]>;

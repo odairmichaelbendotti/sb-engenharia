@@ -5,8 +5,8 @@ type AccessLevel = "none" | "view" | "edit";
 
 const ROLE_DOMAIN_ACCESS: Record<UserRole, Record<BusinessDomain, AccessLevel>> = {
   USER: { engenharia: "view", administrativo: "view" },
-  ENGENHARIA: { engenharia: "edit", administrativo: "none" },
-  ADMINISTRATIVO: { engenharia: "none", administrativo: "edit" },
+  ENGENHARIA: { engenharia: "edit", administrativo: "view" },
+  ADMINISTRATIVO: { engenharia: "view", administrativo: "edit" },
   COORDENACAO: { engenharia: "edit", administrativo: "edit" },
   // MASTER e PLATFORM_ADMIN só visualizam Engenharia (Obra) — edição fica
   // restrita a ENGENHARIA/COORDENACAO, por decisão explícita do usuário.
