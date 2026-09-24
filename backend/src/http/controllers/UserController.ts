@@ -46,6 +46,8 @@ export class UserController {
         email: user.email,
         approved: user.approved,
         role: user.role,
+        tenant_id: user.tenant_id,
+        company_id: user.company_id,
       };
 
       res.cookie("auth", token, {
@@ -78,7 +80,15 @@ export class UserController {
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       });
-      res.status(200).json(user);
+      res.status(200).json({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        approved: user.approved,
+        role: user.role,
+        tenant_id: user.tenant_id,
+        company_id: user.company_id,
+      });
     } catch (err) {
       console.log(err);
       if (err instanceof DomainError) {

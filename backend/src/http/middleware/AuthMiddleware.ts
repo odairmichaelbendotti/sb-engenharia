@@ -15,7 +15,12 @@ export class AuthMiddleware {
 
     if (!token) return res.status(401).json({ message: "Token not provided" });
 
-    const payload = this.tokenValidator.validate(token) as JwtPayload;
+    let payload: JwtPayload;
+    try {
+      payload = this.tokenValidator.validate(token) as JwtPayload;
+    } catch {
+      return res.status(401).json({ message: "Invalid token" });
+    }
 
     if (!payload) {
       return res.status(401).json({ message: "Invalid token" });

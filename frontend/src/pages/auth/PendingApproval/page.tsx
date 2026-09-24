@@ -17,7 +17,9 @@ export default function PendingApproval() {
     async function poll() {
       setChecking(true);
       try {
-        fetchUser();
+        await fetchUser();
+      } catch {
+        // falha transitória: mantém a tela de espera e tenta de novo no próximo ciclo
       } finally {
         setChecking(false);
         setLastCheckedAt(new Date());

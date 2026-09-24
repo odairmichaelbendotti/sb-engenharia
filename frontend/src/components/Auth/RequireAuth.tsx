@@ -7,9 +7,13 @@ import PendingApproval from "../../pages/auth/PendingApproval/page";
 const RequireAuth = ({ children }: { children: React.ReactNode }) => {
   const { user, fetchUser } = useUser();
   const navigate = useNavigate();
-  const [checking, setChecking] = useState(true);
+  const [checking, setChecking] = useState(!user);
 
   useEffect(() => {
+    // signin/signup já populam o store; refazer GET /me aqui só cria uma chance
+    // de derrubar o usuário (inclusive o pendente de aprovação) de volta pro login.
+    if (useUser.getState().user) return;
+
     let cancelled = false;
 
     fetchUser()
