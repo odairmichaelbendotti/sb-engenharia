@@ -159,7 +159,7 @@ Padrão de "não refazer fetch ao remontar": como as páginas (`useState` local)
 
 ## Variáveis de ambiente
 
-Só uma: `VITE_HOST` (ex.: `http://localhost:4000/api`), lida em `services/api.ts`. Ver `.env.example`.
+Só uma: `VITE_HOST` (ex.: `http://localhost:4000/api`), lida em `services/api.ts` **apenas em dev**. No build de produção a base é fixa em `/api` (rewrite do `vercel.json` para o backend): chamar a API em outro domínio deixa o cookie `auth` como cookie de terceiro, o navegador descarta e a sessão some no F5. Ver `.env.example`.
 
 **`frontend/.env` estava versionado no git até esta sessão** — foi removido do tracking (`git rm --cached`) e adicionado ao `.gitignore`; o arquivo continua no disco para uso local. Não versionar `.env` de novo, mesmo que o valor pareça inofensivo.
 
