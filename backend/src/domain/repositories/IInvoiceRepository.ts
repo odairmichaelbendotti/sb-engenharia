@@ -24,6 +24,8 @@ export type InvoiceSummaryByTenant = {
 export interface IInvoiceRepository {
   create(invoice: InvoiceType): Promise<PersistedInvoice>;
   findByNumber(number: string): Promise<PersistedInvoice | null>;
+  /** tenant da nota, herdado do empenho (nota não tem tenant_id próprio). */
+  findTenantId(id: string): Promise<string | null>;
   list(tenant_id?: string): Promise<listInvoices>;
   /** Notas fiscais pendentes/vencidas, agrupadas por tenant — resumo multi-institucional do PLATFORM_ADMIN. */
   summaryByTenant(): Promise<InvoiceSummaryByTenant[]>;

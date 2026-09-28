@@ -3,32 +3,34 @@ import { DomainError } from "../../../domain/errors/DomainError.js";
 import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository.js";
 import type { IInvoiceRepository } from "../../../domain/repositories/IInvoiceRepository.js";
 import type { IObraRepository } from "../../../domain/repositories/IObraRepository.js";
+import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
+import type { InvoiceScopeValidator } from "./InvoiceScopeValidator.js";
 
 export class CreateInvoiceUseCase {
   constructor(
     private repository: IInvoiceRepository,
     private empenhoRepository: IEmpenhoRepository,
     private obraRepository: IObraRepository,
+    private scopeValidator: InvoiceScopeValidator,
   ) {}
 
-  async execute({
-    numero,
-    description,
-    vencimento,
-    value,
-    empenho_id,
-    company_id,
-    obra_id,
-  }: InvoiceType) {
+  async execute(
+    {
+      numero,
+      description,
+      vencimento,
+      value,
+      empenho_id,
+      company_id,
+      obra_id,
+    }: InvoiceType,
+    user: AuthenticatedUser,
+  ) {
     if (value <= 0) {
       throw new DomainError("Value must be greater than 0");
     }
 
-    const empenho = await this.empenhoRepository.findByEmpenhoId(empenho_id);
-
-    if (!empenho) {
-      throw new DomainError("Empenho not found");
-    }
+    const empenho = await this.scopeValidator.validate(user, empenho_id, company_id);
 
     if (empenho.totalPaid + Math.round(value * 100) > empenho.value) {
       throw new DomainError("Value exceeds empenho limit");

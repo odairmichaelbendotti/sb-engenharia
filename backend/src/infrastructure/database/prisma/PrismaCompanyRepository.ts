@@ -5,16 +5,18 @@ import type {
 } from "../../../domain/entities/Company.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import type {
+  CompanyWithTenantEmpenhos,
   ICompanyRepository,
   ListCompaniesResponse,
 } from "../../../domain/repositories/ICompanyRepository.js";
 import { prisma } from "../../prisma/prisma.js";
 
 export class PrismaCompanyRepository implements ICompanyRepository {
-  async create(company: CompanyEntity): Promise<PersistedCompany> {
+  async create(company: CompanyEntity, tenant_id: string): Promise<PersistedCompany> {
     try {
       const newCompany = await prisma.company.create({
         data: {
+          tenants: { create: { tenant_id } },
           name: company.name,
           cnpj: company.cnpj,
           cep: company.cep,
@@ -48,7 +50,61 @@ export class PrismaCompanyRepository implements ICompanyRepository {
       throw new DomainError("Error verifying cnpj: " + error);
     }
   }
-  async list(): Promise<ListCompaniesResponse> {
+  async findByCnpj(cnpj: string): Promise<PersistedCompany | null> {
+    try {
+      return await prisma.company.findUnique({ where: { cnpj } });
+    } catch (error) {
+      throw new DomainError("Error finding company by cnpj: " + error);
+    }
+  }
+  async isLinkedToTenant(company_id: string, tenant_id: string): Promise<boolean> {
+    try {
+      const link = await prisma.tenantCompany.findUnique({
+        where: { tenant_id_company_id: { tenant_id, company_id } },
+      });
+      return link !== null;
+    } catch (error) {
+      throw new DomainError("Error verifying company link: " + error);
+    }
+  }
+  async linkToTenant(company_id: string, tenant_id: string): Promise<void> {
+    try {
+      await prisma.tenantCompany.upsert({
+        where: { tenant_id_company_id: { tenant_id, company_id } },
+        create: { tenant_id, company_id },
+        update: {},
+      });
+    } catch (error) {
+      throw new DomainError("Error linking company: " + error);
+    }
+  }
+  async unlinkFromTenant(company_id: string, tenant_id: string): Promise<void> {
+    try {
+      await prisma.tenantCompany.deleteMany({ where: { tenant_id, company_id } });
+    } catch (error) {
+      throw new DomainError("Error unlinking company: " + error);
+    }
+  }
+  async countTenantLinks(company_id: string): Promise<number> {
+    try {
+      return await prisma.tenantCompany.count({ where: { company_id } });
+    } catch (error) {
+      throw new DomainError("Error counting company links: " + error);
+    }
+  }
+  async hasContratosInTenant(company_id: string, tenant_id: string): Promise<boolean> {
+    try {
+      const count = await prisma.contrato.count({ where: { company_id, tenant_id } });
+      return count > 0;
+    } catch (error) {
+      throw new DomainError("Error verifying company contratos: " + error);
+    }
+  }
+  async list(tenant_id: string | undefined): Promise<ListCompaniesResponse> {
+    // Sem tenant (PLATFORM_ADMIN) os filtros ficam vazios e trazem tudo
+    const tenantFilter = tenant_id ? { tenant_id } : {};
+    const companyFilter = tenant_id ? { tenants: { some: { tenant_id } } } : {};
+
     try {
       const [
         companies,
@@ -57,11 +113,20 @@ export class PrismaCompanyRepository implements ICompanyRepository {
         totalEmpenhosActive,
         totalEmpenhosValue,
       ] = await Promise.all([
-        prisma.company.findMany({ include: { contratos: { include: { empenhos: true } } } }),
-        prisma.company.count(),
-        prisma.empenho.count(),
-        prisma.empenho.count({ where: { status: "ATIVO" } }),
-        prisma.empenho.aggregate({ _sum: { value: true } }),
+        prisma.company.findMany({
+          where: companyFilter,
+          include: {
+            contratos: {
+              where: tenantFilter,
+              include: { empenhos: { where: tenantFilter } },
+            },
+          },
+          orderBy: { name: "asc" },
+        }),
+        prisma.company.count({ where: companyFilter }),
+        prisma.empenho.count({ where: tenantFilter }),
+        prisma.empenho.count({ where: { ...tenantFilter, status: "ATIVO" } }),
+        prisma.empenho.aggregate({ where: tenantFilter, _sum: { value: true } }),
       ]);
 
       // Empenho não pertence mais diretamente à Company (agora vive em Contrato) —
@@ -90,6 +155,37 @@ export class PrismaCompanyRepository implements ICompanyRepository {
       };
     } catch (error) {
       throw new DomainError("Method not implemented." + error);
+    }
+  }
+  async listByTenant(
+    tenant_id: string | undefined,
+  ): Promise<CompanyWithTenantEmpenhos[]> {
+    const tenantFilter = tenant_id ? { tenant_id } : {};
+
+    try {
+      const companies = await prisma.company.findMany({
+        where: { contratos: { some: tenantFilter } },
+        include: {
+          contratos: {
+            where: tenantFilter,
+            include: { empenhos: { where: tenantFilter } },
+          },
+        },
+        orderBy: { name: "asc" },
+      });
+
+      return companies.map(({ contratos, ...company }) => ({
+        ...company,
+        empenhos: contratos.flatMap((contrato) =>
+          contrato.empenhos.map((empenho) => ({
+            ...empenho,
+            value: empenho.value / 100,
+            totalPaid: empenho.totalPaid / 100,
+          })),
+        ),
+      }));
+    } catch (error) {
+      throw new DomainError("Error listing companies by tenant: " + error);
     }
   }
   async delete(id: string): Promise<void> {

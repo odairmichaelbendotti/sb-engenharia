@@ -17,6 +17,11 @@ export class DisapproveUserUseCase {
       throw new DomainError("User not found");
     }
 
+    // MASTER só reprova cadastros da própria organização
+    if (user.role !== "PLATFORM_ADMIN" && userExists.tenant_id !== user.tenant_id) {
+      throw new DomainError("User not found");
+    }
+
     await this.userRepository.disapprove(userId);
   }
 }

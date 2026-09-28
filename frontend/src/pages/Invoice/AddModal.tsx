@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   X,
   Receipt,
@@ -11,7 +11,6 @@ import {
   CircleAlert,
 } from "lucide-react";
 import type { InvoiceFormData } from "../../../types/invoice";
-import { useCompanies } from "../../store/companies";
 import { useObras } from "../../store/obras";
 import type { Empenho } from "../../../types/empenho";
 import { toast } from "sonner";
@@ -42,9 +41,20 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedEmpenho, setSelectedEmpenho] = useState<Empenho | null>(null);
 
-  const { companies } = useCompanies();
-  const { create } = useInvoice();
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
+  const { create, companyOptions: companies, fetchCompanyOptions } = useInvoice();
   const { obraOptionsForInvoice, fetchObraOptionsForInvoice } = useObras();
+
+  // Sempre recarrega ao abrir: só entram empresas com contrato na organização do
+  // usuário, e os empenhos de cada uma mudam com frequência
+  useEffect(() => {
+    fetchCompanyOptions()
+      .catch((error) => {
+        console.error(error);
+        toast.error("Não foi possível carregar as empresas");
+      })
+      .finally(() => setLoadingCompanies(false));
+  }, [fetchCompanyOptions]);
 
   function handleChangeCompany(companyId: string) {
     setFormData((f) => ({ ...f, company_id: companyId, empenho_id: "", obra_id: "" }));
@@ -212,9 +222,16 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
                   <select
                     value={formData.company_id}
                     onChange={(e) => handleChangeCompany(e.target.value)}
-                    className={`w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer ${empenhosByCompany.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+                    disabled={loadingCompanies}
+                    className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <option value="">Selecione a empresa</option>
+                    <option value="">
+                      {loadingCompanies
+                        ? "Carregando empresas..."
+                        : companies.length === 0
+                          ? "Nenhuma empresa com contrato nesta organização"
+                          : "Selecione a empresa"}
+                    </option>
                     {companies.map((company) => (
                       <option key={company.id} value={company.id}>
                         {company.name}

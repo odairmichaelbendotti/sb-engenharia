@@ -52,6 +52,12 @@ export const useCompanies = create<CompaniesStore>((set) => ({
       throw new Error(error.message || "Failed to fetch companies");
     }
 
+    // 204 = nenhuma empresa cadastrada; o corpo vem vazio e response.json() quebraria
+    if (response.status === 204) {
+      set({ companies: [], stats: null });
+      return;
+    }
+
     const data = (await response.json()) as ListCompanies;
     set({ stats: data.stats });
     set({ companies: data.companies.length > 0 ? data.companies : [] });

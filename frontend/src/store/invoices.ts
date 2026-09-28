@@ -5,6 +5,7 @@ import type {
   Invoice,
   InvoiceDashboard,
 } from "../../types/invoice";
+import type { Empresa } from "../../types/empresa";
 
 export type { Invoice, InvoiceDashboard, CreateInvoiceProps };
 
@@ -13,6 +14,9 @@ type InvoiceStore = InvoiceDashboard & {
   list: () => Promise<void>;
   delete: (id: string) => Promise<void>;
   update: (id: string, updateInvoice: CreateInvoiceProps) => Promise<Invoice>;
+  /** Empresas com contrato na organização do usuário, com os empenhos dessa organização. */
+  companyOptions: Empresa[];
+  fetchCompanyOptions: () => Promise<void>;
 };
 
 export const useInvoice = create<InvoiceStore>((set) => ({
@@ -25,6 +29,18 @@ export const useInvoice = create<InvoiceStore>((set) => ({
   pendingInvoices: 0,
   pendingValue: 0,
   allInvoices: [],
+  companyOptions: [],
+
+  async fetchCompanyOptions() {
+    const response = await defaultFetch("/invoices/company-options", {
+      credentials: "include",
+    });
+
+    if (!response.ok) throw new Error("Erro ao buscar empresas");
+
+    const data = (await response.json()) as Empresa[];
+    set({ companyOptions: data });
+  },
 
   async create(createInvoice: CreateInvoiceProps) {
     const response = await defaultFetch(`/invoices/create`, {

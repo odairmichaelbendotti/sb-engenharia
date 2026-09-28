@@ -29,8 +29,9 @@ export class CreateContratoUseCase {
       throw new DomainError("You are not authorized to create a contrato");
     }
 
+    // Só empresas cadastradas para a organização do usuário
     const company = await this.companyRepository.findById(company_id);
-    if (!company) {
+    if (!company || !(await this.companyRepository.isLinkedToTenant(company_id, user.tenant_id))) {
       throw new DomainError("Company not found");
     }
 

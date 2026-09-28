@@ -38,6 +38,7 @@ model Tenant {
   contratos     Contrato[]
   empenhos      Empenho[]
   ordensServico OrdemServico[]
+  companies     TenantCompany[]
 }
 
 model User {
@@ -74,6 +75,19 @@ model Company {
   invoices  Invoice[]
   contratos Contrato[]
   users     User[]
+  tenants   TenantCompany[]
+}
+
+// Empresa cadastrada para uma organização. Company é global (CNPJ único) porque a
+// mesma empresa pode atender várias bases; cada base só enxerga as empresas vinculadas a ela.
+model TenantCompany {
+  tenant_id  String
+  tenant     Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  company_id String
+  company    Company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@id([tenant_id, company_id])
 }
 
 enum ObraStatus {

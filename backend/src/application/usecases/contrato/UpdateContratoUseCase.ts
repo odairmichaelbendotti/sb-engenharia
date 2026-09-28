@@ -38,7 +38,10 @@ export class UpdateContratoUseCase {
 
     if (data.company_id) {
       const company = await this.companyRepository.findById(data.company_id);
-      if (!company) {
+      if (
+        !company ||
+        !(await this.companyRepository.isLinkedToTenant(data.company_id, existing.tenant_id))
+      ) {
         throw new DomainError("Company not found");
       }
     }

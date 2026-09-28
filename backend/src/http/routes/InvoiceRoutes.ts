@@ -7,6 +7,10 @@ import { CreateInvoiceUseCase } from "../../application/usecases/invoice/CreateI
 import { UpdateInvoiceUseCase } from "../../application/usecases/invoice/UpdateInvoiceUseCase.js";
 import { PrismaEmpenhoRepository } from "../../infrastructure/database/prisma/PrismaEmpenhoRepository.js";
 import { PrismaObraRepository } from "../../infrastructure/database/prisma/PrismaObraRepository.js";
+import { PrismaContratoRepository } from "../../infrastructure/database/prisma/PrismaContratoRepository.js";
+import { PrismaCompanyRepository } from "../../infrastructure/database/prisma/PrismaCompanyRepository.js";
+import { InvoiceScopeValidator } from "../../application/usecases/invoice/InvoiceScopeValidator.js";
+import { ListInvoiceCompanyOptionsUseCase } from "../../application/usecases/invoice/ListInvoiceCompanyOptionsUseCase.js";
 import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
 import { PrismaUserRepository } from "../../infrastructure/database/prisma/PrismaUserRepository.js";
@@ -17,10 +21,23 @@ export const InvoiceRoutes = Router();
 const repository = new PrismaInvoiceRepository();
 const empenhoRepository = new PrismaEmpenhoRepository();
 const obraRepository = new PrismaObraRepository();
-const createInvoice = new CreateInvoiceUseCase(repository, empenhoRepository, obraRepository);
+const contratoRepository = new PrismaContratoRepository();
+const companyRepository = new PrismaCompanyRepository();
+const scopeValidator = new InvoiceScopeValidator(
+  empenhoRepository,
+  contratoRepository,
+  repository,
+);
+const createInvoice = new CreateInvoiceUseCase(
+  repository,
+  empenhoRepository,
+  obraRepository,
+  scopeValidator,
+);
 const listInvoices = new ListInvoicesUseCase(repository);
-const deleteInvoice = new DeleteInvoiceUseCase(repository);
-const updateInvoice = new UpdateInvoiceUseCase(repository);
+const deleteInvoice = new DeleteInvoiceUseCase(repository, scopeValidator);
+const updateInvoice = new UpdateInvoiceUseCase(repository, scopeValidator);
+const listCompanyOptions = new ListInvoiceCompanyOptionsUseCase(companyRepository);
 const requireDomainAccess = new RequireDomainAccess();
 
 const invoiceController = new InvoiceController(
@@ -28,6 +45,7 @@ const invoiceController = new InvoiceController(
   listInvoices,
   deleteInvoice,
   updateInvoice,
+  listCompanyOptions,
 );
 
 const token = new TokenGenerator();
@@ -46,6 +64,13 @@ InvoiceRoutes.get(
   authMiddleware.handle,
   requireDomainAccess.handle("administrativo", "view"),
   (req, res) => invoiceController.list(req, res),
+);
+
+InvoiceRoutes.get(
+  "/invoices/company-options",
+  authMiddleware.handle,
+  requireDomainAccess.handle("administrativo", "edit"),
+  (req, res) => invoiceController.companyOptions(req, res),
 );
 
 InvoiceRoutes.delete(

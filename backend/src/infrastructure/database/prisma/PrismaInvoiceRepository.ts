@@ -39,6 +39,17 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
     });
     return invoice;
   }
+  async findTenantId(id: string): Promise<string | null> {
+    try {
+      const invoice = await prisma.invoice.findUnique({
+        where: { id },
+        select: { empenho: { select: { tenant_id: true } } },
+      });
+      return invoice?.empenho.tenant_id ?? null;
+    } catch (error) {
+      throw new DomainError("Error finding invoice: " + error);
+    }
+  }
   async list(tenant_id?: string): Promise<listInvoices> {
     try {
       const tenantFilter = tenant_id ? { empenho: { tenant_id } } : {};

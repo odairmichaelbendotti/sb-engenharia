@@ -16,6 +16,10 @@ export class ApproveUserUseCase {
     if (!allowedUser.includes(user.role)) {
       throw new DomainError("User does not have permission");
     }
+
+    if (user.role !== "PLATFORM_ADMIN" && userExists.tenant_id !== user.tenant_id) {
+      throw new DomainError("User not found");
+    }
     const approvedUser = await this.userRepository.approve(userId);
     if (!approvedUser) {
       throw new DomainError("Error approving the user");

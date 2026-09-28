@@ -1,20 +1,25 @@
 import type { CompanyType } from "../../../domain/entities/Company.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import type { ICompanyRepository } from "../../../domain/repositories/ICompanyRepository.js";
+import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
 
 type UpdateCompanyUseCaseRequest = {
   id: string;
   company: CompanyType;
+  user: AuthenticatedUser;
 };
 
 export class UpdateCompanyUseCase {
   constructor(private repository: ICompanyRepository) {}
 
-  async execute({ id, company }: UpdateCompanyUseCaseRequest) {
+  async execute({ id, company, user }: UpdateCompanyUseCaseRequest) {
     try {
       const companyExists = await this.repository.findById(id);
 
-      if (!companyExists) {
+      if (
+        !companyExists ||
+        !(await this.repository.isLinkedToTenant(id, user.tenant_id))
+      ) {
         throw new DomainError("Company not found");
       }
 

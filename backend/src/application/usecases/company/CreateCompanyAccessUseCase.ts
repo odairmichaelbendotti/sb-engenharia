@@ -35,7 +35,10 @@ export class CreateCompanyAccessUseCase {
     }
 
     const company = await this.companyRepository.findById(companyId);
-    if (!company) {
+    if (
+      !company ||
+      !(await this.companyRepository.isLinkedToTenant(companyId, user.tenant_id))
+    ) {
       throw new DomainError("Company not found");
     }
 

@@ -18,7 +18,11 @@ export class CompanyController {
   async create(req: Request, res: Response) {
     const { name, cnpj, cep, city, state, address, phone, email } = req.body;
     try {
+      const { user } = req;
+      if (!user) throw new DomainError("User not found");
+
       const company = await this.createCompany.execute({
+        user,
         name,
         cnpj,
         cep,
@@ -39,7 +43,10 @@ export class CompanyController {
   }
   async list(req: Request, res: Response) {
     try {
-      const data = await this.listCompanies.execute();
+      const { user } = req;
+      if (!user) throw new DomainError("User not found");
+
+      const data = await this.listCompanies.execute(user);
 
       if (data.companies.length === 0)
         return res
@@ -71,7 +78,10 @@ export class CompanyController {
     }
 
     try {
-      await this.deleteCompany.execute(id);
+      const { user } = req;
+      if (!user) throw new DomainError("User not found");
+
+      await this.deleteCompany.execute({ id, user });
       return res.status(200).json({ message: "Company successfully deleted" });
     } catch (error) {
       if (error instanceof DomainError) {
@@ -117,7 +127,10 @@ export class CompanyController {
     }
 
     try {
-      const updatedCompany = await this.updateCompany.execute({ id, company });
+      const { user } = req;
+      if (!user) throw new DomainError("User not found");
+
+      const updatedCompany = await this.updateCompany.execute({ id, company, user });
       res.status(200).json(updatedCompany);
     } catch (error) {
       if (error instanceof DomainError) {

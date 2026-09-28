@@ -22,6 +22,11 @@ export class DeleteEmpenhoUseCase {
       throw new DomainError("User is not authorized to perform this action");
     }
 
+    const existing = await this.deleteEmpenho.findByEmpenhoId(empenhoId);
+    if (!existing || existing.tenant_id !== user.tenant_id) {
+      throw new DomainError("Empenho not found");
+    }
+
     await this.deleteEmpenho.delete(empenhoId);
   }
 }
