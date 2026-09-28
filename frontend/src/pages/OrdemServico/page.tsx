@@ -7,6 +7,7 @@ import {
   OrdemServicoTable,
   OrdemServicoModal,
   DeleteOrdemServicoModal,
+  ViewOrdemServicoModal,
 } from "./index";
 import { formatCurrency } from "../../utils/format-currency";
 import { usePermission } from "../../hooks/usePermission";
@@ -18,6 +19,7 @@ export default function OrdensServico() {
   const [editingOrdemServico, setEditingOrdemServico] = useState<OrdemServico | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [ordemServicoToDelete, setOrdemServicoToDelete] = useState<OrdemServico | null>(null);
+  const [viewingOrdemServicoId, setViewingOrdemServicoId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isListLoading, setIsListLoading] = useState(true);
 
@@ -49,6 +51,12 @@ export default function OrdensServico() {
       valorTotal: data?.stats.valorTotal || 0,
     };
   }, [data]);
+
+  // Busca pelo id na lista atual para o modal refletir atualizações feitas com ele aberto
+  const viewingOrdemServico = useMemo(
+    () => ordensServico.find((os) => os.id === viewingOrdemServicoId) ?? null,
+    [ordensServico, viewingOrdemServicoId],
+  );
 
   const ordensServicoSemObra = useMemo(
     () => ordensServico.filter((os) => os.status === "ATIVO" && !os.obra),
@@ -117,11 +125,19 @@ export default function OrdensServico() {
           ordensServico={filteredOrdensServico}
           isLoading={isListLoading}
           formatCurrency={formatCurrency}
+          onView={(os) => setViewingOrdemServicoId(os.id)}
           onEdit={handleOpen}
           onDelete={handleOpenDelete}
           onAdd={() => handleOpen()}
         />
       </div>
+
+      {viewingOrdemServico && (
+        <ViewOrdemServicoModal
+          ordemServico={viewingOrdemServico}
+          handleClose={() => setViewingOrdemServicoId(null)}
+        />
+      )}
 
       {isOpen && <OrdemServicoModal ordemServico={editingOrdemServico} handleClose={handleClose} />}
 

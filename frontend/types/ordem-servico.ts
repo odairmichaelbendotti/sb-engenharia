@@ -22,7 +22,16 @@ export type OrdemServicoEmpenho = {
 export type OrdemServicoObra = {
   id: string;
   nome: string;
+  identificacaoPatrimonial: string;
+  tipo: string;
   status: string;
+  dataInicio: string;
+  dataPrevisaoTermino: string;
+  dataConclusao: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  responsavelTecnico: string;
+  valorExecutado: number;
 };
 
 export type OrdemServico = {

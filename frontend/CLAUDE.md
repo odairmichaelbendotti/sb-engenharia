@@ -201,6 +201,7 @@ Por decisão explícita do usuário, `Obra`/`Medicoes` **não** ganharam guard d
 ## Convenções a manter
 
 - `formatCurrency`/`formatDate`/`formatDateTime` vêm sempre de `utils/format-currency.ts` — não redefinir localmente (já foi um problema real: ~15 redefinições idênticas espalhadas, unificadas nesta sessão).
+- Datas sem horário (início/previsão de obra, vigência de contrato/empenho) são gravadas como meia-noite UTC: formatar com `formatDateOnly` (fuso UTC). `formatDate` usa o fuso local e no Brasil mostra o **dia anterior** para esses campos; ela só serve para timestamps reais (`createdAt`, `dataConclusao`). Só `ViewOrdemServicoModal` usa `formatDateOnly` até agora — os demais usos de `formatDate` em campos de data pura ainda estão com o problema.
 - Nomes de props/exports em português quando o domínio é português (`empresa`, `empenho`), mas nomenclatura de código/arquivos em inglês para conceitos técnicos (`Invoice`, não `NotaFiscal` — já foi renomeado propositalmente).
 - Ícones de ordenação/paginação só devem aparecer se a funcionalidade realmente existir — já houve casos de ícone decorativo sem `onClick` (`ArrowUp`/`ArrowDown` em `TableCompanies.tsx`/`EmpenhoTable.tsx`); ao copiar um componente de tabela como modelo, verificar se o sort é real antes de reusar.
 - Qualquer alteração visual de peso (paleta, tipografia, densidade de espaçamento) deve ser proposta e confirmada antes de implementar — ver seção Paleta acima.

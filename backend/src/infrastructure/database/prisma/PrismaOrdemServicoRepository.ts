@@ -29,6 +29,21 @@ const EMPENHO_INFO_SELECT = {
   },
 } as const;
 
+const OBRA_INFO_SELECT = {
+  id: true,
+  nome: true,
+  identificacaoPatrimonial: true,
+  tipo: true,
+  status: true,
+  dataInicio: true,
+  dataPrevisaoTermino: true,
+  dataConclusao: true,
+  latitude: true,
+  longitude: true,
+  responsavelTecnico: true,
+  valorExecutado: true,
+} as const;
+
 export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
   async create(ordemServico: OrdemServicoEntity): Promise<OrdemServicoListItem> {
     try {
@@ -72,7 +87,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
           orderBy: { createdAt: "desc" },
           include: {
             empenho: { select: EMPENHO_INFO_SELECT },
-            obra: { select: { id: true, nome: true, status: true } },
+            obra: { select: OBRA_INFO_SELECT },
           },
         }),
         prisma.ordemServico.count({ where: tenantFilter }),
@@ -86,6 +101,9 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
         ordensServico: ordensServico.map((os) => ({
           ...os,
           valor: os.valor / 100,
+          obra: os.obra
+            ? { ...os.obra, valorExecutado: os.obra.valorExecutado / 100 }
+            : null,
         })),
         stats: {
           total,

@@ -3,6 +3,7 @@ import {
   FileSignature,
   Trash2,
   Edit2,
+  Eye,
   Plus,
   Loader2,
   HardHat,
@@ -31,6 +32,7 @@ interface OrdemServicoTableProps {
   ordensServico: OrdemServico[];
   isLoading?: boolean;
   formatCurrency: (value: number) => string;
+  onView: (ordemServico: OrdemServico) => void;
   onEdit: (ordemServico: OrdemServico) => void;
   onDelete: (ordemServico: OrdemServico) => void;
   onAdd?: () => void;
@@ -40,6 +42,7 @@ export function OrdemServicoTable({
   ordensServico,
   isLoading = false,
   formatCurrency,
+  onView,
   onEdit,
   onDelete,
   onAdd,
@@ -76,11 +79,9 @@ export function OrdemServicoTable({
               <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Status
               </th>
-              {canEditAdministrativo && (
-                <th className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
-                  Ações
-                </th>
-              )}
+              <th className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
+                Ações
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -134,26 +135,35 @@ export function OrdemServicoTable({
                   </span>
                 </td>
 
-                {canEditAdministrativo && (
-                  <td className="py-2.5 px-4">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => onEdit(os)}
-                        className="p-2 hover:bg-primary-100 cursor-pointer text-text-secondary hover:text-primary-500 rounded-md transition-colors"
-                        title="Gerenciar"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button
-                        onClick={() => onDelete(os)}
-                        className="p-2 hover:bg-danger-bg cursor-pointer text-text-secondary hover:text-danger-text rounded-md transition-colors"
-                        title="Excluir"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                )}
+                <td className="py-2.5 px-4">
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      onClick={() => onView(os)}
+                      className="p-2 hover:bg-primary-100 cursor-pointer text-text-secondary hover:text-primary-500 rounded-md transition-colors"
+                      title="Visualizar"
+                    >
+                      <Eye size={16} />
+                    </button>
+                    {canEditAdministrativo && (
+                      <>
+                        <button
+                          onClick={() => onEdit(os)}
+                          className="p-2 hover:bg-primary-100 cursor-pointer text-text-secondary hover:text-primary-500 rounded-md transition-colors"
+                          title="Gerenciar"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => onDelete(os)}
+                          className="p-2 hover:bg-danger-bg cursor-pointer text-text-secondary hover:text-danger-text rounded-md transition-colors"
+                          title="Excluir"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>

@@ -4,3 +4,4 @@ export { OrdemServicoTable } from "./OrdemServicoTable";
 export { OrdemServicoPagination } from "./OrdemServicoPagination";
 export { OrdemServicoModal } from "./OrdemServicoModal";
 export { DeleteOrdemServicoModal } from "./DeleteOrdemServicoModal";
+export { ViewOrdemServicoModal } from "./ViewOrdemServicoModal";

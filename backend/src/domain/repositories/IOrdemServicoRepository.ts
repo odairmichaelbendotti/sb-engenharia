@@ -27,7 +27,16 @@ export type OrdemServicoEmpenhoInfo = {
 export type OrdemServicoObra = {
   id: string;
   nome: string;
+  identificacaoPatrimonial: string;
+  tipo: string;
   status: string;
+  dataInicio: Date;
+  dataPrevisaoTermino: Date;
+  dataConclusao: Date | null;
+  latitude: number | null;
+  longitude: number | null;
+  responsavelTecnico: string;
+  valorExecutado: number;
 };
 
 export type OrdemServicoListItem = PersistedOrdemServico & {

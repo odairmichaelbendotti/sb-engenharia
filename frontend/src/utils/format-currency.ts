@@ -9,6 +9,12 @@ export const formatDate = (date: string | Date) => {
   return new Date(date).toLocaleDateString("pt-BR");
 };
 
+// Datas sem horário (ex.: início da obra) são gravadas como meia-noite UTC; formatar
+// no fuso local mostraria o dia anterior no Brasil
+export const formatDateOnly = (date: string | Date) => {
+  return new Date(date).toLocaleDateString("pt-BR", { timeZone: "UTC" });
+};
+
 export const formatDateTime = (date: string | Date) => {
   return new Date(date).toLocaleString("pt-BR", {
     day: "2-digit",
