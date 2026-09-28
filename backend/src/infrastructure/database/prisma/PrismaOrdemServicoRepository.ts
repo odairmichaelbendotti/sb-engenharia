@@ -81,7 +81,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
   async list(tenant_id?: string): Promise<ListOrdensServicoResponse> {
     const tenantFilter = tenant_id ? { tenant_id } : {};
     try {
-      const [ordensServico, total, ativas, finalizadas, canceladas, valorAgg] = await Promise.all([
+      const [ordensServico, total, ativas, finalizadas, canceladas, valorAgg, liquidadoPorObra] = await Promise.all([
         prisma.ordemServico.findMany({
           where: tenantFilter,
           orderBy: { createdAt: "desc" },
@@ -95,14 +95,29 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
         prisma.ordemServico.count({ where: { ...tenantFilter, status: "FINALIZADO" } }),
         prisma.ordemServico.count({ where: { ...tenantFilter, status: "CANCELADO" } }),
         prisma.ordemServico.aggregate({ where: tenantFilter, _sum: { valor: true } }),
+        // Liquidado vem direto das notas (fonte da verdade), não do campo Obra.valorExecutado:
+        // notas lançadas antes da sincronização existir deixaram esse campo zerado
+        prisma.invoice.groupBy({
+          by: ["obra_id"],
+          where: {
+            obra_id: { not: null },
+            status: { not: "CANCELADO" },
+            ...(tenant_id ? { obra: { tenant_id } } : {}),
+          },
+          _sum: { value: true },
+        }),
       ]);
+
+      const liquidadoCentavos = new Map(
+        liquidadoPorObra.map((g) => [g.obra_id, g._sum.value ?? 0] as const),
+      );
 
       return {
         ordensServico: ordensServico.map((os) => ({
           ...os,
           valor: os.valor / 100,
           obra: os.obra
-            ? { ...os.obra, valorExecutado: os.obra.valorExecutado / 100 }
+            ? { ...os.obra, valorExecutado: (liquidadoCentavos.get(os.obra.id) ?? 0) / 100 }
             : null,
         })),
         stats: {
