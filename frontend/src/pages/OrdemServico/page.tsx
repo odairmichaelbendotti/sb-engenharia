@@ -2,17 +2,45 @@ import { useState, useMemo, useEffect } from "react";
 import { useOrdensServico } from "../../store/ordensServico";
 import type { OrdemServico } from "../../../types/ordem-servico";
 import {
-  OrdemServicoStats,
+  OrdemServicoStatusTabs,
   OrdemServicoFilters,
-  OrdemServicoTable,
+  OrdemServicoList,
   OrdemServicoModal,
   DeleteOrdemServicoModal,
   ViewOrdemServicoModal,
 } from "./index";
+import type { OrdemServicoTab } from "./OrdemServicoStatusTabs";
+import type { OrdemServicoSort } from "./OrdemServicoFilters";
+import { compareNumero, getOrdemServicoSchedule, SCHEDULE_URGENCY } from "./ordem-servico-schedule";
 import { formatCurrency } from "../../utils/format-currency";
 import { usePermission } from "../../hooks/usePermission";
 import { PageHeader } from "../../components/PageHeader";
-import { ClipboardList, DollarSign, AlertTriangle } from "lucide-react";
+import { ClipboardList, DollarSign } from "lucide-react";
+
+function isSemObra(os: OrdemServico) {
+  return os.status === "ATIVO" && !os.obra;
+}
+
+function matchesTab(os: OrdemServico, tab: OrdemServicoTab) {
+  if (tab === "ALL") return true;
+  if (tab === "SEM_OBRA") return isSemObra(os);
+  return os.status === tab;
+}
+
+function sortOrdensServico(list: OrdemServico[], sort: OrdemServicoSort) {
+  if (sort === "VALOR") return [...list].sort((a, b) => b.valor - a.valor);
+  if (sort === "NUMERO") return [...list].sort((a, b) => compareNumero(a.numero, b.numero));
+
+  // Urgência: atrasadas e vencendo primeiro; dentro do mesmo grupo, o prazo mais curto
+  const withSchedule = list.map((os) => ({ os, schedule: getOrdemServicoSchedule(os) }));
+  withSchedule.sort(
+    (a, b) =>
+      SCHEDULE_URGENCY[a.schedule.kind] - SCHEDULE_URGENCY[b.schedule.kind] ||
+      (a.schedule.daysToDeadline ?? Infinity) - (b.schedule.daysToDeadline ?? Infinity) ||
+      compareNumero(a.os.numero, b.os.numero),
+  );
+  return withSchedule.map(({ os }) => os);
+}
 
 export default function OrdensServico() {
   const [isOpen, setIsOpen] = useState(false);
@@ -21,46 +49,60 @@ export default function OrdensServico() {
   const [ordemServicoToDelete, setOrdemServicoToDelete] = useState<OrdemServico | null>(null);
   const [viewingOrdemServicoId, setViewingOrdemServicoId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [tab, setTab] = useState<OrdemServicoTab>("ALL");
+  const [sort, setSort] = useState<OrdemServicoSort>("URGENCY");
   const [isListLoading, setIsListLoading] = useState(true);
 
   const { fetchOrdensServico, data } = useOrdensServico();
 
   const ordensServico = useMemo(() => data?.ordensServico || [], [data]);
 
-  const filteredOrdensServico = useMemo(() => {
+  useEffect(() => {
+    fetchOrdensServico().finally(() => setIsListLoading(false));
+  }, [fetchOrdensServico]);
+
+  const searchedOrdensServico = useMemo(() => {
     if (!searchTerm) return ordensServico;
     const s = searchTerm.toLowerCase();
     return ordensServico.filter(
       (os) =>
         os.numero.toLowerCase().includes(s) ||
         os.empenho.numero.toLowerCase().includes(s) ||
-        os.empenho.contrato.identificador.toLowerCase().includes(s),
+        os.empenho.contrato.identificador.toLowerCase().includes(s) ||
+        os.empenho.contrato.company.name.toLowerCase().includes(s) ||
+        (os.obra?.nome.toLowerCase().includes(s) ?? false) ||
+        (os.obra?.identificacaoPatrimonial.toLowerCase().includes(s) ?? false),
     );
   }, [ordensServico, searchTerm]);
 
-  useEffect(() => {
-    fetchOrdensServico().finally(() => setIsListLoading(false));
-  }, [fetchOrdensServico]);
+  // Contagens seguem a busca para que o número de cada aba bata com o que ela mostra
+  const tabCounts = useMemo(
+    () => ({
+      ALL: searchedOrdensServico.length,
+      ATIVO: searchedOrdensServico.filter((os) => os.status === "ATIVO").length,
+      FINALIZADO: searchedOrdensServico.filter((os) => os.status === "FINALIZADO").length,
+      CANCELADO: searchedOrdensServico.filter((os) => os.status === "CANCELADO").length,
+      SEM_OBRA: searchedOrdensServico.filter(isSemObra).length,
+    }),
+    [searchedOrdensServico],
+  );
 
-  const metrics = useMemo(() => {
-    return {
-      total: data?.stats.total || 0,
-      ativas: data?.stats.ativas || 0,
-      finalizadas: data?.stats.finalizadas || 0,
-      canceladas: data?.stats.canceladas || 0,
-      valorTotal: data?.stats.valorTotal || 0,
-    };
-  }, [data]);
+  // Se a aba "Sem obra" some (pendências resolvidas), volta para "Todas"
+  const activeTab: OrdemServicoTab = tab === "SEM_OBRA" && tabCounts.SEM_OBRA === 0 ? "ALL" : tab;
+
+  const visibleOrdensServico = useMemo(
+    () =>
+      sortOrdensServico(
+        searchedOrdensServico.filter((os) => matchesTab(os, activeTab)),
+        sort,
+      ),
+    [searchedOrdensServico, activeTab, sort],
+  );
 
   // Busca pelo id na lista atual para o modal refletir atualizações feitas com ele aberto
   const viewingOrdemServico = useMemo(
     () => ordensServico.find((os) => os.id === viewingOrdemServicoId) ?? null,
     [ordensServico, viewingOrdemServicoId],
-  );
-
-  const ordensServicoSemObra = useMemo(
-    () => ordensServico.filter((os) => os.status === "ATIVO" && !os.obra),
-    [ordensServico],
   );
 
   const handleOpen = (ordemServico?: OrdemServico) => {
@@ -90,41 +132,33 @@ export default function OrdensServico() {
       <PageHeader
         icon={ClipboardList}
         title="Ordens de Serviço"
-        stat={{ icon: DollarSign, label: "Valor total", value: formatCurrency(metrics.valorTotal) }}
+        stat={{ icon: DollarSign, label: "Valor total", value: formatCurrency(data?.stats.valorTotal || 0) }}
         canAct={canEditAdministrativo}
         actionLabel="Nova Ordem de Serviço"
         onAction={() => handleOpen()}
       />
 
-      <OrdemServicoStats metrics={metrics} formatCurrency={formatCurrency} />
-
-      {ordensServicoSemObra.length > 0 && (
-        <div className="mb-3 flex items-start gap-2.5 rounded-lg border border-warning-border bg-warning-bg px-4 py-3">
-          <AlertTriangle size={16} className="text-warning-text shrink-0 mt-0.5" />
-          <p className="text-sm text-warning-text">
-            <span className="font-semibold">
-              {ordensServicoSemObra.length} ordem{ordensServicoSemObra.length !== 1 ? "ns" : ""} de serviço ativa
-              {ordensServicoSemObra.length !== 1 ? "s" : ""} sem obra vinculada
-            </span>{" "}
-            — crie uma obra em Engenharia &gt; Obras e selecione a ordem de serviço correspondente para completar o vínculo.
-          </p>
-        </div>
-      )}
-
-      <div className="bg-surface border border-border rounded-lg overflow-hidden">
-        <div className="px-4 pt-3 pb-2 border-b border-border">
-          <OrdemServicoFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+      <div className="bg-surface border border-border rounded-xl">
+        <div className="px-4 pt-4 pb-3 border-b border-border space-y-3">
+          <OrdemServicoStatusTabs value={activeTab} counts={tabCounts} onChange={setTab} />
+          <OrdemServicoFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            sort={sort}
+            onSortChange={setSort}
+          />
           {searchTerm && (
-            <p className="text-xs text-text-muted mt-2">
-              {filteredOrdensServico.length} resultado
-              {filteredOrdensServico.length !== 1 ? "s" : ""} para "{searchTerm}"
+            <p className="text-xs text-text-muted">
+              {visibleOrdensServico.length} resultado
+              {visibleOrdensServico.length !== 1 ? "s" : ""} para "{searchTerm}"
             </p>
           )}
         </div>
-        <OrdemServicoTable
-          ordensServico={filteredOrdensServico}
+        {/* key reinicia a paginação quando filtro, busca ou ordenação mudam */}
+        <OrdemServicoList
+          key={`${activeTab}|${sort}|${searchTerm}`}
+          ordensServico={visibleOrdensServico}
           isLoading={isListLoading}
-          formatCurrency={formatCurrency}
           onView={(os) => setViewingOrdemServicoId(os.id)}
           onEdit={handleOpen}
           onDelete={handleOpenDelete}

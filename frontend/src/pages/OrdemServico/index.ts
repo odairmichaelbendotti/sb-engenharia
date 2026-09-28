@@ -1,6 +1,6 @@
-export { OrdemServicoStats } from "./OrdemServicoStats";
+export { OrdemServicoStatusTabs } from "./OrdemServicoStatusTabs";
 export { OrdemServicoFilters } from "./OrdemServicoFilters";
-export { OrdemServicoTable } from "./OrdemServicoTable";
+export { OrdemServicoList } from "./OrdemServicoList";
 export { OrdemServicoPagination } from "./OrdemServicoPagination";
 export { OrdemServicoModal } from "./OrdemServicoModal";
 export { DeleteOrdemServicoModal } from "./DeleteOrdemServicoModal";
