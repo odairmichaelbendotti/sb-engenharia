@@ -45,7 +45,6 @@ export interface IEmpenhoRepository {
     empenhoId: string,
     status: "ATIVO" | "FINALIZADO" | "CANCELADO",
   ): Promise<PersistedEmpenho>;
-  incrementInvoiceValue(empenhoId: string, value: number): Promise<void>;
   /**
    * Saldo disponível do empenho (valor total - soma das ordens de serviço não canceladas).
    * `excludeOrdemServicoId` desconsidera uma OS específica da soma já consumida —

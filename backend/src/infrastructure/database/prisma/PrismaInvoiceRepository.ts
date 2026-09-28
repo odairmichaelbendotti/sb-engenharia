@@ -1,6 +1,7 @@
 import type {
   InvoiceType,
   PersistedInvoice,
+  UpdateInvoiceType,
 } from "../../../domain/entities/Invoice.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import type {
@@ -9,26 +10,88 @@ import type {
   listInvoices,
 } from "../../../domain/repositories/IInvoiceRepository.js";
 import { prisma } from "../../prisma/prisma.js";
+import type { TransactionClient } from "../../../generated/prisma/internal/prismaNamespace.js";
+
+// Valores trafegam em reais entre as camadas e são gravados em centavos (Int).
+// Toda conversão da nota fiscal acontece aqui, na entrada e na saída do repositório.
+function toCents(reais: number): number {
+  return Math.round(reais * 100);
+}
+
+function withValueInReais<T extends { value: number }>(invoice: T): T {
+  return { ...invoice, value: invoice.value / 100 };
+}
+
+// Totais derivados das notas são sempre recalculados (soma das notas não canceladas),
+// em vez de incrementados, para nunca divergirem após edição, cancelamento ou exclusão:
+// - Empenho.totalPaid: quanto do empenho já foi liquidado
+// - Obra.valorExecutado: execução liquidada da obra (e, por consequência, da sua OS)
+async function syncInvoiceTotals(
+  tx: TransactionClient,
+  { empenhoIds, obraIds }: { empenhoIds: string[]; obraIds: (string | null)[] },
+) {
+  for (const empenho_id of new Set(empenhoIds)) {
+    const agg = await tx.invoice.aggregate({
+      where: { empenho_id, status: { not: "CANCELADO" } },
+      _sum: { value: true },
+    });
+    await tx.empenho.update({
+      where: { id: empenho_id },
+      data: { totalPaid: agg._sum.value ?? 0 },
+    });
+  }
+
+  for (const obra_id of new Set(obraIds)) {
+    if (!obra_id) continue;
+    const agg = await tx.invoice.aggregate({
+      where: { obra_id, status: { not: "CANCELADO" } },
+      _sum: { value: true },
+    });
+    await tx.obra.update({
+      where: { id: obra_id },
+      data: { valorExecutado: agg._sum.value ?? 0 },
+    });
+  }
+}
 
 export class PrismaInvoiceRepository implements IInvoiceRepository {
   async create(invoice: InvoiceType): Promise<PersistedInvoice> {
     try {
-      const invoiceCreated = await prisma.invoice.create({
-        data: {
-          numero: invoice.numero,
-          description: invoice.description,
-          vencimento: invoice.vencimento,
-          value: invoice.value,
-          empenho: { connect: { id: invoice.empenho_id } },
-          company: { connect: { id: invoice.company_id } },
-          ...(invoice.obra_id ? { obra: { connect: { id: invoice.obra_id } } } : {}),
-        },
-        include: { company: true },
+      const invoiceCreated = await prisma.$transaction(async (tx) => {
+        const created = await tx.invoice.create({
+          data: {
+            numero: invoice.numero,
+            description: invoice.description,
+            vencimento: invoice.vencimento,
+            value: toCents(invoice.value),
+            empenho: { connect: { id: invoice.empenho_id } },
+            company: { connect: { id: invoice.company_id } },
+            ...(invoice.obra_id ? { obra: { connect: { id: invoice.obra_id } } } : {}),
+          },
+          include: { company: true },
+        });
+        await syncInvoiceTotals(tx, { empenhoIds: [created.empenho_id], obraIds: [created.obra_id] });
+        return created;
       });
 
-      return invoiceCreated;
+      return withValueInReais(invoiceCreated);
     } catch (error) {
       throw new DomainError("Erro ao criar nota fiscal");
+    }
+  }
+  async sumActiveValueByEmpenho(empenho_id: string, excludeInvoiceId?: string): Promise<number> {
+    try {
+      const agg = await prisma.invoice.aggregate({
+        where: {
+          empenho_id,
+          status: { not: "CANCELADO" },
+          ...(excludeInvoiceId ? { id: { not: excludeInvoiceId } } : {}),
+        },
+        _sum: { value: true },
+      });
+      return (agg._sum.value ?? 0) / 100;
+    } catch (error) {
+      throw new DomainError("Error summing invoices: " + error);
     }
   }
   async findByNumber(number: string): Promise<PersistedInvoice | null> {
@@ -96,7 +159,7 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
       ]);
 
       const parsedInvoices = allInvoices.map((invoice) => {
-        return { ...invoice, value: invoice.value ? invoice.value / 100 : 0 };
+        return withValueInReais(invoice);
       });
 
       return {
@@ -142,30 +205,44 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
 
   async delete(id: string): Promise<void> {
     try {
-      await prisma.invoice.delete({
-        where: {
-          id,
-        },
+      await prisma.$transaction(async (tx) => {
+        const deleted = await tx.invoice.delete({ where: { id } });
+        await syncInvoiceTotals(tx, { empenhoIds: [deleted.empenho_id], obraIds: [deleted.obra_id] });
       });
     } catch (error) {
       throw new DomainError("Erro ao deletar nota fiscal");
     }
   }
-  async update(invoice: InvoiceType, id: string): Promise<InvoiceType> {
-    const parsedInvoice = {
-      ...invoice,
-      vencimento: new Date(invoice.vencimento),
-      value: Math.round(invoice.value * 100),
-      obra_id: invoice.obra_id ?? null,
-    };
-
+  async update(invoice: UpdateInvoiceType, id: string): Promise<PersistedInvoice> {
     try {
-      const updatedInvoice = await prisma.invoice.update({
-        where: { id },
-        data: parsedInvoice,
-        include: { company: true },
+      const updatedInvoice = await prisma.$transaction(async (tx) => {
+        const previous = await tx.invoice.findUniqueOrThrow({
+          where: { id },
+          select: { empenho_id: true, obra_id: true },
+        });
+        // Campos listados explicitamente: o corpo da requisição não pode alterar id, datas de auditoria etc.
+        const updated = await tx.invoice.update({
+          where: { id },
+          data: {
+            numero: invoice.numero,
+            description: invoice.description,
+            vencimento: new Date(invoice.vencimento),
+            value: toCents(invoice.value),
+            empenho_id: invoice.empenho_id,
+            company_id: invoice.company_id,
+            obra_id: invoice.obra_id ?? null,
+            ...(invoice.status ? { status: invoice.status } : {}),
+          },
+          include: { company: true },
+        });
+        // Nota pode ter trocado de empenho ou de obra: recalcula os antigos e os novos
+        await syncInvoiceTotals(tx, {
+          empenhoIds: [previous.empenho_id, updated.empenho_id],
+          obraIds: [previous.obra_id, updated.obra_id],
+        });
+        return updated;
       });
-      return updatedInvoice;
+      return withValueInReais(updatedInvoice);
     } catch (error) {
       throw new DomainError("Erro ao atualizar nota fiscal");
     }

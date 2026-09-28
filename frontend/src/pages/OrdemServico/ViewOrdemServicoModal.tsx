@@ -175,7 +175,7 @@ function ObraSection({ ordemServico, obra }: { ordemServico: OrdemServico; obra:
           {obra.responsavelTecnico}
         </Field>
         <div className="sm:col-span-2">
-          <Field icon={Wallet} label="Executado em obra">
+          <Field icon={Wallet} label="Liquidado em notas fiscais">
             {formatCurrency(obra.valorExecutado)} de {formatCurrency(ordemServico.valor)} ({executedPercent}
             %)
           </Field>

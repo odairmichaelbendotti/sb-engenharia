@@ -93,6 +93,8 @@ Models: `Tenant`, `User`, `Company`, `Empenho`, `Invoice`. Enums: `UserRole` (`P
 - **Multi-tenant**: `Tenant` é o topo da hierarquia (uma organização/OM). `User.tenant_id` é obrigatório. `Empenho.tenant_id` também é obrigatório no schema — mas ver pendência abaixo, isso ainda não está implementado na camada de aplicação.
 - **`Invoice`** usa `@@map("nota_fiscal")` — preserva o nome físico da tabela no banco após o rename de `NotaFiscal` para `Invoice` no código/model, sem exigir migration de rename.
 - **Valores monetários** (`Empenho.value`, `Empenho.totalPaid`, `Invoice.value`) são `Int`, armazenados em **centavos** — sempre multiplicar por 100 na escrita e dividir por 100 na leitura, seguindo o padrão já usado nos repositories existentes.
+  - **Toda resposta da API é em reais**, inclusive a de `create`/`update` (o frontend insere essa resposta direto na lista). Retornar o registro cru do Prisma exibe o valor 100× maior.
+  - `Empenho.totalPaid` e `Obra.valorExecutado` são **recalculados** (soma das notas não canceladas do empenho / da obra) dentro da mesma transação em que a nota é criada, editada ou excluída (`syncInvoiceTotals` em `PrismaInvoiceRepository`). Não incrementar/decrementar manualmente nem gravar esses campos em outro lugar. A obra da nota precisa ser da OS do mesmo empenho (`InvoiceScopeValidator.validateObra`).
 - Client gerado em `src/generated/prisma` (custom output, ignorado no git).
 - Não existe pasta `prisma/migrations/` versionada — o `prisma.config.ts` referencia `migrations.path`, mas não há histórico de migration commitado. Ao mexer no schema, confirmar com o usuário antes de rodar `db push`/`migrate` contra o banco real (é Supabase remoto, não local).
 

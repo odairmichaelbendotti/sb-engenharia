@@ -3,6 +3,7 @@ import type { PersistedEmpenho } from "../../../domain/entities/Empenho.js";
 import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository.js";
 import type { IContratoRepository } from "../../../domain/repositories/IContratoRepository.js";
 import type { IInvoiceRepository } from "../../../domain/repositories/IInvoiceRepository.js";
+import type { IObraRepository } from "../../../domain/repositories/IObraRepository.js";
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
 
 // Garante que o empenho da nota é da organização do usuário e que a empresa
@@ -12,7 +13,22 @@ export class InvoiceScopeValidator {
     private empenhoRepository: IEmpenhoRepository,
     private contratoRepository: IContratoRepository,
     private invoiceRepository: IInvoiceRepository,
+    private obraRepository: IObraRepository,
   ) {}
+
+  // A nota soma na execução da obra: a obra precisa ser da OS paga por este mesmo empenho,
+  // senão uma nota inflaria a execução de outra obra (ou de outra organização)
+  async validateObra(empenho_id: string, obra_id?: string | null): Promise<void> {
+    if (!obra_id) return;
+
+    const obraEmpenhoId = await this.obraRepository.findEmpenhoId(obra_id);
+    if (!obraEmpenhoId) {
+      throw new DomainError("Obra not found");
+    }
+    if (obraEmpenhoId !== empenho_id) {
+      throw new DomainError("Obra does not belong to this empenho");
+    }
+  }
 
   // Nota existente precisa ser da organização do usuário (editar/excluir)
   async validateOwnership(user: AuthenticatedUser, invoice_id: string): Promise<void> {

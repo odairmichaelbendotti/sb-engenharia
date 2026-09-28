@@ -28,7 +28,12 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
         },
       });
 
-      return empenhoCreated;
+      // API trabalha em reais; o banco guarda centavos
+      return {
+        ...empenhoCreated,
+        value: empenhoCreated.value / 100,
+        totalPaid: empenhoCreated.totalPaid / 100,
+      };
     } catch (error) {
       throw new DomainError("Error creating empenho");
     }
@@ -211,7 +216,7 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
     empenho: EmpenhoType,
   ): Promise<PersistedEmpenho> {
     try {
-      return await prisma.empenho.update({
+      const updated = await prisma.empenho.update({
         where: { id: empenhoId },
         data: {
           numero: empenho.numero,
@@ -224,6 +229,7 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
           endAt: new Date(formatDate(empenho.endAt)),
         },
       });
+      return { ...updated, value: updated.value / 100, totalPaid: updated.totalPaid / 100 };
     } catch (error) {
       throw new DomainError("Error updating empenho");
     }
@@ -242,20 +248,6 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
       return empenho;
     } catch (error) {
       throw new DomainError("Error updating empenho status");
-    }
-  }
-  async incrementInvoiceValue(empenhoId: string, value: number): Promise<void> {
-    try {
-      await prisma.empenho.update({
-        where: { id: empenhoId },
-        data: {
-          totalPaid: {
-            increment: Math.round(value * 100),
-          },
-        },
-      });
-    } catch (error) {
-      throw new DomainError("Error incrementing invoice value");
     }
   }
 

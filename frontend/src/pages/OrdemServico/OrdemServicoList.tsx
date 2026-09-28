@@ -302,9 +302,9 @@ function ExecutionBar({ executed, total }: { executed: number; total: number }) 
   const over = percent > 100;
 
   return (
-    <div className="mt-2 md:ml-auto md:max-w-44" title={`${formatCurrency(executed)} executados`}>
+    <div className="mt-2 md:ml-auto md:max-w-44" title={`${formatCurrency(executed)} liquidados em notas fiscais`}>
       <div className="flex items-center justify-between text-[11px] text-text-muted mb-1">
-        <span>Executado</span>
+        <span>Liquidado</span>
         <span className={`font-semibold tabular-nums ${over ? "text-danger-text" : "text-text-secondary"}`}>
           {percent}%
         </span>

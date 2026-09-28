@@ -10,9 +10,13 @@ export type InvoiceType = {
   obra_id?: string | null | undefined;
 };
 
+export type InvoiceStatus = "PENDENTE" | "PAGO" | "VENCIDO" | "CANCELADO";
+
+export type UpdateInvoiceType = InvoiceType & { status?: InvoiceStatus };
+
 export type PersistedInvoice = InvoiceType & {
   id: string;
-  status: "PENDENTE" | "PAGO" | "VENCIDO" | "CANCELADO";
+  status: InvoiceStatus;
   createdAt: Date;
   updatedAt: Date;
 };

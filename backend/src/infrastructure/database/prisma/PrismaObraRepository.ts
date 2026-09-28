@@ -211,6 +211,18 @@ export class PrismaObraRepository implements IObraRepository {
     }
   }
 
+  async findEmpenhoId(id: string): Promise<string | null> {
+    try {
+      const obra = await prisma.obra.findUnique({
+        where: { id },
+        select: { ordemServico: { select: { empenho_id: true } } },
+      });
+      return obra?.ordemServico.empenho_id ?? null;
+    } catch (error) {
+      throw new DomainError("Error finding obra: " + error);
+    }
+  }
+
   async update(id: string, obra: ObraType): Promise<PersistedObra & ObraOrdemServicoInfo> {
     try {
       const updatedObra = await prisma.obra.update({

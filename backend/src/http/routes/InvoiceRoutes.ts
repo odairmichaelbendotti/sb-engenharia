@@ -27,13 +27,9 @@ const scopeValidator = new InvoiceScopeValidator(
   empenhoRepository,
   contratoRepository,
   repository,
-);
-const createInvoice = new CreateInvoiceUseCase(
-  repository,
-  empenhoRepository,
   obraRepository,
-  scopeValidator,
 );
+const createInvoice = new CreateInvoiceUseCase(repository, scopeValidator);
 const listInvoices = new ListInvoicesUseCase(repository);
 const deleteInvoice = new DeleteInvoiceUseCase(repository, scopeValidator);
 const updateInvoice = new UpdateInvoiceUseCase(repository, scopeValidator);

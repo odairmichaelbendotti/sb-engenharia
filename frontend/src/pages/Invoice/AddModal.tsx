@@ -105,7 +105,7 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
       setIsOpen(false);
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao criar nota fiscal");
+      toast.error(error instanceof Error ? error.message : "Erro ao criar nota fiscal");
       return;
     } finally {
       setIsLoading(false);

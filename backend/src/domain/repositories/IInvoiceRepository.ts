@@ -1,6 +1,7 @@
 import type {
   InvoiceType,
   PersistedInvoice,
+  UpdateInvoiceType,
 } from "../entities/Invoice.js";
 
 export type listInvoices = {
@@ -22,7 +23,10 @@ export type InvoiceSummaryByTenant = {
 };
 
 export interface IInvoiceRepository {
+  /** Valores em reais na entrada e na saída; o repositório converte para centavos e recalcula o totalPaid do empenho. */
   create(invoice: InvoiceType): Promise<PersistedInvoice>;
+  /** Soma em reais das notas não canceladas do empenho, opcionalmente ignorando uma nota (edição). */
+  sumActiveValueByEmpenho(empenho_id: string, excludeInvoiceId?: string): Promise<number>;
   findByNumber(number: string): Promise<PersistedInvoice | null>;
   /** tenant da nota, herdado do empenho (nota não tem tenant_id próprio). */
   findTenantId(id: string): Promise<string | null>;
@@ -30,5 +34,5 @@ export interface IInvoiceRepository {
   /** Notas fiscais pendentes/vencidas, agrupadas por tenant — resumo multi-institucional do PLATFORM_ADMIN. */
   summaryByTenant(): Promise<InvoiceSummaryByTenant[]>;
   delete(id: string): Promise<void>;
-  update(invoice: InvoiceType, id: string): Promise<InvoiceType>;
+  update(invoice: UpdateInvoiceType, id: string): Promise<PersistedInvoice>;
 }

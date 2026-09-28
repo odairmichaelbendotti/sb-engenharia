@@ -9,6 +9,23 @@ import type { Empresa } from "../../types/empresa";
 
 export type { Invoice, InvoiceDashboard, CreateInvoiceProps };
 
+// Traduz as mensagens de regra de negócio do backend para exibir no toast
+const API_ERROR_MESSAGES: Record<string, string> = {
+  "Value exceeds empenho limit": "O valor ultrapassa o saldo disponível do empenho",
+  "Value must be greater than 0": "O valor deve ser maior que zero",
+  "Obra does not belong to this empenho": "A obra selecionada não pertence a este empenho",
+  "Nota fiscal already exists": "Já existe uma nota fiscal com este número para esta empresa e empenho",
+};
+
+async function apiErrorMessage(response: Response, fallback: string): Promise<string> {
+  try {
+    const body = (await response.json()) as { message?: string };
+    return (body.message && API_ERROR_MESSAGES[body.message]) || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 type InvoiceStore = InvoiceDashboard & {
   create: (createInvoice: CreateInvoiceProps) => Promise<void>;
   list: () => Promise<void>;
@@ -19,7 +36,7 @@ type InvoiceStore = InvoiceDashboard & {
   fetchCompanyOptions: () => Promise<void>;
 };
 
-export const useInvoice = create<InvoiceStore>((set) => ({
+export const useInvoice = create<InvoiceStore>((set, get) => ({
   totalCount: 0,
   totalValue: 0,
   paidInvoices: 0,
@@ -50,11 +67,11 @@ export const useInvoice = create<InvoiceStore>((set) => ({
     });
 
     if (!response.ok) {
-      throw new Error("Erro ao criar nota fiscal");
+      throw new Error(await apiErrorMessage(response, "Erro ao criar nota fiscal"));
     }
 
-    const data = await response.json();
-    set((state) => ({ allInvoices: [...state.allInvoices, data] }));
+    // Recarrega do servidor para lista, totais dos cards e valores ficarem iguais ao banco
+    await get().list();
   },
   async list() {
     const response = await defaultFetch("/invoices/list", {
@@ -86,11 +103,7 @@ export const useInvoice = create<InvoiceStore>((set) => ({
       throw new Error("Erro ao excluir nota fiscal");
     }
 
-    set((state) => ({
-      allInvoices: state.allInvoices.filter((invoice) => invoice.id !== id),
-    }));
-
-    return await response.json();
+    await get().list();
   },
   async update(id: string, invoice: CreateInvoiceProps) {
     const response = await defaultFetch(`/invoices/update/${id}`, {
@@ -100,17 +113,11 @@ export const useInvoice = create<InvoiceStore>((set) => ({
     });
 
     if (!response.ok) {
-      throw new Error("Erro ao atualizar nota fiscal");
+      throw new Error(await apiErrorMessage(response, "Erro ao atualizar nota fiscal"));
     }
 
-    const data = await response.json();
-
-    set((state) => ({
-      allInvoices: state.allInvoices.map((invoice) =>
-        invoice.id === data.id ? data : invoice,
-      ),
-    }));
-
+    const data = (await response.json()) as Invoice;
+    await get().list();
     return data;
   },
 }));

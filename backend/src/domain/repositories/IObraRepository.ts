@@ -79,6 +79,8 @@ export interface IObraRepository {
   /** Obras em andamento + orçamento/executado, agrupados por tenant — resumo multi-institucional do PLATFORM_ADMIN. */
   summaryByTenant(): Promise<ObraSummaryByTenant[]>;
   findById(id: string): Promise<PersistedObra | null>;
+  /** Empenho da OS à qual a obra pertence (obra → OS → empenho); null se a obra não existe. */
+  findEmpenhoId(id: string): Promise<string | null>;
   update(id: string, obra: ObraType): Promise<PersistedObra & ObraOrdemServicoInfo>;
   updateStatus(id: string, status: ObraStatusValue): Promise<PersistedObra & ObraOrdemServicoInfo>;
   delete(id: string): Promise<void>;

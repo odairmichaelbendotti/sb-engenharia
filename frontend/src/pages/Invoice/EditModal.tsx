@@ -127,7 +127,7 @@ export default function EditModal({
       setEditInvoice(null);
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao atualizar nota fiscal");
+      toast.error(error instanceof Error ? error.message : "Erro ao atualizar nota fiscal");
     } finally {
       setIsLoading(false);
     }

@@ -1,16 +1,12 @@
 import { Invoice, type InvoiceType } from "../../../domain/entities/Invoice.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
-import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository.js";
 import type { IInvoiceRepository } from "../../../domain/repositories/IInvoiceRepository.js";
-import type { IObraRepository } from "../../../domain/repositories/IObraRepository.js";
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
 import type { InvoiceScopeValidator } from "./InvoiceScopeValidator.js";
 
 export class CreateInvoiceUseCase {
   constructor(
     private repository: IInvoiceRepository,
-    private empenhoRepository: IEmpenhoRepository,
-    private obraRepository: IObraRepository,
     private scopeValidator: InvoiceScopeValidator,
   ) {}
 
@@ -32,16 +28,13 @@ export class CreateInvoiceUseCase {
 
     const empenho = await this.scopeValidator.validate(user, empenho_id, company_id);
 
-    if (empenho.totalPaid + Math.round(value * 100) > empenho.value) {
+    // Comparação em centavos: empenho.value vem do banco em centavos e a soma em reais
+    const alreadyInvoiced = await this.repository.sumActiveValueByEmpenho(empenho_id);
+    if (Math.round((alreadyInvoiced + value) * 100) > empenho.value) {
       throw new DomainError("Value exceeds empenho limit");
     }
 
-    if (obra_id) {
-      const obra = await this.obraRepository.findById(obra_id);
-      if (!obra) {
-        throw new DomainError("Obra not found");
-      }
-    }
+    await this.scopeValidator.validateObra(empenho_id, obra_id);
 
     const invoiceExist = await this.repository.findByNumber(numero);
 
@@ -52,8 +45,6 @@ export class CreateInvoiceUseCase {
     ) {
       throw new DomainError("Nota fiscal already exists");
     }
-
-    await this.empenhoRepository.incrementInvoiceValue(empenho_id, value);
 
     const invoiceEntity = new Invoice({
       numero,
@@ -69,7 +60,7 @@ export class CreateInvoiceUseCase {
       numero: invoiceEntity.numero,
       description: invoiceEntity.description,
       vencimento: invoiceEntity.vencimento,
-      value: Math.round(invoiceEntity.value * 100),
+      value: invoiceEntity.value,
       empenho_id: invoiceEntity.empenho_id,
       company_id: invoiceEntity.company_id,
       obra_id: invoiceEntity.obra_id,
