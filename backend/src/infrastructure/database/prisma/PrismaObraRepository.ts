@@ -15,6 +15,11 @@ import type {
 } from "../../../domain/repositories/IObraRepository.js";
 import { prisma } from "../../prisma/prisma.js";
 
+// Soma, em centavos, das notas não canceladas
+function sumActiveInvoicesCents(invoices: { value: number; status: string }[]): number {
+  return invoices.filter((i) => i.status !== "CANCELADO").reduce((sum, i) => sum + i.value, 0);
+}
+
 const INVOICE_INFO_SELECT = {
   id: true,
   numero: true,
@@ -109,7 +114,7 @@ export class PrismaObraRepository implements IObraRepository {
           : {}),
       };
 
-      const [obras, total, emAndamento, concluidas, paralisadas, canceladas, valorExecutadoAgg] =
+      const [obras, total, emAndamento, concluidas, paralisadas, canceladas] =
         await Promise.all([
           prisma.obra.findMany({
             where: baseWhere,
@@ -124,8 +129,12 @@ export class PrismaObraRepository implements IObraRepository {
           prisma.obra.count({ where: { ...baseWhere, status: "CONCLUIDA" } }),
           prisma.obra.count({ where: { ...baseWhere, status: "PARALISADA" } }),
           prisma.obra.count({ where: { ...baseWhere, status: "CANCELADA" } }),
-          prisma.obra.aggregate({ where: baseWhere, _sum: { valorExecutado: true } }),
         ]);
+
+      // Executado calculado na leitura a partir das notas (não o campo gravado),
+      // como no detalhe da obra — não depende do recálculo ter rodado
+      const executadoCentavos = new Map(obras.map((o) => [o.id, sumActiveInvoicesCents(o.invoices)]));
+      const valorExecutadoTotalCentavos = obras.reduce((sum, o) => sum + (executadoCentavos.get(o.id) ?? 0), 0);
 
       // Obra não tem mais orçamento próprio — o "orçamento" da obra é o valor
       // integral da ordem de serviço vinculada (1 OS : 1 Obra).
@@ -134,7 +143,7 @@ export class PrismaObraRepository implements IObraRepository {
       return {
         obras: obras.map((o) => ({
           ...o,
-          valorExecutado: o.valorExecutado / 100,
+          valorExecutado: (executadoCentavos.get(o.id) ?? 0) / 100,
           ordemServico: mapOrdemServico(o.ordemServico),
           // Sempre buscamos a relação (simplifica a tipagem do Prisma), mas só
           // devolvemos o dado financeiro pro cliente quando ele tem permissão
@@ -151,7 +160,7 @@ export class PrismaObraRepository implements IObraRepository {
           paralisadas,
           canceladas,
           orcamentoTotal: orcamentoTotalCentavos / 100,
-          valorExecutadoTotal: (valorExecutadoAgg._sum.valorExecutado ?? 0) / 100,
+          valorExecutadoTotal: valorExecutadoTotalCentavos / 100,
         },
       };
     } catch (error) {
@@ -286,8 +295,8 @@ export class PrismaObraRepository implements IObraRepository {
         select: {
           tenant_id: true,
           status: true,
-          valorExecutado: true,
           ordemServico: { select: { valor: true } },
+          invoices: { select: { value: true, status: true } },
         },
       });
 
@@ -301,7 +310,7 @@ export class PrismaObraRepository implements IObraRepository {
         };
         if (o.status === "EM_ANDAMENTO") entry.emAndamento += 1;
         entry.orcamentoTotal += o.ordemServico.valor / 100;
-        entry.valorExecutadoTotal += o.valorExecutado / 100;
+        entry.valorExecutadoTotal += sumActiveInvoicesCents(o.invoices) / 100;
         byTenant.set(o.tenant_id, entry);
       }
 
@@ -364,12 +373,15 @@ export class PrismaObraRepository implements IObraRepository {
         },
         include: {
           ordemServico: { select: ORDEM_SERVICO_INFO_SELECT },
+          invoices: { select: { value: true, status: true } },
         },
       });
 
+      // Executado vem das notas; as notas em si ficam fora da resposta
+      const { invoices, ...obraAtualizada } = updatedObra;
       return {
-        ...updatedObra,
-        valorExecutado: updatedObra.valorExecutado / 100,
+        ...obraAtualizada,
+        valorExecutado: sumActiveInvoicesCents(invoices) / 100,
         ordemServico: mapOrdemServico(updatedObra.ordemServico),
       };
     } catch (error) {
@@ -391,12 +403,15 @@ export class PrismaObraRepository implements IObraRepository {
         },
         include: {
           ordemServico: { select: ORDEM_SERVICO_INFO_SELECT },
+          invoices: { select: { value: true, status: true } },
         },
       });
 
+      // Executado vem das notas; as notas em si ficam fora da resposta
+      const { invoices, ...obraAtualizada } = updatedObra;
       return {
-        ...updatedObra,
-        valorExecutado: updatedObra.valorExecutado / 100,
+        ...obraAtualizada,
+        valorExecutado: sumActiveInvoicesCents(invoices) / 100,
         ordemServico: mapOrdemServico(updatedObra.ordemServico),
       };
     } catch (error) {
