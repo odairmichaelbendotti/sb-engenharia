@@ -65,7 +65,17 @@ export const useContratos = create<ContratosState>((set) => ({
       return {
         data: {
           ...state.data,
-          contratos: state.data.contratos.map((c) => (c.id === id ? { ...c, ...data } : c)),
+          // O update não devolve os totais derivados — recalcula os saldos se o valor mudou
+          contratos: state.data.contratos.map((c) =>
+            c.id === id
+              ? {
+                  ...c,
+                  ...data,
+                  saldoDisponivel: data.valor - c.valorEmpenhado,
+                  saldoALiquidar: data.valor - c.valorLiquidado,
+                }
+              : c,
+          ),
         },
       };
     });

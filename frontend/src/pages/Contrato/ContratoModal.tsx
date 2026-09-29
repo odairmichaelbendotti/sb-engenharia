@@ -270,16 +270,22 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
               </div>
             </div>
             {contrato && (
-              <div className="bg-surface-muted rounded-lg p-3 border border-border flex items-center justify-between gap-4">
+              <div className="bg-surface-muted rounded-lg p-3 border border-border grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
                   <p className="text-xs text-text-muted">Empenhado</p>
                   <p className="text-sm font-semibold text-text-primary">{formatCurrency(contrato.valorEmpenhado)}</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-text-muted">Saldo disponível</p>
-                  <p className={`text-sm font-semibold ${contrato.saldoDisponivel <= 0 ? "text-danger-text" : "text-success-text"}`}>
-                    {formatCurrency(contrato.saldoDisponivel)}
-                  </p>
+                <div>
+                  <p className="text-xs text-text-muted">Saldo a empenhar</p>
+                  <p className="text-sm font-semibold text-text-primary">{formatCurrency(contrato.saldoDisponivel)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-text-muted">Liquidado (NFs)</p>
+                  <p className="text-sm font-semibold text-text-primary">{formatCurrency(contrato.valorLiquidado)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-text-muted">Saldo a liquidar</p>
+                  <p className="text-sm font-semibold text-text-primary">{formatCurrency(contrato.saldoALiquidar)}</p>
                 </div>
               </div>
             )}

@@ -16,7 +16,12 @@ export type ContratoListItem = PersistedContrato & {
     status: string;
   }[];
   valorEmpenhado: number;
+  // Saldo a empenhar (valor − empenhos não cancelados) — usado ao criar empenho
   saldoDisponivel: number;
+  // Soma das notas fiscais não canceladas dos empenhos do contrato
+  valorLiquidado: number;
+  // Quanto do contrato ainda falta pagar (valor − liquidado)
+  saldoALiquidar: number;
 };
 
 export type ContratoStats = {

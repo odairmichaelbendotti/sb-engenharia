@@ -12,6 +12,7 @@ import type { Contrato } from "../../../types/contrato";
 import { formatDate } from "../../utils/format-currency";
 import { usePermission } from "../../hooks/usePermission";
 import { ContratoPagination } from "./ContratoPagination";
+import { ContratoSaldo } from "./ContratoSaldo";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -30,7 +31,6 @@ const STATUS_CLASS: Record<Contrato["status"], string> = {
 interface ContratoTableProps {
   contratos: Contrato[];
   isLoading?: boolean;
-  formatCurrency: (value: number) => string;
   onEdit: (contrato: Contrato) => void;
   onDelete: (contrato: Contrato) => void;
   onAdd?: () => void;
@@ -39,7 +39,6 @@ interface ContratoTableProps {
 export function ContratoTable({
   contratos,
   isLoading = false,
-  formatCurrency,
   onEdit,
   onDelete,
   onAdd,
@@ -133,29 +132,8 @@ export function ContratoTable({
                     {contrato.empenhos.length}
                   </div>
                 </td>
-                <td className="py-2.5 px-4 min-w-40">
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between gap-2 text-xs">
-                      <span
-                        className={`font-semibold ${contrato.saldoDisponivel <= 0 ? "text-danger-text" : "text-text-primary"}`}
-                      >
-                        {formatCurrency(contrato.saldoDisponivel)}
-                      </span>
-                      <span className="text-text-muted shrink-0">de {formatCurrency(contrato.valor)}</span>
-                    </div>
-                    <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          contrato.saldoDisponivel <= 0
-                            ? "bg-danger-text"
-                            : contrato.valorEmpenhado / contrato.valor >= 0.8
-                              ? "bg-warning-text"
-                              : "bg-primary-500"
-                        }`}
-                        style={{ width: `${Math.min(100, (contrato.valorEmpenhado / contrato.valor) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
+                <td className="py-2.5 px-4 min-w-44">
+                  <ContratoSaldo contrato={contrato} />
                 </td>
                 <td className="py-2.5 px-4 text-center">
                   <span

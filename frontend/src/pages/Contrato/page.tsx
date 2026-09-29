@@ -98,7 +98,6 @@ export default function Contratos() {
         <ContratoTable
           contratos={filteredContratos}
           isLoading={isListLoading}
-          formatCurrency={formatCurrency}
           onEdit={handleOpen}
           onDelete={handleOpenDelete}
           onAdd={() => handleOpen()}

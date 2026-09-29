@@ -28,7 +28,12 @@ export type Contrato = {
   company: ContratoCompany;
   empenhos: ContratoEmpenhoResumo[];
   valorEmpenhado: number;
+  // Saldo a empenhar (valor − empenhos não cancelados)
   saldoDisponivel: number;
+  // Soma das notas fiscais não canceladas
+  valorLiquidado: number;
+  // Quanto do contrato ainda falta pagar (valor − liquidado)
+  saldoALiquidar: number;
   createdAt: Date;
   updatedAt: Date;
 };

@@ -61,6 +61,8 @@ export class PrismaContratoRepository implements IContratoRepository {
         empenhos: [],
         valorEmpenhado: 0,
         saldoDisponivel: newContrato.valor / 100,
+        valorLiquidado: 0,
+        saldoALiquidar: newContrato.valor / 100,
       };
     } catch (error) {
       throw new DomainError("Error creating contrato: " + error);
@@ -103,11 +105,26 @@ export class PrismaContratoRepository implements IContratoRepository {
         prisma.contrato.aggregate({ where: tenantFilter, _sum: { valor: true } }),
       ]);
 
+      // Liquidado é calculado na leitura a partir das notas, como em Empenho/OS
+      const liquidadoPorEmpenho = await prisma.invoice.groupBy({
+        by: ["empenho_id"],
+        where: {
+          empenho_id: { in: contratos.flatMap((c) => c.empenhos.map((e) => e.id)) },
+          status: { not: "CANCELADO" },
+        },
+        _sum: { value: true },
+      });
+      const liquidadoCentavos = new Map(liquidadoPorEmpenho.map((row) => [row.empenho_id, row._sum.value ?? 0]));
+
       return {
         contratos: contratos.map((c) => {
           const valorEmpenhadoCentavos = c.empenhos
             .filter((e) => e.status !== "CANCELADO")
             .reduce((sum, e) => sum + e.value, 0);
+          const valorLiquidadoCentavos = c.empenhos.reduce(
+            (sum, e) => sum + (liquidadoCentavos.get(e.id) ?? 0),
+            0,
+          );
 
           return {
             ...c,
@@ -115,6 +132,8 @@ export class PrismaContratoRepository implements IContratoRepository {
             empenhos: c.empenhos.map((e) => ({ ...e, value: e.value / 100 })),
             valorEmpenhado: valorEmpenhadoCentavos / 100,
             saldoDisponivel: (c.valor - valorEmpenhadoCentavos) / 100,
+            valorLiquidado: valorLiquidadoCentavos / 100,
+            saldoALiquidar: (c.valor - valorLiquidadoCentavos) / 100,
           };
         }),
         stats: {
