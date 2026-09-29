@@ -12,7 +12,7 @@ import type { Contrato } from "../../../types/contrato";
 import { formatDate } from "../../utils/format-currency";
 import { usePermission } from "../../hooks/usePermission";
 import { ContratoPagination } from "./ContratoPagination";
-import { ContratoSaldo } from "./ContratoSaldo";
+import { SaldoLiquidacao } from "../../components/SaldoLiquidacao";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -133,7 +133,12 @@ export function ContratoTable({
                   </div>
                 </td>
                 <td className="py-2.5 px-4 min-w-44">
-                  <ContratoSaldo contrato={contrato} />
+                  <SaldoLiquidacao
+                    valor={contrato.valor}
+                    liquidado={contrato.valorLiquidado}
+                    saldo={contrato.saldoALiquidar}
+                    liquidadoLabel="Contrato liquidado"
+                  />
                 </td>
                 <td className="py-2.5 px-4 text-center">
                   <span

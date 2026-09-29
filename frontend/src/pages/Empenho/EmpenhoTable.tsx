@@ -11,6 +11,7 @@ import type { EmpenhoList } from "../../../types/empenho";
 import { formatDate } from "../../utils/format-currency";
 import { usePermission } from "../../hooks/usePermission";
 import { EmpenhoPagination } from "./EmpenhoPagination";
+import { SaldoLiquidacao } from "../../components/SaldoLiquidacao";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -135,29 +136,13 @@ export function EmpenhoTable({
                       {formatCurrency(empenho.value)}
                     </p>
                   </td>
-                  <td className="py-2.5 px-4 min-w-40">
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between gap-2 text-xs">
-                        <span
-                          className={`font-semibold ${empenho.saldoDisponivel <= 0 ? "text-danger-text" : "text-text-primary"}`}
-                        >
-                          {formatCurrency(empenho.saldoDisponivel)}
-                        </span>
-                        <span className="text-text-muted shrink-0">de {formatCurrency(empenho.value)}</span>
-                      </div>
-                      <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${
-                            empenho.saldoDisponivel <= 0
-                              ? "bg-danger-text"
-                              : empenho.valorComprometido / empenho.value >= 0.8
-                                ? "bg-warning-text"
-                                : "bg-primary-500"
-                          }`}
-                          style={{ width: `${Math.min(100, (empenho.valorComprometido / empenho.value) * 100)}%` }}
-                        />
-                      </div>
-                    </div>
+                  <td className="py-2.5 px-4 min-w-44">
+                    <SaldoLiquidacao
+                      valor={empenho.value}
+                      liquidado={empenho.valorLiquidado}
+                      saldo={empenho.saldoALiquidar}
+                      liquidadoLabel="Empenho liquidado"
+                    />
                   </td>
 
                   {canEditAdministrativo && (

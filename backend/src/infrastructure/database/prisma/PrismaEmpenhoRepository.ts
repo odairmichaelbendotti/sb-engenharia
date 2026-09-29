@@ -103,6 +103,17 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
         }),
       ]);
 
+      // Liquidado é calculado na leitura a partir das notas, como em Contrato/OS
+      const liquidadoPorEmpenho = await prisma.invoice.groupBy({
+        by: ["empenho_id"],
+        where: {
+          empenho_id: { in: empenhos.map((e) => e.id) },
+          status: { not: "CANCELADO" },
+        },
+        _sum: { value: true },
+      });
+      const liquidadoCentavos = new Map(liquidadoPorEmpenho.map((row) => [row.empenho_id, row._sum.value ?? 0]));
+
       const formattedEmpenhos = empenhos.map(
         (
           empenho: PrismaEmpenho & {
@@ -126,6 +137,8 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
             totalPaid: Number(empenho.totalPaid) / 100,
             valorComprometido: valorComprometidoCentavos / 100,
             saldoDisponivel: (Number(empenho.value) - valorComprometidoCentavos) / 100,
+            valorLiquidado: (liquidadoCentavos.get(empenho.id) ?? 0) / 100,
+            saldoALiquidar: (Number(empenho.value) - (liquidadoCentavos.get(empenho.id) ?? 0)) / 100,
           };
         },
       );

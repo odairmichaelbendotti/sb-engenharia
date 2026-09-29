@@ -18,6 +18,10 @@ export type empenhosDTO = {
     valorComprometido: number;
     /** Valor do empenho - valorComprometido. */
     saldoDisponivel: number;
+    /** Soma das notas fiscais não canceladas do empenho. */
+    valorLiquidado: number;
+    /** Valor do empenho - valorLiquidado. */
+    saldoALiquidar: number;
   })[];
   totalEmpenhos: number;
   totalEmpenhosAmount: number;

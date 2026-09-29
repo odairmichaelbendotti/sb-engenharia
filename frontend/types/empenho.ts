@@ -37,6 +37,10 @@ export type EmpenhoList = {
   valorComprometido: number;
   /** value - valorComprometido. */
   saldoDisponivel: number;
+  /** Soma das notas fiscais não canceladas do empenho. */
+  valorLiquidado: number;
+  /** value - valorLiquidado. */
+  saldoALiquidar: number;
 };
 
 type Company = {
