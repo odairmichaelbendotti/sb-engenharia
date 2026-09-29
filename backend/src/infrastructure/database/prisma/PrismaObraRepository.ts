@@ -8,6 +8,7 @@ import { DomainError } from "../../../domain/errors/DomainError.js";
 import type {
   IObraRepository,
   ListObrasResponse,
+  ObraDetail,
   ObraOptionForInvoice,
   ObraOrdemServicoInfo,
   ObraSummaryByTenant,
@@ -155,6 +156,127 @@ export class PrismaObraRepository implements IObraRepository {
       };
     } catch (error) {
       throw new DomainError("Error listing obras: " + error);
+    }
+  }
+
+  async getDetail(id: string, tenant_id: string | undefined, company_id?: string): Promise<ObraDetail | null> {
+    try {
+      const found = await prisma.obra.findFirst({
+        where: {
+          id,
+          ...(tenant_id ? { tenant_id } : {}),
+          ...(company_id ? { ordemServico: { empenho: { contrato: { company_id } } } } : {}),
+        },
+        include: {
+          invoices: { select: INVOICE_INFO_SELECT, orderBy: { vencimento: "asc" } },
+          ordemServico: {
+            include: {
+              empenho: {
+                include: {
+                  contrato: {
+                    include: {
+                      company: { select: { id: true, name: true, cnpj: true } },
+                      empenhos: {
+                        orderBy: { startAt: "asc" },
+                        include: { ordensServico: { select: { valor: true, status: true } } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+      if (!found) return null;
+
+      const { invoices, ordemServico, valorExecutado: _stored, ...obra } = found;
+      const { empenho } = ordemServico;
+      const { contrato } = empenho;
+
+      // Liquidado por empenho do contrato, somando só NFs não canceladas
+      const liquidadoPorEmpenho = await prisma.invoice.groupBy({
+        by: ["empenho_id"],
+        where: {
+          empenho_id: { in: contrato.empenhos.map((e) => e.id) },
+          status: { not: "CANCELADO" },
+        },
+        _sum: { value: true },
+      });
+      const liquidadoCentavos = new Map(liquidadoPorEmpenho.map((row) => [row.empenho_id, row._sum.value ?? 0]));
+
+      const empenhos = contrato.empenhos.map((e) => {
+        const ordensAtivas = e.ordensServico.filter((os) => os.status !== "CANCELADO");
+        return {
+          id: e.id,
+          numero: e.numero,
+          description: e.description,
+          status: e.status,
+          startAt: e.startAt,
+          endAt: e.endAt,
+          valueCentavos: e.value,
+          liquidadoCentavos: liquidadoCentavos.get(e.id) ?? 0,
+          comprometidoCentavos: ordensAtivas.reduce((sum, os) => sum + os.valor, 0),
+          ordensServicoCount: ordensAtivas.length,
+        };
+      });
+      const empenhosAtivos = empenhos.filter((e) => e.status !== "CANCELADO");
+      const empenhoAtual = empenhos.find((e) => e.id === empenho.id)!;
+
+      const obraLiquidadoCentavos = invoices
+        .filter((invoice) => invoice.status !== "CANCELADO")
+        .reduce((sum, invoice) => sum + invoice.value, 0);
+
+      return {
+        obra,
+        ordemServico: { id: ordemServico.id, numero: ordemServico.numero, status: ordemServico.status },
+        empenho: {
+          id: empenho.id,
+          numero: empenho.numero,
+          description: empenho.description,
+          status: empenho.status,
+          startAt: empenho.startAt,
+          endAt: empenho.endAt,
+        },
+        contrato: {
+          id: contrato.id,
+          identificador: contrato.identificador,
+          descricaoCurta: contrato.descricaoCurta,
+          cor: contrato.cor,
+          status: contrato.status,
+          dataInicio: contrato.dataInicio,
+          dataFim: contrato.dataFim,
+          company: contrato.company,
+        },
+        financial: {
+          ordemServico: { valor: ordemServico.valor / 100, liquidado: obraLiquidadoCentavos / 100 },
+          empenho: {
+            value: empenhoAtual.valueCentavos / 100,
+            liquidado: empenhoAtual.liquidadoCentavos / 100,
+            comprometidoOS: empenhoAtual.comprometidoCentavos / 100,
+            ordensServicoCount: empenhoAtual.ordensServicoCount,
+          },
+          contrato: {
+            valor: contrato.valor / 100,
+            totalEmpenhado: empenhosAtivos.reduce((sum, e) => sum + e.valueCentavos, 0) / 100,
+            totalLiquidado: empenhosAtivos.reduce((sum, e) => sum + e.liquidadoCentavos, 0) / 100,
+            empenhos: empenhos.map((e) => ({
+              id: e.id,
+              numero: e.numero,
+              description: e.description,
+              status: e.status,
+              startAt: e.startAt,
+              endAt: e.endAt,
+              value: e.valueCentavos / 100,
+              liquidado: e.liquidadoCentavos / 100,
+              ordensServicoCount: e.ordensServicoCount,
+            })),
+          },
+          invoices: invoices.map((invoice) => ({ ...invoice, value: invoice.value / 100 })),
+        },
+      };
+    } catch (error) {
+      throw new DomainError("Error getting obra detail: " + error);
     }
   }
 

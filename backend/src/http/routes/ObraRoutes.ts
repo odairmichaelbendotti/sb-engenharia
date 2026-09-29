@@ -7,6 +7,7 @@ import { ListObraOptionsForInvoiceUseCase } from "../../application/usecases/obr
 import { UpdateObraUseCase } from "../../application/usecases/obra/UpdateObraUseCase.js";
 import { UpdateObraStatusUseCase } from "../../application/usecases/obra/UpdateObraStatusUseCase.js";
 import { DeleteObraUseCase } from "../../application/usecases/obra/DeleteObraUseCase.js";
+import { GetObraDetailUseCase } from "../../application/usecases/obra/GetObraDetailUseCase.js";
 import { ObraController } from "../controllers/ObraController.js";
 import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
@@ -23,6 +24,7 @@ const listObraOptionsForInvoiceUseCase = new ListObraOptionsForInvoiceUseCase(re
 const updateObraUseCase = new UpdateObraUseCase(repository);
 const updateObraStatusUseCase = new UpdateObraStatusUseCase(repository);
 const deleteObraUseCase = new DeleteObraUseCase(repository);
+const getObraDetailUseCase = new GetObraDetailUseCase(repository);
 
 const obraController = new ObraController(
   createObraUseCase,
@@ -31,6 +33,7 @@ const obraController = new ObraController(
   updateObraStatusUseCase,
   deleteObraUseCase,
   listObraOptionsForInvoiceUseCase,
+  getObraDetailUseCase,
 );
 
 const token = new TokenGenerator();
@@ -50,6 +53,14 @@ ObraRoutes.get(
   authMiddleware.handle,
   requireDomainAccess.handle("engenharia", "view"),
   (req, res) => obraController.list(req, res),
+);
+// Detalhe do painel do Mapa de Obras; o use case aplica o escopo de tenant/empresa
+// e omite a parte financeira para quem não vê o domínio administrativo
+ObraRoutes.get(
+  "/obra/detail/:id",
+  authMiddleware.handle,
+  requireDomainAccess.handle("engenharia", "view"),
+  (req, res) => obraController.detail(req, res),
 );
 // Rota estreita: expõe só id/nome/identificacaoPatrimonial das obras vinculadas
 // a um empenho específico — usada pelo select de Obra na criação/edição de

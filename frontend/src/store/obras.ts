@@ -1,5 +1,12 @@
 import { create } from "zustand";
-import type { ListObras, Obra, ObraStatus, CreateObraPayload, ObraOptionForInvoice } from "../../types/obra";
+import type {
+  ListObras,
+  Obra,
+  ObraDetail,
+  ObraStatus,
+  CreateObraPayload,
+  ObraOptionForInvoice,
+} from "../../types/obra";
 import { defaultFetch } from "../services/api";
 
 type ObrasState = {
@@ -7,6 +14,7 @@ type ObrasState = {
   obraOptionsForInvoice: ObraOptionForInvoice[];
   fetchObras: () => Promise<void>;
   fetchObraOptionsForInvoice: (empenhoId: string) => Promise<void>;
+  fetchObraDetail: (id: string) => Promise<ObraDetail>;
   createObra: (payload: CreateObraPayload) => Promise<Obra>;
   updateObra: (id: string, payload: Partial<CreateObraPayload>) => Promise<Obra>;
   updateObraStatus: (id: string, status: ObraStatus) => Promise<void>;
@@ -36,6 +44,14 @@ export const useObras = create<ObrasState>((set) => ({
     if (!response.ok) throw new Error("Erro ao carregar obras disponíveis");
     const options: ObraOptionForInvoice[] = await response.json();
     set({ obraOptionsForInvoice: options });
+  },
+
+  // Não fica no store: o painel busca o detalhe a cada abertura para refletir NFs recentes
+  fetchObraDetail: async (id) => {
+    const response = await defaultFetch(`/obra/detail/${id}`, { credentials: "include" });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || "Erro ao carregar detalhes da obra");
+    return data;
   },
 
   createObra: async (payload) => {

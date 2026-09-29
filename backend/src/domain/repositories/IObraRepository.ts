@@ -72,7 +72,67 @@ export type ObraSummaryByTenant = {
   valorExecutadoTotal: number;
 };
 
+// Detalhe da obra para o painel do Mapa: cadeia Contrato → Empenho → OS → Obra.
+// Valores em reais; liquidado sempre calculado a partir das notas fiscais não canceladas.
+export type ObraDetailEmpenhoResumo = {
+  id: string;
+  numero: string;
+  description: string;
+  status: string;
+  startAt: Date;
+  endAt: Date;
+  value: number;
+  liquidado: number;
+  ordensServicoCount: number;
+};
+
+export type ObraDetailFinancial = {
+  ordemServico: { valor: number; liquidado: number };
+  empenho: {
+    value: number;
+    liquidado: number;
+    // Soma das OS não canceladas do empenho (inclui a OS desta obra)
+    comprometidoOS: number;
+    ordensServicoCount: number;
+  };
+  contrato: {
+    valor: number;
+    // Totais consideram só empenhos não cancelados
+    totalEmpenhado: number;
+    totalLiquidado: number;
+    empenhos: ObraDetailEmpenhoResumo[];
+  };
+  invoices: ObraInvoiceResumo[];
+};
+
+export type ObraDetail = {
+  obra: Omit<PersistedObra, "valorExecutado">;
+  ordemServico: { id: string; numero: string; status: string };
+  empenho: {
+    id: string;
+    numero: string;
+    description: string;
+    status: string;
+    startAt: Date;
+    endAt: Date;
+  };
+  contrato: {
+    id: string;
+    identificador: string;
+    descricaoCurta: string;
+    cor: string;
+    status: string;
+    dataInicio: Date;
+    dataFim: Date;
+    company: { id: string; name: string; cnpj: string };
+  };
+  // null quando o usuário não pode ver o domínio administrativo (ex.: EMPRESA)
+  financial: ObraDetailFinancial | null;
+};
+
 export interface IObraRepository {
+  /** Detalhe da obra restrito ao tenant e, para EMPRESA, à própria empresa; null se não encontrada. */
+  getDetail(id: string, tenant_id: string | undefined, company_id?: string): Promise<ObraDetail | null>;
   create(obra: ObraEntity): Promise<PersistedObra & ObraOrdemServicoInfo>;
   list(tenant_id: string | undefined, company_id?: string, includeInvoices?: boolean): Promise<ListObrasResponse>;
   listOptionsForInvoice(tenant_id: string, empenho_id: string): Promise<ObraOptionForInvoice[]>;

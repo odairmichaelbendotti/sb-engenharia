@@ -5,6 +5,7 @@ import type { ListObraOptionsForInvoiceUseCase } from "../../application/usecase
 import type { UpdateObraUseCase } from "../../application/usecases/obra/UpdateObraUseCase.js";
 import type { UpdateObraStatusUseCase } from "../../application/usecases/obra/UpdateObraStatusUseCase.js";
 import type { DeleteObraUseCase } from "../../application/usecases/obra/DeleteObraUseCase.js";
+import type { GetObraDetailUseCase } from "../../application/usecases/obra/GetObraDetailUseCase.js";
 import { DomainError } from "../../domain/errors/DomainError.js";
 import { DomainAccessPolicy } from "../../domain/polices/DomainAccessPolicy.js";
 
@@ -18,6 +19,7 @@ export class ObraController {
     private updateObraStatus: UpdateObraStatusUseCase,
     private deleteObra: DeleteObraUseCase,
     private listObraOptionsForInvoice: ListObraOptionsForInvoiceUseCase,
+    private getObraDetail: GetObraDetailUseCase,
   ) {}
 
   async create(req: Request, res: Response) {
@@ -63,6 +65,21 @@ export class ObraController {
         company_id: user.role === "EMPRESA" ? user.company_id! : undefined,
         includeInvoices: new DomainAccessPolicy().can(user.role, "administrativo", "view"),
       });
+      res.status(200).json(data);
+    } catch (error) {
+      if (error instanceof DomainError) return res.status(400).json({ message: error.message });
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  }
+
+  async detail(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { user } = req;
+      if (!id || Array.isArray(id)) throw new DomainError("Invalid ID");
+      if (!user) throw new DomainError("User not found");
+
+      const data = await this.getObraDetail.execute({ id, user });
       res.status(200).json(data);
     } catch (error) {
       if (error instanceof DomainError) return res.status(400).json({ message: error.message });

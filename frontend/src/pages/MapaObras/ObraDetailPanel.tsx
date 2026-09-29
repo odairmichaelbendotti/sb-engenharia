@@ -1,174 +1,507 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   X,
   Wrench,
   CheckCircle2,
   PauseCircle,
   XCircle,
-  MapPin,
-  User,
-  Calendar,
+  HardHat,
   Wallet,
   Building2,
   FileText,
   Clock,
-  AlertTriangle,
+  CalendarRange,
+  ChevronRight,
+  RefreshCw,
+  Info,
 } from "lucide-react";
-import { formatCurrency, formatDate } from "../../utils/format-currency";
-import { usePermission } from "../../hooks/usePermission";
-import type { Obra, ObraStatus, ObraTipo } from "../../../types/obra";
+import { formatCurrency, formatDate, formatDateOnly } from "../../utils/format-currency";
+import { useObras } from "../../store/obras";
+import type { Obra, ObraDetail, ObraDetailFinancial, ObraStatus } from "../../../types/obra";
+import { Card, PendingBadge, ProgressBar, StatusPill, VigenciaAlert } from "./obra-detail-shared";
+import {
+  daysUntil,
+  formatPercent,
+  INVOICE_STATUS,
+  OBRA_TIPO_LABEL,
+  percentOf,
+  plural,
+  RECORD_STATUS,
+  dateOnlyUtc,
+  todayUtc,
+} from "./obra-detail-utils";
+import { ContratoEmpenhosModal } from "./ContratoEmpenhosModal";
+import { ObraInfoModal } from "./ObraInfoModal";
+import { ObraTimeline } from "./ObraTimeline";
 
 /**
- * Painel de detalhe da obra, no Mapa de Obras — redesenhado a partir da
- * proposta aprovada em 2026-09-02 (canvas "Painel de Obra"), que abandonou
- * de propósito o visual das imagens em frontend/referencias/ (header escuro,
- * campos vermelho+negrito). Todo campo sinalizado com <PendingBadge /> não
- * tem dado real no sistema ainda — ver pendência #8 em frontend/CLAUDE.md
- * antes de tentar "corrigir" esses trechos.
+ * Painel lateral de detalhe da obra, no Mapa de Obras. Mostra a cadeia
+ * Contrato → Empenho → OS/Obra, cada nível com seus próprios valores e prazos.
+ * Os dados vêm de GET /obra/detail/:id (liquidado calculado a partir das NFs);
+ * a obra da listagem só é usada para o cabeçalho aparecer sem esperar o fetch.
+ * Campos com <PendingBadge /> ainda não têm dado no sistema — ver pendência #7
+ * em frontend/CLAUDE.md antes de "completar" esses trechos.
  */
 
 type Tab = "geral" | "notas-fiscais" | "cronograma";
 
-const STATUS_BADGE: Record<
-  ObraStatus,
-  { label: string; icon: typeof Wrench; className: string }
-> = {
+const STATUS_BADGE: Record<ObraStatus, { label: string; icon: typeof Wrench; className: string }> = {
   EM_ANDAMENTO: { label: "Em Andamento", icon: Wrench, className: "bg-accent-500 text-white" },
   CONCLUIDA: { label: "Concluída", icon: CheckCircle2, className: "bg-secondary-500 text-white" },
   PARALISADA: { label: "Paralisada", icon: PauseCircle, className: "bg-warning-text text-white" },
   CANCELADA: { label: "Cancelada", icon: XCircle, className: "bg-danger-text text-white" },
 };
 
-const TIPO_LABEL: Record<ObraTipo, string> = {
-  CONSTRUCAO: "Construção",
-  REFORMA: "Reforma",
-  AMPLIACAO: "Ampliação",
-  PAVIMENTACAO: "Pavimentação",
-  SANEAMENTO: "Saneamento",
-  MANUTENCAO_PREDIAL: "Manutenção Predial",
-  OUTRO: "Outro",
-};
+type Deadline = { label: string; className: string; elapsed: number };
 
-const EMPENHO_TIMELINE_STATUS: Record<string, { label: string; className: string }> = {
-  ATIVO: { label: "Em andamento", className: "bg-accent-50 text-accent-600" },
-  FINALIZADO: { label: "Concluído", className: "bg-success-bg text-success-text" },
-  CANCELADO: { label: "Cancelado", className: "bg-danger-bg text-danger-text" },
-};
+function getObraDeadline(obra: ObraDetail["obra"]): Deadline {
+  const start = dateOnlyUtc(obra.dataInicio);
+  const end = dateOnlyUtc(obra.dataPrevisaoTermino);
+  const today = todayUtc();
+  const elapsed = end > start ? percentOf(today - start, end - start) : today >= end ? 100 : 0;
 
-function PendingBadge() {
+  if (obra.dataConclusao) {
+    return { label: `Concluída em ${formatDate(obra.dataConclusao)}`, className: "text-success-text", elapsed: 100 };
+  }
+  if (obra.status === "CANCELADA") return { label: "Obra cancelada", className: "text-text-muted", elapsed };
+  if (obra.status === "PARALISADA") return { label: "Obra paralisada", className: "text-warning-text", elapsed };
+  if (today < start) {
+    return { label: `Começa em ${plural(daysUntil(obra.dataInicio), "dia", "dias")}`, className: "text-info-text", elapsed: 0 };
+  }
+
+  const days = daysUntil(obra.dataPrevisaoTermino);
+  if (days < 0) return { label: `Atrasada há ${plural(-days, "dia", "dias")}`, className: "text-danger-text", elapsed };
+  if (days === 0) return { label: "Vence hoje", className: "text-warning-text", elapsed };
+  if (days <= 15) return { label: `Vence em ${plural(days, "dia", "dias")}`, className: "text-warning-text", elapsed };
+  return { label: `Faltam ${plural(days, "dia", "dias")}`, className: "text-success-text", elapsed };
+}
+
+function Metric({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-dashed border-border-strong bg-surface-muted text-text-muted text-[10px] font-semibold shrink-0">
-      <Clock size={10} />
-      Em breve
-    </span>
-  );
-}
-
-function Dot() {
-  return <span className="w-1 h-1 rounded-full bg-text-muted shrink-0" />;
-}
-
-function getDaysRemaining(endAt: string | Date): number {
-  const end = new Date(endAt);
-  end.setHours(0, 0, 0, 0);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-function VigenciaAlert({ endAt }: { endAt: string | Date }) {
-  const days = getDaysRemaining(endAt);
-  const expired = days < 0;
-  return (
-    <div
-      className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold ${
-        expired
-          ? "bg-danger-bg border-danger-border text-danger-text"
-          : days <= 30
-            ? "bg-warning-bg border-warning-border text-warning-text"
-            : "bg-success-bg border-success-border text-success-text"
-      }`}
-    >
-      <AlertTriangle size={13} className="shrink-0" />
-      Vigência até {formatDate(endAt)} —{" "}
-      {expired ? "expirado" : `${days} dia${days === 1 ? "" : "s"} restante${days === 1 ? "" : "s"}`}
+    <div className="min-w-0">
+      <p className="text-[10px] text-text-muted">{label}</p>
+      <p className={`text-[13px] font-semibold truncate ${tone ?? "text-text-primary"}`}>{value}</p>
     </div>
   );
 }
 
-function ProgressBar({ percent, colorClassName }: { percent: number; colorClassName: string }) {
-  const clamped = Math.min(100, Math.max(0, percent));
+function PeriodRow({ label, start, end }: { label: string; start: string; end: string }) {
   return (
-    <div className="w-full h-1.5 rounded-full bg-surface-muted overflow-hidden">
-      <div className={`h-full rounded-full ${colorClassName}`} style={{ width: `${clamped}%` }} />
+    <div className="flex items-center justify-between gap-2 text-xs">
+      <span className="text-text-muted">{label}</span>
+      <span className="font-medium text-text-primary">
+        {formatDateOnly(start)} → {formatDateOnly(end)}
+      </span>
     </div>
   );
 }
 
-function Card({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+// Barra empilhada do empenho: esta OS, outras OS e saldo livre para novas OS
+function EmpenhoCommitmentBar({ financial }: { financial: ObraDetailFinancial }) {
+  const { value, comprometidoOS } = financial.empenho;
+  const estaOS = financial.ordemServico.valor;
+  const outrasOS = Math.max(comprometidoOS - estaOS, 0);
+  const base = Math.max(value, comprometidoOS);
+  const segments = [
+    { label: "Esta OS", amount: estaOS, className: "bg-accent-500" },
+    { label: "Outras OS", amount: outrasOS, className: "bg-primary-400" },
+  ];
+
   return (
-    <div className="rounded-xl border border-border bg-surface p-4">
-      <div className="flex items-center gap-1.5 mb-3">
-        <span className="text-text-muted flex">{icon}</span>
-        <span className="text-[11px] font-bold uppercase tracking-wide text-text-muted">{title}</span>
+    <div>
+      <div className="flex h-2.5 w-full rounded-full bg-surface-muted overflow-hidden">
+        {segments.map((s) => (
+          <div
+            key={s.label}
+            className={s.className}
+            style={{ width: `${percentOf(s.amount, base)}%` }}
+            title={`${s.label}: ${formatCurrency(s.amount)}`}
+          />
+        ))}
       </div>
-      {children}
+      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-[10.5px] text-text-secondary">
+        {segments.map((s) => (
+          <span key={s.label} className="inline-flex items-center gap-1">
+            <span className={`w-2 h-2 rounded-sm ${s.className}`} />
+            {s.label} {formatPercent(percentOf(s.amount, value))}
+          </span>
+        ))}
+        <span className="inline-flex items-center gap-1">
+          <span className="w-2 h-2 rounded-sm bg-surface-muted border border-border" />
+          Livre {formatPercent(Math.max(percentOf(value - comprometidoOS, value), 0))}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function ObraCard({ detail, onOpenInfo }: { detail: ObraDetail; onOpenInfo: () => void }) {
+  const { obra, ordemServico, financial } = detail;
+  const deadline = getObraDeadline(obra);
+  const liquidadoPercent = financial ? percentOf(financial.ordemServico.liquidado, financial.ordemServico.valor) : 0;
+
+  return (
+    <Card
+      icon={<HardHat size={14} />}
+      title={`Obra · OS ${ordemServico.numero}`}
+      action={<StatusPill status={ordemServico.status} map={RECORD_STATUS} />}
+    >
+      {financial && (
+        <div className="mb-3">
+          <div className="flex items-end justify-between gap-2">
+            <div>
+              <p className="text-[11px] text-text-muted">Valor da OS</p>
+              <p className="text-[15px] font-bold text-text-primary">{formatCurrency(financial.ordemServico.valor)}</p>
+            </div>
+            <p className="text-[11px] text-text-secondary text-right">
+              <span className="font-semibold text-success-text">{formatCurrency(financial.ordemServico.liquidado)}</span>{" "}
+              liquidado
+            </p>
+          </div>
+          <div className="mt-1.5">
+            <ProgressBar percent={liquidadoPercent} colorClassName="bg-secondary-500" />
+          </div>
+          <p className="text-[10px] text-text-muted text-right mt-0.5">
+            {formatPercent(liquidadoPercent)} liquidado em notas fiscais
+          </p>
+        </div>
+      )}
+
+      <div className="rounded-lg bg-surface-muted/70 px-3 py-2.5">
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <span className="text-text-muted">Prazo da obra</span>
+          <span className={`font-semibold ${deadline.className}`}>{deadline.label}</span>
+        </div>
+        <p className="text-[13px] font-medium text-text-primary mt-1">
+          {formatDateOnly(obra.dataInicio)} → {formatDateOnly(obra.dataConclusao ?? obra.dataPrevisaoTermino)}
+        </p>
+        <div className="mt-1.5">
+          <ProgressBar
+            percent={deadline.elapsed}
+            colorClassName={deadline.className === "text-danger-text" ? "bg-danger-text" : "bg-accent-500"}
+          />
+        </div>
+      </div>
+
+      <button
+        onClick={onOpenInfo}
+        className="mt-3 w-full flex items-center justify-between gap-2 text-xs font-semibold text-primary-600 hover:text-primary-700 cursor-pointer"
+      >
+        <span className="inline-flex items-center gap-1.5">
+          <Info size={13} />
+          Detalhes da obra, responsável técnico e descrição
+        </span>
+        <ChevronRight size={14} />
+      </button>
+    </Card>
+  );
+}
+
+function EmpenhoCard({ detail }: { detail: ObraDetail }) {
+  const { empenho, financial } = detail;
+
+  return (
+    <Card
+      icon={<Wallet size={14} />}
+      title={`Empenho ${empenho.numero}`}
+      action={<StatusPill status={empenho.status} map={RECORD_STATUS} />}
+    >
+      <p className="text-xs text-text-secondary mb-2.5 line-clamp-2" title={empenho.description}>
+        {empenho.description}
+      </p>
+
+      {financial && (
+        <>
+          <p className="text-[11px] text-text-muted">Valor empenhado</p>
+          <p className="text-[15px] font-bold text-text-primary mb-2">{formatCurrency(financial.empenho.value)}</p>
+
+          <EmpenhoCommitmentBar financial={financial} />
+          <p className="text-xs text-text-secondary mt-2">
+            Esta OS representa{" "}
+            <span className="font-bold text-accent-600">
+              {formatPercent(percentOf(financial.ordemServico.valor, financial.empenho.value))}
+            </span>{" "}
+            do empenho ({plural(financial.empenho.ordensServicoCount, "OS ativa", "OS ativas")}).
+          </p>
+
+          <div className="grid grid-cols-3 gap-2 my-3 pt-3 border-t border-border">
+            <Metric label="Liquidado" value={formatCurrency(financial.empenho.liquidado)} tone="text-success-text" />
+            <Metric
+              label="Saldo a liquidar"
+              value={formatCurrency(financial.empenho.value - financial.empenho.liquidado)}
+              tone="text-accent-600"
+            />
+            <Metric
+              label="Livre p/ novas OS"
+              value={formatCurrency(financial.empenho.value - financial.empenho.comprometidoOS)}
+              tone={financial.empenho.value - financial.empenho.comprometidoOS < 0 ? "text-danger-text" : "text-primary-600"}
+            />
+          </div>
+          <div className="mb-3">
+            <ProgressBar
+              percent={percentOf(financial.empenho.liquidado, financial.empenho.value)}
+              colorClassName="bg-secondary-500"
+            />
+            <p className="text-[10px] text-text-muted text-right mt-0.5">
+              {formatPercent(percentOf(financial.empenho.liquidado, financial.empenho.value))} do empenho liquidado
+            </p>
+          </div>
+        </>
+      )}
+
+      <VigenciaAlert label="Vigência do empenho" endAt={empenho.endAt} />
+    </Card>
+  );
+}
+
+function ContratoCard({ detail, onOpenEmpenhos }: { detail: ObraDetail; onOpenEmpenhos: () => void }) {
+  const { contrato, financial } = detail;
+
+  return (
+    <Card
+      icon={<Building2 size={14} />}
+      title="Contrato"
+      action={<StatusPill status={contrato.status} map={RECORD_STATUS} />}
+    >
+      <div className="flex items-start gap-2 mb-2.5">
+        <span className="w-2.5 h-2.5 rounded-full shrink-0 mt-1" style={{ backgroundColor: contrato.cor }} />
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-text-primary">{contrato.identificador}</p>
+          <p className="text-xs text-text-secondary mt-0.5">{contrato.descricaoCurta}</p>
+        </div>
+      </div>
+      <div className="mb-3">
+        <p className="text-sm font-medium text-text-primary">{contrato.company.name}</p>
+        <p className="text-[11px] text-text-muted mt-0.5">CNPJ {contrato.company.cnpj}</p>
+      </div>
+
+      {financial && (
+        <div className="space-y-2.5 mb-3">
+          <div>
+            <p className="text-[11px] text-text-muted">Valor total do contrato</p>
+            <p className="text-[15px] font-bold text-text-primary">{formatCurrency(financial.contrato.valor)}</p>
+          </div>
+          <div>
+            <div className="flex justify-between text-[11px] mb-1">
+              <span className="text-text-secondary">Empenhado</span>
+              <span className="font-semibold text-text-primary">
+                {formatCurrency(financial.contrato.totalEmpenhado)} ·{" "}
+                {formatPercent(percentOf(financial.contrato.totalEmpenhado, financial.contrato.valor))}
+              </span>
+            </div>
+            <ProgressBar
+              percent={percentOf(financial.contrato.totalEmpenhado, financial.contrato.valor)}
+              colorClassName="bg-primary-500"
+            />
+          </div>
+          <div>
+            <div className="flex justify-between text-[11px] mb-1">
+              <span className="text-text-secondary">Utilizado (NFs)</span>
+              <span className="font-semibold text-success-text">
+                {formatCurrency(financial.contrato.totalLiquidado)} ·{" "}
+                {formatPercent(percentOf(financial.contrato.totalLiquidado, financial.contrato.valor))}
+              </span>
+            </div>
+            <ProgressBar
+              percent={percentOf(financial.contrato.totalLiquidado, financial.contrato.valor)}
+              colorClassName="bg-secondary-500"
+            />
+          </div>
+        </div>
+      )}
+
+      <PeriodRow label="Vigência" start={contrato.dataInicio} end={contrato.dataFim} />
+
+      {financial && (
+        <button
+          onClick={onOpenEmpenhos}
+          className="mt-3 w-full flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition-colors cursor-pointer"
+        >
+          Ver empenhos do contrato ({financial.contrato.empenhos.length})
+          <ChevronRight size={14} />
+        </button>
+      )}
+    </Card>
+  );
+}
+
+function InvoicesTab({ financial }: { financial: ObraDetailFinancial }) {
+  const { invoices, ordemServico } = financial;
+
+  return (
+    <Card icon={<FileText size={14} />} title="Notas fiscais desta obra">
+      {invoices.length === 0 ? (
+        <p className="text-sm text-text-muted bg-surface-muted rounded-lg px-3 py-4 text-center">
+          Nenhuma nota fiscal vinculada a esta obra.
+        </p>
+      ) : (
+        <div className="overflow-x-auto -mx-1">
+          <table className="w-full text-sm min-w-[340px]">
+            <thead>
+              <tr className="text-[10.5px] text-text-muted uppercase tracking-wide border-b border-border">
+                <th className="text-left font-bold py-1.5 px-1">Nota</th>
+                <th className="text-left font-bold py-1.5 px-1">Vencimento</th>
+                <th className="text-left font-bold py-1.5 px-1">Situação</th>
+                <th className="text-right font-bold py-1.5 px-1">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {invoices.map((invoice) => {
+                const cancelled = invoice.status === "CANCELADO";
+                return (
+                  <tr key={invoice.id} className="border-b border-border/60">
+                    <td className="py-2 px-1">
+                      <p className={`text-text-primary ${cancelled ? "line-through text-text-muted" : ""}`}>
+                        {invoice.numero}
+                      </p>
+                      <p className="text-[10.5px] text-text-muted truncate max-w-[120px]" title={invoice.description}>
+                        {invoice.description}
+                      </p>
+                    </td>
+                    <td className="py-2 px-1 text-text-secondary">{formatDateOnly(invoice.vencimento)}</td>
+                    <td className="py-2 px-1">
+                      <StatusPill status={invoice.status} map={INVOICE_STATUS} />
+                    </td>
+                    <td
+                      className={`py-2 px-1 text-right font-medium whitespace-nowrap ${
+                        cancelled ? "line-through text-text-muted" : "text-text-primary"
+                      }`}
+                    >
+                      {formatCurrency(invoice.value)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={3} className="pt-2.5 px-1 font-bold text-text-primary">
+                  Total liquidado
+                  <span className="block text-[10.5px] font-normal text-text-muted">
+                    {formatPercent(percentOf(ordemServico.liquidado, ordemServico.valor))} do valor da OS ·
+                    canceladas não somam
+                  </span>
+                </td>
+                <td className="pt-2.5 px-1 text-right font-bold text-success-text whitespace-nowrap align-top">
+                  {formatCurrency(ordemServico.liquidado)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function ScheduleTab({ detail }: { detail: ObraDetail }) {
+  const { obra, empenho, contrato } = detail;
+
+  return (
+    <>
+      <Card icon={<CalendarRange size={14} />} title="Cronograma comparativo">
+        <ObraTimeline detail={detail} />
+      </Card>
+
+      <Card icon={<Clock size={14} />} title="Prazos">
+        <div className="space-y-2">
+          <PeriodRow label="Obra (OS)" start={obra.dataInicio} end={obra.dataPrevisaoTermino} />
+          {obra.dataConclusao && (
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="text-text-muted">Conclusão da obra</span>
+              <span className="font-medium text-success-text">{formatDate(obra.dataConclusao)}</span>
+            </div>
+          )}
+          <PeriodRow label="Empenho" start={empenho.startAt} end={empenho.endAt} />
+          <PeriodRow label="Contrato" start={contrato.dataInicio} end={contrato.dataFim} />
+        </div>
+        <div className="mt-3 space-y-2">
+          <VigenciaAlert label="Vigência do empenho" endAt={empenho.endAt} />
+          <VigenciaAlert label="Vigência do contrato" endAt={contrato.dataFim} />
+        </div>
+      </Card>
+
+      <div className="rounded-xl border border-border bg-surface p-4 flex items-center justify-between gap-2">
+        <span className="text-sm font-semibold text-text-primary">Histórico de aditivos de prazo</span>
+        <PendingBadge />
+      </div>
+    </>
+  );
+}
+
+function PendingFields() {
+  return (
+    <div className="rounded-xl border border-dashed border-border px-4 py-3 grid grid-cols-2 gap-x-3 gap-y-2">
+      {["Aditivo Total", "E-PAG", "% Exec. Física", "Var. Físico/Financ."].map((label) => (
+        <div key={label} className="flex items-center justify-between gap-1">
+          <span className="text-[11px] text-text-secondary truncate">{label}</span>
+          <PendingBadge />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="space-y-3.5 animate-pulse">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="rounded-xl border border-border bg-surface p-4 space-y-2.5">
+          <div className="h-2.5 w-24 rounded bg-surface-muted" />
+          <div className="h-4 w-40 rounded bg-surface-muted" />
+          <div className="h-1.5 w-full rounded bg-surface-muted" />
+          <div className="h-2.5 w-2/3 rounded bg-surface-muted" />
+        </div>
+      ))}
     </div>
   );
 }
 
 export default function ObraDetailPanel({ obra, onClose }: { obra: Obra | null; onClose: () => void }) {
+  const { fetchObraDetail } = useObras();
   const [tab, setTab] = useState<Tab>("geral");
-  const { canViewAdministrativo } = usePermission();
+  const [detail, setDetail] = useState<ObraDetail | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
+  const [isEmpenhosOpen, setIsEmpenhosOpen] = useState(false);
 
-  // Vem embutido na resposta de GET /obra/list (já filtrado pra essa obra
-  // especificamente, via Invoice.obra_id) — o servidor só popula esse array
-  // quando o usuário tem permissão de ver o domínio administrativo; do
-  // contrário vem sempre vazio, mesmo que existam notas fiscais de verdade.
-  const notasFiscais = useMemo(() => obra?.invoices ?? [], [obra]);
+  const obraId = obra?.id;
 
-  const totalMedido = useMemo(
-    () => notasFiscais.reduce((sum, inv) => sum + inv.value, 0),
-    [notasFiscais],
-  );
+  const load = useCallback(() => {
+    if (!obraId) return;
+    return fetchObraDetail(obraId)
+      .then(setDetail)
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : "Erro ao carregar detalhes da obra"));
+  }, [obraId, fetchObraDetail]);
+
+  // O painel é remontado a cada obra (key na página), então o estado inicial já está limpo
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const retry = () => {
+    setError(null);
+    load();
+  };
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    if (obraId) window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [obraId, onClose]);
 
   if (!obra) return null;
 
-  const { ordemServico } = obra;
-  const empenho = ordemServico?.empenho;
-  const contrato = empenho?.contrato;
-
-  if (!ordemServico || !empenho || !contrato) {
-    return (
-      <>
-        <div className="fixed inset-0 bg-black/20 z-[1200]" onClick={onClose} />
-        <aside className="fixed inset-y-0 right-0 z-[1201] w-full sm:w-[480px] bg-surface shadow-2xl flex flex-col items-center justify-center gap-3 p-6 animate-slide-in-right">
-          <button
-            onClick={onClose}
-            className="absolute top-3 right-3 text-text-muted hover:text-text-primary cursor-pointer"
-            aria-label="Fechar"
-          >
-            <X size={18} />
-          </button>
-          <p className="text-sm text-text-muted text-center">
-            Dados de ordem de serviço/empenho/contrato indisponíveis para esta obra.
-          </p>
-        </aside>
-      </>
-    );
-  }
-
   const statusBadge = STATUS_BADGE[obra.status];
   const StatusIcon = statusBadge.icon;
-  const tipoLabel = TIPO_LABEL[obra.tipo];
-  const saldoAFaturar = empenho.value - empenho.totalPaid;
-  const financeiroPercent = empenho.value > 0 ? (empenho.totalPaid / empenho.value) * 100 : 0;
-  const timelineStatus =
-    EMPENHO_TIMELINE_STATUS[empenho.status] ?? { label: empenho.status, className: "bg-surface-muted text-text-secondary" };
+  const contratoCor = detail?.contrato.cor ?? obra.ordemServico?.empenho.contrato.cor ?? "#4478b6";
+  const financial = detail?.financial ?? null;
 
   const tabs: { id: Tab; label: string; count?: number }[] = [
     { id: "geral", label: "Geral" },
-    { id: "notas-fiscais", label: "Notas Fiscais", count: notasFiscais.length },
+    ...(financial ? [{ id: "notas-fiscais" as const, label: "Notas Fiscais", count: financial.invoices.length }] : []),
     { id: "cronograma", label: "Cronograma" },
   ];
 
@@ -179,9 +512,8 @@ export default function ObraDetailPanel({ obra, onClose }: { obra: Obra | null; 
 
       <aside className="fixed inset-y-0 right-0 z-[1201] w-full sm:w-[480px] bg-background shadow-2xl flex flex-col animate-slide-in-right">
         {/* Faixa na cor do contrato — mesma identidade visual usada nos marcadores do mapa */}
-        <div className="h-1 w-full shrink-0" style={{ backgroundColor: contrato.cor }} />
+        <div className="h-1 w-full shrink-0" style={{ backgroundColor: contratoCor }} />
 
-        {/* Header */}
         <div className="relative bg-surface border-b border-border px-5 pt-4 pb-4 shrink-0">
           <button
             onClick={onClose}
@@ -198,17 +530,20 @@ export default function ObraDetailPanel({ obra, onClose }: { obra: Obra | null; 
             {statusBadge.label}
           </span>
 
-          <h2 className="mt-2.5 text-lg font-bold leading-tight text-text-primary break-words pr-8">
-            {obra.nome}
-          </h2>
+          <h2 className="mt-2.5 text-lg font-bold leading-tight text-text-primary break-words pr-8">{obra.nome}</h2>
           <p className="mt-1 text-xs text-text-secondary flex items-center gap-1.5 flex-wrap">
-            <span>{tipoLabel}</span>
-            <Dot />
             <span>{obra.identificacaoPatrimonial}</span>
+            <span className="w-1 h-1 rounded-full bg-text-muted shrink-0" />
+            <span>{OBRA_TIPO_LABEL[obra.tipo]}</span>
+            {obra.ordemServico && (
+              <>
+                <span className="w-1 h-1 rounded-full bg-text-muted shrink-0" />
+                <span>OS {obra.ordemServico.numero}</span>
+              </>
+            )}
           </p>
         </div>
 
-        {/* Tabs */}
         <div className="flex bg-surface border-b border-border shrink-0">
           {tabs.map((t) => (
             <button
@@ -234,189 +569,46 @@ export default function ObraDetailPanel({ obra, onClose }: { obra: Obra | null; 
           ))}
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3.5">
-          {tab === "geral" && (
+          {error ? (
+            <div className="rounded-xl border border-danger-border bg-danger-bg px-4 py-5 text-center">
+              <p className="text-sm text-danger-text">Não foi possível carregar os detalhes da obra.</p>
+              <button
+                onClick={retry}
+                className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 hover:text-primary-700 cursor-pointer"
+              >
+                <RefreshCw size={13} />
+                Tentar novamente
+              </button>
+            </div>
+          ) : !detail ? (
+            <LoadingState />
+          ) : (
             <>
-              <Card icon={<MapPin size={14} />} title="Sobre a obra">
-                <div className="flex items-start gap-2 mb-2.5">
-                  <User size={15} className="text-text-muted shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-[11px] text-text-muted">Responsável técnico</p>
-                    <p className="text-[13px] font-medium text-text-primary">{obra.responsavelTecnico}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Calendar size={15} className="text-text-muted shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-[11px] text-text-muted">
-                      {obra.dataConclusao ? "Início — Conclusão" : "Início — Previsão de término"}
-                    </p>
-                    <p className="text-[13px] font-medium text-text-primary">
-                      {formatDate(obra.dataInicio)} —{" "}
-                      {formatDate(obra.dataConclusao ?? obra.dataPrevisaoTermino)}
-                    </p>
-                  </div>
-                </div>
-                {obra.anotacoes && (
-                  <div className="mt-2.5 bg-surface-muted rounded-lg px-2.5 py-2 text-xs text-text-secondary italic leading-relaxed">
-                    "{obra.anotacoes}"
-                  </div>
-                )}
-              </Card>
-
-              <Card icon={<Wallet size={14} />} title="Execução Financeira">
-                <div className="flex items-start gap-2 mb-2.5">
-                  <Wallet size={15} className="text-text-muted shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] text-text-muted">Valor do Empenho</p>
-                    <p className="text-[15px] font-bold text-text-primary">{formatCurrency(empenho.value)}</p>
-                    <div className="mt-1.5">
-                      <ProgressBar percent={financeiroPercent} colorClassName="bg-secondary-500" />
-                    </div>
-                    <p className="text-[10px] text-text-muted text-right mt-0.5">
-                      {financeiroPercent.toFixed(0)}% liquidado
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 mb-2.5">
-                  <div>
-                    <p className="text-[10px] text-text-muted">Liquidado</p>
-                    <p className="text-[13px] font-semibold text-success-text truncate">{formatCurrency(empenho.totalPaid)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-text-muted">Saldo</p>
-                    <p className="text-[13px] font-semibold text-accent-600 truncate">{formatCurrency(saldoAFaturar)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-text-muted">Desta OS</p>
-                    <p className="text-[13px] font-semibold text-text-primary truncate">{formatCurrency(ordemServico.valor)}</p>
-                  </div>
-                </div>
-
-                <VigenciaAlert endAt={empenho.endAt} />
-
-                <div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-2.5 pt-2.5 border-t border-border">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-[11px] text-text-secondary truncate">Aditivo Total</span>
-                    <PendingBadge />
-                  </div>
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-[11px] text-text-secondary truncate">E-PAG</span>
-                    <PendingBadge />
-                  </div>
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-[11px] text-text-secondary truncate">% Exec. Física</span>
-                    <PendingBadge />
-                  </div>
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-[11px] text-text-secondary truncate">Var. Físico/Financ.</span>
-                    <PendingBadge />
-                  </div>
-                </div>
-              </Card>
-
-              <Card icon={<Building2 size={14} />} title="Contrato">
-                <div className="flex items-start gap-2 mb-2.5">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full shrink-0 mt-1"
-                    style={{ backgroundColor: contrato.cor }}
-                  />
-                  <div>
-                    <p className="text-sm font-bold text-text-primary">{contrato.identificador}</p>
-                    <p className="text-xs text-text-secondary mt-0.5">{contrato.descricaoCurta}</p>
-                  </div>
-                </div>
-                <div className="mb-2.5">
-                  <p className="text-sm font-medium text-text-primary">{contrato.company.name}</p>
-                  <p className="text-[11px] text-text-muted mt-0.5">CNPJ {contrato.company.cnpj}</p>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-text-secondary">Ordem de Serviço</span>
-                  <span className="text-sm font-semibold text-text-primary">{ordemServico.numero}</span>
-                </div>
-              </Card>
-            </>
-          )}
-
-          {tab === "notas-fiscais" && (
-            <Card icon={<FileText size={14} />} title="Notas Fiscais Apresentadas">
-              {!canViewAdministrativo ? (
-                <p className="text-sm text-text-muted bg-surface-muted rounded-lg px-3 py-4 text-center">
-                  Você não tem permissão para visualizar notas fiscais.
-                </p>
-              ) : notasFiscais.length === 0 ? (
-                <p className="text-sm text-text-muted bg-surface-muted rounded-lg px-3 py-4 text-center">
-                  Nenhuma nota fiscal emitida para este empenho.
-                </p>
-              ) : (
-                <div className="overflow-x-auto -mx-1">
-                  <table className="w-full text-sm min-w-[320px]">
-                    <thead>
-                      <tr className="text-[10.5px] text-text-muted uppercase tracking-wide border-b border-border">
-                        <th className="text-left font-bold py-1.5 px-1">Nota Fiscal</th>
-                        <th className="text-left font-bold py-1.5 px-1">Vencimento</th>
-                        <th className="text-right font-bold py-1.5 px-1">Valor</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {notasFiscais.map((inv) => (
-                        <tr key={inv.id} className="border-b border-border/60">
-                          <td className="py-2 px-1 text-text-primary">{inv.numero}</td>
-                          <td className="py-2 px-1 text-text-secondary">{formatDate(inv.vencimento)}</td>
-                          <td className="py-2 px-1 text-right font-medium text-text-primary">
-                            {formatCurrency(inv.value)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot>
-                      <tr>
-                        <td colSpan={2} className="py-2 px-1 font-bold text-text-primary">
-                          Total medido
-                        </td>
-                        <td className="py-2 px-1 text-right font-bold text-text-primary">
-                          {formatCurrency(totalMedido)}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
+              {tab === "geral" && (
+                <>
+                  <ObraCard detail={detail} onOpenInfo={() => setIsInfoOpen(true)} />
+                  <EmpenhoCard detail={detail} />
+                  <ContratoCard detail={detail} onOpenEmpenhos={() => setIsEmpenhosOpen(true)} />
+                  {financial && <PendingFields />}
+                </>
               )}
-            </Card>
-          )}
-
-          {tab === "cronograma" && (
-            <>
-              <Card icon={<Clock size={14} />} title="Prazos de Execução">
-                <div className="flex items-start gap-2.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-accent-500 border-2 border-accent-50 shrink-0 mt-1" />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-text-primary">Prazo do Empenho</span>
-                      <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full ${timelineStatus.className}`}>
-                        {timelineStatus.label}
-                      </span>
-                    </div>
-                    <p className="text-xs text-text-secondary mt-0.5">
-                      {formatDate(empenho.startAt)} → {formatDate(empenho.endAt)}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-3.5">
-                  <VigenciaAlert endAt={empenho.endAt} />
-                </div>
-              </Card>
-
-              <div className="rounded-xl border border-border bg-surface p-4 flex items-center justify-between gap-2">
-                <span className="text-sm font-semibold text-text-primary">Histórico de aditivos de prazo</span>
-                <PendingBadge />
-              </div>
+              {tab === "notas-fiscais" && financial && <InvoicesTab financial={financial} />}
+              {tab === "cronograma" && <ScheduleTab detail={detail} />}
             </>
           )}
         </div>
       </aside>
+
+      {detail && isInfoOpen && <ObraInfoModal detail={detail} onClose={() => setIsInfoOpen(false)} />}
+      {detail?.financial && isEmpenhosOpen && (
+        <ContratoEmpenhosModal
+          contrato={detail.contrato}
+          financial={detail.financial.contrato}
+          currentEmpenhoId={detail.empenho.id}
+          onClose={() => setIsEmpenhosOpen(false)}
+        />
+      )}
     </>
   );
 }

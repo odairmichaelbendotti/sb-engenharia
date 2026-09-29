@@ -98,3 +98,51 @@ export type CreateObraPayload = {
   /** Obrigatório na criação (validado em runtime); imutável em edições. */
   ordemServico_id?: string;
 };
+
+// Detalhe do painel do Mapa de Obras (GET /obra/detail/:id) — valores em reais,
+// liquidado calculado a partir das notas fiscais não canceladas
+export type ObraDetailEmpenhoResumo = {
+  id: string;
+  numero: string;
+  description: string;
+  status: string;
+  startAt: string;
+  endAt: string;
+  value: number;
+  liquidado: number;
+  ordensServicoCount: number;
+};
+
+export type ObraDetailFinancial = {
+  ordemServico: { valor: number; liquidado: number };
+  empenho: { value: number; liquidado: number; comprometidoOS: number; ordensServicoCount: number };
+  contrato: {
+    valor: number;
+    totalEmpenhado: number;
+    totalLiquidado: number;
+    empenhos: ObraDetailEmpenhoResumo[];
+  };
+  invoices: ObraInvoiceResumo[];
+};
+
+export type ObraDetail = {
+  obra: Omit<Obra, "valorExecutado" | "ordemServico" | "invoices" | "dataInicio" | "dataPrevisaoTermino" | "dataConclusao"> & {
+    dataInicio: string;
+    dataPrevisaoTermino: string;
+    dataConclusao: string | null;
+  };
+  ordemServico: { id: string; numero: string; status: string };
+  empenho: { id: string; numero: string; description: string; status: string; startAt: string; endAt: string };
+  contrato: {
+    id: string;
+    identificador: string;
+    descricaoCurta: string;
+    cor: string;
+    status: string;
+    dataInicio: string;
+    dataFim: string;
+    company: { id: string; name: string; cnpj: string };
+  };
+  // null para quem não vê o domínio administrativo (ex.: login de empresa)
+  financial: ObraDetailFinancial | null;
+};
