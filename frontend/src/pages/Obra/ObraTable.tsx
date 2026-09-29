@@ -332,9 +332,14 @@ export function ObraTable({
                   <p className="font-semibold text-text-primary text-sm">
                     {formatCurrency(obra.ordemServico.valor)}
                   </p>
-                  <p className="text-xs text-text-muted">
-                    Resp.: {obra.responsavelTecnico}
-                  </p>
+                  {/* Quanto falta liquidar da OS: valor da OS − notas da obra (1 OS : 1 obra) */}
+                  {obra.ordemServico.valor - obra.valorExecutado > 0 ? (
+                    <p className="text-xs text-text-muted" title="Valor da OS menos as notas fiscais emitidas">
+                      A liquidar: {formatCurrency(obra.ordemServico.valor - obra.valorExecutado)}
+                    </p>
+                  ) : (
+                    <p className="text-xs font-medium text-success-text">OS liquidada</p>
+                  )}
                 </td>
                 <td className="py-2.5 px-4 hidden md:table-cell">
                   <ProgressCell
