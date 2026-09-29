@@ -218,6 +218,11 @@ function OrdemServicoRow({ ordemServico: os, canEdit, onView, onEdit, onDelete }
       {/* Valor e execução */}
       <div className={`min-w-0 md:text-right ${muted ? "opacity-60" : ""}`}>
         <p className="text-base font-semibold text-text-primary tabular-nums">{formatCurrency(os.valor)}</p>
+        {os.empenhos.length > 1 && (
+          <p className="text-xs text-text-muted" title={os.empenhos.map((v) => v.numero).join(", ")}>
+            {os.empenhos.length} empenhos
+          </p>
+        )}
         {os.obra && <ExecutionBar executed={os.obra.valorExecutado} total={os.valor} />}
       </div>
 

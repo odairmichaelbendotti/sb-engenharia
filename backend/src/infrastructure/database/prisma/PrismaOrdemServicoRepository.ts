@@ -1,7 +1,5 @@
 import type {
-  OrdemServicoEntity,
   OrdemServicoStatusValue,
-  OrdemServicoType,
   PersistedOrdemServico,
 } from "../../../domain/entities/OrdemServico.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
@@ -11,6 +9,8 @@ import type {
   OrdemServicoActiveCountByTenant,
   OrdemServicoListItem,
   OrdemServicoOption,
+  OrdemServicoPersistData,
+  OrdemServicoVinculo,
 } from "../../../domain/repositories/IOrdemServicoRepository.js";
 import { prisma } from "../../prisma/prisma.js";
 
@@ -29,6 +29,30 @@ const EMPENHO_INFO_SELECT = {
   },
 } as const;
 
+// Vínculos OS × empenho, na ordem em que foram feitos (o primeiro é o principal)
+const VINCULOS_INCLUDE = {
+  orderBy: { createdAt: "asc" },
+  select: {
+    valor: true,
+    empenho: { select: { id: true, numero: true, description: true, value: true } },
+  },
+} as const;
+
+type VinculoRow = {
+  valor: number;
+  empenho: { id: string; numero: string; description: string; value: number };
+};
+
+function mapVinculos(rows: VinculoRow[]): OrdemServicoVinculo[] {
+  return rows.map((row) => ({
+    empenho_id: row.empenho.id,
+    numero: row.empenho.numero,
+    description: row.empenho.description,
+    valor: row.valor / 100,
+    empenhoValue: row.empenho.value / 100,
+  }));
+}
+
 const OBRA_INFO_SELECT = {
   id: true,
   nome: true,
@@ -45,23 +69,29 @@ const OBRA_INFO_SELECT = {
 } as const;
 
 export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
-  async create(ordemServico: OrdemServicoEntity): Promise<OrdemServicoListItem> {
+  async create(data: OrdemServicoPersistData): Promise<OrdemServicoListItem> {
     try {
       const newOrdemServico = await prisma.ordemServico.create({
         data: {
-          numero: ordemServico.numero,
-          valor: ordemServico.valor,
-          empenho_id: ordemServico.empenho_id,
-          tenant_id: ordemServico.tenant_id,
+          numero: data.numero,
+          // Valor da OS = soma dos vínculos; o primeiro empenho é o principal
+          valor: data.empenhos.reduce((sum, e) => sum + e.valor, 0),
+          empenho_id: data.empenhos[0]!.empenho_id,
+          tenant_id: data.tenant_id,
+          empenhos: {
+            create: data.empenhos.map((e) => ({ empenho_id: e.empenho_id, valor: e.valor })),
+          },
         },
         include: {
           empenho: { select: EMPENHO_INFO_SELECT },
+          empenhos: VINCULOS_INCLUDE,
         },
       });
 
       return {
         ...newOrdemServico,
         valor: newOrdemServico.valor / 100,
+        empenhos: mapVinculos(newOrdemServico.empenhos),
         obra: null,
       };
     } catch (error) {
@@ -89,6 +119,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
           orderBy: { createdAt: "desc" },
           include: {
             empenho: { select: EMPENHO_INFO_SELECT },
+            empenhos: VINCULOS_INCLUDE,
             obra: { select: OBRA_INFO_SELECT },
           },
         }),
@@ -118,6 +149,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
         ordensServico: ordensServico.map((os) => ({
           ...os,
           valor: os.valor / 100,
+          empenhos: mapVinculos(os.empenhos),
           obra: os.obra
             ? { ...os.obra, valorExecutado: (liquidadoCentavos.get(os.obra.id) ?? 0) / 100 }
             : null,
@@ -159,12 +191,14 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
           numero: true,
           valor: true,
           empenho: { select: EMPENHO_INFO_SELECT },
+          empenhos: VINCULOS_INCLUDE,
         },
       });
 
       return ordensServico.map((os) => ({
         ...os,
         valor: os.valor / 100,
+        empenhos: mapVinculos(os.empenhos),
       }));
     } catch (error) {
       throw new DomainError("Error listing ordem de serviço options: " + error);
@@ -181,21 +215,80 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
     }
   }
 
-  async update(id: string, ordemServico: OrdemServicoType): Promise<PersistedOrdemServico> {
+  async update(id: string, data: Omit<OrdemServicoPersistData, "tenant_id">): Promise<OrdemServicoListItem> {
     try {
-      const updated = await prisma.ordemServico.update({
-        where: { id },
-        data: {
-          numero: ordemServico.numero,
-          valor: ordemServico.valor,
-          empenho_id: ordemServico.empenho_id,
-          updatedAt: new Date(),
-        },
+      const updated = await prisma.$transaction(async (tx) => {
+        const atuais = await tx.ordemServicoEmpenho.findMany({
+          where: { ordemServico_id: id },
+          orderBy: { createdAt: "asc" },
+          select: { empenho_id: true },
+        });
+        const novosIds = new Set(data.empenhos.map((e) => e.empenho_id));
+
+        // Sai quem não está mais na lista; os demais são criados ou têm o valor atualizado
+        await tx.ordemServicoEmpenho.deleteMany({
+          where: { ordemServico_id: id, empenho_id: { notIn: [...novosIds] } },
+        });
+        for (const vinculo of data.empenhos) {
+          await tx.ordemServicoEmpenho.upsert({
+            where: { ordemServico_id_empenho_id: { ordemServico_id: id, empenho_id: vinculo.empenho_id } },
+            create: { ordemServico_id: id, empenho_id: vinculo.empenho_id, valor: vinculo.valor },
+            update: { valor: vinculo.valor },
+          });
+        }
+
+        // Principal: mantém o vínculo mais antigo que continua na OS
+        const principal =
+          atuais.find((a) => novosIds.has(a.empenho_id))?.empenho_id ?? data.empenhos[0]!.empenho_id;
+
+        return tx.ordemServico.update({
+          where: { id },
+          data: {
+            numero: data.numero,
+            valor: data.empenhos.reduce((sum, e) => sum + e.valor, 0),
+            empenho_id: principal,
+            updatedAt: new Date(),
+          },
+          include: {
+            empenho: { select: EMPENHO_INFO_SELECT },
+            empenhos: VINCULOS_INCLUDE,
+            obra: { select: OBRA_INFO_SELECT },
+          },
+        });
       });
 
-      return { ...updated, valor: updated.valor / 100 };
+      return {
+        ...updated,
+        valor: updated.valor / 100,
+        empenhos: mapVinculos(updated.empenhos),
+        obra: updated.obra ? { ...updated.obra, valorExecutado: updated.obra.valorExecutado / 100 } : null,
+      };
     } catch (error) {
       throw new DomainError("Error updating ordem de serviço: " + error);
+    }
+  }
+
+  async listVinculos(id: string): Promise<OrdemServicoVinculo[]> {
+    try {
+      const rows = await prisma.ordemServicoEmpenho.findMany({
+        where: { ordemServico_id: id },
+        ...VINCULOS_INCLUDE,
+      });
+      return mapVinculos(rows);
+    } catch (error) {
+      throw new DomainError("Error listing ordem de serviço empenhos: " + error);
+    }
+  }
+
+  async hasInvoicesForEmpenho(id: string, empenho_id: string): Promise<boolean> {
+    try {
+      const invoice = await prisma.invoice.findFirst({
+        where: { empenho_id, obra: { ordemServico_id: id } },
+        select: { id: true },
+      });
+      return invoice !== null;
+    } catch (error) {
+      throw new DomainError("Error checking ordem de serviço invoices: " + error);
     }
   }
 

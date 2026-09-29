@@ -303,7 +303,7 @@ export function ObraModal({ obra, handleClose }: ObraModalProps) {
                 <div>
                   <p className="text-sm font-medium text-text-primary">{obra.ordemServico.numero}</p>
                   <p className="text-xs text-text-secondary">
-                    Empenho {obra.ordemServico.empenho.numero} — {obra.ordemServico.empenho.contrato.identificador} (vínculo fixo, não editável)
+                    Contrato {obra.ordemServico.empenho.contrato.identificador} (vínculo fixo, não editável)
                   </p>
                 </div>
               </div>
@@ -317,7 +317,7 @@ export function ObraModal({ obra, handleClose }: ObraModalProps) {
                   <option value="">Selecione uma ordem de serviço</option>
                   {ordemServicoOptions.map((os) => (
                     <option key={os.id} value={os.id}>
-                      {os.numero} — Empenho {os.empenho.numero} — {os.empenho.contrato.identificador}
+                      {os.numero} — {os.empenhos.length > 1 ? "Empenhos" : "Empenho"} {os.empenhos.map((v) => v.numero).join(", ")} — {os.empenho.contrato.identificador}
                     </option>
                   ))}
                 </select>

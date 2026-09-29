@@ -97,7 +97,14 @@ export default function EditModal({
 
   function handleChangeEmpenho(empenhoId: string) {
     setFormData((f) => ({ ...f, empenho_id: empenhoId, obra_id: "" }));
-    fetchObraOptionsForInvoice(empenhoId).catch(() => {});
+    fetchObraOptionsForInvoice(empenhoId)
+      .then((options) => {
+        // Empenho que financia uma única obra: ela já vem selecionada
+        if (options.length === 1) {
+          setFormData((f) => (f.empenho_id === empenhoId ? { ...f, obra_id: options[0]!.id } : f));
+        }
+      })
+      .catch(() => {});
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -109,6 +116,11 @@ export default function EditModal({
       !editInvoice
     )
       return;
+
+    if (obraOptionsForInvoice.length > 0 && !formData.obra_id) {
+      toast.error("Selecione a obra desta nota fiscal: o empenho financia obras.");
+      return;
+    }
 
     const nf = {
       numero: formData.numero,
@@ -308,7 +320,9 @@ export default function EditModal({
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Obra (opcional)
+                  {/* Obrigatória quando o empenho financia alguma obra */}
+                  Obra{" "}
+                  {obraOptionsForInvoice.length > 0 ? <span className="text-danger-text">*</span> : "(opcional)"}
                 </label>
                 <select
                   disabled={!formData.empenho_id}
@@ -319,7 +333,9 @@ export default function EditModal({
                   <option value="">
                     {!formData.empenho_id
                       ? "Primeiro selecione o empenho"
-                      : "Nenhuma obra específica"}
+                      : obraOptionsForInvoice.length > 0
+                        ? "Selecione a obra"
+                        : "Nenhuma obra específica"}
                   </option>
                   {obraOptionsForInvoice.map((obra) => (
                     <option key={obra.id} value={obra.id}>

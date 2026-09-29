@@ -22,6 +22,7 @@ function sumActiveInvoicesCents(invoices: { value: number; status: string }[]): 
 
 const INVOICE_INFO_SELECT = {
   id: true,
+  empenho_id: true,
   numero: true,
   description: true,
   vencimento: true,
@@ -180,6 +181,8 @@ export class PrismaObraRepository implements IObraRepository {
           invoices: { select: INVOICE_INFO_SELECT, orderBy: { vencimento: "asc" } },
           ordemServico: {
             include: {
+              // Vínculos da OS; o contrato vem do empenho principal (todos são do mesmo contrato)
+              empenhos: { orderBy: { createdAt: "asc" }, select: { empenho_id: true, valor: true } },
               empenho: {
                 include: {
                   contrato: {
@@ -187,7 +190,11 @@ export class PrismaObraRepository implements IObraRepository {
                       company: { select: { id: true, name: true, cnpj: true } },
                       empenhos: {
                         orderBy: { startAt: "asc" },
-                        include: { ordensServico: { select: { valor: true, status: true } } },
+                        include: {
+                          vinculosOrdemServico: {
+                            select: { valor: true, ordemServico: { select: { status: true } } },
+                          },
+                        },
                       },
                     },
                   },
@@ -215,7 +222,7 @@ export class PrismaObraRepository implements IObraRepository {
       const liquidadoCentavos = new Map(liquidadoPorEmpenho.map((row) => [row.empenho_id, row._sum.value ?? 0]));
 
       const empenhos = contrato.empenhos.map((e) => {
-        const ordensAtivas = e.ordensServico.filter((os) => os.status !== "CANCELADO");
+        const vinculosAtivos = e.vinculosOrdemServico.filter((v) => v.ordemServico.status !== "CANCELADO");
         return {
           id: e.id,
           numero: e.numero,
@@ -225,28 +232,34 @@ export class PrismaObraRepository implements IObraRepository {
           endAt: e.endAt,
           valueCentavos: e.value,
           liquidadoCentavos: liquidadoCentavos.get(e.id) ?? 0,
-          comprometidoCentavos: ordensAtivas.reduce((sum, os) => sum + os.valor, 0),
-          ordensServicoCount: ordensAtivas.length,
+          comprometidoCentavos: vinculosAtivos.reduce((sum, v) => sum + v.valor, 0),
+          ordensServicoCount: vinculosAtivos.length,
         };
       });
       const empenhosAtivos = empenhos.filter((e) => e.status !== "CANCELADO");
-      const empenhoAtual = empenhos.find((e) => e.id === empenho.id)!;
+      const empenhosById = new Map(empenhos.map((e) => [e.id, e]));
 
-      const obraLiquidadoCentavos = invoices
-        .filter((invoice) => invoice.status !== "CANCELADO")
-        .reduce((sum, invoice) => sum + invoice.value, 0);
+      const notasAtivas = invoices.filter((invoice) => invoice.status !== "CANCELADO");
+      const obraLiquidadoCentavos = notasAtivas.reduce((sum, invoice) => sum + invoice.value, 0);
+
+      // Empenhos da OS, com o que cada um destina a ela e o que já foi liquidado nesta obra
+      const empenhosDaOS = ordemServico.empenhos
+        .map((vinculo) => ({ vinculo, empenho: empenhosById.get(vinculo.empenho_id) }))
+        .filter((item): item is { vinculo: typeof item.vinculo; empenho: NonNullable<typeof item.empenho> } =>
+          Boolean(item.empenho),
+        );
 
       return {
         obra,
         ordemServico: { id: ordemServico.id, numero: ordemServico.numero, status: ordemServico.status },
-        empenho: {
-          id: empenho.id,
-          numero: empenho.numero,
-          description: empenho.description,
-          status: empenho.status,
-          startAt: empenho.startAt,
-          endAt: empenho.endAt,
-        },
+        empenhos: empenhosDaOS.map(({ empenho: e }) => ({
+          id: e.id,
+          numero: e.numero,
+          description: e.description,
+          status: e.status,
+          startAt: e.startAt,
+          endAt: e.endAt,
+        })),
         contrato: {
           id: contrato.id,
           identificador: contrato.identificador,
@@ -259,12 +272,17 @@ export class PrismaObraRepository implements IObraRepository {
         },
         financial: {
           ordemServico: { valor: ordemServico.valor / 100, liquidado: obraLiquidadoCentavos / 100 },
-          empenho: {
-            value: empenhoAtual.valueCentavos / 100,
-            liquidado: empenhoAtual.liquidadoCentavos / 100,
-            comprometidoOS: empenhoAtual.comprometidoCentavos / 100,
-            ordensServicoCount: empenhoAtual.ordensServicoCount,
-          },
+          empenhos: empenhosDaOS.map(({ vinculo, empenho: e }) => ({
+            id: e.id,
+            value: e.valueCentavos / 100,
+            valorNaOS: vinculo.valor / 100,
+            liquidado: e.liquidadoCentavos / 100,
+            liquidadoNaOS:
+              notasAtivas.filter((invoice) => invoice.empenho_id === e.id).reduce((sum, invoice) => sum + invoice.value, 0) /
+              100,
+            comprometidoOS: e.comprometidoCentavos / 100,
+            ordensServicoCount: e.ordensServicoCount,
+          })),
           contrato: {
             valor: contrato.valor / 100,
             totalEmpenhado: empenhosAtivos.reduce((sum, e) => sum + e.valueCentavos, 0) / 100,
@@ -323,7 +341,8 @@ export class PrismaObraRepository implements IObraRepository {
   async listOptionsForInvoice(tenant_id: string, empenho_id: string): Promise<ObraOptionForInvoice[]> {
     try {
       return await prisma.obra.findMany({
-        where: { tenant_id, ordemServico: { empenho_id } },
+        // Obras cujas OS são financiadas (também) por este empenho
+        where: { tenant_id, ordemServico: { empenhos: { some: { empenho_id } } } },
         orderBy: { nome: "asc" },
         select: { id: true, nome: true, identificacaoPatrimonial: true },
       });
@@ -342,15 +361,27 @@ export class PrismaObraRepository implements IObraRepository {
     }
   }
 
-  async findEmpenhoId(id: string): Promise<string | null> {
+  async findEmpenhoIds(id: string): Promise<string[] | null> {
     try {
       const obra = await prisma.obra.findUnique({
         where: { id },
-        select: { ordemServico: { select: { empenho_id: true } } },
+        select: { ordemServico: { select: { empenhos: { select: { empenho_id: true } } } } },
       });
-      return obra?.ordemServico.empenho_id ?? null;
+      return obra ? obra.ordemServico.empenhos.map((vinculo) => vinculo.empenho_id) : null;
     } catch (error) {
       throw new DomainError("Error finding obra: " + error);
+    }
+  }
+
+  async empenhoHasObra(empenho_id: string): Promise<boolean> {
+    try {
+      const obra = await prisma.obra.findFirst({
+        where: { ordemServico: { empenhos: { some: { empenho_id } } } },
+        select: { id: true },
+      });
+      return obra !== null;
+    } catch (error) {
+      throw new DomainError("Error checking empenho obras: " + error);
     }
   }
 

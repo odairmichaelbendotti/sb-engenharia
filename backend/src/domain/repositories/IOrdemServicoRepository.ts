@@ -1,6 +1,4 @@
 import type {
-  OrdemServicoEntity,
-  OrdemServicoType,
   OrdemServicoStatusValue,
   PersistedOrdemServico,
 } from "../entities/OrdemServico.js";
@@ -24,6 +22,24 @@ export type OrdemServicoEmpenhoInfo = {
   contrato: OrdemServicoContrato;
 };
 
+// Empenho vinculado à OS, com o valor destinado a ela
+export type OrdemServicoVinculo = {
+  empenho_id: string;
+  numero: string;
+  description: string;
+  // Quanto deste empenho vai para a OS
+  valor: number;
+  // Valor total do empenho
+  empenhoValue: number;
+};
+
+// Dados já validados para gravar a OS — valores em centavos
+export type OrdemServicoPersistData = {
+  numero: string;
+  tenant_id: string;
+  empenhos: { empenho_id: string; valor: number }[];
+};
+
 export type OrdemServicoObra = {
   id: string;
   nome: string;
@@ -40,7 +56,9 @@ export type OrdemServicoObra = {
 };
 
 export type OrdemServicoListItem = PersistedOrdemServico & {
+  // Empenho principal — por ele se chega ao contrato e à empresa
   empenho: OrdemServicoEmpenhoInfo;
+  empenhos: OrdemServicoVinculo[];
   obra: OrdemServicoObra | null;
 };
 
@@ -62,6 +80,7 @@ export type OrdemServicoOption = {
   numero: string;
   valor: number;
   empenho: OrdemServicoEmpenhoInfo;
+  empenhos: OrdemServicoVinculo[];
 };
 
 export type OrdemServicoActiveCountByTenant = {
@@ -70,14 +89,20 @@ export type OrdemServicoActiveCountByTenant = {
 };
 
 export interface IOrdemServicoRepository {
-  create(ordemServico: OrdemServicoEntity): Promise<OrdemServicoListItem>;
+  /** Cria a OS com seus vínculos; valor da OS = soma dos vínculos. */
+  create(data: OrdemServicoPersistData): Promise<OrdemServicoListItem>;
   verifyNumero(numero: string, tenant_id: string): Promise<boolean>;
   list(tenant_id?: string): Promise<ListOrdensServicoResponse>;
   /** Contagem de OS ativas, agrupada por tenant — resumo multi-institucional do PLATFORM_ADMIN. */
   countActiveByTenant(): Promise<OrdemServicoActiveCountByTenant[]>;
   listOptionsForObra(tenant_id: string): Promise<OrdemServicoOption[]>;
   findById(id: string): Promise<PersistedOrdemServico | null>;
-  update(id: string, ordemServico: OrdemServicoType): Promise<PersistedOrdemServico>;
+  /** Atualiza o número e substitui o conjunto de vínculos (valor da OS é recalculado). */
+  update(id: string, data: Omit<OrdemServicoPersistData, "tenant_id">): Promise<OrdemServicoListItem>;
+  /** Empenhos vinculados à OS (valores em reais). */
+  listVinculos(id: string): Promise<OrdemServicoVinculo[]>;
+  /** Se já existe nota fiscal (qualquer status) da obra desta OS lançada no empenho. */
+  hasInvoicesForEmpenho(id: string, empenho_id: string): Promise<boolean>;
   updateStatus(id: string, status: OrdemServicoStatusValue): Promise<PersistedOrdemServico>;
   delete(id: string): Promise<void>;
   hasObraVinculada(id: string): Promise<boolean>;

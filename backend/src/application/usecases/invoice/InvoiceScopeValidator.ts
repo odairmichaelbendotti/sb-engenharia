@@ -16,16 +16,22 @@ export class InvoiceScopeValidator {
     private obraRepository: IObraRepository,
   ) {}
 
-  // A nota soma na execução da obra: a obra precisa ser da OS paga por este mesmo empenho,
-  // senão uma nota inflaria a execução de outra obra (ou de outra organização)
+  // A nota soma na execução da obra: a obra precisa ser de uma OS financiada por este
+  // empenho, senão uma nota inflaria a execução de outra obra (ou de outra organização).
+  // Se o empenho financia alguma obra, a nota precisa dizer de qual obra é.
   async validateObra(empenho_id: string, obra_id?: string | null): Promise<void> {
-    if (!obra_id) return;
+    if (!obra_id) {
+      if (await this.obraRepository.empenhoHasObra(empenho_id)) {
+        throw new DomainError("Informe a obra da nota fiscal: este empenho financia obras.");
+      }
+      return;
+    }
 
-    const obraEmpenhoId = await this.obraRepository.findEmpenhoId(obra_id);
-    if (!obraEmpenhoId) {
+    const obraEmpenhoIds = await this.obraRepository.findEmpenhoIds(obra_id);
+    if (!obraEmpenhoIds) {
       throw new DomainError("Obra not found");
     }
-    if (obraEmpenhoId !== empenho_id) {
+    if (!obraEmpenhoIds.includes(empenho_id)) {
       throw new DomainError("Obra does not belong to this empenho");
     }
   }

@@ -164,7 +164,8 @@ export function useDashboardData() {
           .map((inv) => ({ id: `invoice-${inv.id}`, label: `Nota fiscal ${inv.numero}`, meta: "vencida", href: "/notasfiscais" })),
       });
 
-      const osEmpenhoIds = new Set(ordensServico.map((os) => os.empenho.id));
+      // Uma OS pode ter vários empenhos: todos eles contam como "com OS"
+      const osEmpenhoIds = new Set(ordensServico.flatMap((os) => os.empenhos.map((v) => v.empenho_id)));
       groups.push({
         key: "empenhos-sem-os",
         label: "Empenhos ativos sem ordem de serviço",

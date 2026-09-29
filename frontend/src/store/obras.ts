@@ -13,7 +13,8 @@ type ObrasState = {
   data: ListObras | null;
   obraOptionsForInvoice: ObraOptionForInvoice[];
   fetchObras: () => Promise<void>;
-  fetchObraOptionsForInvoice: (empenhoId: string) => Promise<void>;
+  // Devolve também as opções, para o formulário já selecionar quando houver uma só
+  fetchObraOptionsForInvoice: (empenhoId: string) => Promise<ObraOptionForInvoice[]>;
   fetchObraDetail: (id: string) => Promise<ObraDetail>;
   createObra: (payload: CreateObraPayload) => Promise<Obra>;
   updateObra: (id: string, payload: Partial<CreateObraPayload>) => Promise<Obra>;
@@ -35,7 +36,7 @@ export const useObras = create<ObrasState>((set) => ({
   fetchObraOptionsForInvoice: async (empenhoId) => {
     if (!empenhoId) {
       set({ obraOptionsForInvoice: [] });
-      return;
+      return [];
     }
     const response = await defaultFetch(
       `/obra/list-for-invoice?empenho_id=${empenhoId}`,
@@ -44,6 +45,7 @@ export const useObras = create<ObrasState>((set) => ({
     if (!response.ok) throw new Error("Erro ao carregar obras disponíveis");
     const options: ObraOptionForInvoice[] = await response.json();
     set({ obraOptionsForInvoice: options });
+    return options;
   },
 
   // Não fica no store: o painel busca o detalhe a cada abertura para refletir NFs recentes

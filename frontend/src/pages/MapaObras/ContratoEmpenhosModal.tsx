@@ -7,7 +7,8 @@ import { formatPercent, percentOf, RECORD_STATUS } from "./obra-detail-utils";
 interface ContratoEmpenhosModalProps {
   contrato: ObraDetail["contrato"];
   financial: ObraDetailFinancial["contrato"];
-  currentEmpenhoId: string;
+  // Empenhos que financiam a OS desta obra (destacados na tabela)
+  currentEmpenhoIds: string[];
   onClose: () => void;
 }
 
@@ -21,7 +22,7 @@ function Summary({ label, value, hint, tone }: { label: string; value: string; h
   );
 }
 
-export function ContratoEmpenhosModal({ contrato, financial, currentEmpenhoId, onClose }: ContratoEmpenhosModalProps) {
+export function ContratoEmpenhosModal({ contrato, financial, currentEmpenhoIds, onClose }: ContratoEmpenhosModalProps) {
   const empenhadoPercent = percentOf(financial.totalEmpenhado, financial.valor);
   const utilizadoPercent = percentOf(financial.totalLiquidado, financial.valor);
   const saldoAEmpenhar = financial.valor - financial.totalEmpenhado;
@@ -73,7 +74,7 @@ export function ContratoEmpenhosModal({ contrato, financial, currentEmpenhoId, o
           </thead>
           <tbody>
             {financial.empenhos.map((empenho) => {
-              const isCurrent = empenho.id === currentEmpenhoId;
+              const isCurrent = currentEmpenhoIds.includes(empenho.id);
               const liquidadoPercent = percentOf(empenho.liquidado, empenho.value);
               return (
                 <tr

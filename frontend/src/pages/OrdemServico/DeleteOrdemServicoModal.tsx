@@ -89,7 +89,7 @@ export function DeleteOrdemServicoModal({
                 <div>
                   <p className="text-xs text-gray-500">Empenho</p>
                   <p className="text-sm font-medium text-gray-800 truncate max-w-37.5">
-                    {ordemServico.empenho.numero} — {ordemServico.empenho.contrato.identificador}
+                    {ordemServico.empenhos.map((v) => v.numero).join(", ")} — {ordemServico.empenho.contrato.identificador}
                   </p>
                 </div>
               </div>

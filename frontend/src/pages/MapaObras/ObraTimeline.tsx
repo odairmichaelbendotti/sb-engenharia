@@ -19,7 +19,7 @@ type Row = {
  * com marcador de hoje — evidencia que o prazo da obra (OS) é diferente do empenho.
  */
 export function ObraTimeline({ detail }: { detail: ObraDetail }) {
-  const { obra, empenho, contrato, financial } = detail;
+  const { obra, empenhos, contrato, financial } = detail;
   const today = todayUtc();
 
   const obraEnd = dateOnlyUtc(obra.dataConclusao ?? obra.dataPrevisaoTermino);
@@ -32,12 +32,13 @@ export function ObraTimeline({ detail }: { detail: ObraDetail }) {
       end: dateOnlyUtc(contrato.dataFim),
       barClassName: "bg-primary-200",
     },
-    {
-      label: "Empenho",
+    // Uma faixa por empenho que financia a OS
+    ...empenhos.map((empenho, index) => ({
+      label: empenhos.length > 1 ? `Empenho ${index + 1}` : "Empenho",
       start: dateOnlyUtc(empenho.startAt),
       end: dateOnlyUtc(empenho.endAt),
       barClassName: "bg-primary-400",
-    },
+    })),
     {
       label: "Obra (OS)",
       start: dateOnlyUtc(obra.dataInicio),

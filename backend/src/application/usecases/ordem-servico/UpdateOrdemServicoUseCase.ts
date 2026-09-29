@@ -1,16 +1,21 @@
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
-import type { OrdemServicoType } from "../../../domain/entities/OrdemServico.js";
+import { OrdemServicoEntity, type OrdemServicoType } from "../../../domain/entities/OrdemServico.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository.js";
 import type { IOrdemServicoRepository } from "../../../domain/repositories/IOrdemServicoRepository.js";
 import { normalizeInput, ORDEM_SERVICO_RULES } from "../../../domain/normalization/input-rules.js";
+import { OrdemServicoEmpenhosValidator } from "./OrdemServicoEmpenhosValidator.js";
 
 export class UpdateOrdemServicoUseCase {
+  private empenhosValidator: OrdemServicoEmpenhosValidator;
+
   constructor(
     private repository: IOrdemServicoRepository,
-    private empenhoRepository: IEmpenhoRepository,
-  ) {}
+    empenhoRepository: IEmpenhoRepository,
+  ) {
+    this.empenhosValidator = new OrdemServicoEmpenhosValidator(empenhoRepository);
+  }
 
   async execute({
     ordemServicoId,
@@ -33,34 +38,37 @@ export class UpdateOrdemServicoUseCase {
       throw new DomainError("OrdemServico not found");
     }
 
-    if (data.empenho_id && data.empenho_id !== existing.empenho_id) {
-      const empenho = await this.empenhoRepository.findByEmpenhoId(data.empenho_id);
-      if (!empenho || empenho.tenant_id !== user.tenant_id) {
-        throw new DomainError("Empenho not found");
-      }
-    }
-
-    if (data.numero && data.numero !== existing.numero) {
-      const numeroAlreadyExists = await this.repository.verifyNumero(data.numero, user.tenant_id);
+    const numero = data.numero || existing.numero;
+    if (numero !== existing.numero) {
+      const numeroAlreadyExists = await this.repository.verifyNumero(numero, user.tenant_id);
       if (numeroAlreadyExists) {
         throw new DomainError("Numero already exists");
       }
     }
 
-    if (data.valor) {
-      const empenhoId = data.empenho_id ?? existing.empenho_id;
-      const saldoDisponivel = await this.empenhoRepository.getSaldoDisponivel(empenhoId, ordemServicoId);
-      if (data.valor > saldoDisponivel) {
+    const ordemServicoEntity = new OrdemServicoEntity({
+      numero,
+      empenhos: data.empenhos ?? [],
+      tenant_id: existing.tenant_id,
+    });
+
+    // Empenho só sai da OS se nenhuma nota fiscal da obra desta OS foi lançada nele
+    const novosIds = new Set(ordemServicoEntity.empenhos.map((e) => e.empenho_id));
+    const atuais = await this.repository.listVinculos(ordemServicoId);
+    for (const removido of atuais.filter((vinculo) => !novosIds.has(vinculo.empenho_id))) {
+      if (await this.repository.hasInvoicesForEmpenho(ordemServicoId, removido.empenho_id)) {
         throw new DomainError(
-          `OrdemServico valor (${data.valor}) exceeds empenho available balance (${saldoDisponivel})`,
+          `Não é possível remover o empenho ${removido.numero}: já existem notas fiscais desta obra lançadas nele.`,
         );
       }
     }
 
-    return this.repository.update(ordemServicoId, {
-      ...data,
-      valor: Math.round(data.valor * 100),
-      tenant_id: existing.tenant_id,
+    const vinculos = await this.empenhosValidator.validate({
+      user,
+      empenhos: ordemServicoEntity.empenhos,
+      ordemServicoId,
     });
+
+    return this.repository.update(ordemServicoId, { numero: ordemServicoEntity.numero, empenhos: vinculos });
   }
 }

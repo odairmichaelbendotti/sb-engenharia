@@ -199,7 +199,10 @@ model Empenho {
   contrato_id String
   contrato    Contrato  @relation(fields: [contrato_id], references: [id])
   invoices      Invoice[]
+  // OS que têm este como empenho principal (define o contrato da OS)
   ordensServico OrdemServico[]
+  // Quanto deste empenho foi destinado a cada OS
+  vinculosOrdemServico OrdemServicoEmpenho[]
 }
 
 enum OrdemServicoStatus {
@@ -219,12 +222,34 @@ model OrdemServico {
   tenant_id String
   tenant    Tenant @relation(fields: [tenant_id], references: [id])
 
+  // Empenho principal: o primeiro vinculado. Todos os empenhos da OS são do mesmo
+  // contrato, então é por ele que se chega ao contrato, à empresa e à cor no mapa
   empenho_id String
   empenho    Empenho @relation(fields: [empenho_id], references: [id])
+
+  // Empenhos que financiam a OS; "valor" da OS é a soma deles
+  empenhos OrdemServicoEmpenho[]
 
   obra Obra?
 
   @@unique([numero, tenant_id])
+}
+
+// Vínculo OS × empenho: quanto de cada empenho vai para a OS. Por padrão o empenho
+// inteiro; um empenho ainda pode ser dividido entre OS (ex.: manutenções)
+model OrdemServicoEmpenho {
+  id        String   @id @default(uuid())
+  valor     Int
+  createdAt DateTime @default(now())
+
+  ordemServico_id String
+  ordemServico    OrdemServico @relation(fields: [ordemServico_id], references: [id], onDelete: Cascade)
+
+  empenho_id String
+  empenho    Empenho @relation(fields: [empenho_id], references: [id], onDelete: Restrict)
+
+  @@unique([ordemServico_id, empenho_id])
+  @@index([empenho_id])
 }
 
 enum InvoiceStatus {

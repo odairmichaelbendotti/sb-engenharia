@@ -65,16 +65,19 @@ export default function OrdensServico() {
   // Empenhos que possuem OS nesta organização, para o filtro em dropdown
   const empenhoOptions = useMemo<EmpenhoFilterOption[]>(() => {
     const byId = new Map<string, EmpenhoFilterOption>();
+    // Uma OS pode ter vários empenhos: conta em cada um deles
     for (const os of ordensServico) {
-      const entry = byId.get(os.empenho.id);
-      if (entry) entry.count += 1;
-      else
-        byId.set(os.empenho.id, {
-          id: os.empenho.id,
-          numero: os.empenho.numero,
-          companyName: os.empenho.contrato.company.name,
-          count: 1,
-        });
+      for (const vinculo of os.empenhos) {
+        const entry = byId.get(vinculo.empenho_id);
+        if (entry) entry.count += 1;
+        else
+          byId.set(vinculo.empenho_id, {
+            id: vinculo.empenho_id,
+            numero: vinculo.numero,
+            companyName: os.empenho.contrato.company.name,
+            count: 1,
+          });
+      }
     }
     return [...byId.values()].sort((a, b) => a.numero.localeCompare(b.numero));
   }, [ordensServico]);
@@ -84,14 +87,14 @@ export default function OrdensServico() {
 
   const searchedOrdensServico = useMemo(() => {
     const byEmpenho = activeEmpenhoId
-      ? ordensServico.filter((os) => os.empenho.id === activeEmpenhoId)
+      ? ordensServico.filter((os) => os.empenhos.some((v) => v.empenho_id === activeEmpenhoId))
       : ordensServico;
     if (!searchTerm) return byEmpenho;
     const s = searchTerm.toLowerCase();
     return byEmpenho.filter(
       (os) =>
         os.numero.toLowerCase().includes(s) ||
-        os.empenho.numero.toLowerCase().includes(s) ||
+        os.empenhos.some((v) => v.numero.toLowerCase().includes(s)) ||
         os.empenho.contrato.identificador.toLowerCase().includes(s) ||
         os.empenho.contrato.company.name.toLowerCase().includes(s) ||
         (os.obra?.nome.toLowerCase().includes(s) ?? false) ||
@@ -214,7 +217,9 @@ export default function OrdensServico() {
         />
       )}
 
-      {isOpen && <OrdemServicoModal ordemServico={editingOrdemServico} handleClose={handleClose} />}
+      {isOpen && (
+        <OrdemServicoModal key={editingOrdemServico?.id ?? "nova"} ordemServico={editingOrdemServico} handleClose={handleClose} />
+      )}
 
       {isDeleteOpen && ordemServicoToDelete && (
         <DeleteOrdemServicoModal

@@ -19,6 +19,16 @@ export type OrdemServicoEmpenho = {
   contrato: OrdemServicoContrato;
 };
 
+// Empenho que financia a OS e quanto dele vai para ela
+export type OrdemServicoVinculo = {
+  empenho_id: string;
+  numero: string;
+  description: string;
+  valor: number;
+  // Valor total do empenho
+  empenhoValue: number;
+};
+
 export type OrdemServicoObra = {
   id: string;
   nome: string;
@@ -39,8 +49,10 @@ export type OrdemServico = {
   numero: string;
   valor: number;
   status: OrdemServicoStatus;
+  // Empenho principal (o primeiro vinculado) — por ele se chega ao contrato
   empenho_id: string;
   empenho: OrdemServicoEmpenho;
+  empenhos: OrdemServicoVinculo[];
   obra: OrdemServicoObra | null;
   createdAt: Date;
   updatedAt: Date;
@@ -61,8 +73,8 @@ export type ListOrdensServico = {
 
 export type CreateOrdemServicoPayload = {
   numero: string;
-  valor: string;
-  empenho_id: string;
+  // Valor da OS = soma do que cada empenho destina a ela (em reais)
+  empenhos: { empenho_id: string; valor: number }[];
 };
 
 export type OrdemServicoOption = {
@@ -70,4 +82,5 @@ export type OrdemServicoOption = {
   numero: string;
   valor: number;
   empenho: OrdemServicoEmpenho;
+  empenhos: OrdemServicoVinculo[];
 };

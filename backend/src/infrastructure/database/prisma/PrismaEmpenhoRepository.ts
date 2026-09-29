@@ -79,8 +79,9 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
                 },
               },
             },
-            ordensServico: {
-              select: { valor: true, status: true },
+            // Quanto deste empenho foi destinado a cada OS
+            vinculosOrdemServico: {
+              select: { valor: true, ordemServico: { select: { status: true } } },
             },
           },
         }),
@@ -123,13 +124,13 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
               descricaoCurta: string;
               company: { id: string; name: string; cnpj: string };
             };
-            ordensServico: { valor: number; status: string }[];
+            vinculosOrdemServico: { valor: number; ordemServico: { status: string } }[];
           },
         ) => {
-          const { ordensServico, ...rest } = empenho;
-          const valorComprometidoCentavos = ordensServico
-            .filter((os) => os.status !== "CANCELADO")
-            .reduce((sum, os) => sum + os.valor, 0);
+          const { vinculosOrdemServico, ...rest } = empenho;
+          const valorComprometidoCentavos = vinculosOrdemServico
+            .filter((vinculo) => vinculo.ordemServico.status !== "CANCELADO")
+            .reduce((sum, vinculo) => sum + vinculo.valor, 0);
 
           return {
             ...rest,
@@ -179,10 +180,10 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
   }
 
   async delete(empenhoId: string): Promise<void> {
-    const [ordensServico, invoices] = await Promise.all([
-      prisma.ordemServico.findMany({
+    const [vinculos, invoices] = await Promise.all([
+      prisma.ordemServicoEmpenho.findMany({
         where: { empenho_id: empenhoId },
-        select: { status: true },
+        select: { ordemServico: { select: { status: true } } },
       }),
       prisma.invoice.findMany({
         where: { empenho_id: empenhoId },
@@ -190,8 +191,8 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
       }),
     ]);
 
-    if (ordensServico.length > 0) {
-      const hasActive = ordensServico.some((os) => os.status === "ATIVO");
+    if (vinculos.length > 0) {
+      const hasActive = vinculos.some((vinculo) => vinculo.ordemServico.status === "ATIVO");
       throw new DomainError(
         hasActive
           ? "Não é possível excluir o empenho: existem ordens de serviço ativas vinculadas a ele."
@@ -271,11 +272,14 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
         throw new DomainError("Empenho not found");
       }
 
-      const agg = await prisma.ordemServico.aggregate({
+      // Soma do que já foi destinado a OS não canceladas (exceto a OS em edição)
+      const agg = await prisma.ordemServicoEmpenho.aggregate({
         where: {
           empenho_id: empenhoId,
-          status: { not: "CANCELADO" },
-          ...(excludeOrdemServicoId ? { id: { not: excludeOrdemServicoId } } : {}),
+          ordemServico: {
+            status: { not: "CANCELADO" },
+            ...(excludeOrdemServicoId ? { id: { not: excludeOrdemServicoId } } : {}),
+          },
         },
         _sum: { valor: true },
       });

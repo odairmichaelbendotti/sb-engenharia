@@ -233,8 +233,16 @@ export function ViewOrdemServicoModal({ ordemServico, handleClose }: ViewOrdemSe
               <Field icon={Wallet} label="Valor">
                 {formatCurrency(ordemServico.valor)}
               </Field>
-              <Field icon={FileSignature} label="Empenho">
-                {empenho.numero}
+              <Field icon={FileSignature} label={ordemServico.empenhos.length > 1 ? "Empenhos" : "Empenho"}>
+                {/* Uma OS pode ser financiada por vários empenhos do mesmo contrato */}
+                <ul className="space-y-0.5">
+                  {ordemServico.empenhos.map((vinculo) => (
+                    <li key={vinculo.empenho_id}>
+                      {vinculo.numero}{" "}
+                      <span className="text-text-muted font-normal">· {formatCurrency(vinculo.valor)}</span>
+                    </li>
+                  ))}
+                </ul>
               </Field>
               <Field icon={FileSignature} label="Contrato">
                 {empenho.contrato.identificador}

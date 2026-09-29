@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { formatCurrency, formatDate, formatDateOnly } from "../../utils/format-currency";
 import { useObras } from "../../store/obras";
-import type { Obra, ObraDetail, ObraDetailFinancial, ObraStatus } from "../../../types/obra";
+import type { Obra, ObraDetail, ObraDetailEmpenhoFinanceiro, ObraDetailFinancial, ObraStatus } from "../../../types/obra";
 import { Card, PendingBadge, ProgressBar, StatusPill, VigenciaAlert } from "./obra-detail-shared";
 import {
   daysUntil,
@@ -98,9 +98,9 @@ function PeriodRow({ label, start, end }: { label: string; start: string; end: s
 }
 
 // Barra empilhada do empenho: esta OS, outras OS e saldo livre para novas OS
-function EmpenhoCommitmentBar({ financial }: { financial: ObraDetailFinancial }) {
-  const { value, comprometidoOS } = financial.empenho;
-  const estaOS = financial.ordemServico.valor;
+function EmpenhoCommitmentBar({ financial }: { financial: ObraDetailEmpenhoFinanceiro }) {
+  const { value, comprometidoOS } = financial;
+  const estaOS = financial.valorNaOS;
   const outrasOS = Math.max(comprometidoOS - estaOS, 0);
   const base = Math.max(value, comprometidoOS);
   const segments = [
@@ -198,9 +198,14 @@ function ObraCard({ detail, onOpenInfo }: { detail: ObraDetail; onOpenInfo: () =
   );
 }
 
-function EmpenhoCard({ detail }: { detail: ObraDetail }) {
-  const { empenho, financial } = detail;
-
+// Um cartão por empenho que financia a OS (a OS pode receber vários empenhos do contrato)
+function EmpenhoCard({
+  empenho,
+  financial,
+}: {
+  empenho: ObraDetail["empenhos"][number];
+  financial: ObraDetailEmpenhoFinanceiro | null;
+}) {
   return (
     <Card
       icon={<Wallet size={14} />}
@@ -214,37 +219,42 @@ function EmpenhoCard({ detail }: { detail: ObraDetail }) {
       {financial && (
         <>
           <p className="text-[11px] text-text-muted">Valor empenhado</p>
-          <p className="text-[15px] font-bold text-text-primary mb-2">{formatCurrency(financial.empenho.value)}</p>
+          <p className="text-[15px] font-bold text-text-primary mb-2">{formatCurrency(financial.value)}</p>
 
           <EmpenhoCommitmentBar financial={financial} />
           <p className="text-xs text-text-secondary mt-2">
-            Esta OS representa{" "}
+            Esta OS recebe{" "}
             <span className="font-bold text-accent-600">
-              {formatPercent(percentOf(financial.ordemServico.valor, financial.empenho.value))}
+              {formatCurrency(financial.valorNaOS)} ({formatPercent(percentOf(financial.valorNaOS, financial.value))})
             </span>{" "}
-            do empenho ({plural(financial.empenho.ordensServicoCount, "OS ativa", "OS ativas")}).
+            do empenho ({plural(financial.ordensServicoCount, "OS ativa", "OS ativas")}).
+          </p>
+          <p className="text-xs text-text-secondary mt-1">
+            Liquidado nesta obra:{" "}
+            <span className="font-semibold text-text-primary">{formatCurrency(financial.liquidadoNaOS)}</span> de{" "}
+            {formatCurrency(financial.valorNaOS)}
           </p>
 
           <div className="grid grid-cols-3 gap-2 my-3 pt-3 border-t border-border">
-            <Metric label="Liquidado" value={formatCurrency(financial.empenho.liquidado)} tone="text-success-text" />
+            <Metric label="Liquidado" value={formatCurrency(financial.liquidado)} tone="text-success-text" />
             <Metric
               label="Saldo a liquidar"
-              value={formatCurrency(financial.empenho.value - financial.empenho.liquidado)}
+              value={formatCurrency(financial.value - financial.liquidado)}
               tone="text-accent-600"
             />
             <Metric
               label="Livre p/ novas OS"
-              value={formatCurrency(financial.empenho.value - financial.empenho.comprometidoOS)}
-              tone={financial.empenho.value - financial.empenho.comprometidoOS < 0 ? "text-danger-text" : "text-primary-600"}
+              value={formatCurrency(financial.value - financial.comprometidoOS)}
+              tone={financial.value - financial.comprometidoOS < 0 ? "text-danger-text" : "text-primary-600"}
             />
           </div>
           <div className="mb-3">
             <ProgressBar
-              percent={percentOf(financial.empenho.liquidado, financial.empenho.value)}
+              percent={percentOf(financial.liquidado, financial.value)}
               colorClassName="bg-secondary-500"
             />
             <p className="text-[10px] text-text-muted text-right mt-0.5">
-              {formatPercent(percentOf(financial.empenho.liquidado, financial.empenho.value))} do empenho liquidado
+              {formatPercent(percentOf(financial.liquidado, financial.value))} do empenho liquidado
             </p>
           </div>
         </>
@@ -396,7 +406,7 @@ function InvoicesTab({ financial }: { financial: ObraDetailFinancial }) {
 }
 
 function ScheduleTab({ detail }: { detail: ObraDetail }) {
-  const { obra, empenho, contrato } = detail;
+  const { obra, empenhos, contrato } = detail;
 
   return (
     <>
@@ -413,11 +423,15 @@ function ScheduleTab({ detail }: { detail: ObraDetail }) {
               <span className="font-medium text-success-text">{formatDate(obra.dataConclusao)}</span>
             </div>
           )}
-          <PeriodRow label="Empenho" start={empenho.startAt} end={empenho.endAt} />
+          {empenhos.map((empenho) => (
+            <PeriodRow key={empenho.id} label={`Empenho ${empenho.numero}`} start={empenho.startAt} end={empenho.endAt} />
+          ))}
           <PeriodRow label="Contrato" start={contrato.dataInicio} end={contrato.dataFim} />
         </div>
         <div className="mt-3 space-y-2">
-          <VigenciaAlert label="Vigência do empenho" endAt={empenho.endAt} />
+          {empenhos.map((empenho) => (
+            <VigenciaAlert key={empenho.id} label={`Vigência do empenho ${empenho.numero}`} endAt={empenho.endAt} />
+          ))}
           <VigenciaAlert label="Vigência do contrato" endAt={contrato.dataFim} />
         </div>
       </Card>
@@ -589,7 +603,13 @@ export default function ObraDetailPanel({ obra, onClose }: { obra: Obra | null; 
               {tab === "geral" && (
                 <>
                   <ObraCard detail={detail} onOpenInfo={() => setIsInfoOpen(true)} />
-                  <EmpenhoCard detail={detail} />
+                  {detail.empenhos.map((empenho) => (
+                    <EmpenhoCard
+                      key={empenho.id}
+                      empenho={empenho}
+                      financial={detail.financial?.empenhos.find((e) => e.id === empenho.id) ?? null}
+                    />
+                  ))}
                   <ContratoCard detail={detail} onOpenEmpenhos={() => setIsEmpenhosOpen(true)} />
                   {financial && <PendingFields />}
                 </>
@@ -606,7 +626,7 @@ export default function ObraDetailPanel({ obra, onClose }: { obra: Obra | null; 
         <ContratoEmpenhosModal
           contrato={detail.contrato}
           financial={detail.financial.contrato}
-          currentEmpenhoId={detail.empenho.id}
+          currentEmpenhoIds={detail.empenhos.map((e) => e.id)}
           onClose={() => setIsEmpenhosOpen(false)}
         />
       )}

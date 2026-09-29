@@ -70,16 +70,24 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
   function handleChangeEmpenho(
     e: React.ChangeEvent<HTMLSelectElement, HTMLSelectElement>,
   ) {
-    setFormData((f) => ({ ...f, empenho_id: e.target.value, obra_id: "" }));
+    const empenhoId = e.target.value;
+    setFormData((f) => ({ ...f, empenho_id: empenhoId, obra_id: "" }));
 
     const empenho = empenhosByCompany.find(
-      (f) => f.id.toString() === e.target.value,
+      (f) => f.id.toString() === empenhoId,
     );
 
     if (!empenho) return setSelectedEmpenho(null);
 
     setSelectedEmpenho(empenho);
-    fetchObraOptionsForInvoice(e.target.value).catch(() => {});
+    fetchObraOptionsForInvoice(empenhoId)
+      .then((options) => {
+        // Empenho que financia uma única obra: ela já vem selecionada
+        if (options.length === 1) {
+          setFormData((f) => (f.empenho_id === empenhoId ? { ...f, obra_id: options[0]!.id } : f));
+        }
+      })
+      .catch(() => {});
   }
 
   if (!isOpen) return null;
@@ -87,6 +95,11 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!formData.numero || !formData.value || !formData.vencimento) return;
+
+    if (obraOptionsForInvoice.length > 0 && !formData.obra_id) {
+      toast.error("Selecione a obra desta nota fiscal: o empenho financia obras.");
+      return;
+    }
 
     const nf = {
       numero: formData.numero,
@@ -294,7 +307,9 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Obra (opcional)
+                  {/* Obrigatória quando o empenho financia alguma obra */}
+                  Obra{" "}
+                  {obraOptionsForInvoice.length > 0 ? <span className="text-danger-text">*</span> : "(opcional)"}
                 </label>
                 <select
                   disabled={!formData.empenho_id}
@@ -305,7 +320,9 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
                   <option value="">
                     {!formData.empenho_id
                       ? "Primeiro selecione o empenho"
-                      : "Nenhuma obra específica"}
+                      : obraOptionsForInvoice.length > 0
+                        ? "Selecione a obra"
+                        : "Nenhuma obra específica"}
                   </option>
                   {obraOptionsForInvoice.map((obra) => (
                     <option key={obra.id} value={obra.id}>

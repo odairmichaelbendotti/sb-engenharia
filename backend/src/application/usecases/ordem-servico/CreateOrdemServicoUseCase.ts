@@ -5,22 +5,22 @@ import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.j
 import type { IOrdemServicoRepository } from "../../../domain/repositories/IOrdemServicoRepository.js";
 import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository.js";
 import { normalizeInput, ORDEM_SERVICO_RULES } from "../../../domain/normalization/input-rules.js";
+import { OrdemServicoEmpenhosValidator } from "./OrdemServicoEmpenhosValidator.js";
 
 export class CreateOrdemServicoUseCase {
+  private empenhosValidator: OrdemServicoEmpenhosValidator;
+
   constructor(
     private repository: IOrdemServicoRepository,
-    private empenhoRepository: IEmpenhoRepository,
-  ) {}
+    empenhoRepository: IEmpenhoRepository,
+  ) {
+    this.empenhosValidator = new OrdemServicoEmpenhosValidator(empenhoRepository);
+  }
 
   async execute(input: Omit<OrdemServicoType, "tenant_id"> & { user: AuthenticatedUser }) {
     // Padroniza os textos antes de validar, buscar duplicados e gravar
-    const {
-      user,
-      numero,
-      valor,
-      empenho_id,
-    } = normalizeInput(input, ORDEM_SERVICO_RULES);
-    if (!numero || !valor || !empenho_id) {
+    const { user, numero, empenhos } = normalizeInput(input, ORDEM_SERVICO_RULES);
+    if (!numero || !empenhos?.length) {
       throw new DomainError("All fields are required");
     }
 
@@ -29,34 +29,18 @@ export class CreateOrdemServicoUseCase {
       throw new DomainError("You are not authorized to create an ordem de serviço");
     }
 
-    const empenho = await this.empenhoRepository.findByEmpenhoId(empenho_id);
-    if (!empenho || empenho.tenant_id !== user.tenant_id) {
-      throw new DomainError("Empenho not found");
-    }
-
     const numeroAlreadyExists = await this.repository.verifyNumero(numero, user.tenant_id);
     if (numeroAlreadyExists) {
       throw new DomainError("Numero already exists");
     }
 
-    const ordemServicoEntity = new OrdemServicoEntity({
-      numero,
-      valor,
-      empenho_id,
-      tenant_id: user.tenant_id,
-    });
-
-    const saldoDisponivel = await this.empenhoRepository.getSaldoDisponivel(empenho_id);
-    if (ordemServicoEntity.valor > saldoDisponivel) {
-      throw new DomainError(
-        `OrdemServico valor (${ordemServicoEntity.valor}) exceeds empenho available balance (${saldoDisponivel})`,
-      );
-    }
+    const ordemServicoEntity = new OrdemServicoEntity({ numero, empenhos, tenant_id: user.tenant_id });
+    const vinculos = await this.empenhosValidator.validate({ user, empenhos: ordemServicoEntity.empenhos });
 
     return this.repository.create({
-      ...ordemServicoEntity,
-      // Math.round evita que erros de ponto flutuante quebrem o insert na coluna Int do Prisma.
-      valor: Math.round(ordemServicoEntity.valor * 100),
+      numero: ordemServicoEntity.numero,
+      tenant_id: user.tenant_id,
+      empenhos: vinculos,
     });
   }
 }

@@ -113,9 +113,24 @@ export type ObraDetailEmpenhoResumo = {
   ordensServicoCount: number;
 };
 
+// Situação de cada empenho que financia a OS desta obra
+export type ObraDetailEmpenhoFinanceiro = {
+  id: string;
+  value: number;
+  // Quanto do empenho foi destinado a esta OS
+  valorNaOS: number;
+  // Liquidado do empenho inteiro (todas as OS)
+  liquidado: number;
+  // Liquidado só nesta obra
+  liquidadoNaOS: number;
+  // Soma do destinado a OS não canceladas (inclui esta OS)
+  comprometidoOS: number;
+  ordensServicoCount: number;
+};
+
 export type ObraDetailFinancial = {
   ordemServico: { valor: number; liquidado: number };
-  empenho: { value: number; liquidado: number; comprometidoOS: number; ordensServicoCount: number };
+  empenhos: ObraDetailEmpenhoFinanceiro[];
   contrato: {
     valor: number;
     totalEmpenhado: number;
@@ -132,7 +147,8 @@ export type ObraDetail = {
     dataConclusao: string | null;
   };
   ordemServico: { id: string; numero: string; status: string };
-  empenho: { id: string; numero: string; description: string; status: string; startAt: string; endAt: string };
+  // Empenhos que financiam a OS; o primeiro é o principal
+  empenhos: { id: string; numero: string; description: string; status: string; startAt: string; endAt: string }[];
   contrato: {
     id: string;
     identificador: string;

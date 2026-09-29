@@ -86,15 +86,24 @@ export type ObraDetailEmpenhoResumo = {
   ordensServicoCount: number;
 };
 
+// Situação de cada empenho que financia a OS desta obra
+export type ObraDetailEmpenhoFinanceiro = {
+  id: string;
+  value: number;
+  // Quanto do empenho foi destinado a esta OS
+  valorNaOS: number;
+  // Liquidado do empenho inteiro (todas as OS)
+  liquidado: number;
+  // Liquidado só nesta obra
+  liquidadoNaOS: number;
+  // Soma do destinado a OS não canceladas (inclui esta OS)
+  comprometidoOS: number;
+  ordensServicoCount: number;
+};
+
 export type ObraDetailFinancial = {
   ordemServico: { valor: number; liquidado: number };
-  empenho: {
-    value: number;
-    liquidado: number;
-    // Soma das OS não canceladas do empenho (inclui a OS desta obra)
-    comprometidoOS: number;
-    ordensServicoCount: number;
-  };
+  empenhos: ObraDetailEmpenhoFinanceiro[];
   contrato: {
     valor: number;
     // Totais consideram só empenhos não cancelados
@@ -108,14 +117,15 @@ export type ObraDetailFinancial = {
 export type ObraDetail = {
   obra: Omit<PersistedObra, "valorExecutado">;
   ordemServico: { id: string; numero: string; status: string };
-  empenho: {
+  // Empenhos que financiam a OS, na ordem em que foram vinculados (o primeiro é o principal)
+  empenhos: {
     id: string;
     numero: string;
     description: string;
     status: string;
     startAt: Date;
     endAt: Date;
-  };
+  }[];
   contrato: {
     id: string;
     identificador: string;
@@ -139,8 +149,10 @@ export interface IObraRepository {
   /** Obras em andamento + orçamento/executado, agrupados por tenant — resumo multi-institucional do PLATFORM_ADMIN. */
   summaryByTenant(): Promise<ObraSummaryByTenant[]>;
   findById(id: string): Promise<PersistedObra | null>;
-  /** Empenho da OS à qual a obra pertence (obra → OS → empenho); null se a obra não existe. */
-  findEmpenhoId(id: string): Promise<string | null>;
+  /** Empenhos que financiam a OS da obra (obra → OS → empenhos); null se a obra não existe. */
+  findEmpenhoIds(id: string): Promise<string[] | null>;
+  /** Se o empenho financia a OS de alguma obra — nesse caso a NF precisa indicar a obra. */
+  empenhoHasObra(empenho_id: string): Promise<boolean>;
   update(id: string, obra: ObraType): Promise<PersistedObra & ObraOrdemServicoInfo>;
   updateStatus(id: string, status: ObraStatusValue): Promise<PersistedObra & ObraOrdemServicoInfo>;
   delete(id: string): Promise<void>;

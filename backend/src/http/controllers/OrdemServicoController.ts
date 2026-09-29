@@ -6,8 +6,24 @@ import type { UpdateOrdemServicoUseCase } from "../../application/usecases/ordem
 import type { UpdateOrdemServicoStatusUseCase } from "../../application/usecases/ordem-servico/UpdateOrdemServicoStatusUseCase.js";
 import type { DeleteOrdemServicoUseCase } from "../../application/usecases/ordem-servico/DeleteOrdemServicoUseCase.js";
 import { DomainError } from "../../domain/errors/DomainError.js";
+import type { OrdemServicoEmpenhoInput } from "../../domain/entities/OrdemServico.js";
 
 const VALID_STATUSES = ["ATIVO", "FINALIZADO", "CANCELADO"];
+
+// Aceita a lista de empenhos ou o formato antigo (um empenho + valor), ainda
+// enviado pelo frontend anterior durante a janela de deploy
+function parseEmpenhos(body: Record<string, unknown>): OrdemServicoEmpenhoInput[] {
+  if (Array.isArray(body.empenhos)) {
+    return body.empenhos.map((item: { empenho_id?: unknown; valor?: unknown }) => ({
+      empenho_id: String(item?.empenho_id ?? ""),
+      valor: Number(item?.valor),
+    }));
+  }
+  if (body.empenho_id) {
+    return [{ empenho_id: String(body.empenho_id), valor: Number(body.valor) }];
+  }
+  return [];
+}
 
 export class OrdemServicoController {
   constructor(
@@ -24,13 +40,10 @@ export class OrdemServicoController {
       const { user } = req;
       if (!user) throw new DomainError("User not found");
 
-      const { numero, valor, empenho_id } = req.body;
-
       const ordemServico = await this.createOrdemServico.execute({
         user,
-        numero,
-        valor: Number(valor),
-        empenho_id,
+        numero: req.body.numero,
+        empenhos: parseEmpenhos(req.body),
       });
 
       res.status(201).json(ordemServico);
@@ -73,15 +86,12 @@ export class OrdemServicoController {
       if (!id || Array.isArray(id)) throw new DomainError("Invalid ID");
       if (!user) throw new DomainError("User not found");
 
-      const { numero, valor, empenho_id } = req.body;
-
       const ordemServico = await this.updateOrdemServico.execute({
         ordemServicoId: id,
         user,
         data: {
-          numero,
-          valor: Number(valor),
-          empenho_id,
+          numero: req.body.numero,
+          empenhos: parseEmpenhos(req.body),
         },
       });
 
