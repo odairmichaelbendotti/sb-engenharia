@@ -1,4 +1,5 @@
 import { DomainError } from "../../../domain/errors/DomainError.js";
+import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import type { IUserRepository } from "../../../domain/repositories/IUserRepository.js";
 import type { UserRole } from "../../../generated/prisma/enums.js";
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
@@ -33,16 +34,18 @@ export class UpdateUserRoleUseCase {
       return await this.userRepository.updateRole(userId, role);
     }
 
-    if (user.role === "MASTER") {
-      if (targetUser.tenant_id !== user.tenant_id) {
-        throw new DomainError("User does not belong to your organization");
-      }
-      if (role === "PLATFORM_ADMIN") {
-        throw new DomainError("You cannot grant this role");
-      }
-      return await this.userRepository.updateRole(userId, role);
+    if (!new DomainAccessPolicy().canDo(user.role, "manageUsers")) {
+      throw new DomainError("User does not have permission");
     }
 
-    throw new DomainError("User does not have permission");
+    // MASTER e COORDENACAO: só dentro da própria organização e sem conceder
+    // nem retirar o PLATFORM_ADMIN
+    if (targetUser.tenant_id !== user.tenant_id) {
+      throw new DomainError("User does not belong to your organization");
+    }
+    if (role === "PLATFORM_ADMIN" || targetUser.role === "PLATFORM_ADMIN") {
+      throw new DomainError("You cannot grant this role");
+    }
+    return await this.userRepository.updateRole(userId, role);
   }
 }

@@ -8,6 +8,8 @@ import { ConfirmModal } from "../../components/ConfirmModal";
 import UsersHeader from "./UsersHeader";
 import UsersTable from "./UsersTable";
 import { ROLE_LABELS } from "./role-labels";
+import { ROLE_GUIDE_BY_ROLE } from "./role-guide";
+import { RoleGuideModal } from "./RoleGuideModal";
 
 type PendingRoleChange = { user: User; role: User["role"] };
 
@@ -20,6 +22,7 @@ const Usuarios = () => {
     null,
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
 
   async function loadUsers(pageToLoad: number) {
     try {
@@ -49,7 +52,8 @@ const Usuarios = () => {
         "PLATFORM_ADMIN",
       ];
     }
-    if (currentUser?.role === "MASTER") {
+    // COORDENACAO tem os mesmos poderes do MASTER sobre usuários
+    if (currentUser?.role === "MASTER" || currentUser?.role === "COORDENACAO") {
       return ["USER", "ENGENHARIA", "ADMINISTRATIVO", "COORDENACAO", "MASTER"];
     }
     return [];
@@ -73,7 +77,9 @@ const Usuarios = () => {
 
   return (
     <div className="p-4 md:p-5 max-w-7xl mx-auto">
-      <UsersHeader />
+      <UsersHeader
+        onOpenGuide={assignableRoles.length > 0 ? () => setIsGuideOpen(true) : undefined}
+      />
 
       {isLoading ? (
         <div className="bg-surface border border-border rounded-lg py-10 flex flex-col items-center justify-center gap-2">
@@ -111,12 +117,18 @@ const Usuarios = () => {
         isLoading={isSaving}
         message={
           pendingChange
-            ? `Alterar o papel de ${pendingChange.user.name} para ${ROLE_LABELS[pendingChange.role]}?`
+            ? `Alterar o papel de ${pendingChange.user.name} para ${ROLE_LABELS[pendingChange.role]}? Com esse perfil, ${ROLE_GUIDE_BY_ROLE[pendingChange.role].summary}.`
             : ""
         }
         confirmLabel="Confirmar"
         onConfirm={handleConfirmRoleChange}
         onCancel={() => setPendingChange(null)}
+      />
+
+      <RoleGuideModal
+        open={isGuideOpen}
+        assignableRoles={assignableRoles}
+        onClose={() => setIsGuideOpen(false)}
       />
     </div>
   );

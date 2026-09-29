@@ -81,7 +81,7 @@ export function OrdemServicoList({
   onDelete,
   onAdd,
 }: OrdemServicoListProps) {
-  const { canEditAdministrativo } = usePermission();
+  const { canEditAdministrativo, canCreateOrdemServico } = usePermission();
   const [page, setPage] = useState(1);
 
   const totalPages = Math.max(1, Math.ceil(ordensServico.length / ITEMS_PER_PAGE));
@@ -105,7 +105,7 @@ export function OrdemServicoList({
         <p className="text-text-muted text-sm mt-1">
           Tente ajustar os filtros ou cadastre uma nova ordem de serviço
         </p>
-        {onAdd && canEditAdministrativo && (
+        {onAdd && canCreateOrdemServico && (
           <button
             onClick={onAdd}
             className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-md cursor-pointer transition-colors"

@@ -11,6 +11,7 @@ import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator
 import { PrismaUserRepository } from "../../infrastructure/database/prisma/PrismaUserRepository.js";
 import { HashGenerator } from "../../infrastructure/cryptography/HashGenerator.js";
 import { RequireDomainAccess } from "../middleware/RequireDomainAccess.js";
+import { RequireCapability } from "../middleware/RequireCapability.js";
 
 export const CompanyRoutes = Router();
 
@@ -40,6 +41,7 @@ const token = new TokenGenerator();
 const authMiddleware = new AuthMiddleware(token, userRepository);
 
 const requireDomainAccess = new RequireDomainAccess();
+const requireCapability = new RequireCapability();
 
 CompanyRoutes.post(
   "/company/create",
@@ -72,6 +74,6 @@ CompanyRoutes.put(
 CompanyRoutes.post(
   "/company/:id/create-access",
   authMiddleware.handle,
-  requireDomainAccess.handle("administrativo", "edit"),
+  requireCapability.handle("createCompanyAccess"),
   (req, res) => companyController.createAccess(req, res),
 );

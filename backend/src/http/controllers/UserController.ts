@@ -157,7 +157,7 @@ export class UserController {
       return res.status(403).json({ message: "parameter not found" });
     }
 
-    if (user.role === "MASTER") {
+    if (user.role === "MASTER" || user.role === "COORDENACAO") {
       const users = await this.listUserUseCase.execute({
         tenant_id: user.tenant_id,
         page: Number(page),

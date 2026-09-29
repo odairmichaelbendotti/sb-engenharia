@@ -15,8 +15,12 @@ const MobileSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const { user, logout } = useUser();
-  const { canViewAdministrativo, canViewEngenharia, isEmpresaRestricted } =
-    usePermission();
+  const {
+    canViewAdministrativo,
+    canViewEngenharia,
+    canApproveUsers,
+    isEmpresaRestricted,
+  } = usePermission();
   const { tenantOptions, listTenantOptions } = useTenants();
 
   useEffect(() => {
@@ -110,7 +114,7 @@ const MobileSidebar = () => {
                     onNavigate={handleLinkClick}
                   />
                 )}
-                {(user?.role === "MASTER" || user?.role === "PLATFORM_ADMIN") && (
+                {canApproveUsers && (
                   <SidebarGroup
                     label="Gestão"
                     items={gestaoItems}

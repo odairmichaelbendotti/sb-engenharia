@@ -10,10 +10,10 @@ const ROLE_DOMAIN_ACCESS: Record<
   USER: { engenharia: "view", administrativo: "view" },
   ENGENHARIA: { engenharia: "edit", administrativo: "view" },
   ADMINISTRATIVO: { engenharia: "view", administrativo: "edit" },
+  // COORDENACAO tem os mesmos poderes do MASTER — a diferença é só hierárquica.
   COORDENACAO: { engenharia: "edit", administrativo: "edit" },
-  // MASTER e PLATFORM_ADMIN só visualizam Engenharia (Obra) — edição fica
-  // restrita a ENGENHARIA/COORDENACAO, por decisão explícita do usuário.
-  MASTER: { engenharia: "view", administrativo: "edit" },
+  MASTER: { engenharia: "edit", administrativo: "edit" },
+  // PLATFORM_ADMIN só visualiza Engenharia (Obra), por decisão explícita do usuário.
   PLATFORM_ADMIN: { engenharia: "view", administrativo: "edit" },
   EMPRESA: { engenharia: "view", administrativo: "none" },
 };
@@ -35,7 +35,12 @@ export function usePermission() {
     // backend próprio para diferenciar view/edit de verdade.
     canCreateAndEditContent: access.engenharia === "edit",
     canManageOrganization: role === "PLATFORM_ADMIN",
-    canApproveUsers: role === "MASTER" || role === "PLATFORM_ADMIN",
+    // Aprovar/recusar cadastros e mudar roles (espelha a capability manageUsers do backend)
+    canApproveUsers:
+      role === "MASTER" || role === "COORDENACAO" || role === "PLATFORM_ADMIN",
+    // ENGENHARIA só visualiza o administrativo, mas pode abrir OS e criar acesso de empresa
+    canCreateOrdemServico: access.administrativo === "edit" || role === "ENGENHARIA",
+    canCreateCompanyAccess: access.administrativo === "edit" || role === "ENGENHARIA",
     // Login da empresa contratada — só enxerga o Mapa de Obras, filtrado pela
     // própria empresa. Ver AppLayout.tsx (redireciona qualquer outra rota) e
     // Sidebar/MobileSidebar (só mostram o item Mapa de Obras).

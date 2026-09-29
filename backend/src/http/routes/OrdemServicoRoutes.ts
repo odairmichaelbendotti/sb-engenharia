@@ -12,6 +12,7 @@ import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
 import { PrismaUserRepository } from "../../infrastructure/database/prisma/PrismaUserRepository.js";
 import { RequireDomainAccess } from "../middleware/RequireDomainAccess.js";
+import { RequireCapability } from "../middleware/RequireCapability.js";
 
 export const OrdemServicoRoutes = Router();
 
@@ -38,11 +39,13 @@ const userRepository = new PrismaUserRepository();
 const authMiddleware = new AuthMiddleware(token, userRepository);
 
 const requireDomainAccess = new RequireDomainAccess();
+const requireCapability = new RequireCapability();
 
 OrdemServicoRoutes.post(
   "/ordem-servico/create",
   authMiddleware.handle,
-  requireDomainAccess.handle("administrativo", "edit"),
+  // ENGENHARIA só visualiza o administrativo, mas pode abrir OS
+  requireCapability.handle("createOrdemServico"),
   (req, res) => ordemServicoController.create(req, res),
 );
 

@@ -170,9 +170,17 @@ Matriz de acesso (`view` = listar/ler; `edit` = criar/editar/excluir, implica `v
 | ADMINISTRATIVO | view | edit |
 | COORDENACAO | edit | edit |
 | MASTER | edit | edit |
-| PLATFORM_ADMIN | edit | edit |
+| PLATFORM_ADMIN | view | edit |
+| EMPRESA | view (só Mapa, da própria empresa) | none |
 
-`PLATFORM_ADMIN` e `MASTER` não mudaram de comportamento fora da matriz acima — `PLATFORM_ADMIN` continua o único role com `canManageOrganization` (único que vê/gerencia `Tenant`) e `MASTER` continua o que aprova/reprova cadastro de usuário (`canApproveUsers`), nenhum dos dois foi tocado por esta mudança.
+**Capabilities (2026-09-29)** — ações que fogem da matriz ficam em `DomainAccessPolicy.canDo(role, capability)` e no middleware `RequireCapability`:
+- `manageUsers` (PLATFORM_ADMIN, MASTER, COORDENACAO): aprovar/recusar cadastro, listar usuários e mudar role. MASTER e COORDENACAO só na própria tenant e sem conceder nem alterar PLATFORM_ADMIN. COORDENACAO = MASTER, a diferença é só hierárquica.
+- `createOrdemServico` (administrativo edit + ENGENHARIA): `POST /ordem-servico/create`. ENGENHARIA não edita nem exclui OS.
+- `createCompanyAccess` (administrativo edit + ENGENHARIA): `POST /company/:id/create-access`.
+
+A cola de perfis da tela de Usuários (`frontend/src/pages/Users/role-guide.ts`) e o `usePermission.ts` espelham essas regras — mudou aqui, atualizar lá.
+
+`PLATFORM_ADMIN` continua o único role com `canManageOrganization` (único que vê/gerencia `Tenant`). A aprovação de cadastro (`canApproveUsers` no frontend) vale para MASTER, COORDENACAO e PLATFORM_ADMIN — ver capability `manageUsers` acima.
 
 O que foi implementado:
 - `CompanyRoutes.ts`/`EmpenhoRoutes.ts`/`InvoiceRoutes.ts` — todos os métodos (inclusive os GETs de listagem, que antes não tinham nenhuma checagem de role) passaram a usar `RequireDomainAccess.handle("administrativo", "view" | "edit")` no lugar de `RequiredRoles.handle("EDITOR", "MASTER", "PLATFORM_ADMIN")`.

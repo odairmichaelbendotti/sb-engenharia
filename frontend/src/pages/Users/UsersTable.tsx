@@ -47,7 +47,9 @@ export default function UsersTable({
               const canEditRole =
                 assignableRoles.length > 0 &&
                 user.id !== currentUserId &&
-                user.approved;
+                user.approved &&
+                // Só PLATFORM_ADMIN mexe em quem já é PLATFORM_ADMIN
+                (user.role !== "PLATFORM_ADMIN" || assignableRoles.includes("PLATFORM_ADMIN"));
 
               return (
                 <tr

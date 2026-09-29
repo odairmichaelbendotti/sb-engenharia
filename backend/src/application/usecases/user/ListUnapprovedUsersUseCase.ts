@@ -1,4 +1,5 @@
 import { DomainError } from "../../../domain/errors/DomainError.js";
+import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import type { IUserRepository } from "../../../domain/repositories/IUserRepository.js";
 
 export class ListUnapprovedUsersUseCase {
@@ -13,16 +14,17 @@ export class ListUnapprovedUsersUseCase {
 
     const unapprovedUsers = await this.userRepository.findUnapproved();
 
-    if (user.role === "MASTER") {
-      return unapprovedUsers.filter(
-        (usuario) => usuario.tenant_id === user.tenant_id,
-      );
+    if (!new DomainAccessPolicy().canDo(user.role, "manageUsers")) {
+      throw new DomainError("UNAUTHORIZED");
     }
 
     if (user.role === "PLATFORM_ADMIN") {
       return unapprovedUsers;
     }
 
-    throw new DomainError("UNAUTHORIZED");
+    // MASTER e COORDENACAO só enxergam cadastros da própria organização
+    return unapprovedUsers.filter(
+      (usuario) => usuario.tenant_id === user.tenant_id,
+    );
   }
 }

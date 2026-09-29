@@ -1,13 +1,12 @@
 import { DomainError } from "../../../domain/errors/DomainError.js";
+import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import type { IUserRepository } from "../../../domain/repositories/IUserRepository.js";
 import type { User } from "../../../generated/prisma/client.js";
 
 export class DisapproveUserUseCase {
   constructor(private userRepository: IUserRepository) {}
   async execute({ userId, user }: { userId: string; user: User }) {
-    const allowUser = ["MASTER", "PLATFORM_ADMIN"];
-
-    if (!allowUser.includes(user.role)) {
+    if (!new DomainAccessPolicy().canDo(user.role, "manageUsers")) {
       throw new DomainError("User does not have permission");
     }
 
@@ -17,7 +16,7 @@ export class DisapproveUserUseCase {
       throw new DomainError("User not found");
     }
 
-    // MASTER só reprova cadastros da própria organização
+    // MASTER/COORDENACAO só reprovam cadastros da própria organização
     if (user.role !== "PLATFORM_ADMIN" && userExists.tenant_id !== user.tenant_id) {
       throw new DomainError("User not found");
     }

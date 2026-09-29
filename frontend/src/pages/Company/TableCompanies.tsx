@@ -54,7 +54,8 @@ const TableCompanies = ({
     );
   }, [empresas, searchTerm]);
 
-  const { canEditAdministrativo } = usePermission();
+  const { canEditAdministrativo, canCreateCompanyAccess } = usePermission();
+  const showActions = canEditAdministrativo || canCreateCompanyAccess;
 
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const totalPages = Math.ceil(filteredEmpresas.length / ITEMS_PER_PAGE);
@@ -90,7 +91,7 @@ const TableCompanies = ({
                   <ArrowDown size={12} className="text-text-muted" />
                 </div>
               </th>
-              {canEditAdministrativo && (
+              {showActions && (
                 <th className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                   Ações
                 </th>
@@ -155,30 +156,36 @@ const TableCompanies = ({
                     {empresa.empenhos.length !== 1 ? "s" : ""}
                   </button>
                 </td>
-                {canEditAdministrativo && (
+                {showActions && (
                   <td className="py-2.5 px-4">
                     <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => handleOpenAccess(empresa)}
-                        className="p-2 cursor-pointer hover:bg-secondary-100 text-text-secondary hover:text-secondary-500 rounded-md transition-colors"
-                        title="Criar acesso"
-                      >
-                        <KeyRound size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleOpen(empresa)}
-                        className="p-2 cursor-pointer hover:bg-primary-100 text-text-secondary hover:text-primary-500 rounded-md transition-colors"
-                        title="Editar"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleOpenDelete(empresa)}
-                        className="p-2 cursor-pointer hover:bg-danger-bg text-text-secondary hover:text-danger-text rounded-md transition-colors"
-                        title="Excluir"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {canCreateCompanyAccess && (
+                        <button
+                          onClick={() => handleOpenAccess(empresa)}
+                          className="p-2 cursor-pointer hover:bg-secondary-100 text-text-secondary hover:text-secondary-500 rounded-md transition-colors"
+                          title="Criar acesso"
+                        >
+                          <KeyRound size={16} />
+                        </button>
+                      )}
+                      {canEditAdministrativo && (
+                        <>
+                          <button
+                            onClick={() => handleOpen(empresa)}
+                            className="p-2 cursor-pointer hover:bg-primary-100 text-text-secondary hover:text-primary-500 rounded-md transition-colors"
+                            title="Editar"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleOpenDelete(empresa)}
+                            className="p-2 cursor-pointer hover:bg-danger-bg text-text-secondary hover:text-danger-text rounded-md transition-colors"
+                            title="Excluir"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 )}

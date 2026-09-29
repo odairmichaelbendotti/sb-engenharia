@@ -149,7 +149,7 @@ export default function OrdensServico() {
     setOrdemServicoToDelete(null);
   };
 
-  const { canEditAdministrativo } = usePermission();
+  const { canCreateOrdemServico } = usePermission();
 
   return (
     <div className="p-4 md:p-5 max-w-7xl mx-auto">
@@ -157,7 +157,7 @@ export default function OrdensServico() {
         icon={ClipboardList}
         title="Ordens de Serviço"
         stat={{ icon: DollarSign, label: "Valor total", value: formatCurrency(data?.stats.valorTotal || 0) }}
-        canAct={canEditAdministrativo}
+        canAct={canCreateOrdemServico}
         actionLabel="Nova Ordem de Serviço"
         onAction={() => handleOpen()}
       />

@@ -1,4 +1,5 @@
 import { DomainError } from "../../../domain/errors/DomainError.js";
+import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import type { IUserRepository } from "../../../domain/repositories/IUserRepository.js";
 import type { User } from "../../../generated/prisma/client.js";
 
@@ -11,9 +12,7 @@ export class ApproveUserUseCase {
       throw new DomainError("User not found");
     }
 
-    const allowedUser = ["MASTER", "PLATFORM_ADMIN"];
-
-    if (!allowedUser.includes(user.role)) {
+    if (!new DomainAccessPolicy().canDo(user.role, "manageUsers")) {
       throw new DomainError("User does not have permission");
     }
 

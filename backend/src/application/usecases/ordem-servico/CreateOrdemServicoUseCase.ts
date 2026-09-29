@@ -21,7 +21,7 @@ export class CreateOrdemServicoUseCase {
       throw new DomainError("All fields are required");
     }
 
-    const canEdit = new DomainAccessPolicy().can(user.role, "administrativo", "edit");
+    const canEdit = new DomainAccessPolicy().canDo(user.role, "createOrdemServico");
     if (!canEdit) {
       throw new DomainError("You are not authorized to create an ordem de serviço");
     }

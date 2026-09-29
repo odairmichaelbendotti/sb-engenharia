@@ -25,7 +25,7 @@ export class CreateCompanyAccessUseCase {
     name: string;
     email: string;
   }) {
-    const canEdit = new DomainAccessPolicy().can(user.role, "administrativo", "edit");
+    const canEdit = new DomainAccessPolicy().canDo(user.role, "createCompanyAccess");
     if (!canEdit) {
       throw new DomainError("You are not authorized to create a company access");
     }
