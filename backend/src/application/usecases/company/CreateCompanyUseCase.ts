@@ -2,21 +2,24 @@ import { CompanyEntity, type CompanyType } from "../../../domain/entities/Compan
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import type { ICompanyRepository } from "../../../domain/repositories/ICompanyRepository.js";
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
+import { normalizeInput, COMPANY_RULES } from "../../../domain/normalization/input-rules.js";
 
 export class CreateCompanyUseCase {
   constructor(private repository: ICompanyRepository) {}
 
-  async execute({
-    name,
-    cnpj,
-    cep,
-    city,
-    state,
-    address,
-    phone,
-    email,
-    user,
-  }: CompanyType & { user: AuthenticatedUser }) {
+  async execute(input: CompanyType & { user: AuthenticatedUser }) {
+    // Padroniza os textos antes de validar, buscar duplicados e gravar
+    const {
+      name,
+      cnpj,
+      cep,
+      city,
+      state,
+      address,
+      phone,
+      email,
+      user,
+    } = normalizeInput(input, COMPANY_RULES);
     if (
       !name ||
       !cnpj ||

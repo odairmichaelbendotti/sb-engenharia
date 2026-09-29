@@ -6,6 +6,7 @@ import type { ICompanyRepository } from "../../../domain/repositories/ICompanyRe
 import type { IUserRepository } from "../../../domain/repositories/IUserRepository.js";
 import type { IHashGenerator } from "../../../domain/cryptography/HashGenerator.js";
 import { generateRandomPassword } from "../../../utils/generateRandomPassword.js";
+import { normalizeInput, USER_RULES } from "../../../domain/normalization/input-rules.js";
 
 export class CreateCompanyAccessUseCase {
   constructor(
@@ -25,6 +26,8 @@ export class CreateCompanyAccessUseCase {
     name: string;
     email: string;
   }) {
+    // Padroniza os textos antes de validar, buscar duplicados e gravar
+    ({ name, email } = normalizeInput({ name, email }, USER_RULES));
     const canEdit = new DomainAccessPolicy().canDo(user.role, "createCompanyAccess");
     if (!canEdit) {
       throw new DomainError("You are not authorized to create a company access");

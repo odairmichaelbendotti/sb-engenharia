@@ -33,6 +33,7 @@ import {
 import { ContratoEmpenhosModal } from "./ContratoEmpenhosModal";
 import { ObraInfoModal } from "./ObraInfoModal";
 import { ObraTimeline } from "./ObraTimeline";
+import { maskCnpj } from "../../utils/masks";
 
 /**
  * Painel lateral de detalhe da obra, no Mapa de Obras. Mostra a cadeia
@@ -272,7 +273,7 @@ function ContratoCard({ detail, onOpenEmpenhos }: { detail: ObraDetail; onOpenEm
       </div>
       <div className="mb-3">
         <p className="text-sm font-medium text-text-primary">{contrato.company.name}</p>
-        <p className="text-[11px] text-text-muted mt-0.5">CNPJ {contrato.company.cnpj}</p>
+        <p className="text-[11px] text-text-muted mt-0.5">CNPJ {maskCnpj(contrato.company.cnpj)}</p>
       </div>
 
       {financial && (

@@ -71,7 +71,9 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
 
   async verifyNumero(numero: string, tenant_id: string): Promise<boolean> {
     try {
-      const ordemServico = await prisma.ordemServico.findFirst({ where: { numero, tenant_id } });
+      const ordemServico = await prisma.ordemServico.findFirst({
+        where: { numero: { equals: numero, mode: "insensitive" }, tenant_id },
+      });
       return ordemServico !== null;
     } catch (error) {
       throw new DomainError("Error verifying numero: " + error);

@@ -17,6 +17,7 @@ import type { Empenho } from "../../../types/empenho";
 import { toast } from "sonner";
 import { useInvoice } from "../../store/invoices";
 import { maskCurrency, formatValueToCurrencyMask, parseCurrencyMask } from "../../utils/masks";
+import { createBlurNormalizer, INVOICE_FIELD_RULES } from "../../utils/normalization/form-rules";
 
 interface EditModalProps {
   editInvoice: Invoice | null;
@@ -162,7 +163,7 @@ export default function EditModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-5">
+        <form onBlur={createBlurNormalizer(setFormData, INVOICE_FIELD_RULES)} onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-5">
           {/* Identificação */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
@@ -183,6 +184,7 @@ export default function EditModal({
                   <input
                     type="text"
                     required
+                    name="numero"
                     value={formData.numero}
                     onChange={(e) =>
                       setFormData((f) => ({ ...f, numero: e.target.value }))
@@ -338,6 +340,7 @@ export default function EditModal({
             </div>
             <div>
               <textarea
+                name="description"
                 value={formData.description}
                 onChange={(e) =>
                   setFormData((f) => ({ ...f, description: e.target.value }))

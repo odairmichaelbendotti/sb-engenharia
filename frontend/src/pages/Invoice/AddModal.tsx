@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { useInvoice } from "../../store/invoices";
 import { EmpenhoDetails } from "./EmpenhoDetails";
 import { maskCurrency, parseCurrencyMask } from "../../utils/masks";
+import { createBlurNormalizer, INVOICE_FIELD_RULES } from "../../utils/normalization/form-rules";
 
 interface AddModalProps {
   isOpen: boolean;
@@ -140,7 +141,7 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-5">
+        <form onBlur={createBlurNormalizer(setFormData, INVOICE_FIELD_RULES)} onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-5">
           {/* Empenho Selecionado */}
           {selectedEmpenho && (
             <EmpenhoDetails
@@ -169,6 +170,7 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
                   <input
                     type="text"
                     required
+                    name="numero"
                     value={formData.numero}
                     onChange={(e) =>
                       setFormData((f) => ({ ...f, numero: e.target.value }))
@@ -324,6 +326,7 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
             </div>
             <div>
               <textarea
+                name="description"
                 value={formData.description}
                 onChange={(e) =>
                   setFormData((f) => ({ ...f, description: e.target.value }))

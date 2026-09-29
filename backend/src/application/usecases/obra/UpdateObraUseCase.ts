@@ -2,6 +2,7 @@ import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
 import type { ObraType } from "../../../domain/entities/Obra.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
+import { normalizeInput, OBRA_RULES } from "../../../domain/normalization/input-rules.js";
 import type { IObraRepository } from "../../../domain/repositories/IObraRepository.js";
 
 type UpdateObraUseCaseRequest = {
@@ -14,6 +15,8 @@ export class UpdateObraUseCase {
   constructor(private repository: IObraRepository) {}
 
   async execute({ id, obra, user }: UpdateObraUseCaseRequest) {
+    // Padroniza os textos antes de validar, buscar duplicados e gravar
+    obra = normalizeInput(obra, OBRA_RULES);
     const existing = await this.repository.findById(id);
     if (!existing || existing.tenant_id !== user.tenant_id) {
       throw new DomainError("Obra not found");

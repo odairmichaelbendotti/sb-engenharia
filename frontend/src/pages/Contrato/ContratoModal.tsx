@@ -15,8 +15,9 @@ import { toast } from "sonner";
 import { useCompanies } from "../../store/companies";
 import { useContratos } from "../../store/contratos";
 import { formatCurrency } from "../../utils/format-currency";
-import { maskCurrency, formatValueToCurrencyMask, parseCurrencyMask } from "../../utils/masks";
+import { maskCnpj, maskCurrency, formatValueToCurrencyMask, parseCurrencyMask } from "../../utils/masks";
 import type { Contrato, ContratoStatus, CreateContratoPayload } from "../../../types/contrato";
+import { createBlurNormalizer, CONTRATO_FIELD_RULES } from "../../utils/normalization/form-rules";
 
 interface ContratoModalProps {
   contrato: Contrato | null;
@@ -183,7 +184,7 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
           </button>
         </div>
 
-        <form className="p-5 overflow-y-auto space-y-5" onSubmit={handleSubmit}>
+        <form onBlur={createBlurNormalizer(setForm, CONTRATO_FIELD_RULES)} className="p-5 overflow-y-auto space-y-5" onSubmit={handleSubmit}>
           {/* Identificação */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
@@ -239,7 +240,7 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
                 <option value="">Selecione uma empresa</option>
                 {companies.map((empresa) => (
                   <option key={empresa.id} value={empresa.id}>
-                    {empresa.name} - {empresa.cnpj}
+                    {empresa.name} - {maskCnpj(empresa.cnpj)}
                   </option>
                 ))}
               </select>

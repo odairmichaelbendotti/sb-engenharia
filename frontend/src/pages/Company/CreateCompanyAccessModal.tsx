@@ -12,6 +12,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import type { Empresa } from "../../../types/empresa";
 import { useCompanies } from "../../store/companies";
+import { normalizeEmail, normalizeProperName } from "../../utils/normalization/text-normalizers";
 
 type CreateCompanyAccessModalProps = {
   empresa: Empresa;
@@ -154,6 +155,7 @@ export function CreateCompanyAccessModal({
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  onBlur={() => setName(normalizeProperName(name))}
                   placeholder="Nome de quem vai acessar"
                   className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
                 />
@@ -166,6 +168,7 @@ export function CreateCompanyAccessModal({
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onBlur={() => setEmail(normalizeEmail(email))}
                   placeholder="contato@empresa.com.br"
                   className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
                 />

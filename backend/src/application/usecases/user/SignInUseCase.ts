@@ -1,6 +1,7 @@
 import type { IHashComparer } from "../../../domain/cryptography/HashComparer.js";
 import type { ITokenGenerator } from "../../../domain/cryptography/TokenGenerator.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
+import { normalizeInput, USER_RULES } from "../../../domain/normalization/input-rules.js";
 import type { IUserRepository } from "../../../domain/repositories/IUserRepository.js";
 
 export class SignInUseCase {
@@ -11,6 +12,8 @@ export class SignInUseCase {
   ) {}
 
   async execute({ email, password }: { email: string; password: string }) {
+    // Mesmo formato gravado no cadastro (minúsculas, sem espaços)
+    ({ email } = normalizeInput({ email }, USER_RULES));
     const user = await this.repository.findByEmail(email);
 
     if (!user) throw new DomainError("Invalid credentials");

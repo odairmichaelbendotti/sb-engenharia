@@ -71,7 +71,9 @@ export class PrismaContratoRepository implements IContratoRepository {
 
   async verifyIdentificador(identificador: string, tenant_id: string): Promise<boolean> {
     try {
-      const contrato = await prisma.contrato.findFirst({ where: { identificador, tenant_id } });
+      const contrato = await prisma.contrato.findFirst({
+        where: { identificador: { equals: identificador, mode: "insensitive" }, tenant_id },
+      });
       return contrato !== null;
     } catch (error) {
       throw new DomainError("Error verifying identificador: " + error);

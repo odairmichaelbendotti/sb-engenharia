@@ -4,6 +4,7 @@ import { User } from "../../../domain/entities/User.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import type { ITenantRepository } from "../../../domain/repositories/ITenantRepository.js";
 import type { IUserRepository } from "../../../domain/repositories/IUserRepository.js";
+import { normalizeInput, USER_RULES } from "../../../domain/normalization/input-rules.js";
 
 export class SignUpUseCase {
   constructor(
@@ -24,6 +25,8 @@ export class SignUpUseCase {
     email: string;
     password: string;
   }) {
+    // Padroniza os textos antes de validar, buscar duplicados e gravar
+    ({ name, email } = normalizeInput({ name, email }, USER_RULES));
     const userExists = await this.repository.findByEmail(email);
 
     if (userExists) {

@@ -2,6 +2,7 @@ import type { CompanyType } from "../../../domain/entities/Company.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import type { ICompanyRepository } from "../../../domain/repositories/ICompanyRepository.js";
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
+import { normalizeInput, COMPANY_RULES } from "../../../domain/normalization/input-rules.js";
 
 type UpdateCompanyUseCaseRequest = {
   id: string;
@@ -13,6 +14,8 @@ export class UpdateCompanyUseCase {
   constructor(private repository: ICompanyRepository) {}
 
   async execute({ id, company, user }: UpdateCompanyUseCaseRequest) {
+    // Padroniza os textos antes de validar, buscar duplicados e gravar
+    company = normalizeInput(company, COMPANY_RULES);
     try {
       const companyExists = await this.repository.findById(id);
 

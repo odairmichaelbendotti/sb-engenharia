@@ -4,6 +4,7 @@ import { DomainError } from "../../../domain/errors/DomainError.js";
 import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import type { IOrdemServicoRepository } from "../../../domain/repositories/IOrdemServicoRepository.js";
 import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository.js";
+import { normalizeInput, ORDEM_SERVICO_RULES } from "../../../domain/normalization/input-rules.js";
 
 export class CreateOrdemServicoUseCase {
   constructor(
@@ -11,12 +12,14 @@ export class CreateOrdemServicoUseCase {
     private empenhoRepository: IEmpenhoRepository,
   ) {}
 
-  async execute({
-    user,
-    numero,
-    valor,
-    empenho_id,
-  }: Omit<OrdemServicoType, "tenant_id"> & { user: AuthenticatedUser }) {
+  async execute(input: Omit<OrdemServicoType, "tenant_id"> & { user: AuthenticatedUser }) {
+    // Padroniza os textos antes de validar, buscar duplicados e gravar
+    const {
+      user,
+      numero,
+      valor,
+      empenho_id,
+    } = normalizeInput(input, ORDEM_SERVICO_RULES);
     if (!numero || !valor || !empenho_id) {
       throw new DomainError("All fields are required");
     }

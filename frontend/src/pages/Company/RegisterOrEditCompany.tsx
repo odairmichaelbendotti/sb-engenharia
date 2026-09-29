@@ -17,6 +17,7 @@ import type { Empresa } from "../../../types/empresa";
 import { useCompanies } from "../../store/companies";
 import type { CreateCompanyType } from "../../../types/create-company";
 import { maskCnpj, maskPhone, maskCep, onlyDigits } from "../../utils/masks";
+import { createBlurNormalizer, COMPANY_FIELD_RULES } from "../../utils/normalization/form-rules";
 
 type RegisterOrEditCompanyProps = {
   isOpen: boolean;
@@ -120,7 +121,7 @@ const RegisterOrEditCompany = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-5">
+        <form onBlur={createBlurNormalizer(setFormData, COMPANY_FIELD_RULES)} onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-5">
           {/* Seção: Dados da Empresa */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
@@ -141,6 +142,7 @@ const RegisterOrEditCompany = ({
                   <input
                     type="text"
                     required
+                    name="name"
                     value={formData.name}
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
@@ -182,6 +184,7 @@ const RegisterOrEditCompany = ({
                   />
                   <input
                     type="email"
+                    name="email"
                     value={formData.email}
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value })
@@ -254,6 +257,7 @@ const RegisterOrEditCompany = ({
                   />
                   <input
                     type="text"
+                    name="address"
                     value={formData.address}
                     onChange={(e) =>
                       setFormData({ ...formData, address: e.target.value })
@@ -274,6 +278,7 @@ const RegisterOrEditCompany = ({
                   />
                   <input
                     type="text"
+                    name="city"
                     value={formData.city}
                     onChange={(e) =>
                       setFormData({ ...formData, city: e.target.value })

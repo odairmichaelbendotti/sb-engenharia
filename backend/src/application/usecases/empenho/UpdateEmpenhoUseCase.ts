@@ -4,6 +4,7 @@ import { DomainError } from "../../../domain/errors/DomainError.js";
 import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import type { IContratoRepository } from "../../../domain/repositories/IContratoRepository.js";
 import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository.js";
+import { normalizeInput, EMPENHO_RULES } from "../../../domain/normalization/input-rules.js";
 
 export class UpdateEmpenhoUseCase {
   constructor(
@@ -20,6 +21,8 @@ export class UpdateEmpenhoUseCase {
     data: Omit<EmpenhoType, "tenant_id">;
     user: AuthenticatedUser;
   }) {
+    // Padroniza os textos antes de validar, buscar duplicados e gravar
+    data = normalizeInput(data, EMPENHO_RULES);
     const canEdit = new DomainAccessPolicy().can(
       user.role,
       "administrativo",

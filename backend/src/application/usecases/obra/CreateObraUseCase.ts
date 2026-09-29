@@ -4,6 +4,7 @@ import { DomainError } from "../../../domain/errors/DomainError.js";
 import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import type { IOrdemServicoRepository } from "../../../domain/repositories/IOrdemServicoRepository.js";
 import type { IObraRepository } from "../../../domain/repositories/IObraRepository.js";
+import { normalizeInput, OBRA_RULES } from "../../../domain/normalization/input-rules.js";
 
 export class CreateObraUseCase {
   constructor(
@@ -11,20 +12,22 @@ export class CreateObraUseCase {
     private ordemServicoRepository: IOrdemServicoRepository,
   ) {}
 
-  async execute({
-    user,
-    nome,
-    identificacaoPatrimonial,
-    tipo,
-    descricao,
-    latitude,
-    longitude,
-    dataInicio,
-    dataPrevisaoTermino,
-    responsavelTecnico,
-    anotacoes,
-    ordemServico_id,
-  }: Omit<ObraType, "tenant_id"> & { user: AuthenticatedUser }) {
+  async execute(input: Omit<ObraType, "tenant_id"> & { user: AuthenticatedUser }) {
+    // Padroniza os textos antes de validar, buscar duplicados e gravar
+    const {
+      user,
+      nome,
+      identificacaoPatrimonial,
+      tipo,
+      descricao,
+      latitude,
+      longitude,
+      dataInicio,
+      dataPrevisaoTermino,
+      responsavelTecnico,
+      anotacoes,
+      ordemServico_id,
+    } = normalizeInput(input, OBRA_RULES);
     if (
       !nome ||
       !identificacaoPatrimonial ||

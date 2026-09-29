@@ -19,8 +19,8 @@ export class PrismaTenantRepository implements ITenantRepository {
   }
   async findByApelido(apelido: string): Promise<PersistedTenant | null> {
     try {
-      return await prisma.tenant.findUnique({
-        where: { apelido },
+      return await prisma.tenant.findFirst({
+        where: { apelido: { equals: apelido, mode: "insensitive" } },
       });
     } catch (error) {
       throw new DomainError("Error finding tenant by apelido");

@@ -16,6 +16,7 @@ import { useContratos } from "../../store/contratos";
 import { useOrdensServico } from "../../store/ordensServico";
 import { maskCurrency, formatValueToCurrencyMask, parseCurrencyMask } from "../../utils/masks";
 import type { OrdemServico, OrdemServicoStatus, CreateOrdemServicoPayload } from "../../../types/ordem-servico";
+import { createBlurNormalizer, ORDEM_SERVICO_FIELD_RULES } from "../../utils/normalization/form-rules";
 
 interface OrdemServicoModalProps {
   ordemServico: OrdemServico | null;
@@ -160,7 +161,7 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
           </button>
         </div>
 
-        <form className="p-5 overflow-y-auto space-y-5" onSubmit={handleSubmit}>
+        <form onBlur={createBlurNormalizer(setForm, ORDEM_SERVICO_FIELD_RULES)} className="p-5 overflow-y-auto space-y-5" onSubmit={handleSubmit}>
           {/* Identificação */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">

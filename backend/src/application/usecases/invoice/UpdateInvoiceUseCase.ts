@@ -2,6 +2,7 @@ import type { UpdateInvoiceType } from "../../../domain/entities/Invoice.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import type { IInvoiceRepository } from "../../../domain/repositories/IInvoiceRepository.js";
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
+import { normalizeInput, INVOICE_RULES } from "../../../domain/normalization/input-rules.js";
 import type { InvoiceScopeValidator } from "./InvoiceScopeValidator.js";
 
 export class UpdateInvoiceUseCase {
@@ -19,6 +20,8 @@ export class UpdateInvoiceUseCase {
     id: string;
     user: AuthenticatedUser;
   }) {
+    // Padroniza os textos antes de validar, buscar duplicados e gravar
+    invoice = normalizeInput(invoice, INVOICE_RULES);
     const value = Number(invoice.value);
     if (!Number.isFinite(value) || value <= 0) {
       throw new DomainError("Value must be greater than 0");

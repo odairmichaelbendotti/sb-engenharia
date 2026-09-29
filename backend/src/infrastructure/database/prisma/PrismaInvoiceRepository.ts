@@ -97,7 +97,7 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
   async findByNumber(number: string): Promise<PersistedInvoice | null> {
     const invoice = await prisma.invoice.findFirst({
       where: {
-        numero: number,
+        numero: { equals: number, mode: "insensitive" },
       },
     });
     return invoice;

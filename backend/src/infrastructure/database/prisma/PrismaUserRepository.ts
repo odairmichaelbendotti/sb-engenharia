@@ -11,8 +11,9 @@ import { prisma } from "../../prisma/prisma.js";
 export class PrismaUserRepository implements IUserRepository {
   async findByEmail(email: string): Promise<User | null> {
     try {
+      // Sem diferenciar maiúsculas: e-mails antigos podem ter sido gravados fora do padrão
       const user = await prisma.user.findFirst({
-        where: { email },
+        where: { email: { equals: email, mode: "insensitive" } },
       });
       if (!user) {
         return null;

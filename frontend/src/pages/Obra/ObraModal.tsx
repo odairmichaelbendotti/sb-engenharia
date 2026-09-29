@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { useObras } from "../../store/obras";
 import { useOrdensServico } from "../../store/ordensServico";
 import type { Obra, ObraStatus, CreateObraPayload } from "../../../types/obra";
+import { createBlurNormalizer, OBRA_FIELD_RULES } from "../../utils/normalization/form-rules";
 
 interface ObraModalProps {
   obra: Obra | null;
@@ -241,7 +242,7 @@ export function ObraModal({ obra, handleClose }: ObraModalProps) {
           </button>
         </div>
 
-        <form className="p-5 overflow-y-auto space-y-5" onSubmit={handleSubmit}>
+        <form onBlur={createBlurNormalizer(setForm, OBRA_FIELD_RULES)} className="p-5 overflow-y-auto space-y-5" onSubmit={handleSubmit}>
           {/* Identificação */}
           <div className="space-y-4">
             <SectionTitle icon={Hash} label="Identificação" />

@@ -4,6 +4,7 @@ import { DomainError } from "../../../domain/errors/DomainError.js";
 import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import type { IContratoRepository } from "../../../domain/repositories/IContratoRepository.js";
 import type { ICompanyRepository } from "../../../domain/repositories/ICompanyRepository.js";
+import { normalizeInput, CONTRATO_RULES } from "../../../domain/normalization/input-rules.js";
 
 export class CreateContratoUseCase {
   constructor(
@@ -11,15 +12,17 @@ export class CreateContratoUseCase {
     private companyRepository: ICompanyRepository,
   ) {}
 
-  async execute({
-    user,
-    identificador,
-    descricaoCurta,
-    valor,
-    dataInicio,
-    dataFim,
-    company_id,
-  }: Omit<ContratoType, "tenant_id"> & { user: AuthenticatedUser }) {
+  async execute(input: Omit<ContratoType, "tenant_id"> & { user: AuthenticatedUser }) {
+    // Padroniza os textos antes de validar, buscar duplicados e gravar
+    const {
+      user,
+      identificador,
+      descricaoCurta,
+      valor,
+      dataInicio,
+      dataFim,
+      company_id,
+    } = normalizeInput(input, CONTRATO_RULES);
     if (!identificador || !descricaoCurta || !valor || !dataInicio || !dataFim || !company_id) {
       throw new DomainError("All fields are required");
     }

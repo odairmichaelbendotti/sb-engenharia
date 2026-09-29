@@ -17,6 +17,7 @@ import {
 import { useTenants } from "../../store/tenants";
 import type { CreateTenantType } from "../../../types/create-tenant";
 import { maskCnpj, maskPhone, maskCep, onlyDigits } from "../../utils/masks";
+import { createBlurNormalizer, TENANT_FIELD_RULES } from "../../utils/normalization/form-rules";
 
 type RegisterTenantProps = {
   isOpen: boolean;
@@ -114,7 +115,7 @@ const RegisterTenant = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-5">
+        <form onBlur={createBlurNormalizer(setFormData, TENANT_FIELD_RULES)} onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-5">
           {/* Seção: Dados da Organização */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
@@ -135,6 +136,7 @@ const RegisterTenant = ({
                   <input
                     type="text"
                     required
+                    name="name"
                     value={formData.name}
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
@@ -156,6 +158,7 @@ const RegisterTenant = ({
                   <input
                     type="text"
                     required
+                    name="apelido"
                     value={formData.apelido}
                     onChange={(e) =>
                       setFormData({ ...formData, apelido: e.target.value })
@@ -198,6 +201,7 @@ const RegisterTenant = ({
                   <input
                     type="email"
                     required
+                    name="email"
                     value={formData.email}
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value })
@@ -273,6 +277,7 @@ const RegisterTenant = ({
                   <input
                     type="text"
                     required
+                    name="address"
                     value={formData.address}
                     onChange={(e) =>
                       setFormData({ ...formData, address: e.target.value })
@@ -294,6 +299,7 @@ const RegisterTenant = ({
                   <input
                     type="text"
                     required
+                    name="city"
                     value={formData.city}
                     onChange={(e) =>
                       setFormData({ ...formData, city: e.target.value })

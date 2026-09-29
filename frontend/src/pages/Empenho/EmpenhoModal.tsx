@@ -20,6 +20,7 @@ import { useEmpenhos } from "../../store/empenhos";
 import { formatCurrency } from "../../utils/format-currency";
 import { maskCurrency, formatValueToCurrencyMask, parseCurrencyMask } from "../../utils/masks";
 import type { EmpenhoList, EmpenhoCategory } from "../../../types/empenho";
+import { createBlurNormalizer, EMPENHO_FIELD_RULES } from "../../utils/normalization/form-rules";
 
 interface EmpenhoModalProps {
   isOpen: boolean;
@@ -233,7 +234,7 @@ export function EmpenhoModal({
           </button>
         </div>
 
-        <form className="p-5 overflow-y-auto space-y-5" onSubmit={handleSubmit}>
+        <form onBlur={createBlurNormalizer(setFormState, EMPENHO_FIELD_RULES)} className="p-5 overflow-y-auto space-y-5" onSubmit={handleSubmit}>
           {/* Seção: Identificação */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">

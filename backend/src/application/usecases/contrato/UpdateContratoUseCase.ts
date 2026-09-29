@@ -4,6 +4,7 @@ import { DomainError } from "../../../domain/errors/DomainError.js";
 import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import type { ICompanyRepository } from "../../../domain/repositories/ICompanyRepository.js";
 import type { IContratoRepository } from "../../../domain/repositories/IContratoRepository.js";
+import { normalizeInput, CONTRATO_RULES } from "../../../domain/normalization/input-rules.js";
 
 const DESCRICAO_CURTA_MAX_LENGTH = 20;
 
@@ -22,6 +23,8 @@ export class UpdateContratoUseCase {
     data: Omit<ContratoType, "tenant_id">;
     user: AuthenticatedUser;
   }) {
+    // Padroniza os textos antes de validar, buscar duplicados e gravar
+    data = normalizeInput(data, CONTRATO_RULES);
     const canEdit = new DomainAccessPolicy().can(user.role, "administrativo", "edit");
     if (!canEdit) {
       throw new DomainError("User is not authorized to perform this action");

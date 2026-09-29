@@ -4,6 +4,7 @@ import { DomainError } from "../../../domain/errors/DomainError.js";
 import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository.js";
 import type { IOrdemServicoRepository } from "../../../domain/repositories/IOrdemServicoRepository.js";
+import { normalizeInput, ORDEM_SERVICO_RULES } from "../../../domain/normalization/input-rules.js";
 
 export class UpdateOrdemServicoUseCase {
   constructor(
@@ -20,6 +21,8 @@ export class UpdateOrdemServicoUseCase {
     data: Omit<OrdemServicoType, "tenant_id">;
     user: AuthenticatedUser;
   }) {
+    // Padroniza os textos antes de validar, buscar duplicados e gravar
+    data = normalizeInput(data, ORDEM_SERVICO_RULES);
     const canEdit = new DomainAccessPolicy().can(user.role, "administrativo", "edit");
     if (!canEdit) {
       throw new DomainError("User is not authorized to perform this action");

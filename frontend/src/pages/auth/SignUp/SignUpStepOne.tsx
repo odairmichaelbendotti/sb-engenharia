@@ -1,5 +1,6 @@
 import { Mail, User } from "lucide-react";
 import PasswordInput from "../PasswordInput";
+import { normalizeEmail, normalizeProperName } from "../../../utils/normalization/text-normalizers";
 
 type SignUpStepOneProps = {
   name: string;
@@ -46,6 +47,7 @@ export default function SignUpStepOne({
               placeholder="João Silva"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onBlur={(e) => setName(normalizeProperName(e.target.value))}
               className="flex-1 bg-transparent outline-none text-sm text-text-primary placeholder:text-text-muted"
             />
           </div>
@@ -63,6 +65,7 @@ export default function SignUpStepOne({
               placeholder="voce@exemplo.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onBlur={(e) => setEmail(normalizeEmail(e.target.value))}
               className="flex-1 bg-transparent outline-none text-sm text-text-primary placeholder:text-text-muted"
             />
           </div>
