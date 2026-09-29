@@ -132,9 +132,11 @@ export const useCompanies = create<CompaniesStore>((set) => ({
 
     const data = (await response.json()) as Empresa;
 
+    // A resposta do update traz só o cadastro — mescla para manter os empenhos
+    // e demais dados da listagem (substituir quebrava a tabela)
     set((state) => ({
       companies: state.companies.map((company) =>
-        company.id === id ? data : company,
+        company.id === id ? { ...company, ...data } : company,
       ),
     }));
   },

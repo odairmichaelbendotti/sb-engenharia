@@ -88,7 +88,8 @@ export const useObras = create<ObrasState>((set) => ({
       return {
         data: {
           ...state.data,
-          obras: state.data.obras.map((o) => (o.id === id ? data : o)),
+          // Mescla: a resposta do update pode não trazer tudo o que a listagem traz
+          obras: state.data.obras.map((o) => (o.id === id ? { ...o, ...data } : o)),
         },
       };
     });
