@@ -96,7 +96,7 @@ export interface IOrdemServicoRepository {
   /** Cria a OS com seus vínculos; valor da OS = soma dos vínculos. */
   create(data: OrdemServicoPersistData): Promise<OrdemServicoListItem>;
   verifyNumero(numero: string, tenant_id: string): Promise<boolean>;
-  list(tenant_id?: string): Promise<ListOrdensServicoResponse>;
+  list(tenant_id?: string, company_id?: string): Promise<ListOrdensServicoResponse>;
   /** Contagem de OS ativas, agrupada por tenant — resumo multi-institucional do PLATFORM_ADMIN. */
   countActiveByTenant(): Promise<OrdemServicoActiveCountByTenant[]>;
   listOptionsForObra(tenant_id: string): Promise<OrdemServicoOption[]>;

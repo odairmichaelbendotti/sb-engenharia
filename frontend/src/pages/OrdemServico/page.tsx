@@ -56,6 +56,7 @@ export default function OrdensServico() {
   const [sort, setSort] = useState<OrdemServicoSort>("URGENCY");
   const [empenhoId, setEmpenhoId] = useEmpenhoFilter();
   const [isListLoading, setIsListLoading] = useState(true);
+  const { canCreateOrdemServico, isEmpresaRestricted } = usePermission();
 
   const { fetchOrdensServico, data } = useOrdensServico();
 
@@ -102,9 +103,10 @@ export default function OrdensServico() {
       ATIVO: searchedOrdensServico.filter((os) => os.status === "ATIVO").length,
       FINALIZADO: searchedOrdensServico.filter((os) => os.status === "FINALIZADO").length,
       CANCELADO: searchedOrdensServico.filter((os) => os.status === "CANCELADO").length,
-      SEM_OBRA: searchedOrdensServico.filter(isSemObra).length,
+      // Pendência interna (criar a obra da OS): não aparece para o login da empresa
+      SEM_OBRA: isEmpresaRestricted ? 0 : searchedOrdensServico.filter(isSemObra).length,
     }),
-    [searchedOrdensServico],
+    [searchedOrdensServico, isEmpresaRestricted],
   );
 
   // Se a aba "Sem obra" some (pendências resolvidas), volta para "Todas"
@@ -144,8 +146,6 @@ export default function OrdensServico() {
     setIsDeleteOpen(false);
     setOrdemServicoToDelete(null);
   };
-
-  const { canCreateOrdemServico } = usePermission();
 
   return (
     <div className="p-4 md:p-5 max-w-7xl mx-auto">

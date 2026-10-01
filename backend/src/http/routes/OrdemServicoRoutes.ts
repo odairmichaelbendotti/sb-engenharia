@@ -51,10 +51,11 @@ OrdemServicoRoutes.post(
   (req, res) => ordemServicoController.create(req, res),
 );
 
+// EMPRESA também lista, restrita às OS dos próprios contratos (escopo aplicado no use case)
 OrdemServicoRoutes.get(
   "/ordem-servico/list",
   authMiddleware.handle,
-  requireDomainAccess.handle("administrativo", "view"),
+  requireCapability.handle("viewOrdensServico"),
   (req, res) => ordemServicoController.list(req, res),
 );
 

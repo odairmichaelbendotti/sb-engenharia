@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { SquareDashedMousePointer, LogOut, Building2 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { adminItems } from "./adm-items";
+import { empresaItems } from "./empresa-items";
 import { engItems } from "./eng-items";
 import { gestaoItems } from "./gestao-items";
 import { plataformaItems } from "./plataforma-items";
@@ -63,8 +64,8 @@ const Sidebar = () => {
         <div className="flex flex-col h-full mt-6 overflow-y-auto">
           {isEmpresaRestricted ? (
             <SidebarGroup
-              label="Engenharia"
-              items={engItems.filter((item) => item.path === "/mapa-obras")}
+              label="Acompanhamento"
+              items={empresaItems}
             />
           ) : (
             <>

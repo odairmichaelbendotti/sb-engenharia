@@ -124,8 +124,12 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
     }
   }
 
-  async list(tenant_id?: string): Promise<ListOrdensServicoResponse> {
-    const tenantFilter = tenant_id ? { tenant_id } : {};
+  async list(tenant_id?: string, company_id?: string): Promise<ListOrdensServicoResponse> {
+    // Escopo da organização e, para EMPRESA, só as OS de contratos da própria empresa
+    const tenantFilter = {
+      ...(tenant_id ? { tenant_id } : {}),
+      ...(company_id ? { empenho: { contrato: { company_id } } } : {}),
+    };
     try {
       const [ordensServico, total, ativas, finalizadas, canceladas, valorAgg, executadoPorOS] = await Promise.all([
         prisma.ordemServico.findMany({
@@ -144,7 +148,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
           where: {
             ordemServico_id: { not: null },
             status: { not: "CANCELADO" },
-            ...(tenant_id ? { ordemServico: { tenant_id } } : {}),
+            ...(tenant_id || company_id ? { ordemServico: tenantFilter } : {}),
           },
           _sum: { value: true },
         }),

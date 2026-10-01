@@ -68,7 +68,12 @@ function ordensServicoInclude(company_id?: string) {
 function obraListInclude(company_id?: string) {
   return {
     ordensServico: ordensServicoInclude(company_id),
-    invoices: { select: INVOICE_INFO_SELECT, orderBy: { vencimento: "asc" } },
+    // Para EMPRESA, o executado considera só as notas dos empenhos da própria empresa
+    invoices: {
+      ...(company_id ? { where: { empenho: { contrato: { company_id } } } } : {}),
+      select: INVOICE_INFO_SELECT,
+      orderBy: { vencimento: "asc" },
+    },
   } as const;
 }
 

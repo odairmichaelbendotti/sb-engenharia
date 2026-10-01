@@ -183,12 +183,13 @@ Matriz de acesso (`view` = listar/ler; `edit` = criar/editar/excluir, implica `v
 | COORDENACAO | edit | edit |
 | MASTER | edit | edit |
 | PLATFORM_ADMIN | view | edit |
-| EMPRESA | view (só Mapa, da própria empresa) | none |
+| EMPRESA | view (Obras, OS e Mapa, só da própria empresa; somente leitura) | none |
 
 **Capabilities (2026-09-29)** — ações que fogem da matriz ficam em `DomainAccessPolicy.canDo(role, capability)` e no middleware `RequireCapability`:
 - `manageUsers` (PLATFORM_ADMIN, MASTER, COORDENACAO): aprovar/recusar cadastro, listar usuários e mudar role. MASTER e COORDENACAO só na própria tenant e sem conceder nem alterar PLATFORM_ADMIN. COORDENACAO = MASTER, a diferença é só hierárquica.
 - `createOrdemServico` (administrativo edit + ENGENHARIA): `POST /ordem-servico/create`. ENGENHARIA não edita nem exclui OS.
 - `createCompanyAccess` (administrativo edit + ENGENHARIA): `POST /company/:id/create-access`.
+- `viewOrdensServico` (quem vê o administrativo + EMPRESA, 2026-10-01): `GET /ordem-servico/list`. Para EMPRESA o `ListOrdensServicoUseCase` passa `company_id` e o repository filtra `empenho.contrato.company_id` (empenho principal da OS), inclusive nas contagens e no executado — mesmo critério de `GET /obra/list`.
 
 A cola de perfis da tela de Usuários (`frontend/src/pages/Users/role-guide.ts`) e o `usePermission.ts` espelham essas regras — mudou aqui, atualizar lá.
 

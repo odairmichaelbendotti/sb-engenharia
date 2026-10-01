@@ -41,9 +41,9 @@ export function usePermission() {
     // ENGENHARIA só visualiza o administrativo, mas pode abrir OS e criar acesso de empresa
     canCreateOrdemServico: access.administrativo === "edit" || role === "ENGENHARIA",
     canCreateCompanyAccess: access.administrativo === "edit" || role === "ENGENHARIA",
-    // Login da empresa contratada — só enxerga o Mapa de Obras, filtrado pela
-    // própria empresa. Ver AppLayout.tsx (redireciona qualquer outra rota) e
-    // Sidebar/MobileSidebar (só mostram o item Mapa de Obras).
+    // Login da empresa contratada — só leitura de Obras, Ordens de Serviço e Mapa
+    // de Obras, filtrados pela própria empresa no backend. Ver AppLayout.tsx
+    // (redireciona qualquer outra rota) e Sidebar/empresa-items.ts.
     isEmpresaRestricted: role === "EMPRESA",
   };
 }
