@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Menu, X, LogOut, Building2 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { adminItems } from "./adm-items";
+import { empresaItems } from "./empresa-items";
 import { engItems } from "./eng-items";
 import { gestaoItems } from "./gestao-items";
 import { plataformaItems } from "./plataforma-items";
@@ -101,8 +102,8 @@ const MobileSidebar = () => {
           <div className="flex-1 overflow-y-auto">
             {isEmpresaRestricted ? (
               <SidebarGroup
-                label="Engenharia"
-                items={engItems.filter((item) => item.path === "/mapa-obras")}
+                label="Acompanhamento"
+                items={empresaItems}
                 onNavigate={handleLinkClick}
               />
             ) : (

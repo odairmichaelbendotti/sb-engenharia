@@ -2,6 +2,7 @@ import { Navigate, Outlet, useLocation } from "react-router";
 import Sidebar from "../Sidebar/Sidebar";
 import MobileSidebar from "../Sidebar/MobileSidebar";
 import { useUser } from "../../store/user";
+import { EMPRESA_PATHS } from "../Sidebar/empresa-items";
 
 const EMPRESA_HOME = "/mapa-obras";
 
@@ -9,7 +10,8 @@ const AppLayout = () => {
   const { user } = useUser();
   const location = useLocation();
 
-  if (user?.role === "EMPRESA" && location.pathname !== EMPRESA_HOME) {
+  // Empresa só acessa as telas do próprio menu (somente leitura); o resto volta ao mapa
+  if (user?.role === "EMPRESA" && !EMPRESA_PATHS.includes(location.pathname)) {
     return <Navigate to={EMPRESA_HOME} replace />;
   }
 
