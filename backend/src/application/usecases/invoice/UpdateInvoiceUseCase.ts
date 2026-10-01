@@ -29,7 +29,11 @@ export class UpdateInvoiceUseCase {
 
     await this.scopeValidator.validateOwnership(user, id);
     const empenho = await this.scopeValidator.validate(user, invoice.empenho_id, invoice.company_id);
-    await this.scopeValidator.validateObra(invoice.empenho_id, invoice.obra_id);
+    const vinculo = await this.scopeValidator.resolveObra({
+      empenho,
+      obra_id: invoice.obra_id,
+      ordemServico_id: invoice.ordemServico_id,
+    });
 
     // Nota cancelada não consome o empenho; as demais somam ao que já foi lançado, sem contar a própria nota
     if (invoice.status !== "CANCELADO") {
@@ -39,6 +43,6 @@ export class UpdateInvoiceUseCase {
       }
     }
 
-    return this.repository.update({ ...invoice, value }, id);
+    return this.repository.update({ ...invoice, ...vinculo, value }, id);
   }
 }

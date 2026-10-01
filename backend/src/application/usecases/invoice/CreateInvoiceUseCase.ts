@@ -24,6 +24,7 @@ export class CreateInvoiceUseCase {
       empenho_id,
       company_id,
       obra_id,
+      ordemServico_id,
     } = normalizeInput(input, INVOICE_RULES);
     if (value <= 0) {
       throw new DomainError("Value must be greater than 0");
@@ -37,7 +38,7 @@ export class CreateInvoiceUseCase {
       throw new DomainError("Value exceeds empenho limit");
     }
 
-    await this.scopeValidator.validateObra(empenho_id, obra_id);
+    const vinculo = await this.scopeValidator.resolveObra({ empenho, obra_id, ordemServico_id });
 
     const invoiceExist = await this.repository.findByNumber(numero);
 
@@ -56,7 +57,8 @@ export class CreateInvoiceUseCase {
       value,
       empenho_id,
       company_id,
-      obra_id,
+      obra_id: vinculo.obra_id,
+      ordemServico_id: vinculo.ordemServico_id,
     });
 
     return await this.repository.create({
@@ -67,6 +69,7 @@ export class CreateInvoiceUseCase {
       empenho_id: invoiceEntity.empenho_id,
       company_id: invoiceEntity.company_id,
       obra_id: invoiceEntity.obra_id,
+      ordemServico_id: invoiceEntity.ordemServico_id,
     });
   }
 }

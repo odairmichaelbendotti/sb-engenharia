@@ -12,6 +12,8 @@ export type Invoice = {
   empenho_id: string;
   company_id: string;
   obra_id?: string | null;
+  // OS da obra que a nota paga
+  ordemServico_id?: string | null;
   company: {
     id: string;
     name: string;
@@ -47,7 +49,8 @@ export type InvoiceFormData = {
   value: string;
   empenho_id: string;
   company_id: string;
-  obra_id: string;
+  // A nota indica a OS (e, por ela, a obra); vazio quando o empenho não financia obra
+  ordemServico_id: string;
   status: InvoiceStatus;
 };
 
@@ -59,4 +62,5 @@ export type CreateInvoiceProps = {
   empenho_id: string;
   company_id: string;
   obra_id?: string;
+  ordemServico_id?: string;
 };

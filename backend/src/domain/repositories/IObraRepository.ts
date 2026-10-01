@@ -10,35 +10,30 @@ export type ObraStats = {
   valorExecutadoTotal: number;
 };
 
-export type ObraOrdemServicoInfo = {
-  ordemServico: {
+export type ObraContratoInfo = {
+  id: string;
+  identificador: string;
+  descricaoCurta: string;
+  cor: string;
+  company: {
     id: string;
-    numero: string;
-    valor: number;
-    status: string;
-    empenho: {
-      id: string;
-      numero: string;
-      description: string;
-      category: string;
-      status: string;
-      value: number;
-      totalPaid: number;
-      startAt: Date;
-      endAt: Date;
-      contrato: {
-        id: string;
-        identificador: string;
-        descricaoCurta: string;
-        cor: string;
-        company: {
-          id: string;
-          name: string;
-          cnpj: string;
-        };
-      };
-    };
+    name: string;
+    cnpj: string;
   };
+};
+
+// OS executada na obra, com o cronograma e quanto dela já foi executado (notas fiscais)
+export type ObraOrdemServicoResumo = {
+  id: string;
+  numero: string;
+  valor: number;
+  status: string;
+  dataInicio: Date | null;
+  dataPrevisaoTermino: Date | null;
+  // Soma das notas não canceladas lançadas nesta OS
+  valorExecutado: number;
+  empenhos: { empenho_id: string; numero: string }[];
+  contrato: ObraContratoInfo;
 };
 
 export type ObraInvoiceResumo = {
@@ -48,21 +43,40 @@ export type ObraInvoiceResumo = {
   vencimento: Date;
   value: number;
   status: string;
+  ordemServico_id: string | null;
 };
 
-export type ObraInvoiceInfo = {
+// Obra como a listagem devolve: o orçamento e o prazo vêm das OS da obra
+export type ObraListItem = PersistedObra & {
+  // Menor início e maior previsão de término entre as OS não canceladas
+  dataInicio: Date | null;
+  dataPrevisaoTermino: Date | null;
+  // Soma do valor das OS não canceladas
+  valor: number;
+  // Contrato da OS mais antiga — define a cor da obra no mapa
+  contrato: ObraContratoInfo | null;
+  ordensServico: ObraOrdemServicoResumo[];
   invoices: ObraInvoiceResumo[];
 };
 
 export type ListObrasResponse = {
-  obras: (PersistedObra & ObraOrdemServicoInfo & ObraInvoiceInfo)[];
+  obras: ObraListItem[];
   stats: ObraStats;
 };
 
+// Uma opção por OS: a nota fiscal indica a obra e a OS dela que está sendo paga
 export type ObraOptionForInvoice = {
   id: string;
   nome: string;
   identificacaoPatrimonial: string;
+  ordemServico: { id: string; numero: string };
+};
+
+export type ObraOption = {
+  id: string;
+  nome: string;
+  identificacaoPatrimonial: string;
+  status: ObraStatusValue;
 };
 
 export type ObraSummaryByTenant = {
@@ -86,23 +100,24 @@ export type ObraDetailEmpenhoResumo = {
   ordensServicoCount: number;
 };
 
-// Situação de cada empenho que financia a OS desta obra
+// Situação de cada empenho que financia as OS desta obra
 export type ObraDetailEmpenhoFinanceiro = {
   id: string;
   value: number;
-  // Quanto do empenho foi destinado a esta OS
+  // Quanto do empenho foi destinado às OS desta obra
   valorNaOS: number;
   // Liquidado do empenho inteiro (todas as OS)
   liquidado: number;
   // Liquidado só nesta obra
   liquidadoNaOS: number;
-  // Soma do destinado a OS não canceladas (inclui esta OS)
+  // Soma do destinado a OS não canceladas (inclui as desta obra)
   comprometidoOS: number;
   ordensServicoCount: number;
 };
 
 export type ObraDetailFinancial = {
-  ordemServico: { valor: number; liquidado: number };
+  // Totais da obra: soma das OS não canceladas e das notas da obra
+  obra: { valor: number; liquidado: number };
   empenhos: ObraDetailEmpenhoFinanceiro[];
   contrato: {
     valor: number;
@@ -115,9 +130,12 @@ export type ObraDetailFinancial = {
 };
 
 export type ObraDetail = {
-  obra: Omit<PersistedObra, "valorExecutado">;
-  ordemServico: { id: string; numero: string; status: string };
-  // Empenhos que financiam a OS, na ordem em que foram vinculados (o primeiro é o principal)
+  obra: Omit<PersistedObra, "valorExecutado"> & {
+    dataInicio: Date | null;
+    dataPrevisaoTermino: Date | null;
+  };
+  ordensServico: ObraOrdemServicoResumo[];
+  // Empenhos que financiam as OS da obra, na ordem em que foram vinculados
   empenhos: {
     id: string;
     numero: string;
@@ -126,15 +144,11 @@ export type ObraDetail = {
     startAt: Date;
     endAt: Date;
   }[];
-  contrato: {
-    id: string;
-    identificador: string;
-    descricaoCurta: string;
-    cor: string;
+  // Contrato da OS mais antiga da obra
+  contrato: ObraContratoInfo & {
     status: string;
     dataInicio: Date;
     dataFim: Date;
-    company: { id: string; name: string; cnpj: string };
   };
   // null quando o usuário não pode ver o domínio administrativo (ex.: EMPRESA)
   financial: ObraDetailFinancial | null;
@@ -143,17 +157,23 @@ export type ObraDetail = {
 export interface IObraRepository {
   /** Detalhe da obra restrito ao tenant e, para EMPRESA, à própria empresa; null se não encontrada. */
   getDetail(id: string, tenant_id: string | undefined, company_id?: string): Promise<ObraDetail | null>;
-  create(obra: ObraEntity): Promise<PersistedObra & ObraOrdemServicoInfo>;
+  /** Cria a obra e vincula a ela as OS informadas (ao menos uma). */
+  create(obra: ObraEntity, ordemServicoIds: string[]): Promise<ObraListItem>;
   list(tenant_id: string | undefined, company_id?: string, includeInvoices?: boolean): Promise<ListObrasResponse>;
+  /** OS (com obra) financiadas pelo empenho — opções de obra/OS da nota fiscal. */
   listOptionsForInvoice(tenant_id: string, empenho_id: string): Promise<ObraOptionForInvoice[]>;
+  /** Obras da organização — opções do campo "Obra" no cadastro da OS. */
+  listOptions(tenant_id: string): Promise<ObraOption[]>;
   /** Obras em andamento + orçamento/executado, agrupados por tenant — resumo multi-institucional do PLATFORM_ADMIN. */
   summaryByTenant(): Promise<ObraSummaryByTenant[]>;
   findById(id: string): Promise<PersistedObra | null>;
-  /** Empenhos que financiam a OS da obra (obra → OS → empenhos); null se a obra não existe. */
-  findEmpenhoIds(id: string): Promise<string[] | null>;
-  /** Se o empenho financia a OS de alguma obra — nesse caso a NF precisa indicar a obra. */
-  empenhoHasObra(empenho_id: string): Promise<boolean>;
-  update(id: string, obra: ObraType): Promise<PersistedObra & ObraOrdemServicoInfo>;
-  updateStatus(id: string, status: ObraStatusValue): Promise<PersistedObra & ObraOrdemServicoInfo>;
+  /** Ids das OS vinculadas à obra. */
+  findOrdemServicoIds(id: string): Promise<string[]>;
+  /**
+   * Atualiza os dados da obra. Com `ordemServicoIds`, o conjunto de OS da obra passa a ser
+   * exatamente esse (as que saem ficam sem obra).
+   */
+  update(id: string, obra: ObraType, ordemServicoIds?: string[]): Promise<ObraListItem>;
+  updateStatus(id: string, status: ObraStatusValue): Promise<ObraListItem>;
   delete(id: string): Promise<void>;
 }

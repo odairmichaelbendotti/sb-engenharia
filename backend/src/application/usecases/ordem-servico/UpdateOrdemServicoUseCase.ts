@@ -3,18 +3,23 @@ import { OrdemServicoEntity, type OrdemServicoType } from "../../../domain/entit
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository.js";
+import type { IObraRepository } from "../../../domain/repositories/IObraRepository.js";
 import type { IOrdemServicoRepository } from "../../../domain/repositories/IOrdemServicoRepository.js";
 import { normalizeInput, ORDEM_SERVICO_RULES } from "../../../domain/normalization/input-rules.js";
 import { OrdemServicoEmpenhosValidator } from "./OrdemServicoEmpenhosValidator.js";
+import { OrdemServicoObraValidator } from "./OrdemServicoObraValidator.js";
 
 export class UpdateOrdemServicoUseCase {
   private empenhosValidator: OrdemServicoEmpenhosValidator;
+  private obraValidator: OrdemServicoObraValidator;
 
   constructor(
     private repository: IOrdemServicoRepository,
     empenhoRepository: IEmpenhoRepository,
+    obraRepository: IObraRepository,
   ) {
     this.empenhosValidator = new OrdemServicoEmpenhosValidator(empenhoRepository);
+    this.obraValidator = new OrdemServicoObraValidator(obraRepository, repository);
   }
 
   async execute({
@@ -23,6 +28,7 @@ export class UpdateOrdemServicoUseCase {
     user,
   }: {
     ordemServicoId: string;
+    // obra_id undefined = mantém a obra atual; null = retira a OS da obra
     data: Omit<OrdemServicoType, "tenant_id">;
     user: AuthenticatedUser;
   }) {
@@ -49,16 +55,19 @@ export class UpdateOrdemServicoUseCase {
     const ordemServicoEntity = new OrdemServicoEntity({
       numero,
       empenhos: data.empenhos ?? [],
+      dataInicio: data.dataInicio || existing.dataInicio?.toISOString() || "",
+      dataPrevisaoTermino: data.dataPrevisaoTermino || existing.dataPrevisaoTermino?.toISOString() || "",
+      obra_id: data.obra_id === undefined ? existing.obra_id : data.obra_id,
       tenant_id: existing.tenant_id,
     });
 
-    // Empenho só sai da OS se nenhuma nota fiscal da obra desta OS foi lançada nele
+    // Empenho só sai da OS se nenhuma nota fiscal desta OS foi lançada nele
     const novosIds = new Set(ordemServicoEntity.empenhos.map((e) => e.empenho_id));
     const atuais = await this.repository.listVinculos(ordemServicoId);
     for (const removido of atuais.filter((vinculo) => !novosIds.has(vinculo.empenho_id))) {
       if (await this.repository.hasInvoicesForEmpenho(ordemServicoId, removido.empenho_id)) {
         throw new DomainError(
-          `Não é possível remover o empenho ${removido.numero}: já existem notas fiscais desta obra lançadas nele.`,
+          `Não é possível remover o empenho ${removido.numero}: já existem notas fiscais desta OS lançadas nele.`,
         );
       }
     }
@@ -68,7 +77,19 @@ export class UpdateOrdemServicoUseCase {
       empenhos: ordemServicoEntity.empenhos,
       ordemServicoId,
     });
+    await this.obraValidator.validate({
+      user,
+      ordemServicoId,
+      obraAnterior: existing.obra_id,
+      obraNova: ordemServicoEntity.obra_id,
+    });
 
-    return this.repository.update(ordemServicoId, { numero: ordemServicoEntity.numero, empenhos: vinculos });
+    return this.repository.update(ordemServicoId, {
+      numero: ordemServicoEntity.numero,
+      empenhos: vinculos,
+      dataInicio: new Date(ordemServicoEntity.dataInicio),
+      dataPrevisaoTermino: new Date(ordemServicoEntity.dataPrevisaoTermino),
+      obra_id: ordemServicoEntity.obra_id,
+    });
   }
 }

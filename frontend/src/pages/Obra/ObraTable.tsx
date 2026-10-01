@@ -1,176 +1,23 @@
-import {
-  HardHat,
-  Trash2,
-  Edit2,
-  CheckCircle2,
-  Activity,
-  PauseCircle,
-  XCircle,
-  CalendarClock,
-  ArrowUp,
-  ArrowDown,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Trash2, Edit2, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Obra } from "../../../types/obra";
-import { formatCurrency } from "../../utils/format-currency";
+import { formatCurrency, formatDateOnly } from "../../utils/format-currency";
 import { usePermission } from "../../hooks/usePermission";
+import { OBRA_STATUS, OBRA_TIPO_LABEL, getObraDeadlineHint } from "./obra-display";
 
 const ITEMS_PER_PAGE = 10;
 
 interface ObraTableProps {
   obras: Obra[];
-  formatCurrency: (v: number) => string;
+  onView: (obra: Obra) => void;
   onEdit: (obra: Obra) => void;
   onDelete: (obra: Obra) => void;
 }
 
-const STATUS_MAP = {
-  EM_ANDAMENTO: {
-    label: "Andamento",
-    icon: Activity,
-    bg: "bg-warning-bg",
-    text: "text-warning-text",
-    border: "border-warning-border",
-  },
-  CONCLUIDA: {
-    label: "Concluída",
-    icon: CheckCircle2,
-    bg: "bg-success-bg",
-    text: "text-success-text",
-    border: "border-success-border",
-  },
-  PARALISADA: {
-    label: "Paralisada",
-    icon: PauseCircle,
-    bg: "bg-danger-bg",
-    text: "text-danger-text",
-    border: "border-danger-border",
-  },
-  CANCELADA: {
-    label: "Cancelada",
-    icon: XCircle,
-    bg: "bg-surface-muted",
-    text: "text-text-muted",
-    border: "border-border",
-  },
-};
-
-const TIPO_MAP: Record<string, string> = {
-  CONSTRUCAO: "Construção",
-  REFORMA: "Reforma",
-  AMPLIACAO: "Ampliação",
-  PAVIMENTACAO: "Pavimentação",
-  SANEAMENTO: "Saneamento",
-  MANUTENCAO_PREDIAL: "Manutenção Predial",
-  OUTRO: "Outro",
-};
-
-type SortKey = "nome" | "dataPrevisaoTermino" | "orcamento" | "valorExecutado";
+type SortKey = "nome" | "dataPrevisaoTermino" | "valor";
 type SortDir = "asc" | "desc";
 
-function StatusBadge({ status }: { status: Obra["status"] }) {
-  const cfg = STATUS_MAP[status] ?? STATUS_MAP.CANCELADA;
-  const Icon = cfg.icon;
-  return (
-    <span
-      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium border ${cfg.bg} ${cfg.text} ${cfg.border} whitespace-nowrap`}
-    >
-      <Icon size={10} />
-      {cfg.label}
-    </span>
-  );
-}
-
-function ProgressCell({
-  orcamento,
-  executado,
-  formatCurrency,
-}: {
-  orcamento: number;
-  executado: number;
-  formatCurrency: (v: number) => string;
-}) {
-  const [hover, setHover] = useState(false);
-  const pct =
-    orcamento > 0
-      ? Math.min(100, Math.round((executado / orcamento) * 100))
-      : 0;
-
-  return (
-    <div
-      className="relative w-full min-w-25"
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-    >
-      <div className="flex items-center gap-2">
-        <div className="flex-1 h-2 bg-border rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all duration-300 ${pct >= 90 ? "bg-danger-text" : pct >= 60 ? "bg-warning-text" : "bg-primary-500"}`}
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-        <span className="text-xs text-text-muted w-8 text-right shrink-0">
-          {pct}%
-        </span>
-      </div>
-      {hover && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-text-primary text-text-inverse text-xs rounded-lg whitespace-nowrap z-10 shadow-xl">
-          <p className="font-medium">{pct}% executado</p>
-          <p className="text-text-inverse/70">
-            {formatCurrency(executado)} / {formatCurrency(orcamento)}
-          </p>
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-text-primary" />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DeadlineCell({
-  date,
-  status,
-}: {
-  date: Date | string;
-  status: Obra["status"];
-}) {
-  const d = date instanceof Date ? date : new Date(date);
-  const today = new Date();
-  const diffDays = Math.ceil(
-    (d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-  );
-  const isOver = diffDays < 0 && status === "EM_ANDAMENTO";
-  const isClose = diffDays >= 0 && diffDays <= 30 && status === "EM_ANDAMENTO";
-
-  return (
-    <div>
-      <span
-        className={`text-sm ${isOver ? "text-danger-text font-medium" : isClose ? "text-warning-text font-medium" : "text-text-primary"}`}
-      >
-        {d.toLocaleDateString("pt-BR")}
-      </span>
-      {isOver && (
-        <p className="text-xs text-danger-text mt-0.5">Prazo vencido</p>
-      )}
-      {isClose && (
-        <p className="text-xs text-warning-text mt-0.5">
-          {diffDays}d restantes
-        </p>
-      )}
-    </div>
-  );
-}
-
-function SortIcon({
-  k,
-  sortKey,
-  sortDir,
-}: {
-  k: SortKey;
-  sortKey: SortKey;
-  sortDir: SortDir;
-}) {
+function SortIcon({ k, sortKey, sortDir }: { k: SortKey; sortKey: SortKey; sortDir: SortDir }) {
   if (sortKey !== k) return <ArrowUp size={12} className="text-text-muted" />;
   return sortDir === "asc" ? (
     <ArrowUp size={12} className="text-primary-500" />
@@ -179,11 +26,29 @@ function SortIcon({
   );
 }
 
-export function ObraTable({
-  obras,
-  onEdit,
-  onDelete,
-}: Omit<ObraTableProps, "formatCurrency">) {
+function ExecucaoCell({ executado, valor }: { executado: number; valor: number }) {
+  const pct = valor > 0 ? Math.round((executado / valor) * 100) : 0;
+  return (
+    <div className="min-w-36" title={`${formatCurrency(executado)} liquidados de ${formatCurrency(valor)}`}>
+      <div className="flex items-baseline justify-between gap-2 text-xs tabular-nums">
+        <span className="font-medium text-text-primary">{formatCurrency(executado)}</span>
+        <span className={pct > 100 ? "font-semibold text-danger-text" : "text-text-muted"}>{pct}%</span>
+      </div>
+      <div className="mt-1 h-1.5 rounded-full bg-surface-muted overflow-hidden">
+        <div
+          className={`h-full rounded-full ${pct > 100 ? "bg-danger-text" : "bg-primary-500"}`}
+          style={{ width: `${Math.min(100, pct)}%` }}
+        />
+      </div>
+      <p className="mt-1 text-[11px] text-text-muted tabular-nums">de {formatCurrency(valor)}</p>
+    </div>
+  );
+}
+
+const thClass = "py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase";
+const sortableClass = "cursor-pointer hover:text-text-primary transition-colors";
+
+export function ObraTable({ obras, onView, onEdit, onDelete }: ObraTableProps) {
   const { canEditEngenharia } = usePermission();
   const [sortKey, setSortKey] = useState<SortKey>("dataPrevisaoTermino");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -203,13 +68,12 @@ export function ObraTable({
       [...obras].sort((a, b) => {
         let cmp = 0;
         if (sortKey === "nome") cmp = a.nome.localeCompare(b.nome);
-        else if (sortKey === "orcamento") cmp = a.ordemServico.valor - b.ordemServico.valor;
-        else if (sortKey === "valorExecutado")
-          cmp = a.valorExecutado - b.valorExecutado;
+        else if (sortKey === "valor") cmp = a.valor - b.valor;
         else {
-          const da = new Date(a.dataPrevisaoTermino).getTime();
-          const db = new Date(b.dataPrevisaoTermino).getTime();
-          cmp = da - db;
+          // Obra sem prazo (OS sem datas) vai para o fim
+          const da = a.dataPrevisaoTermino ? new Date(a.dataPrevisaoTermino).getTime() : Infinity;
+          const db = b.dataPrevisaoTermino ? new Date(b.dataPrevisaoTermino).getTime() : Infinity;
+          cmp = da === db ? 0 : da < db ? -1 : 1;
         }
         return sortDir === "asc" ? cmp : -cmp;
       }),
@@ -219,24 +83,7 @@ export function ObraTable({
   const totalPages = Math.max(1, Math.ceil(sorted.length / ITEMS_PER_PAGE));
   const currentPage = Math.min(page, totalPages);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginated = useMemo(
-    () => sorted.slice(startIndex, startIndex + ITEMS_PER_PAGE),
-    [sorted, startIndex],
-  );
-
-  if (obras.length === 0) {
-    return (
-      <div className="py-10 text-center">
-        <HardHat size={32} className="mx-auto text-text-muted mb-3" />
-        <p className="text-text-secondary font-medium">
-          Nenhuma obra encontrada
-        </p>
-        <p className="text-text-muted text-sm mt-1">
-          Ajuste os filtros ou cadastre uma nova obra
-        </p>
-      </div>
-    );
-  }
+  const paginated = useMemo(() => sorted.slice(startIndex, startIndex + ITEMS_PER_PAGE), [sorted, startIndex]);
 
   return (
     <div>
@@ -244,141 +91,115 @@ export function ObraTable({
         <table className="w-full">
           <thead className="bg-surface-muted border-b border-border">
             <tr>
-              <th
-                className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors"
-                onClick={() => handleSort("nome")}
-              >
+              <th className={`text-left ${thClass} ${sortableClass}`} onClick={() => handleSort("nome")}>
                 <div className="flex items-center gap-1">
                   Obra <SortIcon k="nome" sortKey={sortKey} sortDir={sortDir} />
                 </div>
               </th>
-              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
-                Status
-              </th>
+              <th className={`text-left ${thClass} hidden sm:table-cell`}>Status</th>
               <th
-                className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase hidden lg:table-cell cursor-pointer hover:text-text-primary transition-colors"
+                className={`text-left ${thClass} ${sortableClass} hidden lg:table-cell`}
                 onClick={() => handleSort("dataPrevisaoTermino")}
               >
                 <div className="flex items-center gap-1">
-                  Previsão{" "}
-                  <SortIcon
-                    k="dataPrevisaoTermino"
-                    sortKey={sortKey}
-                    sortDir={sortDir}
-                  />
+                  Prazo <SortIcon k="dataPrevisaoTermino" sortKey={sortKey} sortDir={sortDir} />
                 </div>
               </th>
-              <th
-                className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase cursor-pointer hover:text-text-primary transition-colors"
-                onClick={() => handleSort("orcamento")}
-              >
-                <div className="flex items-center justify-end gap-1">
-                  Orçamento{" "}
-                  <SortIcon k="orcamento" sortKey={sortKey} sortDir={sortDir} />
+              <th className={`text-left ${thClass} ${sortableClass} hidden md:table-cell`} onClick={() => handleSort("valor")}>
+                <div className="flex items-center gap-1">
+                  Execução <SortIcon k="valor" sortKey={sortKey} sortDir={sortDir} />
                 </div>
               </th>
-              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
-                Execução
-              </th>
-              {canEditEngenharia && (
-                <th className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
-                  Ações
-                </th>
-              )}
+              {canEditEngenharia && <th className={`w-px ${thClass}`} aria-label="Ações" />}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {paginated.map((obra) => (
-              <tr
-                key={obra.id}
-                className="hover:bg-surface-muted/50 transition-colors group"
-              >
-                <td className="py-2.5 px-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center shrink-0">
-                      <HardHat size={18} className="text-primary-500" />
-                    </div>
+            {paginated.map((obra) => {
+              const status = OBRA_STATUS[obra.status] ?? OBRA_STATUS.CANCELADA;
+              const hint = getObraDeadlineHint(obra);
+              const qtdOS = obra.ordensServico.length;
+              return (
+                <tr
+                  key={obra.id}
+                  tabIndex={0}
+                  onClick={() => onView(obra)}
+                  onKeyDown={(e) => {
+                    if (e.target !== e.currentTarget) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onView(obra);
+                    }
+                  }}
+                  className="group cursor-pointer hover:bg-primary-50/40 focus-visible:outline-none focus-visible:bg-primary-50/60 transition-colors"
+                >
+                  <td className="py-3 px-4">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="inline-block px-1.5 py-0.5 rounded bg-primary-100 text-primary-700 text-xs font-semibold shrink-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="px-1.5 py-0.5 rounded bg-primary-100 text-primary-700 text-xs font-semibold shrink-0">
                           {obra.identificacaoPatrimonial}
                         </span>
-                        <p className="font-semibold text-text-primary text-sm truncate max-w-32">
+                        <p className="font-medium text-text-primary text-sm truncate max-w-64" title={obra.nome}>
                           {obra.nome}
                         </p>
                       </div>
-                      <p className="text-xs text-text-muted">
-                        {TIPO_MAP[obra.tipo] ?? obra.tipo}
+                      <p className="text-xs text-text-muted mt-0.5">
+                        {OBRA_TIPO_LABEL[obra.tipo] ?? obra.tipo} · {qtdOS} {qtdOS === 1 ? "OS" : "OSs"}
                       </p>
                     </div>
-                  </div>
-                </td>
-                <td className="py-2.5 px-4">
-                  <StatusBadge status={obra.status} />
-                </td>
-                <td className="py-2.5 px-4 hidden lg:table-cell">
-                  <div className="flex items-center gap-1.5">
-                    <CalendarClock
-                      size={13}
-                      className="text-text-muted shrink-0"
-                    />
-                    <DeadlineCell
-                      date={obra.dataPrevisaoTermino}
-                      status={obra.status}
-                    />
-                  </div>
-                </td>
-                <td className="py-2.5 px-4 text-right">
-                  <p className="font-semibold text-text-primary text-sm">
-                    {formatCurrency(obra.ordemServico.valor)}
-                  </p>
-                  {/* Quanto falta liquidar da OS: valor da OS − notas da obra (1 OS : 1 obra) */}
-                  {obra.ordemServico.valor - obra.valorExecutado > 0 ? (
-                    <p className="text-xs text-text-muted" title="Valor da OS menos as notas fiscais emitidas">
-                      A liquidar: {formatCurrency(obra.ordemServico.valor - obra.valorExecutado)}
-                    </p>
-                  ) : (
-                    <p className="text-xs font-medium text-success-text">OS liquidada</p>
-                  )}
-                </td>
-                <td className="py-2.5 px-4 hidden md:table-cell">
-                  <ProgressCell
-                    orcamento={obra.ordemServico.valor}
-                    executado={obra.valorExecutado}
-                    formatCurrency={formatCurrency}
-                  />
-                </td>
-                {canEditEngenharia && (
-                  <td className="py-2.5 px-4">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => onEdit(obra)}
-                        className="p-2 hover:bg-primary-100 cursor-pointer text-text-secondary hover:text-primary-500 rounded-md transition-colors"
-                        title="Gerenciar obra"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button
-                        onClick={() => onDelete(obra)}
-                        className="p-2 hover:bg-danger-bg cursor-pointer text-text-secondary hover:text-danger-text rounded-md transition-colors"
-                        title="Excluir obra"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
                   </td>
-                )}
-              </tr>
-            ))}
+                  <td className="py-3 px-4 hidden sm:table-cell">
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium whitespace-nowrap ${status.text}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
+                      {status.label}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 hidden lg:table-cell">
+                    {obra.dataPrevisaoTermino ? (
+                      <>
+                        <p className="text-sm text-text-primary tabular-nums">{formatDateOnly(obra.dataPrevisaoTermino)}</p>
+                        {hint && <p className={`text-xs mt-0.5 ${hint.className}`}>{hint.label}</p>}
+                      </>
+                    ) : (
+                      <span className="text-xs text-text-muted">Sem prazo</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 hidden md:table-cell">
+                    <ExecucaoCell executado={obra.valorExecutado} valor={obra.valor} />
+                  </td>
+                  {canEditEngenharia && (
+                    <td className="py-3 px-3">
+                      {/* Ações discretas: aparecem ao passar o mouse; o clique na linha abre o resumo */}
+                      <div
+                        className="flex items-center justify-end gap-0.5 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          onClick={() => onEdit(obra)}
+                          className="p-1.5 cursor-pointer text-text-muted hover:text-primary-500 hover:bg-primary-100 rounded-md transition-colors"
+                          title="Editar obra"
+                        >
+                          <Edit2 size={15} />
+                        </button>
+                        <button
+                          onClick={() => onDelete(obra)}
+                          className="p-1.5 cursor-pointer text-text-muted hover:text-danger-text hover:bg-danger-bg rounded-md transition-colors"
+                          title="Excluir obra"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-surface-muted">
           <p className="text-sm text-text-secondary">
-            Mostrando {startIndex + 1} a{" "}
-            {Math.min(startIndex + ITEMS_PER_PAGE, sorted.length)} de{" "}
-            {sorted.length} obras
+            Mostrando {startIndex + 1} a {Math.min(startIndex + ITEMS_PER_PAGE, sorted.length)} de {sorted.length} obras
           </p>
           <div className="flex items-center gap-2">
             <button

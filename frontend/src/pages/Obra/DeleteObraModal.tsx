@@ -50,10 +50,10 @@ export function DeleteObraModal({ obra, handleClose }: DeleteObraModalProps) {
               Você está prestes a excluir permanentemente a obra:
             </p>
             <p className="text-sm text-text-primary font-semibold mt-1">"{obra.nome}"</p>
-            <p className="text-xs text-text-muted mt-1">{obra.identificacaoPatrimonial} · OS {obra.ordemServico.numero}</p>
+            <p className="text-xs text-text-muted mt-1">{obra.identificacaoPatrimonial} · OS {obra.ordensServico.map((os) => os.numero).join(", ")}</p>
           </div>
           <p className="text-sm text-text-secondary">
-            Todos os dados associados, como cronogramas e anotações, serão perdidos. Confirme somente se tiver certeza.
+            As ordens de serviço da obra não são excluídas: voltam a ficar sem obra. Confirme somente se tiver certeza.
           </p>
         </div>
 

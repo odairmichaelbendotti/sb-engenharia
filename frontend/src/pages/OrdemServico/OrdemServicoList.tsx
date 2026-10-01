@@ -59,6 +59,7 @@ const SCHEDULE_ICON: Record<ScheduleKind, LucideIcon> = {
   dueSoon: Clock,
   paused: PauseCircle,
   noObra: AlertTriangle,
+  noSchedule: AlertTriangle,
   onTrack: Clock,
   concluded: CheckCircle2,
   inactive: Clock,
@@ -196,20 +197,17 @@ function OrdemServicoRow({ ordemServico: os, canEdit, onView, onEdit, onDelete }
 
       {/* Obra e prazo */}
       <div className={`min-w-0 ${muted ? "opacity-60" : ""}`}>
-        {os.obra ? (
-          <>
-            <p className="flex items-center gap-1.5 text-sm text-text-primary min-w-0">
-              <HardHat size={14} className="text-text-muted shrink-0" />
-              <span className="truncate" title={os.obra.nome}>
-                {os.obra.nome}
-              </span>
-            </p>
-            <ScheduleTimeline
-              start={os.obra.dataInicio}
-              end={os.obra.dataPrevisaoTermino}
-              schedule={schedule}
-            />
-          </>
+        {os.obra && (
+          <p className="flex items-center gap-1.5 text-sm text-text-primary min-w-0">
+            <HardHat size={14} className="text-text-muted shrink-0" />
+            <span className="truncate" title={os.obra.nome}>
+              {os.obra.nome}
+            </span>
+          </p>
+        )}
+        {/* Prazo é da própria OS: aparece mesmo antes de ela ter obra */}
+        {os.dataInicio && os.dataPrevisaoTermino ? (
+          <ScheduleTimeline start={os.dataInicio} end={os.dataPrevisaoTermino} schedule={schedule} />
         ) : (
           <ScheduleChip schedule={schedule} />
         )}
@@ -223,7 +221,7 @@ function OrdemServicoRow({ ordemServico: os, canEdit, onView, onEdit, onDelete }
             {os.empenhos.length} empenhos
           </p>
         )}
-        {os.obra && <ExecutionBar executed={os.obra.valorExecutado} total={os.valor} />}
+        {os.obra && <ExecutionBar executed={os.valorExecutado} total={os.valor} />}
       </div>
 
       {/* Ações */}
@@ -252,8 +250,10 @@ function ScheduleChip({ schedule }: { schedule: OrdemServicoSchedule }) {
       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium whitespace-nowrap ${TONE_CHIP[schedule.tone]}`}
       title={
         schedule.kind === "noObra"
-          ? "Crie uma obra em Engenharia › Obras e selecione esta ordem de serviço"
-          : undefined
+          ? "Vincule esta OS a uma obra (no cadastro da OS ou da obra)"
+          : schedule.kind === "noSchedule"
+            ? "Edite a OS e informe o início e a previsão de término"
+            : undefined
       }
     >
       <Icon size={12} />

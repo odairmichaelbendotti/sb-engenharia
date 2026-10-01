@@ -117,8 +117,7 @@ model Obra {
   latitude            Float?
   longitude           Float?
   valorExecutado      Int        @default(0)
-  dataInicio          DateTime
-  dataPrevisaoTermino DateTime
+  // Cronograma fica nas OS da obra; a obra guarda só a data em que foi concluída
   dataConclusao       DateTime?
   responsavelTecnico  String
   anotacoes           String?
@@ -128,8 +127,8 @@ model Obra {
   tenant_id String
   tenant    Tenant @relation(fields: [tenant_id], references: [id])
 
-  ordemServico_id String       @unique
-  ordemServico    OrdemServico @relation(fields: [ordemServico_id], references: [id])
+  // Uma obra pode ter várias OS (ex.: serviço que faltou vira uma nova OS)
+  ordensServico OrdemServico[]
 
   invoices Invoice[]
 }
@@ -230,9 +229,18 @@ model OrdemServico {
   // Empenhos que financiam a OS; "valor" da OS é a soma deles
   empenhos OrdemServicoEmpenho[]
 
-  obra Obra?
+  // Cronograma de execução da OS
+  dataInicio          DateTime?
+  dataPrevisaoTermino DateTime?
+
+  // Obra em que a OS é executada; ao excluir a obra a OS volta a ficar sem obra
+  obra_id String?
+  obra    Obra?   @relation(fields: [obra_id], references: [id], onDelete: SetNull)
+
+  invoices Invoice[]
 
   @@unique([numero, tenant_id])
+  @@index([obra_id])
 }
 
 // Vínculo OS × empenho: quanto de cada empenho vai para a OS. Por padrão o empenho
@@ -278,5 +286,10 @@ model Invoice {
   obra_id String?
   obra    Obra?   @relation(fields: [obra_id], references: [id])
 
+  // OS da obra a que a nota se refere: é por ela que se mede a execução de cada OS
+  ordemServico_id String?
+  ordemServico    OrdemServico? @relation(fields: [ordemServico_id], references: [id], onDelete: Restrict)
+
+  @@index([ordemServico_id])
   @@map("nota_fiscal")
 }

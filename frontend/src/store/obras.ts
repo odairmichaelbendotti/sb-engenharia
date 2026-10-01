@@ -6,13 +6,17 @@ import type {
   ObraStatus,
   CreateObraPayload,
   ObraOptionForInvoice,
+  ObraOption,
 } from "../../types/obra";
 import { defaultFetch } from "../services/api";
 
 type ObrasState = {
   data: ListObras | null;
   obraOptionsForInvoice: ObraOptionForInvoice[];
+  obraOptions: ObraOption[];
   fetchObras: () => Promise<void>;
+  // Obras para o campo "Obra" do cadastro de OS
+  fetchObraOptions: () => Promise<void>;
   // Devolve também as opções, para o formulário já selecionar quando houver uma só
   fetchObraOptionsForInvoice: (empenhoId: string) => Promise<ObraOptionForInvoice[]>;
   fetchObraDetail: (id: string) => Promise<ObraDetail>;
@@ -25,12 +29,20 @@ type ObrasState = {
 export const useObras = create<ObrasState>((set) => ({
   data: null,
   obraOptionsForInvoice: [],
+  obraOptions: [],
 
   fetchObras: async () => {
     const response = await defaultFetch("/obra/list", { credentials: "include" });
     if (!response.ok) throw new Error("Erro ao carregar obras");
     const data: ListObras = await response.json();
     set({ data });
+  },
+
+  fetchObraOptions: async () => {
+    const response = await defaultFetch("/obra/list-for-ordem-servico", { credentials: "include" });
+    if (!response.ok) throw new Error("Erro ao carregar obras");
+    const obraOptions: ObraOption[] = await response.json();
+    set({ obraOptions });
   },
 
   fetchObraOptionsForInvoice: async (empenhoId) => {

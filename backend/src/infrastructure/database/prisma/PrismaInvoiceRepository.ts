@@ -67,6 +67,7 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
             empenho: { connect: { id: invoice.empenho_id } },
             company: { connect: { id: invoice.company_id } },
             ...(invoice.obra_id ? { obra: { connect: { id: invoice.obra_id } } } : {}),
+            ...(invoice.ordemServico_id ? { ordemServico: { connect: { id: invoice.ordemServico_id } } } : {}),
           },
           include: { company: true },
         });
@@ -231,6 +232,7 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
             empenho_id: invoice.empenho_id,
             company_id: invoice.company_id,
             obra_id: invoice.obra_id ?? null,
+            ordemServico_id: invoice.ordemServico_id ?? null,
             ...(invoice.status ? { status: invoice.status } : {}),
           },
           include: { company: true },

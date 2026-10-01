@@ -156,7 +156,7 @@ function ObraLocation({ ordemServico, obra }: { ordemServico: OrdemServico; obra
 
 function ObraSection({ ordemServico, obra }: { ordemServico: OrdemServico; obra: OrdemServicoObra }) {
   const executedPercent =
-    ordemServico.valor > 0 ? Math.round((obra.valorExecutado / ordemServico.valor) * 100) : 0;
+    ordemServico.valor > 0 ? Math.round((ordemServico.valorExecutado / ordemServico.valor) * 100) : 0;
 
   return (
     <div className="space-y-3">
@@ -175,8 +175,8 @@ function ObraSection({ ordemServico, obra }: { ordemServico: OrdemServico; obra:
           {obra.responsavelTecnico}
         </Field>
         <div className="sm:col-span-2">
-          <Field icon={Wallet} label="Liquidado em notas fiscais">
-            {formatCurrency(obra.valorExecutado)} de {formatCurrency(ordemServico.valor)} ({executedPercent}
+          <Field icon={Wallet} label="Liquidado em notas fiscais desta OS">
+            {formatCurrency(ordemServico.valorExecutado)} de {formatCurrency(ordemServico.valor)} ({executedPercent}
             %)
           </Field>
         </div>
@@ -256,9 +256,9 @@ export function ViewOrdemServicoModal({ ordemServico, handleClose }: ViewOrdemSe
           <section>
             <h3 className="text-xs font-semibold text-text-secondary uppercase mb-1">Cronograma</h3>
             <p className="text-xs text-text-muted mb-2.5">
-              {obra
-                ? "Os prazos desta ordem de serviço são os da obra vinculada."
-                : "Os prazos de início e término passam a valer quando uma obra for vinculada a esta ordem de serviço."}
+              {ordemServico.dataInicio
+                ? "Prazos de execução desta ordem de serviço."
+                : "Esta ordem de serviço ainda não tem prazo: edite-a e informe o início e a previsão de término."}
             </p>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
               <DateStep
@@ -269,19 +269,19 @@ export function ViewOrdemServicoModal({ ordemServico, handleClose }: ViewOrdemSe
               />
               <DateStep
                 icon={CalendarClock}
-                label="Início da obra"
-                value={obra ? formatDateOnly(obra.dataInicio) : null}
-                done={!!obra}
+                label="Início"
+                value={ordemServico.dataInicio ? formatDateOnly(ordemServico.dataInicio) : null}
+                done={!!ordemServico.dataInicio}
               />
               <DateStep
                 icon={Flag}
                 label="Previsão de término"
-                value={obra ? formatDateOnly(obra.dataPrevisaoTermino) : null}
-                done={!!obra}
+                value={ordemServico.dataPrevisaoTermino ? formatDateOnly(ordemServico.dataPrevisaoTermino) : null}
+                done={!!ordemServico.dataPrevisaoTermino}
               />
               <DateStep
                 icon={CalendarCheck}
-                label="Conclusão"
+                label="Conclusão da obra"
                 value={obra?.dataConclusao ? formatDate(obra.dataConclusao) : null}
                 hint={obra && !obra.dataConclusao ? "Ainda não concluída" : undefined}
                 done={!!obra?.dataConclusao}
@@ -299,8 +299,8 @@ export function ViewOrdemServicoModal({ ordemServico, handleClose }: ViewOrdemSe
               <div className="flex items-start gap-2.5 rounded-lg border border-warning-border bg-warning-bg px-3.5 py-3">
                 <AlertTriangle size={16} className="text-warning-text shrink-0 mt-0.5" />
                 <p className="text-sm text-warning-text">
-                  Nenhuma obra vinculada. Crie uma obra em Engenharia &gt; Obras e selecione esta ordem de
-                  serviço.
+                  Nenhuma obra vinculada. Edite esta ordem de serviço e escolha a obra, ou vincule-a pelo
+                  cadastro da obra em Engenharia &gt; Obras.
                 </p>
               </div>
             )}

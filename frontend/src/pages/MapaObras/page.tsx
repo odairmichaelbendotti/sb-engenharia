@@ -173,7 +173,7 @@ const MapaObras = () => {
 
   const obrasFiltradas =
     selectedContratoIds.length > 0
-      ? obrasComCoordenadas.filter((obra) => obra.ordemServico?.empenho.contrato && selectedContratoIds.includes(obra.ordemServico.empenho.contrato.id))
+      ? obrasComCoordenadas.filter((obra) => obra.contrato && selectedContratoIds.includes(obra.contrato.id))
       : obrasComCoordenadas;
 
   const tenantLatitude = myTenant?.latitude;
@@ -206,7 +206,7 @@ const MapaObras = () => {
           <Marker
             key={obra.id}
             position={[obra.latitude, obra.longitude]}
-            icon={getObraIcon(obra.ordemServico?.empenho.contrato.cor ?? "#4478b6", obra.identificacaoPatrimonial)}
+            icon={getObraIcon(obra.contrato?.cor ?? "#4478b6", obra.identificacaoPatrimonial)}
             eventHandlers={{ click: () => setSelectedObra(obra) }}
           />
         ))}

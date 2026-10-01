@@ -38,6 +38,9 @@ export type OrdemServicoPersistData = {
   numero: string;
   tenant_id: string;
   empenhos: { empenho_id: string; valor: number }[];
+  dataInicio: Date;
+  dataPrevisaoTermino: Date;
+  obra_id: string | null;
 };
 
 export type OrdemServicoObra = {
@@ -46,13 +49,10 @@ export type OrdemServicoObra = {
   identificacaoPatrimonial: string;
   tipo: string;
   status: string;
-  dataInicio: Date;
-  dataPrevisaoTermino: Date;
   dataConclusao: Date | null;
   latitude: number | null;
   longitude: number | null;
   responsavelTecnico: string;
-  valorExecutado: number;
 };
 
 export type OrdemServicoListItem = PersistedOrdemServico & {
@@ -60,6 +60,8 @@ export type OrdemServicoListItem = PersistedOrdemServico & {
   empenho: OrdemServicoEmpenhoInfo;
   empenhos: OrdemServicoVinculo[];
   obra: OrdemServicoObra | null;
+  // Soma das notas fiscais não canceladas lançadas nesta OS
+  valorExecutado: number;
 };
 
 export type OrdemServicoStats = {
@@ -79,6 +81,8 @@ export type OrdemServicoOption = {
   id: string;
   numero: string;
   valor: number;
+  dataInicio: Date | null;
+  dataPrevisaoTermino: Date | null;
   empenho: OrdemServicoEmpenhoInfo;
   empenhos: OrdemServicoVinculo[];
 };
@@ -97,12 +101,17 @@ export interface IOrdemServicoRepository {
   countActiveByTenant(): Promise<OrdemServicoActiveCountByTenant[]>;
   listOptionsForObra(tenant_id: string): Promise<OrdemServicoOption[]>;
   findById(id: string): Promise<PersistedOrdemServico | null>;
-  /** Atualiza o número e substitui o conjunto de vínculos (valor da OS é recalculado). */
+  /**
+   * Atualiza número, cronograma e obra e substitui o conjunto de vínculos (valor da OS
+   * é recalculado). Se a OS mudar de obra, as notas fiscais dela acompanham.
+   */
   update(id: string, data: Omit<OrdemServicoPersistData, "tenant_id">): Promise<OrdemServicoListItem>;
   /** Empenhos vinculados à OS (valores em reais). */
   listVinculos(id: string): Promise<OrdemServicoVinculo[]>;
-  /** Se já existe nota fiscal (qualquer status) da obra desta OS lançada no empenho. */
+  /** Se já existe nota fiscal (qualquer status) desta OS lançada no empenho. */
   hasInvoicesForEmpenho(id: string, empenho_id: string): Promise<boolean>;
+  /** Se já existe nota fiscal (qualquer status) lançada nesta OS. */
+  hasInvoices(id: string): Promise<boolean>;
   updateStatus(id: string, status: OrdemServicoStatusValue): Promise<PersistedOrdemServico>;
   delete(id: string): Promise<void>;
   hasObraVinculada(id: string): Promise<boolean>;
