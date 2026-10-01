@@ -16,24 +16,47 @@ export class InvoiceScopeValidator {
     private obraRepository: IObraRepository,
   ) {}
 
-  // A nota soma na execução da obra: a obra precisa ser de uma OS financiada por este
-  // empenho, senão uma nota inflaria a execução de outra obra (ou de outra organização).
-  // Se o empenho financia alguma obra, a nota precisa dizer de qual obra é.
-  async validateObra(empenho_id: string, obra_id?: string | null): Promise<void> {
-    if (!obra_id) {
-      if (await this.obraRepository.empenhoHasObra(empenho_id)) {
-        throw new DomainError("Informe a obra da nota fiscal: este empenho financia obras.");
+  // A nota soma na execução da obra e da OS: a OS precisa ser financiada por este empenho
+  // e estar na obra informada, senão uma nota inflaria a execução de outra obra (ou de
+  // outra organização). Se o empenho financia alguma obra, a nota precisa dizer de qual
+  // obra/OS é; com só a obra informada, a OS é deduzida quando a obra tem uma só OS no empenho.
+  async resolveObra({
+    empenho,
+    obra_id,
+    ordemServico_id,
+  }: {
+    empenho: PersistedEmpenho;
+    obra_id?: string | null | undefined;
+    ordemServico_id?: string | null | undefined;
+  }): Promise<{ obra_id: string | null; ordemServico_id: string | null }> {
+    const opcoes = await this.obraRepository.listOptionsForInvoice(empenho.tenant_id, empenho.id);
+
+    if (ordemServico_id) {
+      const opcao = opcoes.find((o) => o.ordemServico.id === ordemServico_id);
+      if (!opcao) {
+        throw new DomainError("Ordem de serviço does not belong to this empenho");
       }
-      return;
+      if (obra_id && obra_id !== opcao.id) {
+        throw new DomainError("Ordem de serviço does not belong to this obra");
+      }
+      return { obra_id: opcao.id, ordemServico_id };
     }
 
-    const obraEmpenhoIds = await this.obraRepository.findEmpenhoIds(obra_id);
-    if (!obraEmpenhoIds) {
-      throw new DomainError("Obra not found");
+    if (!obra_id) {
+      if (opcoes.length > 0) {
+        throw new DomainError("Informe a obra da nota fiscal: este empenho financia obras.");
+      }
+      return { obra_id: null, ordemServico_id: null };
     }
-    if (!obraEmpenhoIds.includes(empenho_id)) {
+
+    const daObra = opcoes.filter((o) => o.id === obra_id);
+    if (daObra.length === 0) {
       throw new DomainError("Obra does not belong to this empenho");
     }
+    if (daObra.length > 1) {
+      throw new DomainError("Informe a ordem de serviço da nota fiscal: esta obra tem mais de uma OS neste empenho.");
+    }
+    return { obra_id, ordemServico_id: daObra[0]!.ordemServico.id };
   }
 
   // Nota existente precisa ser da organização do usuário (editar/excluir)

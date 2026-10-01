@@ -11,11 +11,14 @@ import {
   XCircle,
   Plus,
   Trash2,
+  CalendarDays,
+  HardHat,
 } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { useEmpenhos } from "../../store/empenhos";
 import { useOrdensServico } from "../../store/ordensServico";
+import { useObras } from "../../store/obras";
 import { maskCurrency, formatValueToCurrencyMask, parseCurrencyMask } from "../../utils/masks";
 import { formatCurrency } from "../../utils/format-currency";
 import type { OrdemServico, OrdemServicoStatus, CreateOrdemServicoPayload } from "../../../types/ordem-servico";
@@ -34,7 +37,15 @@ const STATUS_OPTIONS: { value: OrdemServicoStatus; label: string; icon: React.El
 
 type FormState = {
   numero: string;
+  dataInicio: string;
+  dataPrevisaoTermino: string;
+  obra_id: string;
 };
+
+// Datas sem horário chegam como meia-noite UTC: o dia é o prefixo ISO
+function toDateInput(date: string | null | undefined) {
+  return date ? date.slice(0, 10) : "";
+}
 
 // Uma linha da lista de empenhos: qual empenho e quanto dele vai para a OS
 type VinculoForm = {
@@ -52,10 +63,16 @@ const iconInputClass =
 export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoModalProps) {
   const { createOrdemServico, updateOrdemServico, updateOrdemServicoStatus, fetchOrdensServico } = useOrdensServico();
   const { data: empenhosData, fetchListEmpenhos } = useEmpenhos();
+  const { obraOptions, fetchObraOptions } = useObras();
   const [isLoading, setIsLoading] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState<OrdemServicoStatus | null>(null);
   const [currentStatus, setCurrentStatus] = useState<OrdemServicoStatus>(ordemServico?.status ?? "ATIVO");
-  const [form, setForm] = useState<FormState>({ numero: ordemServico?.numero ?? "" });
+  const [form, setForm] = useState<FormState>({
+    numero: ordemServico?.numero ?? "",
+    dataInicio: toDateInput(ordemServico?.dataInicio),
+    dataPrevisaoTermino: toDateInput(ordemServico?.dataPrevisaoTermino),
+    obra_id: ordemServico?.obra_id ?? "",
+  });
   const [selectedContratoId, setSelectedContratoId] = useState(ordemServico?.empenho.contrato.id ?? "");
   const nextKey = useRef(0);
   const [vinculos, setVinculos] = useState<VinculoForm[]>(() =>
@@ -73,6 +90,12 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
     fetchListEmpenhos().catch(() => toast.error("Erro ao carregar os empenhos"));
   }, [fetchListEmpenhos]);
 
+  useEffect(() => {
+    fetchObraOptions().catch(() => toast.error("Erro ao carregar as obras"));
+  }, [fetchObraOptions]);
+
+  // Obras canceladas não recebem OS nova, mas a obra atual da OS continua na lista
+  const obrasDisponiveis = obraOptions.filter((o) => o.status !== "CANCELADA" || o.id === ordemServico?.obra_id);
   const empenhos = useMemo(() => empenhosData?.empenhos ?? [], [empenhosData]);
 
   // Contratos que têm empenho — todos os empenhos da OS precisam ser do mesmo contrato
@@ -98,8 +121,9 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
 
   const valorTotal = vinculos.reduce((sum, v) => sum + parseCurrencyMask(v.valor), 0);
 
-  function handleNumeroChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setForm({ numero: e.target.value });
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
   }
 
   function handleContratoChange(contratoId: string) {
@@ -153,6 +177,14 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
       toast.error("Preencha o número da ordem de serviço");
       return;
     }
+    if (!form.dataInicio || !form.dataPrevisaoTermino) {
+      toast.error("Informe o início e a previsão de término da ordem de serviço");
+      return;
+    }
+    if (form.dataInicio >= form.dataPrevisaoTermino) {
+      toast.error("O início deve ser anterior à previsão de término");
+      return;
+    }
     if (!selectedContratoId) {
       toast.error("Selecione o contrato da ordem de serviço");
       return;
@@ -179,6 +211,9 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
     const payload: CreateOrdemServicoPayload = {
       numero: form.numero,
       empenhos: preenchidos.map((v) => ({ empenho_id: v.empenho_id, valor: parseCurrencyMask(v.valor) })),
+      dataInicio: form.dataInicio,
+      dataPrevisaoTermino: form.dataPrevisaoTermino,
+      obra_id: form.obra_id || null,
     };
 
     try {
@@ -242,11 +277,57 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
                 <input
                   name="numero"
                   value={form.numero}
-                  onChange={handleNumeroChange}
+                  onChange={handleChange}
                   placeholder="04/01/BAFL/2026"
                   className={iconInputClass}
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Cronograma e obra */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+              <CalendarDays size={16} className="text-primary-500" />
+              <span>Cronograma e obra</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  Início <span className="text-danger-text">*</span>
+                </label>
+                <input type="date" name="dataInicio" value={form.dataInicio} onChange={handleChange} className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  Previsão de término <span className="text-danger-text">*</span>
+                </label>
+                <input
+                  type="date"
+                  name="dataPrevisaoTermino"
+                  value={form.dataPrevisaoTermino}
+                  onChange={handleChange}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">Obra</label>
+              <div className="relative">
+                <HardHat size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                <select name="obra_id" value={form.obra_id} onChange={handleChange} className={`${iconInputClass} cursor-pointer`}>
+                  <option value="">Sem obra por enquanto</option>
+                  {obrasDisponiveis.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.identificacaoPatrimonial} — {o.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-xs text-text-muted mt-1">
+                Uma obra pode ter várias OS (ex.: um serviço que faltou vira uma nova OS na mesma obra).
+              </p>
             </div>
           </div>
 

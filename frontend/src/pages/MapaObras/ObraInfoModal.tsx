@@ -32,7 +32,7 @@ interface ObraInfoModalProps {
 }
 
 export function ObraInfoModal({ detail, onClose }: ObraInfoModalProps) {
-  const { obra, ordemServico } = detail;
+  const { obra, ordensServico } = detail;
 
   return (
     <PanelModal
@@ -43,10 +43,14 @@ export function ObraInfoModal({ detail, onClose }: ObraInfoModalProps) {
     >
       <div className="space-y-5">
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
-          <Field icon={ClipboardList} label="Ordem de serviço">
-            <span className="inline-flex items-center gap-2">
-              {ordemServico.numero}
-              <StatusPill status={ordemServico.status} map={RECORD_STATUS} />
+          <Field icon={ClipboardList} label={ordensServico.length > 1 ? "Ordens de serviço" : "Ordem de serviço"}>
+            <span className="flex flex-col gap-1">
+              {ordensServico.map((os) => (
+                <span key={os.id} className="inline-flex items-center gap-2">
+                  {os.numero}
+                  <StatusPill status={os.status} map={RECORD_STATUS} />
+                </span>
+              ))}
             </span>
           </Field>
           <Field icon={UserCog} label="Responsável técnico">
@@ -67,13 +71,17 @@ export function ObraInfoModal({ detail, onClose }: ObraInfoModalProps) {
             <p className="flex items-center gap-1.5 text-xs text-text-muted">
               <CalendarPlus size={13} /> Início
             </p>
-            <p className="text-sm font-semibold text-text-primary mt-1">{formatDateOnly(obra.dataInicio)}</p>
+            <p className="text-sm font-semibold text-text-primary mt-1">
+              {obra.dataInicio ? formatDateOnly(obra.dataInicio) : "—"}
+            </p>
           </div>
           <div className="rounded-lg border border-border bg-surface-muted px-3 py-2.5">
             <p className="flex items-center gap-1.5 text-xs text-text-muted">
               <CalendarClock size={13} /> Previsão de término
             </p>
-            <p className="text-sm font-semibold text-text-primary mt-1">{formatDateOnly(obra.dataPrevisaoTermino)}</p>
+            <p className="text-sm font-semibold text-text-primary mt-1">
+              {obra.dataPrevisaoTermino ? formatDateOnly(obra.dataPrevisaoTermino) : "—"}
+            </p>
           </div>
           <div className="rounded-lg border border-border bg-surface-muted px-3 py-2.5">
             <p className="flex items-center gap-1.5 text-xs text-text-muted">

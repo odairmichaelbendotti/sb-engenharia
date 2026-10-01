@@ -8,6 +8,7 @@ import { UpdateObraUseCase } from "../../application/usecases/obra/UpdateObraUse
 import { UpdateObraStatusUseCase } from "../../application/usecases/obra/UpdateObraStatusUseCase.js";
 import { DeleteObraUseCase } from "../../application/usecases/obra/DeleteObraUseCase.js";
 import { GetObraDetailUseCase } from "../../application/usecases/obra/GetObraDetailUseCase.js";
+import { ListObraOptionsUseCase } from "../../application/usecases/obra/ListObraOptionsUseCase.js";
 import { ObraController } from "../controllers/ObraController.js";
 import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
@@ -21,10 +22,11 @@ const ordemServicoRepository = new PrismaOrdemServicoRepository();
 const createObraUseCase = new CreateObraUseCase(repository, ordemServicoRepository);
 const listObrasUseCase = new ListObrasUseCase(repository);
 const listObraOptionsForInvoiceUseCase = new ListObraOptionsForInvoiceUseCase(repository);
-const updateObraUseCase = new UpdateObraUseCase(repository);
+const updateObraUseCase = new UpdateObraUseCase(repository, ordemServicoRepository);
 const updateObraStatusUseCase = new UpdateObraStatusUseCase(repository);
 const deleteObraUseCase = new DeleteObraUseCase(repository);
 const getObraDetailUseCase = new GetObraDetailUseCase(repository);
+const listObraOptionsUseCase = new ListObraOptionsUseCase(repository);
 
 const obraController = new ObraController(
   createObraUseCase,
@@ -34,6 +36,7 @@ const obraController = new ObraController(
   deleteObraUseCase,
   listObraOptionsForInvoiceUseCase,
   getObraDetailUseCase,
+  listObraOptionsUseCase,
 );
 
 const token = new TokenGenerator();
@@ -73,6 +76,14 @@ ObraRoutes.get(
   authMiddleware.handle,
   requireDomainAccess.handle("administrativo", "edit"),
   (req, res) => obraController.listOptionsForInvoice(req, res),
+);
+// Rota estreita: id/nome/patrimônio/status das obras, para o campo "Obra" no cadastro
+// de OS (domínio administrativo, que nem sempre vê a listagem completa de obras)
+ObraRoutes.get(
+  "/obra/list-for-ordem-servico",
+  authMiddleware.handle,
+  requireDomainAccess.handle("administrativo", "view"),
+  (req, res) => obraController.listOptions(req, res),
 );
 ObraRoutes.put(
   "/obra/update/:id",

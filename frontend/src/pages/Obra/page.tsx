@@ -9,6 +9,7 @@ import {
   ObraModal,
   DeleteObraModal,
   ObraFilters,
+  ViewObraModal,
 } from "./index";
 import type { ObraFiltersState } from "./index";
 import ObraHeader from "./ObraHeader";
@@ -22,6 +23,7 @@ export default function Obras() {
   const [editingObra, setEditingObra] = useState<Obra | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [obraToDelete, setObraToDelete] = useState<Obra | null>(null);
+  const [viewingObraId, setViewingObraId] = useState<string | null>(null);
   const [filters, setFilters] = useState<ObraFiltersState>({
     search: "",
     status: "",
@@ -67,12 +69,19 @@ export default function Obras() {
         !search ||
         o.nome.toLowerCase().includes(search) ||
         o.identificacaoPatrimonial.toLowerCase().includes(search) ||
-        o.responsavelTecnico.toLowerCase().includes(search);
+        o.responsavelTecnico.toLowerCase().includes(search) ||
+        o.ordensServico.some((os) => os.numero.toLowerCase().includes(search));
       const matchStatus = !filters.status || o.status === filters.status;
       const matchTipo = !filters.tipo || o.tipo === filters.tipo;
       return matchSearch && matchStatus && matchTipo;
     });
   }, [obras, filters]);
+
+  // Busca pelo id na lista atual para o resumo refletir edições feitas com ele aberto
+  const viewingObra = useMemo(
+    () => obras.find((o) => o.id === viewingObraId) ?? null,
+    [obras, viewingObraId],
+  );
 
   function handleOpenCreate() {
     setEditingObra(null);
@@ -80,6 +89,7 @@ export default function Obras() {
   }
 
   function handleOpenEdit(obra: Obra) {
+    setViewingObraId(null);
     setEditingObra(obra);
     setIsModalOpen(true);
   }
@@ -166,6 +176,7 @@ export default function Obras() {
             ) : (
               <ObraTable
                 obras={filteredObras}
+                onView={(obra) => setViewingObraId(obra.id)}
                 onEdit={handleOpenEdit}
                 onDelete={handleOpenDelete}
               />
@@ -175,6 +186,10 @@ export default function Obras() {
       )}
 
       {/* Modals */}
+      {viewingObra && (
+        <ViewObraModal obra={viewingObra} onEdit={handleOpenEdit} handleClose={() => setViewingObraId(null)} />
+      )}
+
       {isModalOpen && (
         <ObraModal obra={editingObra} handleClose={handleCloseModal} />
       )}

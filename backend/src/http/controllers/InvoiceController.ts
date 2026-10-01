@@ -15,7 +15,7 @@ export class InvoiceController {
     private listCompanyOptions: ListInvoiceCompanyOptionsUseCase,
   ) {}
   async create(req: Request, res: Response) {
-    const { numero, description, vencimento, value, empenho_id, company_id, obra_id } =
+    const { numero, description, vencimento, value, empenho_id, company_id, obra_id, ordemServico_id } =
       req.body;
 
     try {
@@ -34,6 +34,7 @@ export class InvoiceController {
           empenho_id,
           company_id,
           obra_id: obra_id || undefined,
+          ordemServico_id: ordemServico_id || undefined,
         },
         user,
       );

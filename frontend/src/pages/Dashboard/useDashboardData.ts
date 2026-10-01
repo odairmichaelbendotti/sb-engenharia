@@ -190,7 +190,8 @@ export function useDashboardData() {
         key: "obras-atrasadas",
         label: "Obras com prazo vencido",
         items: obras
-          .filter((o) => o.status === "EM_ANDAMENTO")
+          // Prazo da obra = maior previsão de término entre as OS; obra sem prazo fica de fora
+          .filter((o): o is typeof o & { dataPrevisaoTermino: string } => o.status === "EM_ANDAMENTO" && !!o.dataPrevisaoTermino)
           .map((o) => ({ o, days: getDaysRemaining(o.dataPrevisaoTermino) }))
           .filter(({ days }) => days < 0)
           .sort((a, b) => a.days - b.days)

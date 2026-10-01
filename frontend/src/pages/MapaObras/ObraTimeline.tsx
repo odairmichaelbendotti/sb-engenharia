@@ -6,6 +6,7 @@ const MONTH_FORMAT = new Intl.DateTimeFormat("pt-BR", { month: "short", year: "2
 const TICKS = 4;
 
 type Row = {
+  key: string;
   label: string;
   start: number;
   end: number;
@@ -15,37 +16,49 @@ type Row = {
 };
 
 /**
- * Cronograma comparativo: contrato, empenho e obra no mesmo eixo de tempo,
- * com marcador de hoje — evidencia que o prazo da obra (OS) é diferente do empenho.
+ * Cronograma comparativo: contrato, empenhos e cada OS da obra no mesmo eixo de tempo,
+ * com marcador de hoje — evidencia que o prazo de cada OS é diferente do empenho.
  */
 export function ObraTimeline({ detail }: { detail: ObraDetail }) {
-  const { obra, empenhos, contrato, financial } = detail;
+  const { obra, ordensServico, empenhos, contrato, financial } = detail;
   const today = todayUtc();
+  const obraAtiva = !obra.dataConclusao && obra.status !== "CANCELADA";
 
-  const obraEnd = dateOnlyUtc(obra.dataConclusao ?? obra.dataPrevisaoTermino);
-  const obraOverdue = !obra.dataConclusao && obra.status !== "CANCELADA" && today > obraEnd;
+  // Uma faixa por OS com prazo; atraso só para OS ativa em obra ainda não concluída
+  const osRows: Row[] = ordensServico.flatMap((os) => {
+    if (!os.dataInicio || !os.dataPrevisaoTermino) return [];
+    const end = dateOnlyUtc(os.dataPrevisaoTermino);
+    const overdue = obraAtiva && os.status === "ATIVO" && today > end;
+    return [
+      {
+        key: `os-${os.id}`,
+        label: `OS ${os.numero}`,
+        start: dateOnlyUtc(os.dataInicio),
+        end,
+        barClassName: obra.dataConclusao || os.status === "FINALIZADO" ? "bg-secondary-500" : "bg-accent-500",
+        ...(overdue ? { overdueUntil: today } : {}),
+      },
+    ];
+  });
+  const obraOverdue = osRows.some((row) => row.overdueUntil !== undefined);
 
   const rows: Row[] = [
     {
+      key: "contrato",
       label: "Contrato",
       start: dateOnlyUtc(contrato.dataInicio),
       end: dateOnlyUtc(contrato.dataFim),
       barClassName: "bg-primary-200",
     },
-    // Uma faixa por empenho que financia a OS
+    // Uma faixa por empenho que financia as OS da obra
     ...empenhos.map((empenho, index) => ({
+      key: `empenho-${empenho.id}`,
       label: empenhos.length > 1 ? `Empenho ${index + 1}` : "Empenho",
       start: dateOnlyUtc(empenho.startAt),
       end: dateOnlyUtc(empenho.endAt),
       barClassName: "bg-primary-400",
     })),
-    {
-      label: "Obra (OS)",
-      start: dateOnlyUtc(obra.dataInicio),
-      end: obraEnd,
-      barClassName: obra.dataConclusao ? "bg-secondary-500" : "bg-accent-500",
-      ...(obraOverdue ? { overdueUntil: today } : {}),
-    },
+    ...osRows,
   ];
 
   const invoiceDates = (financial?.invoices ?? [])
@@ -73,8 +86,10 @@ export function ObraTimeline({ detail }: { detail: ObraDetail }) {
 
         <div className="space-y-2.5 pt-4">
           {rows.map((row) => (
-            <div key={row.label} className="flex items-center gap-2">
-              <span className="w-18 shrink-0 text-[11px] font-semibold text-text-secondary">{row.label}</span>
+            <div key={row.key} className="flex items-center gap-2">
+              <span className="w-18 shrink-0 text-[11px] font-semibold text-text-secondary truncate" title={row.label}>
+                {row.label}
+              </span>
               <div className="relative flex-1 h-3.5 rounded-full bg-surface-muted">
                 <div
                   className={`absolute inset-y-0 rounded-full ${row.barClassName}`}
@@ -134,7 +149,7 @@ export function ObraTimeline({ detail }: { detail: ObraDetail }) {
       {obraOverdue && (
         <p className="mt-3 flex items-center gap-2 text-[11px] text-danger-text">
           <span className="w-4 h-2.5 rounded-sm border border-dashed border-danger-text bg-danger-bg" />
-          Obra além da previsão de término
+          OS além da previsão de término
         </p>
       )}
     </div>

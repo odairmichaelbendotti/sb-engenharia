@@ -6,10 +6,19 @@ import type { UpdateObraUseCase } from "../../application/usecases/obra/UpdateOb
 import type { UpdateObraStatusUseCase } from "../../application/usecases/obra/UpdateObraStatusUseCase.js";
 import type { DeleteObraUseCase } from "../../application/usecases/obra/DeleteObraUseCase.js";
 import type { GetObraDetailUseCase } from "../../application/usecases/obra/GetObraDetailUseCase.js";
+import type { ListObraOptionsUseCase } from "../../application/usecases/obra/ListObraOptionsUseCase.js";
 import { DomainError } from "../../domain/errors/DomainError.js";
 import { DomainAccessPolicy } from "../../domain/polices/DomainAccessPolicy.js";
 
 const VALID_STATUSES = ["EM_ANDAMENTO", "CONCLUIDA", "PARALISADA", "CANCELADA"];
+
+// OS da obra: lista "ordemServico_ids" ou o formato antigo (uma "ordemServico_id"),
+// ainda enviado pelo frontend anterior durante a janela de deploy
+function parseOrdemServicoIds(body: Record<string, unknown>): string[] | undefined {
+  if (Array.isArray(body.ordemServico_ids)) return body.ordemServico_ids.map((id) => String(id ?? ""));
+  if (body.ordemServico_id) return [String(body.ordemServico_id)];
+  return undefined;
+}
 
 export class ObraController {
   constructor(
@@ -20,6 +29,7 @@ export class ObraController {
     private deleteObra: DeleteObraUseCase,
     private listObraOptionsForInvoice: ListObraOptionsForInvoiceUseCase,
     private getObraDetail: GetObraDetailUseCase,
+    private listObraOptions: ListObraOptionsUseCase,
   ) {}
 
   async create(req: Request, res: Response) {
@@ -27,7 +37,7 @@ export class ObraController {
       const { user } = req;
       if (!user) throw new DomainError("User not found");
 
-      const { nome, identificacaoPatrimonial, tipo, descricao, latitude, longitude, dataInicio, dataPrevisaoTermino, responsavelTecnico, anotacoes, ordemServico_id } = req.body;
+      const { nome, identificacaoPatrimonial, tipo, descricao, latitude, longitude, responsavelTecnico, anotacoes } = req.body;
 
       const obra = await this.createObra.execute({
         user,
@@ -37,11 +47,9 @@ export class ObraController {
         descricao,
         latitude: latitude !== undefined && latitude !== "" ? Number(latitude) : undefined,
         longitude: longitude !== undefined && longitude !== "" ? Number(longitude) : undefined,
-        dataInicio,
-        dataPrevisaoTermino,
         responsavelTecnico,
         anotacoes,
-        ordemServico_id,
+        ordemServicoIds: parseOrdemServicoIds(req.body) ?? [],
       });
 
       res.status(201).json(obra);
@@ -87,6 +95,19 @@ export class ObraController {
     }
   }
 
+  async listOptions(req: Request, res: Response) {
+    try {
+      const { user } = req;
+      if (!user) throw new DomainError("User not found");
+
+      const data = await this.listObraOptions.execute(user);
+      res.status(200).json(data);
+    } catch (error) {
+      if (error instanceof DomainError) return res.status(400).json({ message: error.message });
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  }
+
   async listOptionsForInvoice(req: Request, res: Response) {
     try {
       const { user } = req;
@@ -113,7 +134,7 @@ export class ObraController {
       if (!id || Array.isArray(id)) throw new DomainError("Invalid ID");
       if (!user) throw new DomainError("User not found");
 
-      const { nome, identificacaoPatrimonial, tipo, descricao, latitude, longitude, dataInicio, dataPrevisaoTermino, responsavelTecnico, anotacoes } = req.body;
+      const { nome, identificacaoPatrimonial, tipo, descricao, latitude, longitude, responsavelTecnico, anotacoes } = req.body;
 
       const obra = await this.updateObra.execute({
         id,
@@ -125,11 +146,10 @@ export class ObraController {
           descricao,
           latitude: latitude !== undefined && latitude !== "" ? Number(latitude) : undefined,
           longitude: longitude !== undefined && longitude !== "" ? Number(longitude) : undefined,
-          dataInicio,
-          dataPrevisaoTermino,
           responsavelTecnico,
           anotacoes,
         },
+        ordemServicoIds: Array.isArray(req.body.ordemServico_ids) ? parseOrdemServicoIds(req.body) : undefined,
       });
 
       res.status(200).json(obra);

@@ -35,13 +35,10 @@ export type OrdemServicoObra = {
   identificacaoPatrimonial: string;
   tipo: string;
   status: string;
-  dataInicio: string;
-  dataPrevisaoTermino: string;
   dataConclusao: string | null;
   latitude: number | null;
   longitude: number | null;
   responsavelTecnico: string;
-  valorExecutado: number;
 };
 
 export type OrdemServico = {
@@ -53,7 +50,13 @@ export type OrdemServico = {
   empenho_id: string;
   empenho: OrdemServicoEmpenho;
   empenhos: OrdemServicoVinculo[];
+  // Cronograma de execução da OS (data sem horário, meia-noite UTC); null em OS antigas sem prazo
+  dataInicio: string | null;
+  dataPrevisaoTermino: string | null;
+  obra_id: string | null;
   obra: OrdemServicoObra | null;
+  // Soma das notas fiscais não canceladas lançadas nesta OS
+  valorExecutado: number;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -75,12 +78,18 @@ export type CreateOrdemServicoPayload = {
   numero: string;
   // Valor da OS = soma do que cada empenho destina a ela (em reais)
   empenhos: { empenho_id: string; valor: number }[];
+  dataInicio: string;
+  dataPrevisaoTermino: string;
+  // Obra em que a OS é executada; null = ainda sem obra
+  obra_id: string | null;
 };
 
 export type OrdemServicoOption = {
   id: string;
   numero: string;
   valor: number;
+  dataInicio: string | null;
+  dataPrevisaoTermino: string | null;
   empenho: OrdemServicoEmpenho;
   empenhos: OrdemServicoVinculo[];
 };

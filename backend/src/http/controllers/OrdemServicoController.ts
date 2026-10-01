@@ -25,6 +25,12 @@ function parseEmpenhos(body: Record<string, unknown>): OrdemServicoEmpenhoInput[
   return [];
 }
 
+// obra_id ausente = mantém a obra atual (edição); vazio/null = OS sem obra
+function parseObraId(body: Record<string, unknown>): string | null | undefined {
+  if (!("obra_id" in body)) return undefined;
+  return body.obra_id ? String(body.obra_id) : null;
+}
+
 export class OrdemServicoController {
   constructor(
     private createOrdemServico: CreateOrdemServicoUseCase,
@@ -44,6 +50,9 @@ export class OrdemServicoController {
         user,
         numero: req.body.numero,
         empenhos: parseEmpenhos(req.body),
+        dataInicio: req.body.dataInicio,
+        dataPrevisaoTermino: req.body.dataPrevisaoTermino,
+        obra_id: parseObraId(req.body) ?? null,
       });
 
       res.status(201).json(ordemServico);
@@ -92,6 +101,9 @@ export class OrdemServicoController {
         data: {
           numero: req.body.numero,
           empenhos: parseEmpenhos(req.body),
+          dataInicio: req.body.dataInicio,
+          dataPrevisaoTermino: req.body.dataPrevisaoTermino,
+          obra_id: parseObraId(req.body),
         },
       });
 

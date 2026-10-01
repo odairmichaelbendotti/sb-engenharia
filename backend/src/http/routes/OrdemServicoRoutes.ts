@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { PrismaOrdemServicoRepository } from "../../infrastructure/database/prisma/PrismaOrdemServicoRepository.js";
 import { PrismaEmpenhoRepository } from "../../infrastructure/database/prisma/PrismaEmpenhoRepository.js";
+import { PrismaObraRepository } from "../../infrastructure/database/prisma/PrismaObraRepository.js";
 import { CreateOrdemServicoUseCase } from "../../application/usecases/ordem-servico/CreateOrdemServicoUseCase.js";
 import { ListOrdensServicoUseCase } from "../../application/usecases/ordem-servico/ListOrdensServicoUseCase.js";
 import { ListOrdemServicoOptionsForObraUseCase } from "../../application/usecases/ordem-servico/ListOrdemServicoOptionsForObraUseCase.js";
@@ -18,10 +19,11 @@ export const OrdemServicoRoutes = Router();
 
 const repository = new PrismaOrdemServicoRepository();
 const empenhoRepository = new PrismaEmpenhoRepository();
-const createOrdemServicoUseCase = new CreateOrdemServicoUseCase(repository, empenhoRepository);
+const obraRepository = new PrismaObraRepository();
+const createOrdemServicoUseCase = new CreateOrdemServicoUseCase(repository, empenhoRepository, obraRepository);
 const listOrdensServicoUseCase = new ListOrdensServicoUseCase(repository);
 const listOrdemServicoOptionsForObraUseCase = new ListOrdemServicoOptionsForObraUseCase(repository);
-const updateOrdemServicoUseCase = new UpdateOrdemServicoUseCase(repository, empenhoRepository);
+const updateOrdemServicoUseCase = new UpdateOrdemServicoUseCase(repository, empenhoRepository, obraRepository);
 const updateOrdemServicoStatusUseCase = new UpdateOrdemServicoStatusUseCase(repository);
 const deleteOrdemServicoUseCase = new DeleteOrdemServicoUseCase(repository);
 

@@ -55,7 +55,11 @@ const STATUS_BADGE: Record<ObraStatus, { label: string; icon: typeof Wrench; cla
 
 type Deadline = { label: string; className: string; elapsed: number };
 
+// Prazo da obra = menor início e maior previsão de término entre as OS dela
 function getObraDeadline(obra: ObraDetail["obra"]): Deadline {
+  if (!obra.dataInicio || !obra.dataPrevisaoTermino) {
+    return { label: "Sem prazo definido", className: "text-text-muted", elapsed: 0 };
+  }
   const start = dateOnlyUtc(obra.dataInicio);
   const end = dateOnlyUtc(obra.dataPrevisaoTermino);
   const today = todayUtc();
@@ -97,14 +101,14 @@ function PeriodRow({ label, start, end }: { label: string; start: string; end: s
   );
 }
 
-// Barra empilhada do empenho: esta OS, outras OS e saldo livre para novas OS
+// Barra empilhada do empenho: OS desta obra, outras OS e saldo livre para novas OS
 function EmpenhoCommitmentBar({ financial }: { financial: ObraDetailEmpenhoFinanceiro }) {
   const { value, comprometidoOS } = financial;
   const estaOS = financial.valorNaOS;
   const outrasOS = Math.max(comprometidoOS - estaOS, 0);
   const base = Math.max(value, comprometidoOS);
   const segments = [
-    { label: "Esta OS", amount: estaOS, className: "bg-accent-500" },
+    { label: "Esta obra", amount: estaOS, className: "bg-accent-500" },
     { label: "Outras OS", amount: outrasOS, className: "bg-primary-400" },
   ];
 
@@ -137,25 +141,24 @@ function EmpenhoCommitmentBar({ financial }: { financial: ObraDetailEmpenhoFinan
 }
 
 function ObraCard({ detail, onOpenInfo }: { detail: ObraDetail; onOpenInfo: () => void }) {
-  const { obra, ordemServico, financial } = detail;
+  const { obra, ordensServico, financial } = detail;
   const deadline = getObraDeadline(obra);
-  const liquidadoPercent = financial ? percentOf(financial.ordemServico.liquidado, financial.ordemServico.valor) : 0;
+  const liquidadoPercent = financial ? percentOf(financial.obra.liquidado, financial.obra.valor) : 0;
 
   return (
     <Card
       icon={<HardHat size={14} />}
-      title={`Obra · OS ${ordemServico.numero}`}
-      action={<StatusPill status={ordemServico.status} map={RECORD_STATUS} />}
+      title={`Obra · ${plural(ordensServico.length, "OS", "OS")}`}
     >
       {financial && (
         <div className="mb-3">
           <div className="flex items-end justify-between gap-2">
             <div>
-              <p className="text-[11px] text-text-muted">Valor da OS</p>
-              <p className="text-[15px] font-bold text-text-primary">{formatCurrency(financial.ordemServico.valor)}</p>
+              <p className="text-[11px] text-text-muted">Valor das OS</p>
+              <p className="text-[15px] font-bold text-text-primary">{formatCurrency(financial.obra.valor)}</p>
             </div>
             <p className="text-[11px] text-text-secondary text-right">
-              <span className="font-semibold text-success-text">{formatCurrency(financial.ordemServico.liquidado)}</span>{" "}
+              <span className="font-semibold text-success-text">{formatCurrency(financial.obra.liquidado)}</span>{" "}
               liquidado
             </p>
           </div>
@@ -173,16 +176,46 @@ function ObraCard({ detail, onOpenInfo }: { detail: ObraDetail; onOpenInfo: () =
           <span className="text-text-muted">Prazo da obra</span>
           <span className={`font-semibold ${deadline.className}`}>{deadline.label}</span>
         </div>
-        <p className="text-[13px] font-medium text-text-primary mt-1">
-          {formatDateOnly(obra.dataInicio)} → {formatDateOnly(obra.dataConclusao ?? obra.dataPrevisaoTermino)}
-        </p>
-        <div className="mt-1.5">
-          <ProgressBar
-            percent={deadline.elapsed}
-            colorClassName={deadline.className === "text-danger-text" ? "bg-danger-text" : "bg-accent-500"}
-          />
-        </div>
+        {obra.dataInicio && obra.dataPrevisaoTermino && (
+          <>
+            <p className="text-[13px] font-medium text-text-primary mt-1">
+              {formatDateOnly(obra.dataInicio)} → {formatDateOnly(obra.dataConclusao ?? obra.dataPrevisaoTermino)}
+            </p>
+            <div className="mt-1.5">
+              <ProgressBar
+                percent={deadline.elapsed}
+                colorClassName={deadline.className === "text-danger-text" ? "bg-danger-text" : "bg-accent-500"}
+              />
+            </div>
+          </>
+        )}
       </div>
+
+      {/* Cada OS da obra com o prazo e o quanto já foi executado */}
+      <ul className="mt-3 space-y-2">
+        {ordensServico.map((os) => (
+          <li key={os.id} className="rounded-lg border border-border px-3 py-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-text-primary">OS {os.numero}</span>
+              <StatusPill status={os.status} map={RECORD_STATUS} />
+            </div>
+            <p className="text-[11px] text-text-muted mt-0.5">
+              {os.dataInicio && os.dataPrevisaoTermino
+                ? `${formatDateOnly(os.dataInicio)} → ${formatDateOnly(os.dataPrevisaoTermino)}`
+                : "Sem prazo definido"}
+            </p>
+            {financial && (
+              <div className="mt-1.5">
+                <ProgressBar percent={percentOf(os.valorExecutado, os.valor)} colorClassName="bg-secondary-500" />
+                <p className="text-[10px] text-text-muted text-right mt-0.5">
+                  {formatCurrency(os.valorExecutado)} de {formatCurrency(os.valor)} ·{" "}
+                  {formatPercent(percentOf(os.valorExecutado, os.valor))}
+                </p>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
 
       <button
         onClick={onOpenInfo}
@@ -198,7 +231,7 @@ function ObraCard({ detail, onOpenInfo }: { detail: ObraDetail; onOpenInfo: () =
   );
 }
 
-// Um cartão por empenho que financia a OS (a OS pode receber vários empenhos do contrato)
+// Um cartão por empenho que financia as OS da obra (uma OS pode receber vários empenhos do contrato)
 function EmpenhoCard({
   empenho,
   financial,
@@ -223,7 +256,7 @@ function EmpenhoCard({
 
           <EmpenhoCommitmentBar financial={financial} />
           <p className="text-xs text-text-secondary mt-2">
-            Esta OS recebe{" "}
+            As OS desta obra recebem{" "}
             <span className="font-bold text-accent-600">
               {formatCurrency(financial.valorNaOS)} ({formatPercent(percentOf(financial.valorNaOS, financial.value))})
             </span>{" "}
@@ -337,7 +370,7 @@ function ContratoCard({ detail, onOpenEmpenhos }: { detail: ObraDetail; onOpenEm
 }
 
 function InvoicesTab({ financial }: { financial: ObraDetailFinancial }) {
-  const { invoices, ordemServico } = financial;
+  const { invoices, obra } = financial;
 
   return (
     <Card icon={<FileText size={14} />} title="Notas fiscais desta obra">
@@ -389,12 +422,12 @@ function InvoicesTab({ financial }: { financial: ObraDetailFinancial }) {
                 <td colSpan={3} className="pt-2.5 px-1 font-bold text-text-primary">
                   Total liquidado
                   <span className="block text-[10.5px] font-normal text-text-muted">
-                    {formatPercent(percentOf(ordemServico.liquidado, ordemServico.valor))} do valor da OS ·
+                    {formatPercent(percentOf(obra.liquidado, obra.valor))} do valor das OS ·
                     canceladas não somam
                   </span>
                 </td>
                 <td className="pt-2.5 px-1 text-right font-bold text-success-text whitespace-nowrap align-top">
-                  {formatCurrency(ordemServico.liquidado)}
+                  {formatCurrency(obra.liquidado)}
                 </td>
               </tr>
             </tfoot>
@@ -406,7 +439,7 @@ function InvoicesTab({ financial }: { financial: ObraDetailFinancial }) {
 }
 
 function ScheduleTab({ detail }: { detail: ObraDetail }) {
-  const { obra, empenhos, contrato } = detail;
+  const { obra, ordensServico, empenhos, contrato } = detail;
 
   return (
     <>
@@ -416,7 +449,11 @@ function ScheduleTab({ detail }: { detail: ObraDetail }) {
 
       <Card icon={<Clock size={14} />} title="Prazos">
         <div className="space-y-2">
-          <PeriodRow label="Obra (OS)" start={obra.dataInicio} end={obra.dataPrevisaoTermino} />
+          {ordensServico.map((os) =>
+            os.dataInicio && os.dataPrevisaoTermino ? (
+              <PeriodRow key={os.id} label={`OS ${os.numero}`} start={os.dataInicio} end={os.dataPrevisaoTermino} />
+            ) : null,
+          )}
           {obra.dataConclusao && (
             <div className="flex items-center justify-between gap-2 text-xs">
               <span className="text-text-muted">Conclusão da obra</span>
@@ -511,7 +548,7 @@ export default function ObraDetailPanel({ obra, onClose }: { obra: Obra | null; 
 
   const statusBadge = STATUS_BADGE[obra.status];
   const StatusIcon = statusBadge.icon;
-  const contratoCor = detail?.contrato.cor ?? obra.ordemServico?.empenho.contrato.cor ?? "#4478b6";
+  const contratoCor = detail?.contrato.cor ?? obra.contrato?.cor ?? "#4478b6";
   const financial = detail?.financial ?? null;
 
   const tabs: { id: Tab; label: string; count?: number }[] = [
@@ -550,10 +587,10 @@ export default function ObraDetailPanel({ obra, onClose }: { obra: Obra | null; 
             <span>{obra.identificacaoPatrimonial}</span>
             <span className="w-1 h-1 rounded-full bg-text-muted shrink-0" />
             <span>{OBRA_TIPO_LABEL[obra.tipo]}</span>
-            {obra.ordemServico && (
+            {obra.ordensServico.length > 0 && (
               <>
                 <span className="w-1 h-1 rounded-full bg-text-muted shrink-0" />
-                <span>OS {obra.ordemServico.numero}</span>
+                <span>OS {obra.ordensServico.map((os) => os.numero).join(", ")}</span>
               </>
             )}
           </p>

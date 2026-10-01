@@ -8,6 +8,8 @@ export type InvoiceType = {
   empenho_id: string;
   company_id: string;
   obra_id?: string | null | undefined;
+  // OS da obra que a nota paga — mede a execução de cada OS
+  ordemServico_id?: string | null | undefined;
 };
 
 export type InvoiceStatus = "PENDENTE" | "PAGO" | "VENCIDO" | "CANCELADO";
@@ -29,6 +31,7 @@ export class Invoice {
   public empenho_id: string;
   public company_id: string;
   public obra_id: string | null;
+  public ordemServico_id: string | null;
 
   constructor(props: InvoiceType) {
     if (props.value <= 0) {
@@ -42,5 +45,6 @@ export class Invoice {
     this.empenho_id = props.empenho_id;
     this.company_id = props.company_id;
     this.obra_id = props.obra_id ?? null;
+    this.ordemServico_id = props.ordemServico_id ?? null;
   }
 }

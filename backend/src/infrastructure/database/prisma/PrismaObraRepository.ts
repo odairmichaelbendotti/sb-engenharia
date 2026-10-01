@@ -9,20 +9,27 @@ import type {
   IObraRepository,
   ListObrasResponse,
   ObraDetail,
+  ObraListItem,
+  ObraOption,
   ObraOptionForInvoice,
-  ObraOrdemServicoInfo,
+  ObraOrdemServicoResumo,
   ObraSummaryByTenant,
 } from "../../../domain/repositories/IObraRepository.js";
 import { prisma } from "../../prisma/prisma.js";
 
-// Soma, em centavos, das notas não canceladas
-function sumActiveInvoicesCents(invoices: { value: number; status: string }[]): number {
-  return invoices.filter((i) => i.status !== "CANCELADO").reduce((sum, i) => sum + i.value, 0);
+type InvoiceRow = { value: number; status: string; ordemServico_id: string | null };
+
+// Soma, em centavos, das notas não canceladas (opcionalmente só as de uma OS)
+function sumActiveInvoicesCents(invoices: InvoiceRow[], ordemServico_id?: string): number {
+  return invoices
+    .filter((i) => i.status !== "CANCELADO" && (ordemServico_id === undefined || i.ordemServico_id === ordemServico_id))
+    .reduce((sum, i) => sum + i.value, 0);
 }
 
 const INVOICE_INFO_SELECT = {
   id: true,
   empenho_id: true,
+  ordemServico_id: true,
   numero: true,
   description: true,
   vencimento: true,
@@ -30,77 +37,142 @@ const INVOICE_INFO_SELECT = {
   status: true,
 } as const;
 
-const ORDEM_SERVICO_INFO_SELECT = {
+const CONTRATO_INFO_SELECT = {
+  id: true,
+  identificador: true,
+  descricaoCurta: true,
+  cor: true,
+  company: { select: { id: true, name: true, cnpj: true } },
+} as const;
+
+const ORDEM_SERVICO_RESUMO_SELECT = {
   id: true,
   numero: true,
   valor: true,
   status: true,
-  empenho: {
-    select: {
-      id: true,
-      numero: true,
-      description: true,
-      category: true,
-      status: true,
-      value: true,
-      totalPaid: true,
-      startAt: true,
-      endAt: true,
-      contrato: {
-        select: {
-          id: true,
-          identificador: true,
-          descricaoCurta: true,
-          cor: true,
-          company: { select: { id: true, name: true, cnpj: true } },
-        },
-      },
-    },
-  },
+  dataInicio: true,
+  dataPrevisaoTermino: true,
+  empenhos: { orderBy: { createdAt: "asc" }, select: { empenho: { select: { id: true, numero: true } } } },
+  empenho: { select: { contrato: { select: CONTRATO_INFO_SELECT } } },
 } as const;
 
-function mapOrdemServico<T extends { valor: number; empenho: { value: number; totalPaid: number } }>(
-  ordemServico: T,
-) {
+// OS da obra em ordem de criação (a primeira define o contrato); para EMPRESA, só as da própria empresa
+function ordensServicoInclude(company_id?: string) {
   return {
-    ...ordemServico,
-    valor: ordemServico.valor / 100,
-    empenho: {
-      ...ordemServico.empenho,
-      value: ordemServico.empenho.value / 100,
-      totalPaid: ordemServico.empenho.totalPaid / 100,
-    },
+    ...(company_id ? { where: { empenho: { contrato: { company_id } } } } : {}),
+    orderBy: { createdAt: "asc" },
+    select: ORDEM_SERVICO_RESUMO_SELECT,
+  } as const;
+}
+
+function obraListInclude(company_id?: string) {
+  return {
+    ordensServico: ordensServicoInclude(company_id),
+    invoices: { select: INVOICE_INFO_SELECT, orderBy: { vencimento: "asc" } },
+  } as const;
+}
+
+type OrdemServicoRow = {
+  id: string;
+  numero: string;
+  valor: number;
+  status: string;
+  dataInicio: Date | null;
+  dataPrevisaoTermino: Date | null;
+  empenhos: { empenho: { id: string; numero: string } }[];
+  empenho: { contrato: ObraOrdemServicoResumo["contrato"] };
+};
+
+type InvoiceInfoRow = InvoiceRow & {
+  id: string;
+  empenho_id: string;
+  numero: string;
+  description: string;
+  vencimento: Date;
+};
+
+type ObraRow = Omit<PersistedObra, "valorExecutado"> & {
+  valorExecutado: number;
+  ordensServico: OrdemServicoRow[];
+  invoices: InvoiceInfoRow[];
+};
+
+function mapOrdemServicoResumo(os: OrdemServicoRow, invoices: InvoiceRow[]): ObraOrdemServicoResumo {
+  return {
+    id: os.id,
+    numero: os.numero,
+    valor: os.valor / 100,
+    status: os.status,
+    dataInicio: os.dataInicio,
+    dataPrevisaoTermino: os.dataPrevisaoTermino,
+    valorExecutado: sumActiveInvoicesCents(invoices, os.id) / 100,
+    empenhos: os.empenhos.map((v) => ({ empenho_id: v.empenho.id, numero: v.empenho.numero })),
+    contrato: os.empenho.contrato,
+  };
+}
+
+// Prazo e orçamento da obra saem das OS: considera as não canceladas (ou todas, se só houver canceladas)
+function resumoDasOS(ordensServico: { valor: number; status: string; dataInicio: Date | null; dataPrevisaoTermino: Date | null }[]) {
+  const ativas = ordensServico.filter((os) => os.status !== "CANCELADO");
+  const base = ativas.length > 0 ? ativas : ordensServico;
+  const inicios = base.map((os) => os.dataInicio?.getTime()).filter((t): t is number => t !== undefined);
+  const terminos = base.map((os) => os.dataPrevisaoTermino?.getTime()).filter((t): t is number => t !== undefined);
+  return {
+    dataInicio: inicios.length ? new Date(Math.min(...inicios)) : null,
+    dataPrevisaoTermino: terminos.length ? new Date(Math.max(...terminos)) : null,
+    valorCentavos: ativas.reduce((sum, os) => sum + os.valor, 0),
+  };
+}
+
+function mapObraListItem(row: ObraRow, includeInvoices: boolean): ObraListItem {
+  const { ordensServico, invoices, ...obra } = row;
+  const resumo = resumoDasOS(ordensServico);
+  return {
+    ...obra,
+    // Executado calculado na leitura a partir das notas (não o campo gravado)
+    valorExecutado: sumActiveInvoicesCents(invoices) / 100,
+    dataInicio: resumo.dataInicio,
+    dataPrevisaoTermino: resumo.dataPrevisaoTermino,
+    valor: resumo.valorCentavos / 100,
+    contrato: ordensServico[0]?.empenho.contrato ?? null,
+    ordensServico: ordensServico.map((os) => mapOrdemServicoResumo(os, invoices)),
+    // Só devolvemos as notas para quem pode ver o domínio administrativo — evita
+    // vazar nota fiscal pra quem só tem acesso de engenharia, mesmo que a UI já esconda
+    invoices: includeInvoices ? invoices.map((invoice) => ({ ...invoice, value: invoice.value / 100 })) : [],
   };
 }
 
 export class PrismaObraRepository implements IObraRepository {
-  async create(obra: ObraEntity): Promise<PersistedObra & ObraOrdemServicoInfo> {
+  private async findListItem(id: string): Promise<ObraListItem> {
+    const row = await prisma.obra.findUniqueOrThrow({ where: { id }, include: obraListInclude() });
+    // Resposta de create/update vai para quem edita obras; as notas ficam fora
+    return mapObraListItem(row, false);
+  }
+
+  async create(obra: ObraEntity, ordemServicoIds: string[]): Promise<ObraListItem> {
     try {
-      const newObra = await prisma.obra.create({
-        data: {
-          nome: obra.nome,
-          identificacaoPatrimonial: obra.identificacaoPatrimonial,
-          tipo: obra.tipo,
-          descricao: obra.descricao,
-          latitude: obra.latitude ?? null,
-          longitude: obra.longitude ?? null,
-          dataInicio: new Date(obra.dataInicio),
-          dataPrevisaoTermino: new Date(obra.dataPrevisaoTermino),
-          responsavelTecnico: obra.responsavelTecnico,
-          anotacoes: obra.anotacoes ?? null,
-          tenant_id: obra.tenant_id,
-          ordemServico_id: obra.ordemServico_id,
-        },
-        include: {
-          ordemServico: { select: ORDEM_SERVICO_INFO_SELECT },
-        },
+      const created = await prisma.$transaction(async (tx) => {
+        const newObra = await tx.obra.create({
+          data: {
+            nome: obra.nome,
+            identificacaoPatrimonial: obra.identificacaoPatrimonial,
+            tipo: obra.tipo,
+            descricao: obra.descricao,
+            latitude: obra.latitude ?? null,
+            longitude: obra.longitude ?? null,
+            responsavelTecnico: obra.responsavelTecnico,
+            anotacoes: obra.anotacoes ?? null,
+            tenant_id: obra.tenant_id,
+          },
+        });
+        await tx.ordemServico.updateMany({
+          where: { id: { in: ordemServicoIds } },
+          data: { obra_id: newObra.id },
+        });
+        return newObra;
       });
 
-      return {
-        ...newObra,
-        valorExecutado: newObra.valorExecutado / 100,
-        ordemServico: mapOrdemServico(newObra.ordemServico),
-      };
+      return this.findListItem(created.id);
     } catch (error) {
       throw new DomainError("Error creating obra: " + error);
     }
@@ -110,58 +182,35 @@ export class PrismaObraRepository implements IObraRepository {
     try {
       const baseWhere = {
         ...(tenant_id ? { tenant_id } : {}),
-        ...(company_id
-          ? { ordemServico: { empenho: { contrato: { company_id } } } }
-          : {}),
+        ...(company_id ? { ordensServico: { some: { empenho: { contrato: { company_id } } } } } : {}),
       };
 
-      const [obras, total, emAndamento, concluidas, paralisadas, canceladas] =
-        await Promise.all([
-          prisma.obra.findMany({
-            where: baseWhere,
-            orderBy: { createdAt: "desc" },
-            include: {
-              ordemServico: { select: ORDEM_SERVICO_INFO_SELECT },
-              invoices: { select: INVOICE_INFO_SELECT, orderBy: { vencimento: "asc" } },
-            },
-          }),
-          prisma.obra.count({ where: baseWhere }),
-          prisma.obra.count({ where: { ...baseWhere, status: "EM_ANDAMENTO" } }),
-          prisma.obra.count({ where: { ...baseWhere, status: "CONCLUIDA" } }),
-          prisma.obra.count({ where: { ...baseWhere, status: "PARALISADA" } }),
-          prisma.obra.count({ where: { ...baseWhere, status: "CANCELADA" } }),
-        ]);
+      const [obras, total, emAndamento, concluidas, paralisadas, canceladas] = await Promise.all([
+        prisma.obra.findMany({
+          where: baseWhere,
+          orderBy: { createdAt: "desc" },
+          include: obraListInclude(company_id),
+        }),
+        prisma.obra.count({ where: baseWhere }),
+        prisma.obra.count({ where: { ...baseWhere, status: "EM_ANDAMENTO" } }),
+        prisma.obra.count({ where: { ...baseWhere, status: "CONCLUIDA" } }),
+        prisma.obra.count({ where: { ...baseWhere, status: "PARALISADA" } }),
+        prisma.obra.count({ where: { ...baseWhere, status: "CANCELADA" } }),
+      ]);
 
-      // Executado calculado na leitura a partir das notas (não o campo gravado),
-      // como no detalhe da obra — não depende do recálculo ter rodado
-      const executadoCentavos = new Map(obras.map((o) => [o.id, sumActiveInvoicesCents(o.invoices)]));
-      const valorExecutadoTotalCentavos = obras.reduce((sum, o) => sum + (executadoCentavos.get(o.id) ?? 0), 0);
-
-      // Obra não tem mais orçamento próprio — o "orçamento" da obra é o valor
-      // integral da ordem de serviço vinculada (1 OS : 1 Obra).
-      const orcamentoTotalCentavos = obras.reduce((sum, o) => sum + o.ordemServico.valor, 0);
+      const items = obras.map((o) => mapObraListItem(o, Boolean(includeInvoices)));
 
       return {
-        obras: obras.map((o) => ({
-          ...o,
-          valorExecutado: (executadoCentavos.get(o.id) ?? 0) / 100,
-          ordemServico: mapOrdemServico(o.ordemServico),
-          // Sempre buscamos a relação (simplifica a tipagem do Prisma), mas só
-          // devolvemos o dado financeiro pro cliente quando ele tem permissão
-          // de ver o domínio administrativo — evita vazar nota fiscal pra quem
-          // só tem acesso de engenharia, mesmo que a UI já esconda a aba.
-          invoices: includeInvoices
-            ? o.invoices.map((invoice) => ({ ...invoice, value: invoice.value / 100 }))
-            : [],
-        })),
+        obras: items,
         stats: {
           total,
           emAndamento,
           concluidas,
           paralisadas,
           canceladas,
-          orcamentoTotal: orcamentoTotalCentavos / 100,
-          valorExecutadoTotal: valorExecutadoTotalCentavos / 100,
+          // Orçamento da obra = soma das OS não canceladas vinculadas a ela
+          orcamentoTotal: items.reduce((sum, o) => sum + o.valor, 0),
+          valorExecutadoTotal: items.reduce((sum, o) => sum + o.valorExecutado, 0),
         },
       };
     } catch (error) {
@@ -171,31 +220,45 @@ export class PrismaObraRepository implements IObraRepository {
 
   async getDetail(id: string, tenant_id: string | undefined, company_id?: string): Promise<ObraDetail | null> {
     try {
+      const EMPENHO_DETAIL_SELECT = {
+        id: true,
+        numero: true,
+        description: true,
+        status: true,
+        startAt: true,
+        endAt: true,
+        value: true,
+        vinculosOrdemServico: { select: { valor: true, ordemServico: { select: { status: true } } } },
+      } as const;
+
       const found = await prisma.obra.findFirst({
         where: {
           id,
           ...(tenant_id ? { tenant_id } : {}),
-          ...(company_id ? { ordemServico: { empenho: { contrato: { company_id } } } } : {}),
+          ...(company_id ? { ordensServico: { some: { empenho: { contrato: { company_id } } } } } : {}),
         },
         include: {
           invoices: { select: INVOICE_INFO_SELECT, orderBy: { vencimento: "asc" } },
-          ordemServico: {
-            include: {
-              // Vínculos da OS; o contrato vem do empenho principal (todos são do mesmo contrato)
-              empenhos: { orderBy: { createdAt: "asc" }, select: { empenho_id: true, valor: true } },
+          ordensServico: {
+            ...(company_id ? { where: { empenho: { contrato: { company_id } } } } : {}),
+            orderBy: { createdAt: "asc" },
+            select: {
+              ...ORDEM_SERVICO_RESUMO_SELECT,
+              // Vínculos com o valor destinado e a situação de cada empenho
+              empenhos: {
+                orderBy: { createdAt: "asc" },
+                select: { valor: true, empenho: { select: EMPENHO_DETAIL_SELECT } },
+              },
               empenho: {
-                include: {
+                select: {
                   contrato: {
-                    include: {
-                      company: { select: { id: true, name: true, cnpj: true } },
-                      empenhos: {
-                        orderBy: { startAt: "asc" },
-                        include: {
-                          vinculosOrdemServico: {
-                            select: { valor: true, ordemServico: { select: { status: true } } },
-                          },
-                        },
-                      },
+                    select: {
+                      ...CONTRATO_INFO_SELECT,
+                      status: true,
+                      dataInicio: true,
+                      dataFim: true,
+                      valor: true,
+                      empenhos: { orderBy: { startAt: "asc" }, select: EMPENHO_DETAIL_SELECT },
                     },
                   },
                 },
@@ -204,24 +267,30 @@ export class PrismaObraRepository implements IObraRepository {
           },
         },
       });
-      if (!found) return null;
+      const principal = found?.ordensServico[0];
+      if (!found || !principal) return null;
 
-      const { invoices, ordemServico, valorExecutado: _stored, ...obra } = found;
-      const { empenho } = ordemServico;
-      const { contrato } = empenho;
+      const { invoices, ordensServico, valorExecutado: _stored, ...obra } = found;
+      const { contrato } = principal.empenho;
 
-      // Liquidado por empenho do contrato, somando só NFs não canceladas
+      // Empenhos do contrato principal + os das OS da obra (uma OS pode ser de outro contrato)
+      type EmpenhoRow = (typeof contrato.empenhos)[number];
+      const empenhoRows = new Map<string, EmpenhoRow>(contrato.empenhos.map((e) => [e.id, e]));
+      for (const os of ordensServico) {
+        for (const vinculo of os.empenhos) {
+          if (!empenhoRows.has(vinculo.empenho.id)) empenhoRows.set(vinculo.empenho.id, vinculo.empenho);
+        }
+      }
+
+      // Liquidado por empenho, somando só NFs não canceladas
       const liquidadoPorEmpenho = await prisma.invoice.groupBy({
         by: ["empenho_id"],
-        where: {
-          empenho_id: { in: contrato.empenhos.map((e) => e.id) },
-          status: { not: "CANCELADO" },
-        },
+        where: { empenho_id: { in: [...empenhoRows.keys()] }, status: { not: "CANCELADO" } },
         _sum: { value: true },
       });
       const liquidadoCentavos = new Map(liquidadoPorEmpenho.map((row) => [row.empenho_id, row._sum.value ?? 0]));
 
-      const empenhos = contrato.empenhos.map((e) => {
+      const resumoEmpenho = (e: EmpenhoRow) => {
         const vinculosAtivos = e.vinculosOrdemServico.filter((v) => v.ordemServico.status !== "CANCELADO");
         return {
           id: e.id,
@@ -235,24 +304,35 @@ export class PrismaObraRepository implements IObraRepository {
           comprometidoCentavos: vinculosAtivos.reduce((sum, v) => sum + v.valor, 0),
           ordensServicoCount: vinculosAtivos.length,
         };
-      });
-      const empenhosAtivos = empenhos.filter((e) => e.status !== "CANCELADO");
-      const empenhosById = new Map(empenhos.map((e) => [e.id, e]));
+      };
+
+      // Empenhos das OS da obra (na ordem de vínculo) e quanto cada um destina às OS não canceladas
+      const valorNaObra = new Map<string, number>();
+      for (const os of ordensServico) {
+        for (const vinculo of os.empenhos) {
+          const destinado = os.status === "CANCELADO" ? 0 : vinculo.valor;
+          valorNaObra.set(vinculo.empenho.id, (valorNaObra.get(vinculo.empenho.id) ?? 0) + destinado);
+        }
+      }
+      const empenhosDaObra = [...valorNaObra.keys()].map((empenhoId) => resumoEmpenho(empenhoRows.get(empenhoId)!));
+      const empenhosContrato = contrato.empenhos.map(resumoEmpenho);
+      const empenhosContratoAtivos = empenhosContrato.filter((e) => e.status !== "CANCELADO");
 
       const notasAtivas = invoices.filter((invoice) => invoice.status !== "CANCELADO");
-      const obraLiquidadoCentavos = notasAtivas.reduce((sum, invoice) => sum + invoice.value, 0);
-
-      // Empenhos da OS, com o que cada um destina a ela e o que já foi liquidado nesta obra
-      const empenhosDaOS = ordemServico.empenhos
-        .map((vinculo) => ({ vinculo, empenho: empenhosById.get(vinculo.empenho_id) }))
-        .filter((item): item is { vinculo: typeof item.vinculo; empenho: NonNullable<typeof item.empenho> } =>
-          Boolean(item.empenho),
-        );
+      const resumo = resumoDasOS(ordensServico);
 
       return {
-        obra,
-        ordemServico: { id: ordemServico.id, numero: ordemServico.numero, status: ordemServico.status },
-        empenhos: empenhosDaOS.map(({ empenho: e }) => ({
+        obra: { ...obra, dataInicio: resumo.dataInicio, dataPrevisaoTermino: resumo.dataPrevisaoTermino },
+        ordensServico: ordensServico.map((os) =>
+          mapOrdemServicoResumo(
+            {
+              ...os,
+              empenhos: os.empenhos.map((v) => ({ empenho: { id: v.empenho.id, numero: v.empenho.numero } })),
+            },
+            invoices,
+          ),
+        ),
+        empenhos: empenhosDaObra.map((e) => ({
           id: e.id,
           numero: e.numero,
           description: e.description,
@@ -271,11 +351,14 @@ export class PrismaObraRepository implements IObraRepository {
           company: contrato.company,
         },
         financial: {
-          ordemServico: { valor: ordemServico.valor / 100, liquidado: obraLiquidadoCentavos / 100 },
-          empenhos: empenhosDaOS.map(({ vinculo, empenho: e }) => ({
+          obra: {
+            valor: resumo.valorCentavos / 100,
+            liquidado: notasAtivas.reduce((sum, invoice) => sum + invoice.value, 0) / 100,
+          },
+          empenhos: empenhosDaObra.map((e) => ({
             id: e.id,
             value: e.valueCentavos / 100,
-            valorNaOS: vinculo.valor / 100,
+            valorNaOS: (valorNaObra.get(e.id) ?? 0) / 100,
             liquidado: e.liquidadoCentavos / 100,
             liquidadoNaOS:
               notasAtivas.filter((invoice) => invoice.empenho_id === e.id).reduce((sum, invoice) => sum + invoice.value, 0) /
@@ -285,9 +368,9 @@ export class PrismaObraRepository implements IObraRepository {
           })),
           contrato: {
             valor: contrato.valor / 100,
-            totalEmpenhado: empenhosAtivos.reduce((sum, e) => sum + e.valueCentavos, 0) / 100,
-            totalLiquidado: empenhosAtivos.reduce((sum, e) => sum + e.liquidadoCentavos, 0) / 100,
-            empenhos: empenhos.map((e) => ({
+            totalEmpenhado: empenhosContratoAtivos.reduce((sum, e) => sum + e.valueCentavos, 0) / 100,
+            totalLiquidado: empenhosContratoAtivos.reduce((sum, e) => sum + e.liquidadoCentavos, 0) / 100,
+            empenhos: empenhosContrato.map((e) => ({
               id: e.id,
               numero: e.numero,
               description: e.description,
@@ -313,8 +396,8 @@ export class PrismaObraRepository implements IObraRepository {
         select: {
           tenant_id: true,
           status: true,
-          ordemServico: { select: { valor: true } },
-          invoices: { select: { value: true, status: true } },
+          ordensServico: { select: { valor: true, status: true, dataInicio: true, dataPrevisaoTermino: true } },
+          invoices: { select: { value: true, status: true, ordemServico_id: true } },
         },
       });
 
@@ -327,7 +410,7 @@ export class PrismaObraRepository implements IObraRepository {
           valorExecutadoTotal: 0,
         };
         if (o.status === "EM_ANDAMENTO") entry.emAndamento += 1;
-        entry.orcamentoTotal += o.ordemServico.valor / 100;
+        entry.orcamentoTotal += resumoDasOS(o.ordensServico).valorCentavos / 100;
         entry.valorExecutadoTotal += sumActiveInvoicesCents(o.invoices) / 100;
         byTenant.set(o.tenant_id, entry);
       }
@@ -340,11 +423,31 @@ export class PrismaObraRepository implements IObraRepository {
 
   async listOptionsForInvoice(tenant_id: string, empenho_id: string): Promise<ObraOptionForInvoice[]> {
     try {
+      // OS com obra financiadas (também) por este empenho — uma opção por OS
+      const ordensServico = await prisma.ordemServico.findMany({
+        where: { tenant_id, obra_id: { not: null }, empenhos: { some: { empenho_id } } },
+        orderBy: [{ obra: { nome: "asc" } }, { createdAt: "asc" }],
+        select: {
+          id: true,
+          numero: true,
+          obra: { select: { id: true, nome: true, identificacaoPatrimonial: true } },
+        },
+      });
+
+      return ordensServico.flatMap((os) =>
+        os.obra ? [{ ...os.obra, ordemServico: { id: os.id, numero: os.numero } }] : [],
+      );
+    } catch (error) {
+      throw new DomainError("Error listing obra options: " + error);
+    }
+  }
+
+  async listOptions(tenant_id: string): Promise<ObraOption[]> {
+    try {
       return await prisma.obra.findMany({
-        // Obras cujas OS são financiadas (também) por este empenho
-        where: { tenant_id, ordemServico: { empenhos: { some: { empenho_id } } } },
+        where: { tenant_id },
         orderBy: { nome: "asc" },
-        select: { id: true, nome: true, identificacaoPatrimonial: true },
+        select: { id: true, nome: true, identificacaoPatrimonial: true, status: true },
       });
     } catch (error) {
       throw new DomainError("Error listing obra options: " + error);
@@ -361,90 +464,67 @@ export class PrismaObraRepository implements IObraRepository {
     }
   }
 
-  async findEmpenhoIds(id: string): Promise<string[] | null> {
+  async findOrdemServicoIds(id: string): Promise<string[]> {
     try {
-      const obra = await prisma.obra.findUnique({
-        where: { id },
-        select: { ordemServico: { select: { empenhos: { select: { empenho_id: true } } } } },
-      });
-      return obra ? obra.ordemServico.empenhos.map((vinculo) => vinculo.empenho_id) : null;
+      const ordensServico = await prisma.ordemServico.findMany({ where: { obra_id: id }, select: { id: true } });
+      return ordensServico.map((os) => os.id);
     } catch (error) {
-      throw new DomainError("Error finding obra: " + error);
+      throw new DomainError("Error listing obra ordens de serviço: " + error);
     }
   }
 
-  async empenhoHasObra(empenho_id: string): Promise<boolean> {
+  async update(id: string, obra: ObraType, ordemServicoIds?: string[]): Promise<ObraListItem> {
     try {
-      const obra = await prisma.obra.findFirst({
-        where: { ordemServico: { empenhos: { some: { empenho_id } } } },
-        select: { id: true },
-      });
-      return obra !== null;
-    } catch (error) {
-      throw new DomainError("Error checking empenho obras: " + error);
-    }
-  }
+      await prisma.$transaction(async (tx) => {
+        await tx.obra.update({
+          where: { id },
+          data: {
+            nome: obra.nome,
+            identificacaoPatrimonial: obra.identificacaoPatrimonial,
+            tipo: obra.tipo,
+            descricao: obra.descricao,
+            latitude: obra.latitude ?? null,
+            longitude: obra.longitude ?? null,
+            responsavelTecnico: obra.responsavelTecnico,
+            anotacoes: obra.anotacoes ?? null,
+            updatedAt: new Date(),
+          },
+        });
 
-  async update(id: string, obra: ObraType): Promise<PersistedObra & ObraOrdemServicoInfo> {
-    try {
-      const updatedObra = await prisma.obra.update({
-        where: { id },
-        data: {
-          nome: obra.nome,
-          identificacaoPatrimonial: obra.identificacaoPatrimonial,
-          tipo: obra.tipo,
-          descricao: obra.descricao,
-          latitude: obra.latitude ?? null,
-          longitude: obra.longitude ?? null,
-          dataInicio: new Date(obra.dataInicio),
-          dataPrevisaoTermino: new Date(obra.dataPrevisaoTermino),
-          responsavelTecnico: obra.responsavelTecnico,
-          anotacoes: obra.anotacoes ?? null,
-          updatedAt: new Date(),
-        },
-        include: {
-          ordemServico: { select: ORDEM_SERVICO_INFO_SELECT },
-          invoices: { select: { value: true, status: true } },
-        },
+        if (ordemServicoIds) {
+          // As que saem ficam sem obra; as que entram passam a ser desta obra
+          await tx.ordemServico.updateMany({
+            where: { obra_id: id, id: { notIn: ordemServicoIds } },
+            data: { obra_id: null },
+          });
+          await tx.ordemServico.updateMany({
+            where: { id: { in: ordemServicoIds } },
+            data: { obra_id: id },
+          });
+        }
       });
 
-      // Executado vem das notas; as notas em si ficam fora da resposta
-      const { invoices, ...obraAtualizada } = updatedObra;
-      return {
-        ...obraAtualizada,
-        valorExecutado: sumActiveInvoicesCents(invoices) / 100,
-        ordemServico: mapOrdemServico(updatedObra.ordemServico),
-      };
+      return this.findListItem(id);
     } catch (error) {
       throw new DomainError("Error updating obra: " + error);
     }
   }
 
-  async updateStatus(id: string, status: ObraStatusValue): Promise<PersistedObra & ObraOrdemServicoInfo> {
+  async updateStatus(id: string, status: ObraStatusValue): Promise<ObraListItem> {
     try {
       const existing = await prisma.obra.findUnique({ where: { id } });
       const shouldSetConclusao = status === "CONCLUIDA" && !existing?.dataConclusao;
 
-      const updatedObra = await prisma.obra.update({
+      await prisma.obra.update({
         where: { id },
         data: {
           status,
           updatedAt: new Date(),
           ...(shouldSetConclusao ? { dataConclusao: new Date() } : {}),
         },
-        include: {
-          ordemServico: { select: ORDEM_SERVICO_INFO_SELECT },
-          invoices: { select: { value: true, status: true } },
-        },
       });
 
-      // Executado vem das notas; as notas em si ficam fora da resposta
-      const { invoices, ...obraAtualizada } = updatedObra;
-      return {
-        ...obraAtualizada,
-        valorExecutado: sumActiveInvoicesCents(invoices) / 100,
-        ordemServico: mapOrdemServico(updatedObra.ordemServico),
-      };
+      return this.findListItem(id);
     } catch (error) {
       throw new DomainError("Error updating obra status: " + error);
     }

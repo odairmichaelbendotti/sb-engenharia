@@ -11,6 +11,11 @@ export type OrdemServicoEmpenhoInput = {
 export type OrdemServicoType = {
   numero: string;
   empenhos: OrdemServicoEmpenhoInput[];
+  // Cronograma de execução (data sem horário, "AAAA-MM-DD")
+  dataInicio: string;
+  dataPrevisaoTermino: string;
+  // Obra em que a OS é executada; null = ainda sem obra
+  obra_id?: string | null | undefined;
   tenant_id: string;
 };
 
@@ -21,6 +26,9 @@ export type PersistedOrdemServico = {
   status: OrdemServicoStatusValue;
   // Empenho principal (o primeiro vinculado) — define o contrato da OS
   empenho_id: string;
+  dataInicio: Date | null;
+  dataPrevisaoTermino: Date | null;
+  obra_id: string | null;
   tenant_id: string;
   createdAt: Date;
   updatedAt: Date;
@@ -29,11 +37,22 @@ export type PersistedOrdemServico = {
 export class OrdemServicoEntity {
   public readonly numero: string;
   public readonly empenhos: OrdemServicoEmpenhoInput[];
+  public readonly dataInicio: string;
+  public readonly dataPrevisaoTermino: string;
+  public readonly obra_id: string | null;
   public readonly tenant_id: string;
 
   constructor(props: OrdemServicoType) {
     if (!props.numero.trim()) {
       throw new DomainError("OrdemServico numero is required");
+    }
+    const inicio = new Date(props.dataInicio);
+    const termino = new Date(props.dataPrevisaoTermino);
+    if (Number.isNaN(inicio.getTime()) || Number.isNaN(termino.getTime())) {
+      throw new DomainError("OrdemServico dataInicio and dataPrevisaoTermino are required");
+    }
+    if (inicio >= termino) {
+      throw new DomainError("OrdemServico dataInicio must be before dataPrevisaoTermino");
     }
     if (props.empenhos.length === 0) {
       throw new DomainError("OrdemServico must have at least one empenho");
@@ -48,6 +67,9 @@ export class OrdemServicoEntity {
 
     this.numero = props.numero;
     this.empenhos = props.empenhos;
+    this.dataInicio = props.dataInicio;
+    this.dataPrevisaoTermino = props.dataPrevisaoTermino;
+    this.obra_id = props.obra_id || null;
     this.tenant_id = props.tenant_id;
   }
 

@@ -59,14 +59,28 @@ const OBRA_INFO_SELECT = {
   identificacaoPatrimonial: true,
   tipo: true,
   status: true,
-  dataInicio: true,
-  dataPrevisaoTermino: true,
   dataConclusao: true,
   latitude: true,
   longitude: true,
   responsavelTecnico: true,
-  valorExecutado: true,
 } as const;
+
+const LIST_ITEM_INCLUDE = {
+  empenho: { select: EMPENHO_INFO_SELECT },
+  empenhos: VINCULOS_INCLUDE,
+  obra: { select: OBRA_INFO_SELECT },
+} as const;
+
+// Executado por OS, em centavos: soma das notas não canceladas lançadas em cada uma
+async function sumExecutadoPorOS(ids: string[]): Promise<Map<string, number>> {
+  if (ids.length === 0) return new Map();
+  const grouped = await prisma.invoice.groupBy({
+    by: ["ordemServico_id"],
+    where: { ordemServico_id: { in: ids }, status: { not: "CANCELADO" } },
+    _sum: { value: true },
+  });
+  return new Map(grouped.map((g) => [g.ordemServico_id ?? "", g._sum.value ?? 0] as const));
+}
 
 export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
   async create(data: OrdemServicoPersistData): Promise<OrdemServicoListItem> {
@@ -77,22 +91,22 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
           // Valor da OS = soma dos vínculos; o primeiro empenho é o principal
           valor: data.empenhos.reduce((sum, e) => sum + e.valor, 0),
           empenho_id: data.empenhos[0]!.empenho_id,
+          dataInicio: data.dataInicio,
+          dataPrevisaoTermino: data.dataPrevisaoTermino,
+          obra_id: data.obra_id,
           tenant_id: data.tenant_id,
           empenhos: {
             create: data.empenhos.map((e) => ({ empenho_id: e.empenho_id, valor: e.valor })),
           },
         },
-        include: {
-          empenho: { select: EMPENHO_INFO_SELECT },
-          empenhos: VINCULOS_INCLUDE,
-        },
+        include: LIST_ITEM_INCLUDE,
       });
 
       return {
         ...newOrdemServico,
         valor: newOrdemServico.valor / 100,
         empenhos: mapVinculos(newOrdemServico.empenhos),
-        obra: null,
+        valorExecutado: 0,
       };
     } catch (error) {
       throw new DomainError("Error creating ordem de serviço: " + error);
@@ -113,36 +127,31 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
   async list(tenant_id?: string): Promise<ListOrdensServicoResponse> {
     const tenantFilter = tenant_id ? { tenant_id } : {};
     try {
-      const [ordensServico, total, ativas, finalizadas, canceladas, valorAgg, liquidadoPorObra] = await Promise.all([
+      const [ordensServico, total, ativas, finalizadas, canceladas, valorAgg, executadoPorOS] = await Promise.all([
         prisma.ordemServico.findMany({
           where: tenantFilter,
           orderBy: { createdAt: "desc" },
-          include: {
-            empenho: { select: EMPENHO_INFO_SELECT },
-            empenhos: VINCULOS_INCLUDE,
-            obra: { select: OBRA_INFO_SELECT },
-          },
+          include: LIST_ITEM_INCLUDE,
         }),
         prisma.ordemServico.count({ where: tenantFilter }),
         prisma.ordemServico.count({ where: { ...tenantFilter, status: "ATIVO" } }),
         prisma.ordemServico.count({ where: { ...tenantFilter, status: "FINALIZADO" } }),
         prisma.ordemServico.count({ where: { ...tenantFilter, status: "CANCELADO" } }),
         prisma.ordemServico.aggregate({ where: tenantFilter, _sum: { valor: true } }),
-        // Liquidado vem direto das notas (fonte da verdade), não do campo Obra.valorExecutado:
-        // notas lançadas antes da sincronização existir deixaram esse campo zerado
+        // Executado vem direto das notas de cada OS (fonte da verdade)
         prisma.invoice.groupBy({
-          by: ["obra_id"],
+          by: ["ordemServico_id"],
           where: {
-            obra_id: { not: null },
+            ordemServico_id: { not: null },
             status: { not: "CANCELADO" },
-            ...(tenant_id ? { obra: { tenant_id } } : {}),
+            ...(tenant_id ? { ordemServico: { tenant_id } } : {}),
           },
           _sum: { value: true },
         }),
       ]);
 
-      const liquidadoCentavos = new Map(
-        liquidadoPorObra.map((g) => [g.obra_id, g._sum.value ?? 0] as const),
+      const executadoCentavos = new Map(
+        executadoPorOS.map((g) => [g.ordemServico_id, g._sum.value ?? 0] as const),
       );
 
       return {
@@ -150,9 +159,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
           ...os,
           valor: os.valor / 100,
           empenhos: mapVinculos(os.empenhos),
-          obra: os.obra
-            ? { ...os.obra, valorExecutado: (liquidadoCentavos.get(os.obra.id) ?? 0) / 100 }
-            : null,
+          valorExecutado: (executadoCentavos.get(os.id) ?? 0) / 100,
         })),
         stats: {
           total,
@@ -184,12 +191,14 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
   async listOptionsForObra(tenant_id: string): Promise<OrdemServicoOption[]> {
     try {
       const ordensServico = await prisma.ordemServico.findMany({
-        where: { tenant_id, status: "ATIVO", obra: null },
+        where: { tenant_id, status: "ATIVO", obra_id: null },
         orderBy: { numero: "asc" },
         select: {
           id: true,
           numero: true,
           valor: true,
+          dataInicio: true,
+          dataPrevisaoTermino: true,
           empenho: { select: EMPENHO_INFO_SELECT },
           empenhos: VINCULOS_INCLUDE,
         },
@@ -218,6 +227,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
   async update(id: string, data: Omit<OrdemServicoPersistData, "tenant_id">): Promise<OrdemServicoListItem> {
     try {
       const updated = await prisma.$transaction(async (tx) => {
+        const anterior = await tx.ordemServico.findUniqueOrThrow({ where: { id }, select: { obra_id: true } });
         const atuais = await tx.ordemServicoEmpenho.findMany({
           where: { ordemServico_id: id },
           orderBy: { createdAt: "asc" },
@@ -241,27 +251,40 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
         const principal =
           atuais.find((a) => novosIds.has(a.empenho_id))?.empenho_id ?? data.empenhos[0]!.empenho_id;
 
+        // OS mudou de obra: as notas dela vão junto e a execução das duas obras é recalculada
+        if (anterior.obra_id !== data.obra_id) {
+          await tx.invoice.updateMany({ where: { ordemServico_id: id }, data: { obra_id: data.obra_id } });
+          for (const obra_id of [anterior.obra_id, data.obra_id]) {
+            if (!obra_id) continue;
+            const agg = await tx.invoice.aggregate({
+              where: { obra_id, status: { not: "CANCELADO" } },
+              _sum: { value: true },
+            });
+            await tx.obra.update({ where: { id: obra_id }, data: { valorExecutado: agg._sum.value ?? 0 } });
+          }
+        }
+
         return tx.ordemServico.update({
           where: { id },
           data: {
             numero: data.numero,
             valor: data.empenhos.reduce((sum, e) => sum + e.valor, 0),
             empenho_id: principal,
+            dataInicio: data.dataInicio,
+            dataPrevisaoTermino: data.dataPrevisaoTermino,
+            obra_id: data.obra_id,
             updatedAt: new Date(),
           },
-          include: {
-            empenho: { select: EMPENHO_INFO_SELECT },
-            empenhos: VINCULOS_INCLUDE,
-            obra: { select: OBRA_INFO_SELECT },
-          },
+          include: LIST_ITEM_INCLUDE,
         });
       });
 
+      const executado = await sumExecutadoPorOS([id]);
       return {
         ...updated,
         valor: updated.valor / 100,
         empenhos: mapVinculos(updated.empenhos),
-        obra: updated.obra ? { ...updated.obra, valorExecutado: updated.obra.valorExecutado / 100 } : null,
+        valorExecutado: (executado.get(id) ?? 0) / 100,
       };
     } catch (error) {
       throw new DomainError("Error updating ordem de serviço: " + error);
@@ -283,9 +306,18 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
   async hasInvoicesForEmpenho(id: string, empenho_id: string): Promise<boolean> {
     try {
       const invoice = await prisma.invoice.findFirst({
-        where: { empenho_id, obra: { ordemServico_id: id } },
+        where: { empenho_id, ordemServico_id: id },
         select: { id: true },
       });
+      return invoice !== null;
+    } catch (error) {
+      throw new DomainError("Error checking ordem de serviço invoices: " + error);
+    }
+  }
+
+  async hasInvoices(id: string): Promise<boolean> {
+    try {
+      const invoice = await prisma.invoice.findFirst({ where: { ordemServico_id: id }, select: { id: true } });
       return invoice !== null;
     } catch (error) {
       throw new DomainError("Error checking ordem de serviço invoices: " + error);
@@ -307,8 +339,8 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
 
   async hasObraVinculada(id: string): Promise<boolean> {
     try {
-      const obra = await prisma.obra.findFirst({ where: { ordemServico_id: id } });
-      return obra !== null;
+      const ordemServico = await prisma.ordemServico.findUnique({ where: { id }, select: { obra_id: true } });
+      return Boolean(ordemServico?.obra_id);
     } catch (error) {
       throw new DomainError("Error checking ordem de serviço vínculo: " + error);
     }

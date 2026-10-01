@@ -1,4 +1,4 @@
-import type { OrdemServico } from "../../../types/ordem-servico";
+import type { OrdemServico, OrdemServicoObra } from "../../../types/ordem-servico";
 import { formatDateOnly } from "../../utils/format-currency";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -11,6 +11,7 @@ export type ScheduleKind =
   | "dueSoon"
   | "paused"
   | "noObra"
+  | "noSchedule"
   | "onTrack"
   | "concluded"
   | "inactive";
@@ -23,7 +24,7 @@ export type OrdemServicoSchedule = {
   label: string;
   // Dias até a previsão de término (negativo = atraso); null quando não se aplica
   daysToDeadline: number | null;
-  // Fração decorrida entre início e previsão de término (0 a 1); null sem obra
+  // Fração decorrida entre início e previsão de término da OS (0 a 1); null sem prazo
   elapsedRatio: number | null;
 };
 
@@ -32,6 +33,7 @@ export const SCHEDULE_URGENCY: Record<ScheduleKind, number> = {
   overdue: 0,
   dueSoon: 1,
   noObra: 2,
+  noSchedule: 2,
   paused: 3,
   onTrack: 4,
   concluded: 5,
@@ -54,8 +56,28 @@ function plural(n: number, singular: string, pluralForm: string) {
   return `${n} ${n === 1 ? singular : pluralForm}`;
 }
 
-export function getOrdemServicoSchedule(os: OrdemServico): OrdemServicoSchedule {
+// O mínimo para calcular o prazo: a OS da listagem de OS e a OS dentro de uma obra servem
+export type ScheduleInput = Pick<OrdemServico, "status" | "dataInicio" | "dataPrevisaoTermino"> & {
+  obra: Pick<OrdemServicoObra, "status" | "dataConclusao"> | null;
+};
+
+// O cronograma é da OS (início e previsão de término dela); a obra só entra com o status
+export function getOrdemServicoSchedule(os: ScheduleInput): OrdemServicoSchedule {
   const { obra } = os;
+
+  const today = todayUtc();
+  const hasSchedule = Boolean(os.dataInicio && os.dataPrevisaoTermino);
+  const start = os.dataInicio ? dateOnlyUtc(os.dataInicio) : today;
+  const deadline = os.dataPrevisaoTermino ? dateOnlyUtc(os.dataPrevisaoTermino) : today;
+  const span = deadline - start;
+  const elapsedRatio = !hasSchedule
+    ? null
+    : span > 0
+      ? Math.min(1, Math.max(0, (today - start) / span))
+      : today >= deadline
+        ? 1
+        : 0;
+  const daysToDeadline = Math.round((deadline - today) / DAY_MS);
 
   if (!obra) {
     if (os.status !== "ATIVO") {
@@ -66,16 +88,9 @@ export function getOrdemServicoSchedule(os: OrdemServico): OrdemServicoSchedule 
       tone: "warning",
       label: "Sem obra vinculada",
       daysToDeadline: null,
-      elapsedRatio: null,
+      elapsedRatio,
     };
   }
-
-  const today = todayUtc();
-  const start = dateOnlyUtc(obra.dataInicio);
-  const deadline = dateOnlyUtc(obra.dataPrevisaoTermino);
-  const span = deadline - start;
-  const elapsedRatio = span > 0 ? Math.min(1, Math.max(0, (today - start) / span)) : today >= deadline ? 1 : 0;
-  const daysToDeadline = Math.round((deadline - today) / DAY_MS);
 
   if (obra.dataConclusao || obra.status === "CONCLUIDA") {
     return {
@@ -95,10 +110,20 @@ export function getOrdemServicoSchedule(os: OrdemServico): OrdemServicoSchedule 
   }
 
   if (obra.status === "PARALISADA") {
-    return { kind: "paused", tone: "warning", label: "Obra paralisada", daysToDeadline, elapsedRatio };
+    return {
+      kind: "paused",
+      tone: "warning",
+      label: "Obra paralisada",
+      daysToDeadline: hasSchedule ? daysToDeadline : null,
+      elapsedRatio,
+    };
   }
   if (obra.status === "CANCELADA") {
     return { kind: "inactive", tone: "neutral", label: "Obra cancelada", daysToDeadline: null, elapsedRatio };
+  }
+
+  if (!hasSchedule) {
+    return { kind: "noSchedule", tone: "warning", label: "Sem prazo definido", daysToDeadline: null, elapsedRatio };
   }
 
   if (daysToDeadline < 0) {
