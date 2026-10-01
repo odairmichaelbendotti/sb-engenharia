@@ -51,6 +51,12 @@ function daysUntil(date: string): number {
   return Math.round((target - today) / DAY_MS);
 }
 
+// Obra em andamento com a previsão de término já passada e execução abaixo do orçamento
+export function isObraOverdue(obra: Pick<Obra, "status" | "dataPrevisaoTermino" | "valor" | "valorExecutado">) {
+  if (obra.status !== "EM_ANDAMENTO" || !obra.dataPrevisaoTermino) return false;
+  return daysUntil(obra.dataPrevisaoTermino) < 0 && obra.valorExecutado < obra.valor;
+}
+
 // Aviso de prazo da obra em andamento (prazo = maior previsão de término entre as OS)
 export function getObraDeadlineHint(obra: Pick<Obra, "status" | "dataPrevisaoTermino">) {
   if (obra.status !== "EM_ANDAMENTO" || !obra.dataPrevisaoTermino) return null;

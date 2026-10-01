@@ -1,19 +1,29 @@
 import { useState, useMemo, useEffect } from "react";
-import { Loader2, FolderOpen, AlertCircle, Plus } from "lucide-react";
+import { Loader2, FolderOpen, AlertCircle, Plus, HardHat, DollarSign } from "lucide-react";
 import { useObras } from "../../store/obras";
 import { usePermission } from "../../hooks/usePermission";
+import { useEmpenhoFilter } from "../../hooks/useEmpenhoFilter";
 import type { Obra } from "../../../types/obra";
-import {
-  ObraStats,
-  ObraTable,
-  ObraModal,
-  DeleteObraModal,
-  ObraFilters,
-  ViewObraModal,
-} from "./index";
-import type { ObraFiltersState } from "./index";
-import ObraHeader from "./ObraHeader";
+import { ObraStats, ObraTable, ObraModal, DeleteObraModal, ObraFilters, ViewObraModal } from "./index";
+import type { ObraSummary } from "./index";
+import { OBRA_TIPO_LABEL, isObraOverdue } from "./obra-display";
+import { PageHeader } from "../../components/PageHeader";
+import { buildEmpenhoOptions } from "../../components/filters/empenho-options";
+import { FilterSummary } from "../../components/filters/FilterSummary";
 import { formatCurrency } from "../../utils/format-currency";
+
+function matchesSearch(obra: Obra, search: string) {
+  if (!search) return true;
+  return (
+    obra.nome.toLowerCase().includes(search) ||
+    obra.identificacaoPatrimonial.toLowerCase().includes(search) ||
+    obra.responsavelTecnico.toLowerCase().includes(search) ||
+    (OBRA_TIPO_LABEL[obra.tipo] ?? obra.tipo).toLowerCase().includes(search) ||
+    obra.ordensServico.some(
+      (os) => os.numero.toLowerCase().includes(search) || os.empenhos.some((v) => v.numero.toLowerCase().includes(search)),
+    )
+  );
+}
 
 export default function Obras() {
   const { data, fetchObras } = useObras();
@@ -24,11 +34,9 @@ export default function Obras() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [obraToDelete, setObraToDelete] = useState<Obra | null>(null);
   const [viewingObraId, setViewingObraId] = useState<string | null>(null);
-  const [filters, setFilters] = useState<ObraFiltersState>({
-    search: "",
-    status: "",
-    tipo: "",
-  });
+  const [search, setSearch] = useState("");
+  const [onlyOverdue, setOnlyOverdue] = useState(false);
+  const [empenhoId, setEmpenhoId] = useEmpenhoFilter();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,40 +56,50 @@ export default function Obras() {
   }, [fetchObras]);
 
   const obras = useMemo(() => data?.obras ?? [], [data]);
-  const stats = useMemo(
+
+  // Uma obra pode ter OS de vários empenhos: conta em cada um deles
+  const empenhoOptions = useMemo(
     () =>
-      data?.stats ?? {
-        total: 0,
-        emAndamento: 0,
-        concluidas: 0,
-        paralisadas: 0,
-        canceladas: 0,
-        orcamentoTotal: 0,
-        valorExecutadoTotal: 0,
-      },
-    [data],
+      buildEmpenhoOptions(obras, (obra) =>
+        obra.ordensServico.flatMap((os) =>
+          os.empenhos.map((v) => ({ id: v.empenho_id, numero: v.numero, companyName: os.contrato.company.name })),
+        ),
+      ),
+    [obras],
   );
+
+  // Empenho sem obra (ex.: escolhido em outra tela) não filtra esta lista
+  const activeEmpenhoId = empenhoOptions.some((e) => e.id === empenhoId) ? empenhoId : "";
+
+  // Resumo acompanha o empenho escolhido, para mostrar a situação só daquele empenho
+  const obrasDoEmpenho = useMemo(
+    () =>
+      activeEmpenhoId
+        ? obras.filter((o) => o.ordensServico.some((os) => os.empenhos.some((v) => v.empenho_id === activeEmpenhoId)))
+        : obras,
+    [obras, activeEmpenhoId],
+  );
+
+  const summary = useMemo<ObraSummary>(() => {
+    const ativas = obrasDoEmpenho.filter((o) => o.status !== "CANCELADA");
+    return {
+      total: ativas.length,
+      orcamento: ativas.reduce((acc, o) => acc + o.valor, 0),
+      executado: ativas.reduce((acc, o) => acc + o.valorExecutado, 0),
+      atrasadas: ativas.filter(isObraOverdue).length,
+    };
+  }, [obrasDoEmpenho]);
+
+  // Sem obras atrasadas o filtro do card deixa de valer
+  const activeOnlyOverdue = onlyOverdue && summary.atrasadas > 0;
 
   const filteredObras = useMemo(() => {
-    return obras.filter((o) => {
-      const search = filters.search.toLowerCase();
-      const matchSearch =
-        !search ||
-        o.nome.toLowerCase().includes(search) ||
-        o.identificacaoPatrimonial.toLowerCase().includes(search) ||
-        o.responsavelTecnico.toLowerCase().includes(search) ||
-        o.ordensServico.some((os) => os.numero.toLowerCase().includes(search));
-      const matchStatus = !filters.status || o.status === filters.status;
-      const matchTipo = !filters.tipo || o.tipo === filters.tipo;
-      return matchSearch && matchStatus && matchTipo;
-    });
-  }, [obras, filters]);
+    const s = search.toLowerCase();
+    return obrasDoEmpenho.filter((o) => matchesSearch(o, s) && (!activeOnlyOverdue || isObraOverdue(o)));
+  }, [obrasDoEmpenho, search, activeOnlyOverdue]);
 
   // Busca pelo id na lista atual para o resumo refletir edições feitas com ele aberto
-  const viewingObra = useMemo(
-    () => obras.find((o) => o.id === viewingObraId) ?? null,
-    [obras, viewingObraId],
-  );
+  const viewingObra = useMemo(() => obras.find((o) => o.id === viewingObraId) ?? null, [obras, viewingObraId]);
 
   function handleOpenCreate() {
     setEditingObra(null);
@@ -109,22 +127,29 @@ export default function Obras() {
     setObraToDelete(null);
   }
 
+  function clearFilters() {
+    setSearch("");
+    setOnlyOverdue(false);
+    setEmpenhoId("");
+  }
+
   return (
     <div className="p-4 md:p-5 max-w-7xl mx-auto">
-      <ObraHeader
-        orcamentoTotal={stats.orcamentoTotal}
-        canCreateAndEditContent={canCreateAndEditContent}
-        onAdd={handleOpenCreate}
+      <PageHeader
+        icon={HardHat}
+        title="Obras"
+        stat={{ icon: DollarSign, label: "Orçamento total", value: formatCurrency(data?.stats.orcamentoTotal ?? 0) }}
+        canAct={canCreateAndEditContent}
+        actionLabel="Nova Obra"
+        onAction={handleOpenCreate}
       />
 
-      {/* Loading State */}
       {isLoading ? (
         <div className="bg-surface border border-border rounded-lg p-8 flex flex-col items-center justify-center">
           <Loader2 size={32} className="text-primary-500 animate-spin mb-3" />
           <p className="text-text-secondary text-sm">Carregando obras...</p>
         </div>
       ) : error ? (
-        /* Error State */
         <div className="bg-surface border border-border rounded-lg p-8 flex flex-col items-center justify-center">
           <AlertCircle size={32} className="text-danger-text mb-3" />
           <p className="text-text-secondary text-sm mb-4">{error}</p>
@@ -141,27 +166,34 @@ export default function Obras() {
         </div>
       ) : (
         <>
-          {/* Stats */}
-          <ObraStats stats={stats} formatCurrency={formatCurrency} />
+          <ObraStats
+            summary={summary}
+            onlyOverdue={activeOnlyOverdue}
+            onToggleOverdue={() => setOnlyOverdue(!activeOnlyOverdue)}
+          />
 
-          {/* Filters + Table agrupados */}
           <div className="bg-surface border border-border rounded-lg overflow-hidden">
-            <div className="px-4 pt-3 pb-2 border-b border-border">
+            <div className="px-4 pt-3 pb-3 border-b border-border space-y-2">
               <ObraFilters
-                filters={filters}
-                onChange={setFilters}
-                total={obras.length}
-                filtered={filteredObras.length}
+                search={search}
+                onSearchChange={setSearch}
+                empenhoOptions={empenhoOptions}
+                empenhoId={activeEmpenhoId}
+                onEmpenhoChange={setEmpenhoId}
+              />
+              <FilterSummary
+                count={filteredObras.length}
+                searchTerm={search}
+                empenhoNumero={empenhoOptions.find((e) => e.id === activeEmpenhoId)?.numero}
+                extra={activeOnlyOverdue ? "com prazo vencido" : undefined}
+                onClear={clearFilters}
               />
             </div>
             {filteredObras.length === 0 ? (
-              /* Empty State */
               <div className="p-8 flex flex-col items-center justify-center">
                 <FolderOpen size={32} className="text-text-muted mb-3" />
                 <p className="text-text-secondary text-sm mb-2">
-                  {obras.length === 0
-                    ? "Nenhuma obra cadastrada"
-                    : "Nenhuma obra encontrada com os filtros aplicados"}
+                  {obras.length === 0 ? "Nenhuma obra cadastrada" : "Nenhuma obra encontrada com os filtros aplicados"}
                 </p>
                 {obras.length === 0 && canCreateAndEditContent && (
                   <button
@@ -174,7 +206,9 @@ export default function Obras() {
                 )}
               </div>
             ) : (
+              /* key reinicia a paginação quando os filtros mudam */
               <ObraTable
+                key={`${search}|${activeEmpenhoId}|${activeOnlyOverdue}`}
                 obras={filteredObras}
                 onView={(obra) => setViewingObraId(obra.id)}
                 onEdit={handleOpenEdit}
@@ -185,18 +219,13 @@ export default function Obras() {
         </>
       )}
 
-      {/* Modals */}
       {viewingObra && (
         <ViewObraModal obra={viewingObra} onEdit={handleOpenEdit} handleClose={() => setViewingObraId(null)} />
       )}
 
-      {isModalOpen && (
-        <ObraModal obra={editingObra} handleClose={handleCloseModal} />
-      )}
+      {isModalOpen && <ObraModal obra={editingObra} handleClose={handleCloseModal} />}
 
-      {isDeleteOpen && obraToDelete && (
-        <DeleteObraModal obra={obraToDelete} handleClose={handleCloseDelete} />
-      )}
+      {isDeleteOpen && obraToDelete && <DeleteObraModal obra={obraToDelete} handleClose={handleCloseDelete} />}
     </div>
   );
 }

@@ -35,7 +35,7 @@ const STATUS_LABEL: Record<OrdemServico["status"], string> = {
 };
 
 const STATUS_DOT: Record<OrdemServico["status"], string> = {
-  ATIVO: "bg-warning-text",
+  ATIVO: "bg-primary-500",
   FINALIZADO: "bg-success-text",
   CANCELADO: "bg-danger-text",
 };
@@ -221,7 +221,8 @@ function OrdemServicoRow({ ordemServico: os, canEdit, onView, onEdit, onDelete }
             {os.empenhos.length} empenhos
           </p>
         )}
-        {os.obra && <ExecutionBar executed={os.valorExecutado} total={os.valor} />}
+        {/* Executado vem das NFs da OS: aparece mesmo antes de ela ter obra */}
+        {(os.obra || os.valorExecutado > 0) && <ExecutionBar executed={os.valorExecutado} total={os.valor} />}
       </div>
 
       {/* Ações */}

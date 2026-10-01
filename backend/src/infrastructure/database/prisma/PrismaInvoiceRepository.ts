@@ -153,9 +153,16 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
           _sum: { value: true },
           where: { ...tenantFilter, status: "PENDENTE" },
         }),
+        // Origem da nota (empenho, OS e obra) para a listagem mostrar e filtrar por ela
         prisma.invoice.findMany({
           where: tenantFilter,
-          include: { company: true },
+          orderBy: { vencimento: "desc" },
+          include: {
+            company: true,
+            empenho: { select: { id: true, numero: true } },
+            ordemServico: { select: { id: true, numero: true } },
+            obra: { select: { id: true, nome: true, identificacaoPatrimonial: true } },
+          },
         }),
       ]);
 

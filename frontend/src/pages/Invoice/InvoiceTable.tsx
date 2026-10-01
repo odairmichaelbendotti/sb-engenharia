@@ -1,19 +1,34 @@
 import { useMemo, useState } from "react";
 import {
   AlertCircle,
+  ArrowDown,
+  ArrowUp,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock,
   Edit2,
   FileText,
+  HardHat,
   Trash2,
   XCircle,
+  type LucideIcon,
 } from "lucide-react";
 import type { Invoice } from "../../../types/invoice";
-import { formatCurrency, formatDate } from "../../utils/format-currency";
+import { usePermission } from "../../hooks/usePermission";
+import { formatCurrency, formatDateOnly } from "../../utils/format-currency";
 
 const ITEMS_PER_PAGE = 10;
+
+const STATUS_DISPLAY: Record<string, { label: string; className: string; icon: LucideIcon }> = {
+  PAGO: { label: "Pago", className: "bg-success-bg text-success-text border-success-border", icon: CheckCircle2 },
+  VENCIDO: { label: "Vencido", className: "bg-danger-bg text-danger-text border-danger-border", icon: AlertCircle },
+  CANCELADO: { label: "Cancelado", className: "bg-surface-muted text-text-muted border-border", icon: XCircle },
+  PENDENTE: { label: "Pendente", className: "bg-warning-bg text-warning-text border-warning-border", icon: Clock },
+};
+
+type SortKey = "vencimento" | "value";
+type SortDir = "asc" | "desc";
 
 type InvoiceTableProps = {
   allInvoices: Invoice[];
@@ -21,20 +36,66 @@ type InvoiceTableProps = {
   setEditInvoice: React.Dispatch<React.SetStateAction<Invoice | null>>;
 };
 
-const InvoiceTable = ({
-  allInvoices,
-  setDeleteInvoice,
-  setEditInvoice,
-}: InvoiceTableProps) => {
-  const [page, setPage] = useState(1);
+const thClass = "text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase";
 
-  const totalPages = Math.max(1, Math.ceil(allInvoices.length / ITEMS_PER_PAGE));
+function SortHeader({
+  label,
+  k,
+  sortKey,
+  sortDir,
+  onSort,
+  className = "",
+}: {
+  label: string;
+  k: SortKey;
+  sortKey: SortKey;
+  sortDir: SortDir;
+  onSort: (k: SortKey) => void;
+  className?: string;
+}) {
+  const active = sortKey === k;
+  const Icon = active && sortDir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <th className={`${thClass} ${className}`}>
+      <button
+        onClick={() => onSort(k)}
+        className="inline-flex items-center gap-1 uppercase cursor-pointer hover:text-text-primary transition-colors"
+      >
+        {label}
+        <Icon size={12} className={active ? "text-primary-500" : "text-text-muted"} />
+      </button>
+    </th>
+  );
+}
+
+const InvoiceTable = ({ allInvoices, setDeleteInvoice, setEditInvoice }: InvoiceTableProps) => {
+  const { canEditAdministrativo } = usePermission();
+  const [page, setPage] = useState(1);
+  const [sortKey, setSortKey] = useState<SortKey>("vencimento");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
+    setPage(1);
+  };
+
+  const sorted = useMemo(() => {
+    const dir = sortDir === "asc" ? 1 : -1;
+    return [...allInvoices].sort((a, b) =>
+      sortKey === "value"
+        ? (a.value - b.value) * dir
+        : (new Date(a.vencimento).getTime() - new Date(b.vencimento).getTime()) * dir,
+    );
+  }, [allInvoices, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / ITEMS_PER_PAGE));
   const currentPage = Math.min(page, totalPages);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedInvoices = useMemo(
-    () => allInvoices.slice(startIndex, startIndex + ITEMS_PER_PAGE),
-    [allInvoices, startIndex],
-  );
+  const paginatedInvoices = useMemo(() => sorted.slice(startIndex, startIndex + ITEMS_PER_PAGE), [sorted, startIndex]);
 
   return (
     <div>
@@ -42,114 +103,109 @@ const InvoiceTable = ({
         <table className="w-full">
           <thead className="bg-surface-muted border-b border-border">
             <tr>
-              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
-                NF
-              </th>
-              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
-                Cliente
-              </th>
-              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
-                Descrição
-              </th>
-              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase hidden sm:table-cell">
-                Vencimento
-              </th>
-              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
-                Valor
-              </th>
-              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
-                Status
-              </th>
-              <th className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
-                Ações
-              </th>
+              <th className={thClass}>Nota fiscal</th>
+              <th className={`${thClass} hidden md:table-cell`}>Origem</th>
+              <th className={`${thClass} hidden lg:table-cell`}>Empresa</th>
+              <SortHeader
+                label="Vencimento"
+                k="vencimento"
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={handleSort}
+                className="hidden sm:table-cell"
+              />
+              <SortHeader
+                label="Valor"
+                k="value"
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={handleSort}
+                className="text-right!"
+              />
+              <th className={thClass}>Status</th>
+              {canEditAdministrativo && <th className={`w-px ${thClass}`} aria-label="Ações" />}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {paginatedInvoices.map((invoice) => {
-              const s = invoice.status?.toLowerCase();
-              const isPago = s === "pago";
-              const isVencido = s === "vencido";
-              const isCancelado = s === "cancelado";
-              const cls = isPago
-                ? "bg-success-bg text-success-text border-success-border"
-                : isVencido
-                  ? "bg-danger-bg text-danger-text border-danger-border"
-                  : isCancelado
-                    ? "bg-surface-muted text-text-muted border-border"
-                    : "bg-warning-bg text-warning-text border-warning-border";
-              const label = isPago
-                ? "Pago"
-                : isVencido
-                  ? "Vencido"
-                  : isCancelado
-                    ? "Cancelado"
-                    : "Pendente";
-              const Icon = isPago
-                ? CheckCircle2
-                : isVencido
-                  ? AlertCircle
-                  : isCancelado
-                    ? XCircle
-                    : Clock;
+              const status = STATUS_DISPLAY[invoice.status?.toUpperCase()] ?? STATUS_DISPLAY.PENDENTE!;
+              const StatusIcon = status.icon;
+              const isVencido = invoice.status?.toUpperCase() === "VENCIDO";
+              const isCancelado = invoice.status?.toUpperCase() === "CANCELADO";
 
               return (
                 <tr
                   key={invoice.id}
-                  className={`hover:bg-surface-muted/50 transition-colors ${
+                  className={`group hover:bg-surface-muted/50 transition-colors ${
                     isVencido ? "border-l-2 border-l-danger-text" : ""
-                  }`}
+                  } ${isCancelado ? "opacity-60" : ""}`}
                 >
-                  <td className="py-2.5 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center shrink-0">
-                        <FileText size={18} className="text-primary-500" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-text-primary text-sm">
-                          {invoice.numero}
-                        </p>
-                      </div>
-                    </div>
+                  <td className="py-2.5 px-4 max-w-64">
+                    <p className="font-medium text-text-primary text-sm">{invoice.numero}</p>
+                    <p className="text-xs text-text-muted truncate" title={invoice.description}>
+                      {invoice.description}
+                    </p>
                   </td>
-                  <td className="py-2.5 px-4 text-center text-sm text-text-primary">
-                    {invoice.company?.name || invoice.description}
+                  <td className="py-2.5 px-4 hidden md:table-cell max-w-72">
+                    {invoice.empenho && (
+                      <p className="text-sm text-text-primary font-medium tabular-nums">{invoice.empenho.numero}</p>
+                    )}
+                    {(invoice.ordemServico || invoice.obra) && (
+                      <p
+                        className="flex items-center gap-1 text-xs text-text-muted min-w-0"
+                        title={[invoice.ordemServico && `OS ${invoice.ordemServico.numero}`, invoice.obra?.nome]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      >
+                        <HardHat size={12} className="shrink-0" />
+                        <span className="truncate">
+                          {invoice.ordemServico && <>OS {invoice.ordemServico.numero}</>}
+                          {invoice.ordemServico && invoice.obra && " · "}
+                          {invoice.obra?.nome}
+                        </span>
+                      </p>
+                    )}
                   </td>
-                  <td className="py-2.5 px-4 text-center text-sm text-text-secondary hidden md:table-cell">
-                    {invoice.description}
+                  <td className="py-2.5 px-4 text-sm text-text-secondary hidden lg:table-cell max-w-56">
+                    <p className="truncate" title={invoice.company?.name}>
+                      {invoice.company?.name ?? "—"}
+                    </p>
                   </td>
-                  <td className="py-2.5 px-4 text-center text-sm hidden sm:table-cell">
-                    {formatDate(invoice.vencimento)}
+                  <td className="py-2.5 px-4 text-sm text-text-secondary tabular-nums hidden sm:table-cell">
+                    {formatDateOnly(invoice.vencimento)}
                   </td>
-                  <td className="py-2.5 px-4 text-center font-semibold text-text-primary text-sm">
+                  <td className="py-2.5 px-4 text-right font-semibold text-text-primary text-sm tabular-nums whitespace-nowrap">
                     {formatCurrency(invoice.value)}
                   </td>
-                  <td className="py-2.5 px-4 text-center">
+                  <td className="py-2.5 px-4">
                     <span
-                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium border whitespace-nowrap ${cls}`}
+                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium border whitespace-nowrap ${status.className}`}
                     >
-                      <Icon size={10} />
-                      {label}
+                      <StatusIcon size={10} />
+                      {status.label}
                     </span>
                   </td>
-                  <td className="py-2.5 px-4">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        className="p-2 hover:bg-primary-100 cursor-pointer text-text-secondary hover:text-primary-500 rounded-md transition-colors"
-                        title="Gerenciar"
-                        onClick={() => setEditInvoice(invoice)}
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button
-                        className="p-2 hover:bg-danger-bg cursor-pointer text-text-secondary hover:text-danger-text rounded-md transition-colors"
-                        title="Excluir"
-                        onClick={() => setDeleteInvoice(invoice)}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
+                  {canEditAdministrativo && (
+                    <td className="py-2.5 px-3">
+                      {/* Ações discretas: aparecem ao passar o mouse */}
+                      <div className="flex items-center justify-end gap-0.5 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
+                        <button
+                          className="p-1.5 cursor-pointer text-text-muted hover:text-primary-500 hover:bg-primary-100 rounded-md transition-colors"
+                          title="Editar nota fiscal"
+                          onClick={() => setEditInvoice(invoice)}
+                        >
+                          <Edit2 size={15} />
+                        </button>
+                        <button
+                          className="p-1.5 cursor-pointer text-text-muted hover:text-danger-text hover:bg-danger-bg rounded-md transition-colors"
+                          title="Excluir nota fiscal"
+                          onClick={() => setDeleteInvoice(invoice)}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -161,12 +217,8 @@ const InvoiceTable = ({
       {paginatedInvoices.length === 0 && (
         <div className="py-8 text-center">
           <FileText size={32} className="mx-auto text-text-muted mb-3" />
-          <p className="text-text-secondary font-medium">
-            Nenhuma nota fiscal encontrada
-          </p>
-          <p className="text-text-muted text-sm mt-1">
-            Tente ajustar a busca ou cadastre uma nova nota fiscal
-          </p>
+          <p className="text-text-secondary font-medium">Nenhuma nota fiscal encontrada</p>
+          <p className="text-text-muted text-sm mt-1">Tente ajustar os filtros ou cadastre uma nova nota fiscal</p>
         </div>
       )}
 
@@ -174,9 +226,7 @@ const InvoiceTable = ({
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-surface-muted">
           <p className="text-sm text-text-secondary">
-            Mostrando {startIndex + 1} a{" "}
-            {Math.min(startIndex + ITEMS_PER_PAGE, allInvoices.length)} de{" "}
-            {allInvoices.length} notas
+            Mostrando {startIndex + 1} a {Math.min(startIndex + ITEMS_PER_PAGE, sorted.length)} de {sorted.length} notas
           </p>
           <div className="flex items-center gap-2">
             <button
