@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import type { Obra } from "../../../types/obra";
 import { formatCurrency, formatDateOnly } from "../../utils/format-currency";
 import { usePermission } from "../../hooks/usePermission";
-import { OBRA_STATUS, OBRA_TIPO_LABEL, getObraDeadlineHint } from "./obra-display";
+import { OBRA_TIPO_LABEL, getObraDeadlineHint } from "./obra-display";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -24,6 +24,22 @@ function SortIcon({ k, sortKey, sortDir }: { k: SortKey; sortKey: SortKey; sortD
   ) : (
     <ArrowDown size={12} className="text-primary-500" />
   );
+}
+
+// "+N" quando a lista não cabe na linha; o title mostra todos
+function compactList(items: string[], max: number) {
+  if (items.length <= max) return items.join(", ");
+  return `${items.slice(0, max).join(", ")} +${items.length - max}`;
+}
+
+function getOrigem(obra: Obra) {
+  const empenhos = [...new Set(obra.ordensServico.flatMap((os) => os.empenhos.map((v) => v.numero)))];
+  const os = obra.ordensServico.map((o) => o.numero);
+  return {
+    empenhos: compactList(empenhos, 2),
+    os: os.length === 0 ? "Sem OS" : `OS ${compactList(os, 2)}`,
+    title: `Empenhos: ${empenhos.join(", ") || "—"}\nOS: ${os.join(", ") || "—"}`,
+  };
 }
 
 function ExecucaoCell({ executado, valor }: { executado: number; valor: number }) {
@@ -96,7 +112,6 @@ export function ObraTable({ obras, onView, onEdit, onDelete }: ObraTableProps) {
                   Obra <SortIcon k="nome" sortKey={sortKey} sortDir={sortDir} />
                 </div>
               </th>
-              <th className={`text-left ${thClass} hidden sm:table-cell`}>Status</th>
               <th
                 className={`text-left ${thClass} ${sortableClass} hidden lg:table-cell`}
                 onClick={() => handleSort("dataPrevisaoTermino")}
@@ -115,9 +130,8 @@ export function ObraTable({ obras, onView, onEdit, onDelete }: ObraTableProps) {
           </thead>
           <tbody className="divide-y divide-border">
             {paginated.map((obra) => {
-              const status = OBRA_STATUS[obra.status] ?? OBRA_STATUS.CANCELADA;
               const hint = getObraDeadlineHint(obra);
-              const qtdOS = obra.ordensServico.length;
+              const origem = getOrigem(obra);
               return (
                 <tr
                   key={obra.id}
@@ -130,7 +144,9 @@ export function ObraTable({ obras, onView, onEdit, onDelete }: ObraTableProps) {
                       onView(obra);
                     }
                   }}
-                  className="group cursor-pointer hover:bg-primary-50/40 focus-visible:outline-none focus-visible:bg-primary-50/60 transition-colors"
+                  className={`group cursor-pointer hover:bg-primary-50/40 focus-visible:outline-none focus-visible:bg-primary-50/60 transition-colors ${
+                    obra.status === "CANCELADA" ? "opacity-60" : ""
+                  }`}
                 >
                   <td className="py-3 px-4">
                     <div className="min-w-0">
@@ -142,16 +158,16 @@ export function ObraTable({ obras, onView, onEdit, onDelete }: ObraTableProps) {
                           {obra.nome}
                         </p>
                       </div>
-                      <p className="text-xs text-text-muted mt-0.5">
-                        {OBRA_TIPO_LABEL[obra.tipo] ?? obra.tipo} · {qtdOS} {qtdOS === 1 ? "OS" : "OSs"}
+                      {/* De onde vem a obra: empenho(s) e OS */}
+                      <p className="text-xs text-text-muted mt-0.5 truncate max-w-md" title={origem.title}>
+                        {origem.empenhos && (
+                          <span className="font-medium text-text-secondary tabular-nums">{origem.empenhos}</span>
+                        )}
+                        {origem.empenhos && " · "}
+                        {origem.os}
+                        <span className="hidden sm:inline"> · {OBRA_TIPO_LABEL[obra.tipo] ?? obra.tipo}</span>
                       </p>
                     </div>
-                  </td>
-                  <td className="py-3 px-4 hidden sm:table-cell">
-                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium whitespace-nowrap ${status.text}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
-                      {status.label}
-                    </span>
                   </td>
                   <td className="py-3 px-4 hidden lg:table-cell">
                     {obra.dataPrevisaoTermino ? (

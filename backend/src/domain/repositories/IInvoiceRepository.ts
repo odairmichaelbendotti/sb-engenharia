@@ -13,7 +13,14 @@ export type listInvoices = {
   expiredValue: number;
   pendingInvoices: number;
   pendingValue: number;
-  allInvoices: PersistedInvoice[];
+  allInvoices: InvoiceListItem[];
+};
+
+// Nota como a listagem devolve: com a origem (empenho, OS e obra) que ela paga
+export type InvoiceListItem = PersistedInvoice & {
+  empenho: { id: string; numero: string };
+  ordemServico: { id: string; numero: string } | null;
+  obra: { id: string; nome: string; identificacaoPatrimonial: string } | null;
 };
 
 export type InvoiceSummaryByTenant = {

@@ -12,7 +12,7 @@ interface OrdemServicoStatusTabsProps {
 
 const TABS: { id: OrdemServicoTab; label: string; dotClass?: string }[] = [
   { id: "ALL", label: "Todas" },
-  { id: "ATIVO", label: "Ativas", dotClass: "bg-warning-text" },
+  { id: "ATIVO", label: "Ativas", dotClass: "bg-primary-500" },
   { id: "FINALIZADO", label: "Finalizadas", dotClass: "bg-success-text" },
   { id: "CANCELADO", label: "Canceladas", dotClass: "bg-danger-text" },
 ];

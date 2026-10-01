@@ -14,6 +14,10 @@ export type Invoice = {
   obra_id?: string | null;
   // OS da obra que a nota paga
   ordemServico_id?: string | null;
+  // Origem da nota, enviada pela listagem (create/update não trazem)
+  empenho?: { id: string; numero: string };
+  ordemServico?: { id: string; numero: string } | null;
+  obra?: { id: string; nome: string; identificacaoPatrimonial: string } | null;
   company: {
     id: string;
     name: string;

@@ -10,7 +10,10 @@ import {
   ViewOrdemServicoModal,
 } from "./index";
 import type { OrdemServicoTab } from "./OrdemServicoStatusTabs";
-import type { EmpenhoFilterOption, OrdemServicoSort } from "./OrdemServicoFilters";
+import type { OrdemServicoSort } from "./OrdemServicoFilters";
+import { buildEmpenhoOptions } from "../../components/filters/empenho-options";
+import { FilterSummary } from "../../components/filters/FilterSummary";
+import { useEmpenhoFilter } from "../../hooks/useEmpenhoFilter";
 import { compareNumero, getOrdemServicoSchedule, SCHEDULE_URGENCY } from "./ordem-servico-schedule";
 import { formatCurrency } from "../../utils/format-currency";
 import { usePermission } from "../../hooks/usePermission";
@@ -51,7 +54,7 @@ export default function OrdensServico() {
   const [searchTerm, setSearchTerm] = useState("");
   const [tab, setTab] = useState<OrdemServicoTab>("ALL");
   const [sort, setSort] = useState<OrdemServicoSort>("URGENCY");
-  const [empenhoId, setEmpenhoId] = useState("");
+  const [empenhoId, setEmpenhoId] = useEmpenhoFilter();
   const [isListLoading, setIsListLoading] = useState(true);
 
   const { fetchOrdensServico, data } = useOrdensServico();
@@ -63,24 +66,14 @@ export default function OrdensServico() {
   }, [fetchOrdensServico]);
 
   // Empenhos que possuem OS nesta organização, para o filtro em dropdown
-  const empenhoOptions = useMemo<EmpenhoFilterOption[]>(() => {
-    const byId = new Map<string, EmpenhoFilterOption>();
-    // Uma OS pode ter vários empenhos: conta em cada um deles
-    for (const os of ordensServico) {
-      for (const vinculo of os.empenhos) {
-        const entry = byId.get(vinculo.empenho_id);
-        if (entry) entry.count += 1;
-        else
-          byId.set(vinculo.empenho_id, {
-            id: vinculo.empenho_id,
-            numero: vinculo.numero,
-            companyName: os.empenho.contrato.company.name,
-            count: 1,
-          });
-      }
-    }
-    return [...byId.values()].sort((a, b) => a.numero.localeCompare(b.numero));
-  }, [ordensServico]);
+  // Uma OS pode ter vários empenhos: conta em cada um deles
+  const empenhoOptions = useMemo(
+    () =>
+      buildEmpenhoOptions(ordensServico, (os) =>
+        os.empenhos.map((v) => ({ id: v.empenho_id, numero: v.numero, companyName: os.empenho.contrato.company.name })),
+      ),
+    [ordensServico],
+  );
 
   // Empenho selecionado que deixou de ter OS (ex.: após exclusão) volta para "Todos"
   const activeEmpenhoId = empenhoOptions.some((e) => e.id === empenhoId) ? empenhoId : "";
@@ -177,26 +170,15 @@ export default function OrdensServico() {
             empenhoId={activeEmpenhoId}
             onEmpenhoChange={setEmpenhoId}
           />
-          {(searchTerm || activeEmpenhoId) && (
-            <div className="flex items-center gap-2 text-xs text-text-muted">
-              <span>
-                {visibleOrdensServico.length} resultado{visibleOrdensServico.length !== 1 ? "s" : ""}
-                {searchTerm && <> para "{searchTerm}"</>}
-                {activeEmpenhoId && (
-                  <> no empenho {empenhoOptions.find((e) => e.id === activeEmpenhoId)?.numero}</>
-                )}
-              </span>
-              <button
-                onClick={() => {
-                  setSearchTerm("");
-                  setEmpenhoId("");
-                }}
-                className="text-primary-500 hover:text-primary-600 font-medium cursor-pointer"
-              >
-                Limpar filtros
-              </button>
-            </div>
-          )}
+          <FilterSummary
+            count={visibleOrdensServico.length}
+            searchTerm={searchTerm}
+            empenhoNumero={empenhoOptions.find((e) => e.id === activeEmpenhoId)?.numero}
+            onClear={() => {
+              setSearchTerm("");
+              setEmpenhoId("");
+            }}
+          />
         </div>
         {/* key reinicia a paginação quando filtro, busca ou ordenação mudam */}
         <OrdemServicoList
