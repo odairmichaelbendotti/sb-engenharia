@@ -65,7 +65,8 @@ export const router = createBrowserRouter([
       {
         path: "/ordens-servico",
         element: (
-          <RequireRole allow={(p) => p.canViewAdministrativo}>
+          // Empresa consulta só as próprias OS (o backend filtra), sem acesso ao resto do administrativo
+          <RequireRole allow={(p) => p.canViewAdministrativo || p.isEmpresaRestricted}>
             <OrdensServico />
           </RequireRole>
         ),
