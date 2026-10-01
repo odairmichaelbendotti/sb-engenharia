@@ -94,8 +94,20 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
     fetchObraOptions().catch(() => toast.error("Erro ao carregar as obras"));
   }, [fetchObraOptions]);
 
-  // Obras canceladas não recebem OS nova, mas a obra atual da OS continua na lista
-  const obrasDisponiveis = obraOptions.filter((o) => o.status !== "CANCELADA" || o.id === ordemServico?.obra_id);
+  // Obra só depois do empenho: primeiro as obras com OS do(s) empenho(s) escolhido(s), depois
+  // as demais do mesmo contrato (ex.: serviço que faltou numa obra, pago por um empenho novo).
+  // Obras canceladas não recebem OS nova, mas a obra atual da OS continua na lista.
+  const empenhosEscolhidos = vinculos.map((v) => v.empenho_id).filter(Boolean);
+  const obrasAtivas = obraOptions.filter((o) => o.status !== "CANCELADA" || o.id === ordemServico?.obra_id);
+  const obrasDoEmpenho = obrasAtivas.filter((o) => o.empenhoIds.some((id) => empenhosEscolhidos.includes(id)));
+  const obrasDoContrato = obrasAtivas.filter(
+    (o) => !obrasDoEmpenho.includes(o) && o.contratoIds.includes(selectedContratoId),
+  );
+  // Trocar contrato/empenho pode tirar a obra escolhida da lista: aí ela deixa de valer
+  const obraId =
+    empenhosEscolhidos.length > 0 && [...obrasDoEmpenho, ...obrasDoContrato].some((o) => o.id === form.obra_id)
+      ? form.obra_id
+      : "";
   const empenhos = useMemo(() => empenhosData?.empenhos ?? [], [empenhosData]);
 
   // Contratos que têm empenho — todos os empenhos da OS precisam ser do mesmo contrato
@@ -213,7 +225,7 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
       empenhos: preenchidos.map((v) => ({ empenho_id: v.empenho_id, valor: parseCurrencyMask(v.valor) })),
       dataInicio: form.dataInicio,
       dataPrevisaoTermino: form.dataPrevisaoTermino,
-      obra_id: form.obra_id || null,
+      obra_id: obraId || null,
     };
 
     try {
@@ -285,11 +297,11 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
             </div>
           </div>
 
-          {/* Cronograma e obra */}
+          {/* Cronograma */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
               <CalendarDays size={16} className="text-primary-500" />
-              <span>Cronograma e obra</span>
+              <span>Cronograma</span>
               <div className="flex-1 h-px bg-border" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -311,23 +323,6 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
                   className={inputClass}
                 />
               </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">Obra</label>
-              <div className="relative">
-                <HardHat size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-                <select name="obra_id" value={form.obra_id} onChange={handleChange} className={`${iconInputClass} cursor-pointer`}>
-                  <option value="">Sem obra por enquanto</option>
-                  {obrasDisponiveis.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.identificacaoPatrimonial} — {o.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <p className="text-xs text-text-muted mt-1">
-                Uma obra pode ter várias OS (ex.: um serviço que faltou vira uma nova OS na mesma obra).
-              </p>
             </div>
           </div>
 
@@ -453,6 +448,52 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
               <Plus size={14} />
               Adicionar outro empenho
             </button>
+          </div>
+
+          {/* Obra: só depois do empenho, para listar apenas as obras dele e do mesmo contrato */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+              <HardHat size={16} className="text-primary-500" />
+              <span>Obra</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+            <div className="relative">
+              <HardHat size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+              <select
+                name="obra_id"
+                value={obraId}
+                onChange={handleChange}
+                disabled={empenhosEscolhidos.length === 0}
+                className={`${iconInputClass} cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <option value="">
+                  {empenhosEscolhidos.length === 0 ? "Selecione um empenho primeiro" : "Sem obra por enquanto"}
+                </option>
+                {obrasDoEmpenho.length > 0 && (
+                  <optgroup label="Obras deste empenho">
+                    {obrasDoEmpenho.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.identificacaoPatrimonial} — {o.nome}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {obrasDoContrato.length > 0 && (
+                  <optgroup label="Outras obras do mesmo contrato">
+                    {obrasDoContrato.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.identificacaoPatrimonial} — {o.nome}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+            </div>
+            <p className="text-xs text-text-muted">
+              {empenhosEscolhidos.length === 0
+                ? "Escolha o contrato e o empenho acima para ver as obras disponíveis."
+                : "Uma obra pode ter várias OS (ex.: um serviço que faltou vira uma nova OS na mesma obra)."}
+            </p>
           </div>
 
           {/* Financeiro */}
