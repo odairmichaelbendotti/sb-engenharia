@@ -444,11 +444,28 @@ export class PrismaObraRepository implements IObraRepository {
 
   async listOptions(tenant_id: string): Promise<ObraOption[]> {
     try {
-      return await prisma.obra.findMany({
+      const obras = await prisma.obra.findMany({
         where: { tenant_id },
         orderBy: { nome: "asc" },
-        select: { id: true, nome: true, identificacaoPatrimonial: true, status: true },
+        select: {
+          id: true,
+          nome: true,
+          identificacaoPatrimonial: true,
+          status: true,
+          ordensServico: {
+            select: {
+              empenhos: { select: { empenho_id: true } },
+              empenho: { select: { contrato_id: true } },
+            },
+          },
+        },
       });
+
+      return obras.map(({ ordensServico, ...obra }) => ({
+        ...obra,
+        empenhoIds: [...new Set(ordensServico.flatMap((os) => os.empenhos.map((v) => v.empenho_id)))],
+        contratoIds: [...new Set(ordensServico.map((os) => os.empenho.contrato_id))],
+      }));
     } catch (error) {
       throw new DomainError("Error listing obra options: " + error);
     }

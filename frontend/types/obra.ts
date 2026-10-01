@@ -91,6 +91,9 @@ export type ObraOption = {
   nome: string;
   identificacaoPatrimonial: string;
   status: ObraStatus;
+  // Empenhos e contratos das OS da obra: o cadastro de OS filtra as obras por eles
+  empenhoIds: string[];
+  contratoIds: string[];
 };
 
 export type CreateObraPayload = {
