@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { Building2, Wallet, HardHat, Receipt, ArrowDown, ArrowUp } from "lucide-react";
-import { StatCard } from "../../components/StatCard";
+import { Building2, ArrowDown, ArrowUp } from "lucide-react";
+import { SummaryStrip } from "../../components/SummaryStrip";
 import { formatCurrency } from "../../utils/format-currency";
 import type { TenantSummaryEntry } from "../../../types/tenant";
 
@@ -83,40 +83,36 @@ export default function DashboardPlatform({ entries }: { entries: TenantSummaryE
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-        <StatCard
-          compact
-          title="Organizações"
-          value={entries.length.toString()}
-          subtitle="Cadastradas na plataforma"
-          icon={<Building2 size={16} className="text-primary-500" />}
-          color="bg-primary-100"
-        />
-        <StatCard
-          compact
-          title="Empenhos ativos"
-          value={formatCurrency(total.empenhosAtivosValor)}
-          subtitle={`${total.empenhosAtivos} empenhos em todas as organizações`}
-          icon={<Wallet size={16} className="text-success-text" />}
-          color="bg-success-bg"
-        />
-        <StatCard
-          compact
-          title="Execução de obras"
-          value={formatCurrency(total.valorExecutadoTotal)}
-          subtitle={`de ${formatCurrency(total.orcamentoTotal)} · ${total.obrasEmAndamento} em andamento`}
-          icon={<HardHat size={16} className="text-accent-500" />}
-          color="bg-accent-100"
-        />
-        <StatCard
-          compact
-          title="Notas pendentes/vencidas"
-          value={total.notasCount.toString()}
-          subtitle={formatCurrency(total.notasValor)}
-          icon={<Receipt size={16} className="text-warning-text" />}
-          color="bg-warning-bg"
-        />
-      </div>
+      <SummaryStrip
+        standalone
+        cells={[
+          {
+            key: "organizacoes",
+            label: "Organizações",
+            value: String(entries.length),
+            hint: "cadastradas na plataforma",
+          },
+          {
+            key: "empenhos",
+            label: "Empenhos ativos",
+            value: formatCurrency(total.empenhosAtivosValor),
+            hint: `${total.empenhosAtivos} empenhos`,
+          },
+          {
+            key: "obras",
+            label: "Liquidado em obras",
+            value: formatCurrency(total.valorExecutadoTotal),
+            hint: `de ${formatCurrency(total.orcamentoTotal)} · ${total.obrasEmAndamento} em andamento`,
+          },
+          {
+            key: "notas",
+            label: "Notas pendentes/vencidas",
+            value: formatCurrency(total.notasValor),
+            hint: `${total.notasCount} ${total.notasCount === 1 ? "nota" : "notas"}`,
+            tone: total.notasCount > 0 ? "warning" : "default",
+          },
+        ]}
+      />
 
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-border">

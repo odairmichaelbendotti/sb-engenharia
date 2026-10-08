@@ -17,7 +17,8 @@ import {
 } from "lucide-react";
 import type { Empresa } from "../../../types/empresa";
 import { usePermission } from "../../hooks/usePermission";
-import { maskCnpj, maskPhone, onlyDigits } from "../../utils/masks";
+import { maskCnpj, maskPhone } from "../../utils/masks";
+import { matchesCompanySearch } from "./company-search";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -44,15 +45,10 @@ const TableCompanies = ({
 }: TableCompaniesProps) => {
   const [currentPage, setCurrentPage] = useState(1);
 
-  const filteredEmpresas = useMemo(() => {
-    const digits = onlyDigits(searchTerm);
-    return empresas.filter(
-      (empresa) =>
-        empresa.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (digits !== "" && empresa.cnpj.includes(digits)) ||
-        empresa.city.toLowerCase().includes(searchTerm.toLowerCase()),
-    );
-  }, [empresas, searchTerm]);
+  const filteredEmpresas = useMemo(
+    () => empresas.filter((empresa) => matchesCompanySearch(empresa, searchTerm)),
+    [empresas, searchTerm],
+  );
 
   const { canEditAdministrativo, canCreateCompanyAccess } = usePermission();
   const showActions = canEditAdministrativo || canCreateCompanyAccess;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { Empresa } from "../../../types/empresa";
 import type { CreateCompanyType } from "../../../types/create-company";
 import { useCompanies } from "../../store/companies";
@@ -8,7 +8,9 @@ import RegisterOrEditCompany from "./RegisterOrEditCompany";
 import TableCompanies from "./TableCompanies";
 import { CreateCompanyAccessModal } from "./CreateCompanyAccessModal";
 import FilterCompany from "./FilterCompany";
-import CompanyStats from "./CompanyStats";
+import { matchesCompanySearch } from "./company-search";
+import { SummaryStrip, type SummaryCell } from "../../components/SummaryStrip";
+import { formatCurrency } from "../../utils/format-currency";
 import { toast } from "sonner";
 import { usePermission } from "../../hooks/usePermission";
 import { maskCnpj, maskPhone, maskCep } from "../../utils/masks";
@@ -44,7 +46,45 @@ export default function Empresas() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isListLoading, setIsListLoading] = useState(true);
 
-  const { companies, listCompanies, stats, deleteCompany } = useCompanies();
+  const { companies, listCompanies, deleteCompany } = useCompanies();
+
+  // Totais das empresas que passam pela busca (empenhos cancelados não entram nos valores)
+  const summaryCells = useMemo<SummaryCell[]>(() => {
+    const visiveis = empresas.filter((e) => matchesCompanySearch(e, searchTerm));
+    const empenhos = visiveis
+      .flatMap((e) => e.empenhos)
+      .filter((emp) => (emp.status ?? "").toUpperCase() !== "CANCELADO");
+    const ativos = empenhos.filter((emp) => (emp.status ?? "").toUpperCase() === "ATIVO").length;
+    const comAtivo = visiveis.filter((e) =>
+      e.empenhos.some((emp) => (emp.status ?? "").toUpperCase() === "ATIVO"),
+    ).length;
+    const empenhado = empenhos.reduce((acc, emp) => acc + emp.value, 0);
+    const liquidado = empenhos.reduce((acc, emp) => acc + (emp.totalPaid ?? 0), 0);
+    const pct = empenhado > 0 ? Math.round((liquidado / empenhado) * 100) : 0;
+
+    return [
+      {
+        key: "empresas",
+        label: "Empresas",
+        value: String(visiveis.length),
+        hint: `${comAtivo} com empenho ativo`,
+      },
+      {
+        key: "empenhado",
+        label: "Empenhado",
+        value: formatCurrency(empenhado),
+        hint: `${empenhos.length} ${empenhos.length === 1 ? "empenho" : "empenhos"} · ${ativos} ${ativos === 1 ? "ativo" : "ativos"}`,
+      },
+      { key: "liquidado", label: "Liquidado", value: formatCurrency(liquidado), hint: `${pct}% do empenhado` },
+      {
+        key: "saldo",
+        label: "A liquidar",
+        value: formatCurrency(Math.max(0, empenhado - liquidado)),
+        hint: "do valor empenhado",
+        tone: "primary",
+      },
+    ];
+  }, [empresas, searchTerm]);
 
   useEffect(() => {
     listCompanies().finally(() => setIsListLoading(false));
@@ -146,10 +186,9 @@ export default function Empresas() {
         onAction={() => handleOpen()}
       />
 
-      <CompanyStats stats={stats} />
-
       {/* Filters + Table */}
       <div className="bg-surface border border-border rounded-lg overflow-hidden">
+        <SummaryStrip cells={summaryCells} className="rounded-t-lg" />
         <div className="px-4 pt-3 pb-2 border-b border-border">
           <FilterCompany
             searchTerm={searchTerm}

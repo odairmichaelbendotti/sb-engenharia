@@ -5,7 +5,8 @@ import type { ScopeFilter } from "../../hooks/useScopeFilter";
 export type ScopeRef = {
   empresa: { id: string; name: string };
   contrato: { id: string; identificador: string } | null;
-  empenho: { id: string; numero: string };
+  // null em itens acima do empenho (ex.: contrato)
+  empenho: { id: string; numero: string } | null;
 };
 
 export type ScopeOption = {
@@ -22,13 +23,13 @@ type Level = keyof ScopeFilter;
 function refId(ref: ScopeRef, level: Level) {
   if (level === "empresa") return ref.empresa.id;
   if (level === "contrato") return ref.contrato?.id ?? "";
-  return ref.empenho.id;
+  return ref.empenho?.id ?? "";
 }
 
 function refLabel(ref: ScopeRef, level: Level) {
   if (level === "empresa") return ref.empresa.name;
   if (level === "contrato") return ref.contrato?.identificador ?? "";
-  return ref.empenho.numero;
+  return ref.empenho?.numero ?? "";
 }
 
 function refMatches(ref: ScopeRef, scope: Partial<ScopeFilter>) {
