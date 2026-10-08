@@ -122,7 +122,7 @@ const InvoiceTable = ({ allInvoices, setDeleteInvoice, setEditInvoice }: Invoice
                 onSort={handleSort}
                 className="text-right!"
               />
-              <th className={thClass}>Status</th>
+              <th className={`${thClass} text-right!`}>Status</th>
               {canEditAdministrativo && <th className={`w-px ${thClass}`} aria-label="Ações" />}
             </tr>
           </thead>
@@ -177,7 +177,7 @@ const InvoiceTable = ({ allInvoices, setDeleteInvoice, setEditInvoice }: Invoice
                   <td className="py-2.5 px-4 text-right font-semibold text-text-primary text-sm tabular-nums whitespace-nowrap">
                     {formatCurrency(invoice.value)}
                   </td>
-                  <td className="py-2.5 px-4">
+                  <td className="py-2.5 px-4 text-right">
                     <span
                       className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium border whitespace-nowrap ${status.className}`}
                     >
