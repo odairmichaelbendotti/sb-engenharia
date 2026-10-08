@@ -122,7 +122,8 @@ const InvoiceTable = ({ allInvoices, setDeleteInvoice, setEditInvoice }: Invoice
                 onSort={handleSort}
                 className="text-right!"
               />
-              <th className={`${thClass} text-right!`}>Status</th>
+              {/* Largura fixa: sem ela a coluna fica do tamanho do selo e o alinhamento à direita não aparece */}
+              <th className={`${thClass} text-right! w-36`}>Status</th>
               {canEditAdministrativo && <th className={`w-px ${thClass}`} aria-label="Ações" />}
             </tr>
           </thead>

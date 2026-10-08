@@ -18,7 +18,6 @@ const ITEMS_PER_PAGE = 10;
 interface EmpenhoTableProps {
   empenhos: EmpenhoList[];
   isLoading?: boolean;
-  formatCurrency: (value: number) => string;
   onEdit: (empenho: EmpenhoList) => void;
   onDelete: (empenho: EmpenhoList) => void;
   onAdd?: () => void;
@@ -27,7 +26,6 @@ interface EmpenhoTableProps {
 export function EmpenhoTable({
   empenhos,
   isLoading = false,
-  formatCurrency,
   onEdit,
   onDelete,
   onAdd,
@@ -60,9 +58,6 @@ export function EmpenhoTable({
               </th>
               <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
                 Prazo
-              </th>
-              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
-                Valor
               </th>
               <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
                 Saldo
@@ -131,11 +126,7 @@ export function EmpenhoTable({
                       )}
                     </div>
                   </td>
-                  <td className="py-2.5 px-4 text-right">
-                    <p className="font-semibold text-text-primary text-sm">
-                      {formatCurrency(empenho.value)}
-                    </p>
-                  </td>
+                  {/* O valor do empenho já aparece no saldo ("de R$ ..."): sem coluna própria */}
                   <td className="py-2.5 px-4 min-w-44">
                     <SaldoLiquidacao
                       valor={empenho.value}

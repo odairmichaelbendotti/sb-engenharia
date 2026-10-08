@@ -154,7 +154,6 @@ export default function Empenhos() {
             key={`${searchTerm}|${scopeKey}`}
             empenhos={filteredEmpenhos}
             isLoading={isListLoading}
-            formatCurrency={formatCurrency}
             onEdit={handleOpen}
             onDelete={handleOpenDelete}
             onAdd={() => handleOpen()}
