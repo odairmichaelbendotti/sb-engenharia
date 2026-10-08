@@ -46,13 +46,20 @@ function getOrigem(obra: Obra) {
   };
 }
 
+// Empresas das OS da obra (normalmente uma só; mais de uma quando há OS de contratos diferentes)
+function getEmpresas(obra: Obra) {
+  const nomes = obra.ordensServico.map((os) => os.contrato.company.name);
+  if (nomes.length === 0 && obra.contrato) nomes.push(obra.contrato.company.name);
+  return [...new Set(nomes)].join(", ");
+}
+
 // Saldo a liquidar da obra; quando tudo foi pago, oferece concluir a obra
 function SaldoCell({ obra, canComplete }: { obra: Obra; canComplete: boolean }) {
   const balance = getObraBalance(obra);
 
   if (balance.kind === "concluded") {
     return (
-      <div className="min-w-40">
+      <div className="min-w-40 ml-auto text-right">
         <p className="inline-flex items-center gap-1 text-sm font-semibold text-success-text">
           <CheckCircle2 size={14} />
           Concluída
@@ -67,7 +74,7 @@ function SaldoCell({ obra, canComplete }: { obra: Obra; canComplete: boolean }) 
 
   if (balance.kind === "paid") {
     return (
-      <div className="min-w-40 space-y-1">
+      <div className="min-w-40 ml-auto text-right space-y-1">
         <p className="inline-flex items-center gap-1 text-sm font-semibold text-success-text">
           <CheckCircle2 size={14} />
           Obra paga
@@ -76,13 +83,20 @@ function SaldoCell({ obra, canComplete }: { obra: Obra; canComplete: boolean }) 
           {balance.osQuitadas} OS sem saldo ·{" "}
           {formatCurrency(obra.valorExecutado)}
         </p>
-        {canComplete && <CompleteObraButton obra={obra} />}
+        {canComplete && (
+          <div className="flex justify-end">
+            <CompleteObraButton obra={obra} />
+          </div>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="min-w-40" title={`${formatCurrency(obra.valorExecutado)} liquidados de ${formatCurrency(obra.valor)}`}>
+    <div
+      className="min-w-40 ml-auto text-right"
+      title={`${formatCurrency(obra.valorExecutado)} liquidados de ${formatCurrency(obra.valor)}`}
+    >
       <p className="text-[11px] font-semibold uppercase tracking-wide text-text-secondary">A liquidar</p>
       <p className="text-sm font-bold text-text-primary tabular-nums">{formatCurrency(balance.saldo)}</p>
       {balance.kind !== "empty" && (
@@ -162,8 +176,9 @@ export function ObraTable({ obras, onView, onEdit, onDelete }: ObraTableProps) {
                   Prazo <SortIcon k="dataPrevisaoTermino" sortKey={sortKey} sortDir={sortDir} />
                 </div>
               </th>
-              <th className={`text-left ${thClass} ${sortableClass}`} onClick={() => handleSort("valor")}>
-                <div className="flex items-center gap-1">
+              <th className={`text-left ${thClass} hidden md:table-cell`}>Empresa</th>
+              <th className={`text-right ${thClass} ${sortableClass}`} onClick={() => handleSort("valor")}>
+                <div className="flex items-center justify-end gap-1">
                   Saldo <SortIcon k="valor" sortKey={sortKey} sortDir={sortDir} />
                 </div>
               </th>
@@ -174,6 +189,7 @@ export function ObraTable({ obras, onView, onEdit, onDelete }: ObraTableProps) {
             {paginated.map((obra) => {
               const hint = getObraDeadlineHint(obra);
               const origem = getOrigem(obra);
+              const empresas = getEmpresas(obra);
               return (
                 <tr
                   key={obra.id}
@@ -226,7 +242,13 @@ export function ObraTable({ obras, onView, onEdit, onDelete }: ObraTableProps) {
                       <span className="text-xs text-text-muted">Sem prazo</span>
                     )}
                   </td>
-                  <td className="py-3 px-4">
+                  {/* Uma linha só: nome longo termina em reticências e aparece inteiro ao passar o mouse */}
+                  <td className="py-3 px-4 hidden md:table-cell max-w-56">
+                    <p className="text-sm text-text-secondary truncate" title={empresas}>
+                      {empresas || "—"}
+                    </p>
+                  </td>
+                  <td className="py-3 px-4 text-right">
                     <SaldoCell obra={obra} canComplete={canEditEngenharia} />
                   </td>
                   {canEditEngenharia && (
