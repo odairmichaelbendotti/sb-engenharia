@@ -25,7 +25,9 @@ import {
   type ScheduleKind,
   type ScheduleTone,
 } from "../OrdemServico/ordem-servico-schedule";
-import { OBRA_STATUS, OBRA_TIPO_LABEL, getObraDeadlineHint } from "./obra-display";
+import { OBRA_STATUS, OBRA_TIPO_LABEL, getObraBalance, getObraDeadlineHint } from "./obra-display";
+import { getBalance } from "../OrdemServico/ordem-servico-balance";
+import { CompleteObraButton } from "./CompleteObraButton";
 
 interface ViewObraModalProps {
   obra: Obra;
@@ -175,7 +177,7 @@ function OrdemServicoCard({ os, obra }: { os: ObraOrdemServico; obra: Obra }) {
         {/* Quanto da OS já foi executado (notas fiscais desta OS) */}
         <div className="min-w-0">
           <div className="flex items-center justify-between gap-2 text-xs">
-            <span className="text-text-muted">Executado</span>
+            <span className="text-text-muted">Liquidado</span>
             <span className={`font-semibold tabular-nums ${executado > 100 ? "text-danger-text" : "text-text-secondary"}`}>
               {executado}%
             </span>
@@ -185,6 +187,9 @@ function OrdemServicoCard({ os, obra }: { os: ObraOrdemServico; obra: Obra }) {
           </div>
           <p className="mt-1 text-[11px] text-text-muted tabular-nums">
             {formatCurrency(os.valorExecutado)} de {formatCurrency(os.valor)}
+            {os.status === "ATIVO" && (
+              <> · falta {formatCurrency(getBalance(os.valor, os.valorExecutado).saldo)}</>
+            )}
           </p>
         </div>
       </div>
@@ -196,6 +201,7 @@ export function ViewObraModal({ obra, onEdit, handleClose }: ViewObraModalProps)
   const { canEditEngenharia } = usePermission();
   const status = OBRA_STATUS[obra.status] ?? OBRA_STATUS.CANCELADA;
   const executado = percentOf(obra.valorExecutado, obra.valor);
+  const balance = getObraBalance(obra);
   const hint = getObraDeadlineHint(obra);
 
   useEffect(() => {
@@ -246,11 +252,21 @@ export function ViewObraModal({ obra, onEdit, handleClose }: ViewObraModalProps)
         <div className="p-5 overflow-y-auto space-y-6">
           {/* Resumo: orçamento, execução e prazo vêm das OS da obra */}
           <section className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <SummaryTile label="Orçamento (soma das OS)" value={formatCurrency(obra.valor)} />
-              <SummaryTile label="Executado" value={formatCurrency(obra.valorExecutado)}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+              <SummaryTile label="Emitido em OS" value={formatCurrency(obra.valor)}>
                 <p className="text-xs text-text-muted mt-0.5">
-                  {executado}% · falta {formatCurrency(Math.max(0, obra.valor - obra.valorExecutado))}
+                  {obra.ordensServico.length} OS
+                </p>
+              </SummaryTile>
+              <SummaryTile label="Liquidado" value={formatCurrency(obra.valorExecutado)}>
+                <p className="text-xs text-text-muted mt-0.5">{executado}% do emitido</p>
+              </SummaryTile>
+              <SummaryTile
+                label="A liquidar"
+                value={balance.kind === "paid" || balance.kind === "concluded" ? "Sem saldo" : formatCurrency(balance.saldo)}
+              >
+                <p className="text-xs text-text-muted mt-0.5">
+                  {balance.kind === "paid" ? "Obra paga" : "nas OS ativas"}
                 </p>
               </SummaryTile>
               <SummaryTile
@@ -269,6 +285,15 @@ export function ViewObraModal({ obra, onEdit, handleClose }: ViewObraModalProps)
               </SummaryTile>
             </div>
             <ProgressBar percent={executado} className={executado > 100 ? "bg-danger-text" : "bg-primary-500"} />
+            {/* Todas as OS sem saldo: a obra já pode ser concluída */}
+            {balance.kind === "paid" && (
+              <div className="flex items-center justify-between gap-3 flex-wrap rounded-lg border border-success-border bg-success-bg px-3.5 py-3">
+                <p className="text-sm text-success-text">
+                  <span className="font-semibold">Obra paga.</span> Nenhuma OS desta obra tem saldo a liquidar.
+                </p>
+                {canEditEngenharia && <CompleteObraButton obra={obra} />}
+              </div>
+            )}
           </section>
 
           {/* Ordens de serviço da obra */}

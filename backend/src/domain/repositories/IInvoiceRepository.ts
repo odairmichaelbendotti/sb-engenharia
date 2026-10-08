@@ -18,7 +18,7 @@ export type listInvoices = {
 
 // Nota como a listagem devolve: com a origem (empenho, OS e obra) que ela paga
 export type InvoiceListItem = PersistedInvoice & {
-  empenho: { id: string; numero: string };
+  empenho: { id: string; numero: string; contrato: { id: string; identificador: string } };
   ordemServico: { id: string; numero: string } | null;
   obra: { id: string; nome: string; identificacaoPatrimonial: string } | null;
 };

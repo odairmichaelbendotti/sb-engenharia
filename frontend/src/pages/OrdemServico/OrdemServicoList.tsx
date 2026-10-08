@@ -7,7 +7,6 @@ import {
   Clock,
   Edit2,
   Eye,
-  HardHat,
   Loader2,
   MoreHorizontal,
   PauseCircle,
@@ -18,7 +17,10 @@ import {
 import type { OrdemServico } from "../../../types/ordem-servico";
 import { usePermission } from "../../hooks/usePermission";
 import { formatCurrency, formatDateOnly } from "../../utils/format-currency";
+import { OrdemServicoNumeroTag } from "../../components/OrdemServicoNumeroTag";
 import { OrdemServicoPagination } from "./OrdemServicoPagination";
+import { FinalizeOrdemServicoButton } from "./FinalizeOrdemServico";
+import { getOrdemServicoBalance, isQuitada } from "./ordem-servico-balance";
 import {
   getOrdemServicoSchedule,
   type OrdemServicoSchedule,
@@ -32,12 +34,6 @@ const STATUS_LABEL: Record<OrdemServico["status"], string> = {
   ATIVO: "Ativa",
   FINALIZADO: "Finalizada",
   CANCELADO: "Cancelada",
-};
-
-const STATUS_DOT: Record<OrdemServico["status"], string> = {
-  ATIVO: "bg-primary-500",
-  FINALIZADO: "bg-success-text",
-  CANCELADO: "bg-danger-text",
 };
 
 const TONE_CHIP: Record<ScheduleTone, string> = {
@@ -157,13 +153,15 @@ interface OrdemServicoRowProps {
 function OrdemServicoRow({ ordemServico: os, canEdit, onView, onEdit, onDelete }: OrdemServicoRowProps) {
   const schedule = getOrdemServicoSchedule(os);
   const { contrato } = os.empenho;
-  const muted = os.status === "CANCELADO";
+  const muted = os.status !== "ATIVO";
+  // O título é o serviço (nome da obra); sem obra, a descrição do empenho
+  const title = os.obra?.nome ?? os.empenho.description;
 
   return (
     <li
       role="button"
       tabIndex={0}
-      aria-label={`Visualizar ordem de serviço ${os.numero}`}
+      aria-label={`Visualizar ordem de serviço ${os.numero}: ${title}`}
       onClick={() => onView(os)}
       onKeyDown={(e) => {
         if (e.target !== e.currentTarget) return;
@@ -172,7 +170,7 @@ function OrdemServicoRow({ ordemServico: os, canEdit, onView, onEdit, onDelete }
           onView(os);
         }
       }}
-      className="group relative grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_minmax(0,0.85fr)_2.5rem] gap-x-6 gap-y-3 pl-5 pr-3 py-4 cursor-pointer transition-colors hover:bg-primary-50/40 focus-visible:outline-none focus-visible:bg-primary-50/60"
+      className="group relative grid grid-cols-1 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,1fr)_2.5rem] gap-x-6 gap-y-3 pl-5 pr-3 py-4 cursor-pointer transition-colors hover:bg-primary-50/40 focus-visible:outline-none focus-visible:bg-primary-50/60"
     >
       {/* Faixa na cor do contrato: agrupa visualmente OS do mesmo contrato */}
       <span
@@ -181,31 +179,31 @@ function OrdemServicoRow({ ordemServico: os, canEdit, onView, onEdit, onDelete }
         style={{ backgroundColor: contrato.cor }}
       />
 
-      {/* Identificação */}
+      {/* Serviço: o número da OS é só uma etiqueta, o título diz o que está sendo feito */}
       <div className={`min-w-0 pr-8 md:pr-0 ${muted ? "opacity-60" : ""}`}>
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-base font-semibold text-text-primary tracking-tight">{os.numero}</span>
-          <span className="inline-flex items-center gap-1.5 text-xs text-text-secondary">
-            <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[os.status]}`} />
-            {STATUS_LABEL[os.status]}
-          </span>
-        </div>
-        <p className="text-sm text-text-secondary truncate mt-0.5" title={`${contrato.identificador} · ${contrato.company.name}`}>
-          {contrato.identificador} <span className="text-text-muted">·</span> {contrato.company.name}
+        <p
+          className={`text-[15px] leading-snug line-clamp-2 ${
+            os.obra ? "font-semibold text-text-primary" : "font-medium text-text-secondary"
+          }`}
+          title={title}
+        >
+          {title}
         </p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-secondary min-w-0">
+          <OrdemServicoNumeroTag numero={os.numero} />
+          {/* Ativa é o padrão: o status só aparece quando é outro */}
+          {os.status !== "ATIVO" && (
+            <span className="px-1.5 py-px rounded border border-border text-[11px]">{STATUS_LABEL[os.status]}</span>
+          )}
+          <span className="truncate" title={`${contrato.company.name} · ${contrato.identificador}`}>
+            {contrato.company.name} <span className="text-text-muted">·</span> {contrato.identificador}
+          </span>
+          {!os.obra && <span className="text-text-muted">· sem obra vinculada</span>}
+        </div>
       </div>
 
-      {/* Obra e prazo */}
+      {/* Prazo da própria OS: aparece mesmo antes de ela ter obra */}
       <div className={`min-w-0 ${muted ? "opacity-60" : ""}`}>
-        {os.obra && (
-          <p className="flex items-center gap-1.5 text-sm text-text-primary min-w-0">
-            <HardHat size={14} className="text-text-muted shrink-0" />
-            <span className="truncate" title={os.obra.nome}>
-              {os.obra.nome}
-            </span>
-          </p>
-        )}
-        {/* Prazo é da própria OS: aparece mesmo antes de ela ter obra */}
         {os.dataInicio && os.dataPrevisaoTermino ? (
           <ScheduleTimeline start={os.dataInicio} end={os.dataPrevisaoTermino} schedule={schedule} />
         ) : (
@@ -213,16 +211,9 @@ function OrdemServicoRow({ ordemServico: os, canEdit, onView, onEdit, onDelete }
         )}
       </div>
 
-      {/* Valor e execução */}
-      <div className={`min-w-0 md:text-right ${muted ? "opacity-60" : ""}`}>
-        <p className="text-base font-semibold text-text-primary tabular-nums">{formatCurrency(os.valor)}</p>
-        {os.empenhos.length > 1 && (
-          <p className="text-xs text-text-muted" title={os.empenhos.map((v) => v.numero).join(", ")}>
-            {os.empenhos.length} empenhos
-          </p>
-        )}
-        {/* Executado vem das NFs da OS: aparece mesmo antes de ela ter obra */}
-        {(os.obra || os.valorExecutado > 0) && <ExecutionBar executed={os.valorExecutado} total={os.valor} />}
+      {/* Saldo a liquidar (vem das NFs da OS) */}
+      <div className="min-w-0">
+        <BalanceCell ordemServico={os} muted={muted} canFinalize={canEdit} />
       </div>
 
       {/* Ações */}
@@ -276,7 +267,7 @@ function ScheduleTimeline({
   const showToday = schedule.kind !== "concluded" && schedule.kind !== "inactive";
 
   return (
-    <div className="mt-2 space-y-1.5">
+    <div className="md:mt-1 space-y-1.5">
       <div className="flex items-center gap-2 text-[11px] text-text-muted tabular-nums">
         <span>{formatDateOnly(start)}</span>
         <div
@@ -303,24 +294,66 @@ function ScheduleTimeline({
   );
 }
 
-function ExecutionBar({ executed, total }: { executed: number; total: number }) {
-  const percent = total > 0 ? Math.round((executed / total) * 100) : 0;
-  const over = percent > 100;
+function BalanceCell({
+  ordemServico: os,
+  muted,
+  canFinalize,
+}: {
+  ordemServico: OrdemServico;
+  muted: boolean;
+  canFinalize: boolean;
+}) {
+  const balance = getOrdemServicoBalance(os);
+  const closed = balance.kind === "paid" || balance.kind === "over";
 
   return (
-    <div className="mt-2 md:ml-auto md:max-w-44" title={`${formatCurrency(executed)} liquidados em notas fiscais`}>
-      <div className="flex items-center justify-between text-[11px] text-text-muted mb-1">
-        <span>Liquidado</span>
-        <span className={`font-semibold tabular-nums ${over ? "text-danger-text" : "text-text-secondary"}`}>
-          {percent}%
+    <div className="flex flex-col items-start md:items-end gap-1 md:text-right">
+      <div className={`flex flex-col items-start md:items-end gap-1 w-full ${muted ? "opacity-60" : ""}`}>
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
+          {closed ? "Saldo" : "A liquidar"}
+        </span>
+        {balance.kind === "paid" ? (
+          <span className="inline-flex items-center gap-1 text-sm font-semibold text-success-text">
+            <CheckCircle2 size={14} />
+            {os.status === "ATIVO" ? "Quitada · sem saldo" : "Quitada"}
+          </span>
+        ) : balance.kind === "over" ? (
+          <span className="inline-flex items-center gap-1 text-sm font-semibold text-danger-text tabular-nums">
+            <AlertTriangle size={14} />
+            {formatCurrency(balance.excesso)} acima do valor
+          </span>
+        ) : (
+          <span className="text-base font-bold text-text-primary tabular-nums tracking-tight">
+            {formatCurrency(balance.saldo)}
+          </span>
+        )}
+        {balance.kind !== "empty" && (
+          <div
+            className="h-1.5 w-full md:max-w-48 rounded-full bg-surface-muted overflow-hidden"
+            role="img"
+            aria-label={`${balance.percent}% liquidado`}
+          >
+            <div
+              className={`h-full rounded-full ${
+                balance.kind === "over" ? "bg-danger-text" : balance.kind === "paid" ? "bg-secondary-500" : "bg-primary-500"
+              }`}
+              style={{ width: `${Math.min(100, balance.percent)}%` }}
+            />
+          </div>
+        )}
+        <span className="text-[11px] text-text-muted tabular-nums">
+          {balance.kind === "empty"
+            ? `Nenhuma nota lançada · ${formatCurrency(os.valor)}`
+            : balance.kind === "paid"
+              ? `${formatCurrency(balance.liquidado)} liquidados`
+              : `${balance.percent}% liquidado de ${formatCurrency(os.valor)}`}
         </span>
       </div>
-      <div className="h-1.5 rounded-full bg-surface-muted overflow-hidden">
-        <div
-          className={`h-full rounded-full ${over ? "bg-danger-text" : "bg-primary-500"}`}
-          style={{ width: `${Math.min(100, percent)}%` }}
-        />
-      </div>
+      {canFinalize && isQuitada(os) && (
+        <div className="mt-1">
+          <FinalizeOrdemServicoButton ordemServico={os} />
+        </div>
+      )}
     </div>
   );
 }

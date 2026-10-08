@@ -1,14 +1,15 @@
 import { ArrowDownUp } from "lucide-react";
-import { EmpenhoFilterSelect } from "../../components/filters/EmpenhoFilterSelect";
-import type { EmpenhoFilterOption } from "../../components/filters/empenho-options";
+import { ScopeFilterButton } from "../../components/filters/ScopeFilterButton";
+import type { ScopeOptions } from "../../components/filters/scope-options";
 import { SearchInput } from "../../components/filters/SearchInput";
+import type { ScopeFilter } from "../../hooks/useScopeFilter";
 
-export type OrdemServicoSort = "URGENCY" | "NUMERO" | "VALOR";
+export type OrdemServicoSort = "URGENCY" | "NUMERO" | "SALDO";
 
 const SORT_LABEL: Record<OrdemServicoSort, string> = {
   URGENCY: "Prazo (mais urgentes)",
   NUMERO: "Número (mais recentes)",
-  VALOR: "Valor (maior)",
+  SALDO: "A liquidar (maior)",
 };
 
 interface OrdemServicoFiltersProps {
@@ -16,9 +17,9 @@ interface OrdemServicoFiltersProps {
   onSearchChange: (value: string) => void;
   sort: OrdemServicoSort;
   onSortChange: (value: OrdemServicoSort) => void;
-  empenhoOptions: EmpenhoFilterOption[];
-  empenhoId: string;
-  onEmpenhoChange: (value: string) => void;
+  scopeOptions: ScopeOptions;
+  scope: ScopeFilter;
+  onScopeChange: (patch: Partial<ScopeFilter>) => void;
 }
 
 export function OrdemServicoFilters({
@@ -26,18 +27,18 @@ export function OrdemServicoFilters({
   onSearchChange,
   sort,
   onSortChange,
-  empenhoOptions,
-  empenhoId,
-  onEmpenhoChange,
+  scopeOptions,
+  scope,
+  onScopeChange,
 }: OrdemServicoFiltersProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-2">
       <SearchInput
         value={searchTerm}
         onChange={onSearchChange}
-        placeholder="Buscar por OS, empenho, contrato, empresa ou obra..."
+        placeholder="Buscar por serviço, OS, empenho, contrato ou empresa..."
       />
-      <EmpenhoFilterSelect options={empenhoOptions} value={empenhoId} onChange={onEmpenhoChange} />
+      <ScopeFilterButton options={scopeOptions} value={scope} onChange={onScopeChange} />
       <label className="relative sm:w-56">
         <span className="sr-only">Ordenar por</span>
         <ArrowDownUp

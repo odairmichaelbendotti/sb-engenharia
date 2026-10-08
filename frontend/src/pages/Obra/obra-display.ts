@@ -1,4 +1,5 @@
 import type { Obra, ObraStatus } from "../../../types/obra";
+import { getBalance } from "../OrdemServico/ordem-servico-balance";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -55,6 +56,33 @@ function daysUntil(date: string): number {
 export function isObraOverdue(obra: Pick<Obra, "status" | "dataPrevisaoTermino" | "valor" | "valorExecutado">) {
   if (obra.status !== "EM_ANDAMENTO" || !obra.dataPrevisaoTermino) return false;
   return daysUntil(obra.dataPrevisaoTermino) < 0 && obra.valorExecutado < obra.valor;
+}
+
+// Saldo da obra: soma do que falta liquidar nas OS ativas. "Paga" quando nenhuma OS
+// não cancelada tem saldo (quitada ou já finalizada) — aí a obra pode ser concluída
+export type ObraBalance = {
+  kind: "open" | "empty" | "paid" | "concluded" | "inactive";
+  saldo: number;
+  percent: number;
+  osQuitadas: number;
+};
+
+export function getObraBalance(
+  obra: Pick<Obra, "status" | "dataConclusao" | "valor" | "valorExecutado" | "ordensServico">,
+): ObraBalance {
+  const ordens = obra.ordensServico.filter((os) => os.status !== "CANCELADO");
+  const ativas = ordens.filter((os) => os.status === "ATIVO");
+  const saldo = ativas.reduce((acc, os) => acc + getBalance(os.valor, os.valorExecutado).saldo, 0);
+  const percent = obra.valor > 0 ? Math.round((obra.valorExecutado / obra.valor) * 100) : 0;
+  const osQuitadas = ordens.filter((os) => os.status !== "ATIVO" || getBalance(os.valor, os.valorExecutado).saldo === 0)
+    .length;
+
+  const base = { saldo, percent, osQuitadas };
+  if (obra.status === "CONCLUIDA" || obra.dataConclusao) return { kind: "concluded", ...base };
+  if (obra.status === "CANCELADA") return { kind: "inactive", ...base };
+  if (ordens.length > 0 && osQuitadas === ordens.length) return { kind: "paid", ...base };
+  if (obra.valorExecutado === 0) return { kind: "empty", ...base };
+  return { kind: "open", ...base };
 }
 
 // Aviso de prazo da obra em andamento (prazo = maior previsão de término entre as OS)

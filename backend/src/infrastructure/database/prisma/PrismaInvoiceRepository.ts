@@ -159,7 +159,8 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
           orderBy: { vencimento: "desc" },
           include: {
             company: true,
-            empenho: { select: { id: true, numero: true } },
+            // Contrato do empenho: a listagem filtra as notas por contrato
+            empenho: { select: { id: true, numero: true, contrato: { select: { id: true, identificador: true } } } },
             ordemServico: { select: { id: true, numero: true } },
             obra: { select: { id: true, nome: true, identificacaoPatrimonial: true } },
           },

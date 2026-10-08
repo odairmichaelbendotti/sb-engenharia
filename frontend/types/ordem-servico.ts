@@ -29,6 +29,14 @@ export type OrdemServicoVinculo = {
   empenhoValue: number;
 };
 
+// Vínculo com a situação financeira (vem só na listagem de OS)
+export type OrdemServicoVinculoFinanceiro = OrdemServicoVinculo & {
+  // Notas não canceladas desta OS lançadas neste empenho
+  liquidado: number;
+  // Quanto do empenho já está destinado a OS não canceladas (inclui esta)
+  empenhoComprometido: number;
+};
+
 export type OrdemServicoObra = {
   id: string;
   nome: string;
@@ -49,7 +57,7 @@ export type OrdemServico = {
   // Empenho principal (o primeiro vinculado) — por ele se chega ao contrato
   empenho_id: string;
   empenho: OrdemServicoEmpenho;
-  empenhos: OrdemServicoVinculo[];
+  empenhos: OrdemServicoVinculoFinanceiro[];
   // Cronograma de execução da OS (data sem horário, meia-noite UTC); null em OS antigas sem prazo
   dataInicio: string | null;
   dataPrevisaoTermino: string | null;

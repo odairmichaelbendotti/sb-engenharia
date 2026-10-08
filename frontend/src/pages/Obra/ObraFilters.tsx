@@ -1,16 +1,17 @@
-import { EmpenhoFilterSelect } from "../../components/filters/EmpenhoFilterSelect";
-import type { EmpenhoFilterOption } from "../../components/filters/empenho-options";
+import { ScopeFilterButton } from "../../components/filters/ScopeFilterButton";
+import type { ScopeOptions } from "../../components/filters/scope-options";
 import { SearchInput } from "../../components/filters/SearchInput";
+import type { ScopeFilter } from "../../hooks/useScopeFilter";
 
 interface ObraFiltersProps {
   search: string;
   onSearchChange: (value: string) => void;
-  empenhoOptions: EmpenhoFilterOption[];
-  empenhoId: string;
-  onEmpenhoChange: (value: string) => void;
+  scopeOptions: ScopeOptions;
+  scope: ScopeFilter;
+  onScopeChange: (patch: Partial<ScopeFilter>) => void;
 }
 
-export function ObraFilters({ search, onSearchChange, empenhoOptions, empenhoId, onEmpenhoChange }: ObraFiltersProps) {
+export function ObraFilters({ search, onSearchChange, scopeOptions, scope, onScopeChange }: ObraFiltersProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-2">
       <SearchInput
@@ -18,7 +19,7 @@ export function ObraFilters({ search, onSearchChange, empenhoOptions, empenhoId,
         onChange={onSearchChange}
         placeholder="Buscar por obra, patrimônio, OS, empenho, tipo ou responsável..."
       />
-      <EmpenhoFilterSelect options={empenhoOptions} value={empenhoId} onChange={onEmpenhoChange} />
+      <ScopeFilterButton options={scopeOptions} value={scope} onChange={onScopeChange} />
     </div>
   );
 }
