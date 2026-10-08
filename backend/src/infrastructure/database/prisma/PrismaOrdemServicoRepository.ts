@@ -11,6 +11,7 @@ import type {
   OrdemServicoOption,
   OrdemServicoPersistData,
   OrdemServicoVinculo,
+  OrdemServicoVinculoFinanceiro,
 } from "../../../domain/repositories/IOrdemServicoRepository.js";
 import { prisma } from "../../prisma/prisma.js";
 
@@ -82,6 +83,52 @@ async function sumExecutadoPorOS(ids: string[]): Promise<Map<string, number>> {
   return new Map(grouped.map((g) => [g.ordemServico_id ?? "", g._sum.value ?? 0] as const));
 }
 
+type VinculoTotals = {
+  // Chave "osId|empenhoId": notas não canceladas da OS lançadas naquele empenho (centavos)
+  liquidado: Map<string, number>;
+  // Por empenho: soma do destinado a OS não canceladas (centavos)
+  comprometido: Map<string, number>;
+};
+
+async function loadVinculoTotals(osIds: string[], empenhoIds: string[]): Promise<VinculoTotals> {
+  if (osIds.length === 0) return { liquidado: new Map(), comprometido: new Map() };
+  const [liquidado, comprometido] = await Promise.all([
+    prisma.invoice.groupBy({
+      by: ["ordemServico_id", "empenho_id"],
+      where: { ordemServico_id: { in: osIds }, status: { not: "CANCELADO" } },
+      _sum: { value: true },
+    }),
+    prisma.ordemServicoEmpenho.groupBy({
+      by: ["empenho_id"],
+      where: { empenho_id: { in: empenhoIds }, ordemServico: { status: { not: "CANCELADO" } } },
+      _sum: { valor: true },
+    }),
+  ]);
+  return {
+    liquidado: new Map(liquidado.map((g) => [`${g.ordemServico_id}|${g.empenho_id}`, g._sum.value ?? 0] as const)),
+    comprometido: new Map(comprometido.map((g) => [g.empenho_id, g._sum.valor ?? 0] as const)),
+  };
+}
+
+function withFinanceiro(
+  osId: string,
+  vinculos: OrdemServicoVinculo[],
+  totals: VinculoTotals,
+): OrdemServicoVinculoFinanceiro[] {
+  return vinculos.map((v) => ({
+    ...v,
+    liquidado: (totals.liquidado.get(`${osId}|${v.empenho_id}`) ?? 0) / 100,
+    empenhoComprometido: (totals.comprometido.get(v.empenho_id) ?? 0) / 100,
+  }));
+}
+
+// Totais de uma OS só (create/update), com a mesma regra da listagem
+async function vinculosFinanceiros(osId: string, rows: VinculoRow[]): Promise<OrdemServicoVinculoFinanceiro[]> {
+  const vinculos = mapVinculos(rows);
+  const totals = await loadVinculoTotals([osId], vinculos.map((v) => v.empenho_id));
+  return withFinanceiro(osId, vinculos, totals);
+}
+
 export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
   async create(data: OrdemServicoPersistData): Promise<OrdemServicoListItem> {
     try {
@@ -105,7 +152,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
       return {
         ...newOrdemServico,
         valor: newOrdemServico.valor / 100,
-        empenhos: mapVinculos(newOrdemServico.empenhos),
+        empenhos: await vinculosFinanceiros(newOrdemServico.id, newOrdemServico.empenhos),
         valorExecutado: 0,
       };
     } catch (error) {
@@ -157,12 +204,16 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
       const executadoCentavos = new Map(
         executadoPorOS.map((g) => [g.ordemServico_id, g._sum.value ?? 0] as const),
       );
+      const totals = await loadVinculoTotals(
+        ordensServico.map((os) => os.id),
+        [...new Set(ordensServico.flatMap((os) => os.empenhos.map((v) => v.empenho.id)))],
+      );
 
       return {
         ordensServico: ordensServico.map((os) => ({
           ...os,
           valor: os.valor / 100,
-          empenhos: mapVinculos(os.empenhos),
+          empenhos: withFinanceiro(os.id, mapVinculos(os.empenhos), totals),
           valorExecutado: (executadoCentavos.get(os.id) ?? 0) / 100,
         })),
         stats: {
@@ -287,7 +338,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
       return {
         ...updated,
         valor: updated.valor / 100,
-        empenhos: mapVinculos(updated.empenhos),
+        empenhos: await vinculosFinanceiros(id, updated.empenhos),
         valorExecutado: (executado.get(id) ?? 0) / 100,
       };
     } catch (error) {

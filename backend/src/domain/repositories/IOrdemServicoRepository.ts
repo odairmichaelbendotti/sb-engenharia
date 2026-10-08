@@ -55,10 +55,17 @@ export type OrdemServicoObra = {
   responsavelTecnico: string;
 };
 
+// Vínculo com a situação financeira: quanto já foi liquidado dele nesta OS e quanto do
+// empenho já está destinado a OS não canceladas (para o saldo livre)
+export type OrdemServicoVinculoFinanceiro = OrdemServicoVinculo & {
+  liquidado: number;
+  empenhoComprometido: number;
+};
+
 export type OrdemServicoListItem = PersistedOrdemServico & {
   // Empenho principal — por ele se chega ao contrato e à empresa
   empenho: OrdemServicoEmpenhoInfo;
-  empenhos: OrdemServicoVinculo[];
+  empenhos: OrdemServicoVinculoFinanceiro[];
   obra: OrdemServicoObra | null;
   // Soma das notas fiscais não canceladas lançadas nesta OS
   valorExecutado: number;

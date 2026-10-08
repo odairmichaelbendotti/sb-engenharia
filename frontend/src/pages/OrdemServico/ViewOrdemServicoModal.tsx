@@ -2,7 +2,6 @@ import { lazy, Suspense, useEffect } from "react";
 import {
   X,
   ClipboardList,
-  FileSignature,
   Building2,
   HardHat,
   AlertTriangle,
@@ -11,11 +10,14 @@ import {
   CalendarCheck,
   Flag,
   UserCog,
-  Wallet,
   MapPinOff,
 } from "lucide-react";
 import type { OrdemServico, OrdemServicoObra } from "../../../types/ordem-servico";
 import { formatCurrency, formatDate, formatDateOnly } from "../../utils/format-currency";
+import { usePermission } from "../../hooks/usePermission";
+import { OrdemServicoNumeroTag } from "../../components/OrdemServicoNumeroTag";
+import { getBalance, getOrdemServicoBalance } from "./ordem-servico-balance";
+import { FinalizeOrdemServicoCallout } from "./FinalizeOrdemServico";
 
 // Leaflet só é baixado quando o modal de uma OS com obra georreferenciada abre
 const ObraMiniMap = lazy(() => import("./ObraMiniMap"));
@@ -155,9 +157,6 @@ function ObraLocation({ ordemServico, obra }: { ordemServico: OrdemServico; obra
 }
 
 function ObraSection({ ordemServico, obra }: { ordemServico: OrdemServico; obra: OrdemServicoObra }) {
-  const executedPercent =
-    ordemServico.valor > 0 ? Math.round((ordemServico.valorExecutado / ordemServico.valor) * 100) : 0;
-
   return (
     <div className="space-y-3">
       <ObraLocation ordemServico={ordemServico} obra={obra} />
@@ -174,19 +173,126 @@ function ObraSection({ ordemServico, obra }: { ordemServico: OrdemServico; obra:
         <Field icon={UserCog} label="Responsável técnico">
           {obra.responsavelTecnico}
         </Field>
-        <div className="sm:col-span-2">
-          <Field icon={Wallet} label="Liquidado em notas fiscais desta OS">
-            {formatCurrency(ordemServico.valorExecutado)} de {formatCurrency(ordemServico.valor)} ({executedPercent}
-            %)
-          </Field>
-        </div>
       </div>
+    </div>
+  );
+}
+
+function BalanceSection({ ordemServico, canFinalize }: { ordemServico: OrdemServico; canFinalize: boolean }) {
+  const balance = getOrdemServicoBalance(ordemServico);
+
+  if (balance.kind === "paid" && ordemServico.status === "ATIVO") {
+    return <FinalizeOrdemServicoCallout ordemServico={ordemServico} canFinalize={canFinalize} />;
+  }
+
+  const fill =
+    balance.kind === "over" ? "bg-danger-text" : balance.kind === "paid" ? "bg-secondary-500" : "bg-primary-500";
+
+  return (
+    <div>
+      <div className="flex items-end justify-between gap-3 flex-wrap">
+        <div>
+          <p className="text-xs font-semibold text-text-secondary uppercase">
+            {balance.kind === "over" ? "Liquidado acima do valor" : balance.kind === "paid" ? "Saldo" : "A liquidar nesta OS"}
+          </p>
+          <p
+            className={`text-2xl font-bold tabular-nums tracking-tight mt-0.5 ${
+              balance.kind === "over" ? "text-danger-text" : balance.kind === "paid" ? "text-success-text" : "text-text-primary"
+            }`}
+          >
+            {balance.kind === "over"
+              ? formatCurrency(balance.excesso)
+              : balance.kind === "paid"
+                ? "Quitada"
+                : formatCurrency(balance.saldo)}
+          </p>
+        </div>
+        <p className="text-xs text-text-secondary text-right tabular-nums">
+          {balance.percent}% liquidado
+          <br />
+          de {formatCurrency(balance.valor)}
+        </p>
+      </div>
+      <div className="h-2.5 mt-2.5 rounded-full bg-surface-muted overflow-hidden">
+        <div className={`h-full rounded-full ${fill}`} style={{ width: `${Math.min(100, balance.percent)}%` }} />
+      </div>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-text-secondary tabular-nums">
+        <span className="inline-flex items-center gap-1.5">
+          <span className={`w-2 h-2 rounded-sm ${fill}`} />
+          Liquidado {formatCurrency(balance.liquidado)}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-sm bg-surface-muted border border-border" />
+          A liquidar {formatCurrency(balance.saldo)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// Quanto cada empenho destinou à OS, quanto já foi liquidado nele e o saldo livre do empenho
+function EmpenhosTable({ ordemServico }: { ordemServico: OrdemServico }) {
+  const totals = ordemServico.empenhos.reduce(
+    (acc, v) => ({ valor: acc.valor + v.valor, liquidado: acc.liquidado + v.liquidado }),
+    { valor: 0, liquidado: 0 },
+  );
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm min-w-120">
+        <thead>
+          <tr className="text-[11px] uppercase text-text-muted border-b border-border">
+            <th className="text-left font-semibold pb-2">Empenho</th>
+            <th className="text-right font-semibold pb-2">Destinado à OS</th>
+            <th className="text-right font-semibold pb-2">Liquidado</th>
+            <th className="text-right font-semibold pb-2">A liquidar</th>
+          </tr>
+        </thead>
+        <tbody className="tabular-nums">
+          {ordemServico.empenhos.map((v) => {
+            const saldo = getBalance(v.valor, v.liquidado);
+            const livre = Math.max(0, v.empenhoValue - v.empenhoComprometido);
+            return (
+              <tr key={v.empenho_id} className="border-b border-border align-top">
+                <td className="py-2.5 pr-3">
+                  <span className="font-mono text-[13px] text-text-primary">{v.numero}</span>
+                  <span className="block text-xs text-text-muted mt-0.5">
+                    Empenho de {formatCurrency(v.empenhoValue)} ·{" "}
+                    {livre > 0 ? `${formatCurrency(livre)} livres para novas OS` : "sem saldo livre"}
+                  </span>
+                </td>
+                <td className="py-2.5 text-right">{formatCurrency(v.valor)}</td>
+                <td className="py-2.5 text-right">{formatCurrency(v.liquidado)}</td>
+                <td
+                  className={`py-2.5 text-right font-semibold ${
+                    saldo.kind === "over" ? "text-danger-text" : saldo.saldo === 0 ? "text-success-text" : "text-primary-600"
+                  }`}
+                >
+                  {saldo.kind === "over" ? `+${formatCurrency(saldo.excesso)}` : formatCurrency(saldo.saldo)}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+        {ordemServico.empenhos.length > 1 && (
+          <tfoot className="tabular-nums font-semibold text-text-primary">
+            <tr>
+              <td className="pt-2.5">Total</td>
+              <td className="pt-2.5 text-right">{formatCurrency(totals.valor)}</td>
+              <td className="pt-2.5 text-right">{formatCurrency(totals.liquidado)}</td>
+              <td className="pt-2.5 text-right">{formatCurrency(Math.max(0, totals.valor - totals.liquidado))}</td>
+            </tr>
+          </tfoot>
+        )}
+      </table>
     </div>
   );
 }
 
 export function ViewOrdemServicoModal({ ordemServico, handleClose }: ViewOrdemServicoModalProps) {
   const { obra, empenho } = ordemServico;
+  const { contrato } = empenho;
+  const { canEditAdministrativo } = usePermission();
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -199,21 +305,22 @@ export function ViewOrdemServicoModal({ ordemServico, handleClose }: ViewOrdemSe
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-surface rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border border-border">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-linear-to-r from-primary-50/50 to-transparent shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center shrink-0">
-              <ClipboardList size={20} className="text-primary-600" />
-            </div>
-            <div className="min-w-0">
-              <h2 className="text-lg font-semibold text-text-primary truncate">
-                Ordem de Serviço {ordemServico.numero}
-              </h2>
-              <span
-                className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-xs font-medium border ${STATUS_CLASS[ordemServico.status]}`}
-              >
+        <div className="relative flex items-start justify-between gap-3 pl-6 pr-4 py-4 border-b border-border shrink-0">
+          {/* Faixa na cor do contrato, igual à da linha da lista */}
+          <span aria-hidden className="absolute left-0 inset-y-0 w-1.5 rounded-tl-2xl" style={{ backgroundColor: contrato.cor }} />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-secondary">
+              <OrdemServicoNumeroTag numero={ordemServico.numero} />
+              <span className={`px-2 py-px rounded-full text-[11px] font-medium border ${STATUS_CLASS[ordemServico.status]}`}>
                 {STATUS_LABEL[ordemServico.status]}
               </span>
+              <span>
+                {contrato.company.name} <span className="text-text-muted">·</span> {contrato.identificador}
+              </span>
             </div>
+            <h2 className={`text-lg font-semibold mt-1.5 leading-snug ${obra ? "text-text-primary" : "text-text-secondary"}`}>
+              {obra?.nome ?? empenho.description}
+            </h2>
           </div>
           <button
             onClick={handleClose}
@@ -226,31 +333,14 @@ export function ViewOrdemServicoModal({ ordemServico, handleClose }: ViewOrdemSe
 
         <div className="p-5 overflow-y-auto space-y-5">
           <section>
-            <h3 className="text-xs font-semibold text-text-secondary uppercase mb-2.5">
-              Ordem de serviço
+            <BalanceSection ordemServico={ordemServico} canFinalize={canEditAdministrativo} />
+          </section>
+
+          <section>
+            <h3 className="text-xs font-semibold text-text-secondary uppercase mb-2">
+              {ordemServico.empenhos.length > 1 ? "Empenhos" : "Empenho"}
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
-              <Field icon={Wallet} label="Valor">
-                {formatCurrency(ordemServico.valor)}
-              </Field>
-              <Field icon={FileSignature} label={ordemServico.empenhos.length > 1 ? "Empenhos" : "Empenho"}>
-                {/* Uma OS pode ser financiada por vários empenhos do mesmo contrato */}
-                <ul className="space-y-0.5">
-                  {ordemServico.empenhos.map((vinculo) => (
-                    <li key={vinculo.empenho_id}>
-                      {vinculo.numero}{" "}
-                      <span className="text-text-muted font-normal">· {formatCurrency(vinculo.valor)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Field>
-              <Field icon={FileSignature} label="Contrato">
-                {empenho.contrato.identificador}
-              </Field>
-              <Field icon={Building2} label="Empresa">
-                {empenho.contrato.company.name}
-              </Field>
-            </div>
+            <EmpenhosTable ordemServico={ordemServico} />
           </section>
 
           <section>

@@ -1,16 +1,26 @@
 import { useState, useMemo, useEffect } from "react";
-import { Loader2, FolderOpen, AlertCircle, Plus, HardHat, DollarSign } from "lucide-react";
+import { Loader2, FolderOpen, AlertCircle, AlertTriangle, Plus, HardHat } from "lucide-react";
 import { useObras } from "../../store/obras";
 import { usePermission } from "../../hooks/usePermission";
-import { useEmpenhoFilter } from "../../hooks/useEmpenhoFilter";
-import type { Obra } from "../../../types/obra";
-import { ObraStats, ObraTable, ObraModal, DeleteObraModal, ObraFilters, ViewObraModal } from "./index";
-import type { ObraSummary } from "./index";
+import { EMPTY_SCOPE, useScopeFilter } from "../../hooks/useScopeFilter";
+import type { Obra, ObraOrdemServico } from "../../../types/obra";
+import { ObraTable, ObraModal, DeleteObraModal, ObraFilters, ViewObraModal } from "./index";
 import { OBRA_TIPO_LABEL, isObraOverdue } from "./obra-display";
+import { getBalance } from "../OrdemServico/ordem-servico-balance";
 import { PageHeader } from "../../components/PageHeader";
-import { buildEmpenhoOptions } from "../../components/filters/empenho-options";
+import { SummaryStrip, type SummaryCell } from "../../components/SummaryStrip";
+import { matchesScope, resolveScope, scopeChips, type ScopeRef } from "../../components/filters/scope-options";
 import { FilterSummary } from "../../components/filters/FilterSummary";
 import { formatCurrency } from "../../utils/format-currency";
+
+// Origem de cada OS da obra: empresa e contrato da OS, uma por empenho
+function obraOsScopeRefs(os: ObraOrdemServico): ScopeRef[] {
+  return os.empenhos.map((v) => ({
+    empresa: { id: os.contrato.company.id, name: os.contrato.company.name },
+    contrato: { id: os.contrato.id, identificador: os.contrato.identificador },
+    empenho: { id: v.empenho_id, numero: v.numero },
+  }));
+}
 
 function matchesSearch(obra: Obra, search: string) {
   if (!search) return true;
@@ -36,7 +46,7 @@ export default function Obras() {
   const [viewingObraId, setViewingObraId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [onlyOverdue, setOnlyOverdue] = useState(false);
-  const [empenhoId, setEmpenhoId] = useEmpenhoFilter();
+  const [scope, setScope] = useScopeFilter();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,46 +67,78 @@ export default function Obras() {
 
   const obras = useMemo(() => data?.obras ?? [], [data]);
 
-  // Uma obra pode ter OS de vários empenhos: conta em cada um deles
-  const empenhoOptions = useMemo(
-    () =>
-      buildEmpenhoOptions(obras, (obra) =>
-        obra.ordensServico.flatMap((os) =>
-          os.empenhos.map((v) => ({ id: v.empenho_id, numero: v.numero, companyName: os.contrato.company.name })),
-        ),
-      ),
-    [obras],
+  // Opções de empresa/contrato/empenho a partir das OS das obras; valor escolhido em outra tela
+  // que não existe aqui é ignorado
+  const { options: scopeOptions, active: activeScope } = useMemo(
+    () => resolveScope(obras, (obra) => obra.ordensServico.flatMap(obraOsScopeRefs), scope),
+    [obras, scope],
   );
+  const scopeKey = `${activeScope.empresa}|${activeScope.contrato}|${activeScope.empenho}`;
 
-  // Empenho sem obra (ex.: escolhido em outra tela) não filtra esta lista
-  const activeEmpenhoId = empenhoOptions.some((e) => e.id === empenhoId) ? empenhoId : "";
-
-  // Resumo acompanha o empenho escolhido, para mostrar a situação só daquele empenho
-  const obrasDoEmpenho = useMemo(
-    () =>
-      activeEmpenhoId
-        ? obras.filter((o) => o.ordensServico.some((os) => os.empenhos.some((v) => v.empenho_id === activeEmpenhoId)))
-        : obras,
-    [obras, activeEmpenhoId],
-  );
-
-  const summary = useMemo<ObraSummary>(() => {
-    const ativas = obrasDoEmpenho.filter((o) => o.status !== "CANCELADA");
-    return {
-      total: ativas.length,
-      orcamento: ativas.reduce((acc, o) => acc + o.valor, 0),
-      executado: ativas.reduce((acc, o) => acc + o.valorExecutado, 0),
-      atrasadas: ativas.filter(isObraOverdue).length,
-    };
-  }, [obrasDoEmpenho]);
-
-  // Sem obras atrasadas o filtro do card deixa de valer
-  const activeOnlyOverdue = onlyOverdue && summary.atrasadas > 0;
-
-  const filteredObras = useMemo(() => {
+  // Obras com alguma OS no recorte e que passam pela busca
+  const baseObras = useMemo(() => {
     const s = search.toLowerCase();
-    return obrasDoEmpenho.filter((o) => matchesSearch(o, s) && (!activeOnlyOverdue || isObraOverdue(o)));
-  }, [obrasDoEmpenho, search, activeOnlyOverdue]);
+    return obras.filter(
+      (o) => matchesScope(o.ordensServico.flatMap(obraOsScopeRefs), activeScope) && matchesSearch(o, s),
+    );
+  }, [obras, activeScope, search]);
+
+  const atrasadas = useMemo(
+    () => baseObras.filter((o) => o.status !== "CANCELADA" && isObraOverdue(o)).length,
+    [baseObras],
+  );
+
+  // Sem obras atrasadas o filtro da célula deixa de valer
+  const activeOnlyOverdue = onlyOverdue && atrasadas > 0;
+
+  const filteredObras = useMemo(
+    () => (activeOnlyOverdue ? baseObras.filter(isObraOverdue) : baseObras),
+    [baseObras, activeOnlyOverdue],
+  );
+
+  // Totais das OS no recorte: numa obra com OS de outro contrato/empenho, só as do filtro contam
+  const summaryCells = useMemo<SummaryCell[]>(() => {
+    const ordens = filteredObras
+      .filter((o) => o.status !== "CANCELADA")
+      .flatMap((o) => o.ordensServico)
+      .filter((os) => os.status !== "CANCELADO" && matchesScope(obraOsScopeRefs(os), activeScope));
+    const emitido = ordens.reduce((acc, os) => acc + os.valor, 0);
+    const liquidado = ordens.reduce((acc, os) => acc + os.valorExecutado, 0);
+    const saldo = ordens
+      .filter((os) => os.status === "ATIVO")
+      .reduce((acc, os) => acc + getBalance(os.valor, os.valorExecutado).saldo, 0);
+    const contratos = new Set(ordens.map((os) => os.contrato.id)).size;
+    const obrasValidas = filteredObras.filter((o) => o.status !== "CANCELADA").length;
+    const percent = emitido > 0 ? Math.round((liquidado / emitido) * 100) : 0;
+
+    return [
+      {
+        key: "obras",
+        label: "Obras",
+        value: String(obrasValidas),
+        hint: `${contratos} ${contratos === 1 ? "contrato" : "contratos"}`,
+      },
+      {
+        key: "emitido",
+        label: "Emitido em OS",
+        value: formatCurrency(emitido),
+        hint: `${ordens.length} OS`,
+      },
+      { key: "liquidado", label: "Liquidado", value: formatCurrency(liquidado), hint: `${percent}% do emitido` },
+      { key: "saldo", label: "A liquidar", value: formatCurrency(saldo), hint: "nas OS ativas", tone: "primary" },
+      {
+        key: "atrasadas",
+        label: "Prazo vencido",
+        value: String(atrasadas),
+        hint: atrasadas === 0 ? "nenhuma obra atrasada" : activeOnlyOverdue ? "clique para ver todas" : "clique para filtrar",
+        tone: atrasadas > 0 ? "danger" : "muted",
+        icon: atrasadas > 0 ? AlertTriangle : undefined,
+        onClick: () => setOnlyOverdue(!activeOnlyOverdue),
+        active: activeOnlyOverdue,
+        disabled: atrasadas === 0,
+      },
+    ];
+  }, [filteredObras, activeScope, atrasadas, activeOnlyOverdue]);
 
   // Busca pelo id na lista atual para o resumo refletir edições feitas com ele aberto
   const viewingObra = useMemo(() => obras.find((o) => o.id === viewingObraId) ?? null, [obras, viewingObraId]);
@@ -130,7 +172,7 @@ export default function Obras() {
   function clearFilters() {
     setSearch("");
     setOnlyOverdue(false);
-    setEmpenhoId("");
+    setScope(EMPTY_SCOPE);
   }
 
   return (
@@ -138,7 +180,6 @@ export default function Obras() {
       <PageHeader
         icon={HardHat}
         title="Obras"
-        stat={{ icon: DollarSign, label: "Orçamento total", value: formatCurrency(data?.stats.orcamentoTotal ?? 0) }}
         canAct={canCreateAndEditContent}
         actionLabel="Nova Obra"
         onAction={handleOpenCreate}
@@ -166,25 +207,21 @@ export default function Obras() {
         </div>
       ) : (
         <>
-          <ObraStats
-            summary={summary}
-            onlyOverdue={activeOnlyOverdue}
-            onToggleOverdue={() => setOnlyOverdue(!activeOnlyOverdue)}
-          />
-
-          <div className="bg-surface border border-border rounded-lg overflow-hidden">
+          {/* Sem overflow-hidden: o painel de filtros precisa sair do card */}
+          <div className="bg-surface border border-border rounded-lg">
+            <SummaryStrip cells={summaryCells} className="rounded-t-lg" />
             <div className="px-4 pt-3 pb-3 border-b border-border space-y-2">
               <ObraFilters
                 search={search}
                 onSearchChange={setSearch}
-                empenhoOptions={empenhoOptions}
-                empenhoId={activeEmpenhoId}
-                onEmpenhoChange={setEmpenhoId}
+                scopeOptions={scopeOptions}
+                scope={activeScope}
+                onScopeChange={setScope}
               />
               <FilterSummary
                 count={filteredObras.length}
                 searchTerm={search}
-                empenhoNumero={empenhoOptions.find((e) => e.id === activeEmpenhoId)?.numero}
+                chips={scopeChips(activeScope, scopeOptions, setScope)}
                 extra={activeOnlyOverdue ? "com prazo vencido" : undefined}
                 onClear={clearFilters}
               />
@@ -206,14 +243,16 @@ export default function Obras() {
                 )}
               </div>
             ) : (
-              /* key reinicia a paginação quando os filtros mudam */
-              <ObraTable
-                key={`${search}|${activeEmpenhoId}|${activeOnlyOverdue}`}
-                obras={filteredObras}
-                onView={(obra) => setViewingObraId(obra.id)}
-                onEdit={handleOpenEdit}
-                onDelete={handleOpenDelete}
-              />
+              <div className="rounded-b-lg overflow-hidden">
+                {/* key reinicia a paginação quando os filtros mudam */}
+                <ObraTable
+                  key={`${search}|${scopeKey}|${activeOnlyOverdue}`}
+                  obras={filteredObras}
+                  onView={(obra) => setViewingObraId(obra.id)}
+                  onEdit={handleOpenEdit}
+                  onDelete={handleOpenDelete}
+                />
+              </div>
             )}
           </div>
         </>

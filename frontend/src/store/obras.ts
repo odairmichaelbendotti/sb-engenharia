@@ -122,7 +122,16 @@ export const useObras = create<ObrasState>((set) => ({
       return {
         data: {
           ...state.data,
-          obras: state.data.obras.map((o) => (o.id === id ? { ...o, status } : o)),
+          // O backend grava a data de conclusão ao concluir; reflete aqui sem refazer a listagem
+          obras: state.data.obras.map((o) =>
+            o.id === id
+              ? {
+                  ...o,
+                  status,
+                  ...(status === "CONCLUIDA" && !o.dataConclusao ? { dataConclusao: new Date().toISOString() } : {}),
+                }
+              : o,
+          ),
         },
       };
     });

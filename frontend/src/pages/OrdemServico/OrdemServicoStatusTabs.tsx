@@ -1,6 +1,6 @@
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
-export type OrdemServicoTab = "ALL" | "ATIVO" | "FINALIZADO" | "CANCELADO" | "SEM_OBRA";
+export type OrdemServicoTab = "ALL" | "ATIVO" | "QUITADA" | "FINALIZADO" | "CANCELADO" | "SEM_OBRA";
 
 type TabCounts = Record<OrdemServicoTab, number>;
 
@@ -18,11 +18,13 @@ const TABS: { id: OrdemServicoTab; label: string; dotClass?: string }[] = [
 ];
 
 export function OrdemServicoStatusTabs({ value, counts, onChange }: OrdemServicoStatusTabsProps) {
+  const quitadaActive = value === "QUITADA";
+
   return (
     <div role="tablist" aria-label="Filtrar por situação" className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
-      {TABS.map((tab) => {
+      {TABS.flatMap((tab) => {
         const active = value === tab.id;
-        return (
+        const button = (
           <button
             key={tab.id}
             role="tab"
@@ -43,6 +45,27 @@ export function OrdemServicoStatusTabs({ value, counts, onChange }: OrdemServico
             </span>
           </button>
         );
+        // "Quitadas" fica logo depois de "Ativas" e só aparece quando há OS paga esperando finalização
+        if (tab.id !== "ATIVO" || counts.QUITADA === 0) return [button];
+        return [
+          button,
+          <button
+            key="QUITADA"
+            role="tab"
+            aria-selected={quitadaActive}
+            onClick={() => onChange("QUITADA")}
+            title="OS ativas com todo o valor liquidado: prontas para finalizar"
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm whitespace-nowrap border transition-colors cursor-pointer ${
+              quitadaActive
+                ? "bg-success-text border-success-text text-white"
+                : "bg-success-bg border-success-border text-success-text hover:brightness-95"
+            }`}
+          >
+            <CheckCircle2 size={13} />
+            Quitadas
+            <span className="text-xs tabular-nums font-semibold">{counts.QUITADA}</span>
+          </button>,
+        ];
       })}
 
       {/* Só aparece quando há pendência: substitui o antigo banner de OS sem obra */}
