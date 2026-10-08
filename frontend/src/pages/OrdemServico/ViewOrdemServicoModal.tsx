@@ -237,54 +237,73 @@ function EmpenhosTable({ ordemServico }: { ordemServico: OrdemServico }) {
     { valor: 0, liquidado: 0 },
   );
 
+  // Saldo livre de cada empenho para novas OS: fica fora da tabela, numa linha só
+  const livre = ordemServico.empenhos.reduce((acc, v) => acc + Math.max(0, v.empenhoValue - v.empenhoComprometido), 0);
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm min-w-120">
-        <thead>
-          <tr className="text-[11px] uppercase text-text-muted border-b border-border">
-            <th className="text-left font-semibold pb-2">Empenho</th>
-            <th className="text-right font-semibold pb-2">Destinado à OS</th>
-            <th className="text-right font-semibold pb-2">Liquidado</th>
-            <th className="text-right font-semibold pb-2">A liquidar</th>
-          </tr>
-        </thead>
-        <tbody className="tabular-nums">
-          {ordemServico.empenhos.map((v) => {
-            const saldo = getBalance(v.valor, v.liquidado);
-            const livre = Math.max(0, v.empenhoValue - v.empenhoComprometido);
-            return (
-              <tr key={v.empenho_id} className="border-b border-border align-top">
-                <td className="py-2.5 pr-3">
-                  <span className="font-mono text-[13px] text-text-primary">{v.numero}</span>
-                  <span className="block text-xs text-text-muted mt-0.5">
-                    Empenho de {formatCurrency(v.empenhoValue)} ·{" "}
-                    {livre > 0 ? `${formatCurrency(livre)} livres para novas OS` : "sem saldo livre"}
-                  </span>
-                </td>
-                <td className="py-2.5 text-right">{formatCurrency(v.valor)}</td>
-                <td className="py-2.5 text-right">{formatCurrency(v.liquidado)}</td>
-                <td
-                  className={`py-2.5 text-right font-semibold ${
-                    saldo.kind === "over" ? "text-danger-text" : saldo.saldo === 0 ? "text-success-text" : "text-primary-600"
-                  }`}
-                >
-                  {saldo.kind === "over" ? `+${formatCurrency(saldo.excesso)}` : formatCurrency(saldo.saldo)}
+    <div className="space-y-2">
+      <div className="overflow-x-auto">
+        {/* Largura fixa: o empenho fica estreito (descrição cortada) e os valores ganham espaço */}
+        <table className="w-full table-fixed text-sm min-w-136">
+          <colgroup>
+            <col className="w-[31%]" />
+            <col className="w-[23%]" />
+            <col className="w-[23%]" />
+            <col className="w-[23%]" />
+          </colgroup>
+          <thead>
+            <tr className="text-[11px] uppercase text-text-muted border-b border-border">
+              <th className="text-left font-semibold pb-2 pr-4">Empenho</th>
+              <th className="text-right font-semibold pb-2 pl-4">Destinado à OS</th>
+              <th className="text-right font-semibold pb-2 pl-4">Liquidado</th>
+              <th className="text-right font-semibold pb-2 pl-4">A liquidar</th>
+            </tr>
+          </thead>
+          <tbody className="tabular-nums">
+            {ordemServico.empenhos.map((v) => {
+              const saldo = getBalance(v.valor, v.liquidado);
+              const livreEmpenho = Math.max(0, v.empenhoValue - v.empenhoComprometido);
+              return (
+                <tr key={v.empenho_id} className="border-b border-border align-top">
+                  <td
+                    className="py-2.5 pr-4"
+                    title={`${v.numero} · ${v.description}\nEmpenho de ${formatCurrency(v.empenhoValue)} · ${formatCurrency(livreEmpenho)} livres para novas OS`}
+                  >
+                    <span className="block font-mono text-[13px] text-text-primary truncate">{v.numero}</span>
+                    <span className="block text-xs text-text-muted mt-0.5 truncate">{v.description}</span>
+                  </td>
+                  <td className="py-2.5 pl-4 text-right whitespace-nowrap">{formatCurrency(v.valor)}</td>
+                  <td className="py-2.5 pl-4 text-right whitespace-nowrap">{formatCurrency(v.liquidado)}</td>
+                  <td
+                    className={`py-2.5 pl-4 text-right font-semibold whitespace-nowrap ${
+                      saldo.kind === "over" ? "text-danger-text" : saldo.saldo === 0 ? "text-success-text" : "text-primary-600"
+                    }`}
+                  >
+                    {saldo.kind === "over" ? `+${formatCurrency(saldo.excesso)}` : formatCurrency(saldo.saldo)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          {ordemServico.empenhos.length > 1 && (
+            <tfoot className="tabular-nums font-semibold text-text-primary">
+              <tr>
+                <td className="pt-2.5 pr-4">Total</td>
+                <td className="pt-2.5 pl-4 text-right whitespace-nowrap">{formatCurrency(totals.valor)}</td>
+                <td className="pt-2.5 pl-4 text-right whitespace-nowrap">{formatCurrency(totals.liquidado)}</td>
+                <td className="pt-2.5 pl-4 text-right whitespace-nowrap">
+                  {formatCurrency(Math.max(0, totals.valor - totals.liquidado))}
                 </td>
               </tr>
-            );
-          })}
-        </tbody>
-        {ordemServico.empenhos.length > 1 && (
-          <tfoot className="tabular-nums font-semibold text-text-primary">
-            <tr>
-              <td className="pt-2.5">Total</td>
-              <td className="pt-2.5 text-right">{formatCurrency(totals.valor)}</td>
-              <td className="pt-2.5 text-right">{formatCurrency(totals.liquidado)}</td>
-              <td className="pt-2.5 text-right">{formatCurrency(Math.max(0, totals.valor - totals.liquidado))}</td>
-            </tr>
-          </tfoot>
-        )}
-      </table>
+            </tfoot>
+          )}
+        </table>
+      </div>
+      <p className="text-xs text-text-muted tabular-nums">
+        {livre > 0
+          ? `${formatCurrency(livre)} livres ${ordemServico.empenhos.length > 1 ? "nestes empenhos" : "neste empenho"} para novas OS`
+          : "Sem saldo livre para novas OS"}
+      </p>
     </div>
   );
 }

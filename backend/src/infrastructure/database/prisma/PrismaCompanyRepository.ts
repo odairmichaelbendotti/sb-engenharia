@@ -138,6 +138,7 @@ export class PrismaCompanyRepository implements ICompanyRepository {
           contrato.empenhos.map((empenho) => ({
             ...empenho,
             value: empenho.value / 100,
+            totalPaid: empenho.totalPaid / 100,
           })),
         ),
       }));

@@ -35,6 +35,8 @@ const ACTIVE_BG: Record<Tone, string> = {
 
 // Colunas por quantidade de células; com número ímpar, a última ocupa a linha toda enquanto há 2 colunas
 const LAYOUT: Record<number, { cols: string; lastSpan: string }> = {
+  1: { cols: "", lastSpan: "col-span-2" },
+  2: { cols: "", lastSpan: "" },
   3: { cols: "sm:grid-cols-3", lastSpan: "col-span-2 sm:col-span-1" },
   4: { cols: "md:grid-cols-4", lastSpan: "" },
   5: { cols: "md:grid-cols-5", lastSpan: "col-span-2 md:col-span-1" },
@@ -44,14 +46,22 @@ const LAYOUT: Record<number, { cols: string; lastSpan: string }> = {
  * Faixa de totais no topo das listagens (NF, OS, Obras). Os números seguem os filtros da tela;
  * detalhe por item fica no modal de cada um.
  */
-// Fica no topo do card da listagem: `className` arredonda os cantos de cima no mesmo raio do card
-export function SummaryStrip({ cells, className = "rounded-t-xl" }: { cells: SummaryCell[]; className?: string }) {
+// Fica no topo do card da listagem: `className` arredonda os cantos de cima no mesmo raio do card.
+// `standalone` desenha a faixa como um card próprio (ex.: Dashboard, fora de uma listagem)
+export function SummaryStrip({
+  cells,
+  className = "rounded-t-xl",
+  standalone = false,
+}: {
+  cells: SummaryCell[];
+  className?: string;
+  standalone?: boolean;
+}) {
   const layout = LAYOUT[cells.length] ?? LAYOUT[4]!;
+  const frame = standalone ? "border border-border rounded-xl mb-3" : `border-b border-border ${className}`;
   return (
     // gap-px sobre fundo de borda desenha as divisórias em qualquer quebra de linha
-    <div
-      className={`grid grid-cols-2 ${layout.cols} gap-px bg-border border-b border-border overflow-hidden ${className}`}
-    >
+    <div className={`grid grid-cols-2 ${layout.cols} gap-px bg-border overflow-hidden ${frame}`}>
       {cells.map((cell, index) => {
         const tone = cell.tone ?? "default";
         const Icon = cell.icon;

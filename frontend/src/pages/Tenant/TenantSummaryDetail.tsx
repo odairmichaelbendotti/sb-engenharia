@@ -1,16 +1,8 @@
 import { useEffect, useMemo } from "react";
 import { Link, useParams } from "react-router";
-import {
-  ArrowLeft,
-  Building2,
-  FileSignature,
-  Layers2,
-  ClipboardList,
-  HardHat,
-  Receipt,
-  Wallet,
-} from "lucide-react";
+import { ArrowLeft, Building2 } from "lucide-react";
 import { useTenants } from "../../store/tenants";
+import { SummaryStrip } from "../../components/SummaryStrip";
 import { formatCurrency } from "../../utils/format-currency";
 
 export default function TenantSummaryDetail() {
@@ -59,72 +51,38 @@ export default function TenantSummaryDetail() {
             Empenhos, Ordens de Serviço, Obras e Notas fiscais.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <SummaryCard
-              icon={FileSignature}
-              label="Contratos ativos"
-              value={entry.stats.contratosAtivos.toString()}
-            />
-            <SummaryCard
-              icon={Layers2}
-              label="Empenhos ativos"
-              value={entry.stats.empenhosAtivos.toString()}
-              subtitle={formatCurrency(entry.stats.empenhosAtivosValor)}
-            />
-            <SummaryCard
-              icon={ClipboardList}
-              label="Ordens de serviço ativas"
-              value={entry.stats.osAtivas.toString()}
-            />
-            <SummaryCard
-              icon={HardHat}
-              label="Obras em andamento"
-              value={entry.stats.obrasEmAndamento.toString()}
-            />
-            <SummaryCard
-              icon={Wallet}
-              label="Orçamento de obras"
-              value={formatCurrency(entry.stats.orcamentoTotal)}
-            />
-            <SummaryCard
-              icon={Wallet}
-              label="Executado em obras"
-              value={formatCurrency(entry.stats.valorExecutadoTotal)}
-            />
-            <SummaryCard
-              icon={Receipt}
-              label="Notas fiscais pendentes/vencidas"
-              value={entry.stats.notasPendentesVencidasCount.toString()}
-              subtitle={formatCurrency(entry.stats.notasPendentesVencidasValor)}
-            />
-          </div>
+          <SummaryStrip
+            standalone
+            cells={[
+              {
+                key: "contratos",
+                label: "Contratos ativos",
+                value: String(entry.stats.contratosAtivos),
+                hint: `${entry.stats.osAtivas} ${entry.stats.osAtivas === 1 ? "OS ativa" : "OS ativas"}`,
+              },
+              {
+                key: "empenhos",
+                label: "Empenhos ativos",
+                value: formatCurrency(entry.stats.empenhosAtivosValor),
+                hint: `${entry.stats.empenhosAtivos} empenhos`,
+              },
+              {
+                key: "obras",
+                label: "Liquidado em obras",
+                value: formatCurrency(entry.stats.valorExecutadoTotal),
+                hint: `de ${formatCurrency(entry.stats.orcamentoTotal)} · ${entry.stats.obrasEmAndamento} em andamento`,
+              },
+              {
+                key: "notas",
+                label: "Notas pendentes/vencidas",
+                value: formatCurrency(entry.stats.notasPendentesVencidasValor),
+                hint: `${entry.stats.notasPendentesVencidasCount} notas`,
+                tone: entry.stats.notasPendentesVencidasCount > 0 ? "warning" : "default",
+              },
+            ]}
+          />
         </>
       )}
-    </div>
-  );
-}
-
-function SummaryCard({
-  icon: Icon,
-  label,
-  value,
-  subtitle,
-}: {
-  icon: typeof Building2;
-  label: string;
-  value: string;
-  subtitle?: string;
-}) {
-  return (
-    <div className="bg-surface border border-border rounded-xl px-3 py-2.5 flex items-center gap-3">
-      <div className="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center shrink-0">
-        <Icon size={16} className="text-primary-500" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs text-text-muted leading-none truncate">{label}</p>
-        <p className="text-base font-bold text-text-primary leading-tight mt-0.5 truncate">{value}</p>
-        {subtitle && <p className="text-xs text-text-secondary leading-none mt-0.5 truncate">{subtitle}</p>}
-      </div>
     </div>
   );
 }
