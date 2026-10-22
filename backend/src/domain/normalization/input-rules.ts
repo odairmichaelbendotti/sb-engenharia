@@ -1,4 +1,5 @@
 import {
+  cleanText,
   digitsOnly,
   normalizeCode,
   normalizeEmail,
@@ -59,6 +60,22 @@ export const USER_RULES: InputRules = {
 export const CONTRATO_RULES: InputRules = {
   identificador: normalizeCode,
   descricaoCurta: normalizeFreeText,
+  ePag: normalizeCode,
+  etp: normalizeCode,
+  termoReferencia: normalizeCode,
+  dataBaseSinapi: normalizeFreeText,
+  endereco: normalizeFreeText,
+};
+
+// Lotes e fiscais vão aninhados no contrato, então têm regras próprias
+export const LOTE_RULES: InputRules = {
+  nome: normalizeCode,
+};
+
+export const FISCAL_CONTRATO_RULES: InputRules = {
+  nome: normalizeUpperName,
+  ramal: normalizeFreeText,
+  email: normalizeEmail,
 };
 
 export const EMPENHO_RULES: InputRules = {
@@ -68,6 +85,10 @@ export const EMPENHO_RULES: InputRules = {
 
 export const ORDEM_SERVICO_RULES: InputRules = {
   numero: normalizeCode,
+  setorRequisitante: normalizeCode,
+  // Linha livre (posto, nome, ramal e e-mail): só a limpeza de espaços, sem forçar maiúsculas
+  fiscalSetorial: cleanText,
+  descricaoProblema: normalizeMultilineText,
 };
 
 export const INVOICE_RULES: InputRules = {
@@ -81,4 +102,7 @@ export const OBRA_RULES: InputRules = {
   descricao: normalizeMultilineText,
   responsavelTecnico: normalizeProperName,
   anotacoes: normalizeMultilineText,
+  idPatrimonialCompleto: normalizeCode,
+  apelido: normalizeCode,
+  estadoConservacao: normalizeFreeText,
 };

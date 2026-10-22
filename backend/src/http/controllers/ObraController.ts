@@ -20,6 +20,25 @@ function parseOrdemServicoIds(body: Record<string, unknown>): string[] | undefin
   return undefined;
 }
 
+// Texto opcional: vazio ou ausente vira undefined (a obra antiga fica sem o dado)
+function optionalText(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() !== "" ? value : undefined;
+}
+
+function optionalNumber(value: unknown): number | undefined {
+  return value !== undefined && value !== null && value !== "" ? Number(value) : undefined;
+}
+
+// Dados da edificação que saem na Ordem de Serviço
+function parseEdificacao(body: Record<string, unknown>) {
+  return {
+    idPatrimonialCompleto: optionalText(body.idPatrimonialCompleto),
+    apelido: optionalText(body.apelido),
+    areaConstruida: optionalNumber(body.areaConstruida),
+    estadoConservacao: optionalText(body.estadoConservacao),
+  };
+}
+
 export class ObraController {
   constructor(
     private createObra: CreateObraUseCase,
@@ -49,6 +68,7 @@ export class ObraController {
         longitude: longitude !== undefined && longitude !== "" ? Number(longitude) : undefined,
         responsavelTecnico,
         anotacoes,
+        ...parseEdificacao(req.body),
         ordemServicoIds: parseOrdemServicoIds(req.body) ?? [],
       });
 
@@ -148,6 +168,7 @@ export class ObraController {
           longitude: longitude !== undefined && longitude !== "" ? Number(longitude) : undefined,
           responsavelTecnico,
           anotacoes,
+          ...parseEdificacao(req.body),
         },
         ordemServicoIds: Array.isArray(req.body.ordemServico_ids) ? parseOrdemServicoIds(req.body) : undefined,
       });

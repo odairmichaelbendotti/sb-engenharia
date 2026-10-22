@@ -167,6 +167,10 @@ export class PrismaObraRepository implements IObraRepository {
             longitude: obra.longitude ?? null,
             responsavelTecnico: obra.responsavelTecnico,
             anotacoes: obra.anotacoes ?? null,
+            idPatrimonialCompleto: obra.idPatrimonialCompleto ?? null,
+            apelido: obra.apelido ?? null,
+            areaConstruida: obra.areaConstruida ?? null,
+            estadoConservacao: obra.estadoConservacao ?? null,
             tenant_id: obra.tenant_id,
           },
         });
@@ -509,6 +513,10 @@ export class PrismaObraRepository implements IObraRepository {
             longitude: obra.longitude ?? null,
             responsavelTecnico: obra.responsavelTecnico,
             anotacoes: obra.anotacoes ?? null,
+            idPatrimonialCompleto: obra.idPatrimonialCompleto ?? null,
+            apelido: obra.apelido ?? null,
+            areaConstruida: obra.areaConstruida ?? null,
+            estadoConservacao: obra.estadoConservacao ?? null,
             updatedAt: new Date(),
           },
         });

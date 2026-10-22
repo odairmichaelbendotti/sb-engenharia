@@ -1,10 +1,11 @@
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
-import type { ContratoType } from "../../../domain/entities/Contrato.js";
+import { validateContratoOrdemServicoData, type ContratoType } from "../../../domain/entities/Contrato.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import type { ICompanyRepository } from "../../../domain/repositories/ICompanyRepository.js";
 import type { IContratoRepository } from "../../../domain/repositories/IContratoRepository.js";
 import { normalizeInput, CONTRATO_RULES } from "../../../domain/normalization/input-rules.js";
+import { normalizeFiscais, normalizeLotes } from "./contrato-collections.js";
 
 const DESCRICAO_CURTA_MAX_LENGTH = 20;
 
@@ -24,7 +25,11 @@ export class UpdateContratoUseCase {
     user: AuthenticatedUser;
   }) {
     // Padroniza os textos antes de validar, buscar duplicados e gravar
-    data = normalizeInput(data, CONTRATO_RULES);
+    data = {
+      ...normalizeInput(data, CONTRATO_RULES),
+      lotes: normalizeLotes(data.lotes),
+      fiscais: normalizeFiscais(data.fiscais),
+    };
     const canEdit = new DomainAccessPolicy().can(user.role, "administrativo", "edit");
     if (!canEdit) {
       throw new DomainError("User is not authorized to perform this action");
@@ -38,6 +43,8 @@ export class UpdateContratoUseCase {
     if (data.descricaoCurta && data.descricaoCurta.length > DESCRICAO_CURTA_MAX_LENGTH) {
       throw new DomainError(`Contrato descricaoCurta must have at most ${DESCRICAO_CURTA_MAX_LENGTH} characters`);
     }
+
+    validateContratoOrdemServicoData(data);
 
     if (data.company_id) {
       const company = await this.companyRepository.findById(data.company_id);

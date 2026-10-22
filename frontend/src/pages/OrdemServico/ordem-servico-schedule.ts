@@ -153,11 +153,11 @@ export function getOrdemServicoSchedule(os: ScheduleInput): OrdemServicoSchedule
   };
 }
 
-// Número da OS no formato "01/BAFL/2026": ordena por ano e depois pela sequência
+// Número da OS no formato "OS 010/BAFL/2026-L1" (ou o antigo "01/BAFL/2026"): ordena por ano e depois pela sequência
 export function compareNumero(a: string, b: string): number {
   const parse = (n: string) => {
     const parts = n.split("/");
-    const seq = parseInt(parts[0] ?? "", 10);
+    const seq = parseInt(parts[0]?.match(/\d+/)?.[0] ?? "", 10);
     const year = parseInt(parts[parts.length - 1] ?? "", 10);
     return { seq: Number.isNaN(seq) ? 0 : seq, year: Number.isNaN(year) ? 0 : year };
   };

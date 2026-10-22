@@ -57,6 +57,11 @@ export type Obra = {
   ordensServico: ObraOrdemServico[];
   responsavelTecnico: string;
   anotacoes?: string;
+  // Dados da edificação que saem na Ordem de Serviço; nulos nas obras antigas
+  idPatrimonialCompleto: string | null;
+  apelido: string | null;
+  areaConstruida: number | null;
+  estadoConservacao: string | null;
   invoices: ObraInvoiceResumo[];
   createdAt: Date;
   updatedAt: Date;
@@ -105,6 +110,10 @@ export type CreateObraPayload = {
   longitude?: string;
   responsavelTecnico: string;
   anotacoes?: string;
+  idPatrimonialCompleto?: string;
+  apelido?: string;
+  areaConstruida?: string;
+  estadoConservacao?: string;
   // OS executadas na obra (ao menos uma); o cronograma vem delas
   ordemServico_ids: string[];
 };

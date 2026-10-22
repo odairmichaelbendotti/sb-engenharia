@@ -53,6 +53,11 @@ type FormState = {
   longitude: string;
   responsavelTecnico: string;
   anotacoes: string;
+  // Dados da edificação que saem na ordem de serviço
+  idPatrimonialCompleto: string;
+  apelido: string;
+  areaConstruida: string;
+  estadoConservacao: string;
 };
 
 const emptyForm: FormState = {
@@ -64,6 +69,10 @@ const emptyForm: FormState = {
   longitude: "",
   responsavelTecnico: "",
   anotacoes: "",
+  idPatrimonialCompleto: "",
+  apelido: "",
+  areaConstruida: "",
+  estadoConservacao: "",
 };
 
 // OS vinculada à obra no formulário (as atuais da obra e as recém-escolhidas)
@@ -143,6 +152,10 @@ export function ObraModal({ obra, handleClose }: ObraModalProps) {
         longitude: obra.longitude !== undefined ? String(obra.longitude) : "",
         responsavelTecnico: obra.responsavelTecnico,
         anotacoes: obra.anotacoes ?? "",
+        idPatrimonialCompleto: obra.idPatrimonialCompleto ?? "",
+        apelido: obra.apelido ?? "",
+        areaConstruida: obra.areaConstruida !== null ? String(obra.areaConstruida).replace(".", ",") : "",
+        estadoConservacao: obra.estadoConservacao ?? "",
       });
     } else {
       setForm(emptyForm);
@@ -210,6 +223,12 @@ export function ObraModal({ obra, handleClose }: ObraModalProps) {
       return;
     }
 
+    const areaNum = form.areaConstruida.trim() ? parseFloat(form.areaConstruida.replace(",", ".")) : undefined;
+    if (areaNum !== undefined && (isNaN(areaNum) || areaNum < 0)) {
+      toast.error("Área construída inválida");
+      return;
+    }
+
     const payload: CreateObraPayload = {
       nome: form.nome,
       identificacaoPatrimonial: form.identificacaoPatrimonial,
@@ -219,6 +238,10 @@ export function ObraModal({ obra, handleClose }: ObraModalProps) {
       longitude: longitudeNum?.toString(),
       responsavelTecnico: form.responsavelTecnico,
       anotacoes: form.anotacoes || undefined,
+      idPatrimonialCompleto: form.idPatrimonialCompleto || undefined,
+      apelido: form.apelido || undefined,
+      areaConstruida: areaNum?.toString(),
+      estadoConservacao: form.estadoConservacao || undefined,
       ordemServico_ids: linked.map((l) => l.id),
     };
 
@@ -310,6 +333,52 @@ export function ObraModal({ obra, handleClose }: ObraModalProps) {
                     className={iconInputClass}
                   />
                 </div>
+              </InputField>
+            </div>
+          </div>
+
+          {/* Edificação: dados que saem no documento da ordem de serviço */}
+          <div className="space-y-4">
+            <SectionTitle icon={FileText} label="Edificação (documento da OS)" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <InputField label="Identificação patrimonial completa">
+                <input
+                  name="idPatrimonialCompleto"
+                  value={form.idPatrimonialCompleto}
+                  onChange={handleChange}
+                  placeholder="SC.027-67272-E-050"
+                  className={inputClass}
+                />
+              </InputField>
+              <InputField label="Apelido da edificação">
+                <input
+                  name="apelido"
+                  value={form.apelido}
+                  onChange={handleChange}
+                  placeholder="SCOAM-FL"
+                  className={inputClass}
+                />
+              </InputField>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <InputField label="Área construída (m²)">
+                <input
+                  name="areaConstruida"
+                  inputMode="decimal"
+                  value={form.areaConstruida}
+                  onChange={(e) => setForm((prev) => ({ ...prev, areaConstruida: e.target.value.replace(/[^\d,]/g, "") }))}
+                  placeholder="60,06"
+                  className={inputClass}
+                />
+              </InputField>
+              <InputField label="Estado de conservação">
+                <input
+                  name="estadoConservacao"
+                  value={form.estadoConservacao}
+                  onChange={handleChange}
+                  placeholder="Bom"
+                  className={inputClass}
+                />
               </InputField>
             </div>
           </div>

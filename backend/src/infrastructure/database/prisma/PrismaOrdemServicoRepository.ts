@@ -7,6 +7,9 @@ import type {
   IOrdemServicoRepository,
   ListOrdensServicoResponse,
   OrdemServicoActiveCountByTenant,
+  OrdemServicoContratoDados,
+  OrdemServicoDocumentData,
+  OrdemServicoDocumentFields,
   OrdemServicoListItem,
   OrdemServicoOption,
   OrdemServicoPersistData,
@@ -14,6 +17,9 @@ import type {
   OrdemServicoVinculoFinanceiro,
 } from "../../../domain/repositories/IOrdemServicoRepository.js";
 import { prisma } from "../../prisma/prisma.js";
+
+// Primeira sequência da numeração das OS (as anteriores ao padrão ficam fora da contagem)
+const FIRST_SEQUENCIA = 10;
 
 const EMPENHO_INFO_SELECT = {
   id: true,
@@ -66,11 +72,74 @@ const OBRA_INFO_SELECT = {
   responsavelTecnico: true,
 } as const;
 
+const LOTE_INFO_SELECT = { id: true, numero: true, nome: true, desconto: true } as const;
+const FISCAL_INFO_SELECT = { id: true, tipo: true, nome: true, ramal: true, email: true } as const;
+
 const LIST_ITEM_INCLUDE = {
   empenho: { select: EMPENHO_INFO_SELECT },
   empenhos: VINCULOS_INCLUDE,
   obra: { select: OBRA_INFO_SELECT },
+  lote: { select: LOTE_INFO_SELECT },
+  fiscalTecnico: { select: FISCAL_INFO_SELECT },
+  fiscalAdministrativo: { select: FISCAL_INFO_SELECT },
 } as const;
+
+// Valores monetários da OS são gravados em centavos; a API responde em reais
+function withReais<T extends { valor: number; totalComBdi: number | null }>(row: T) {
+  return {
+    ...row,
+    valor: row.valor / 100,
+    totalComBdi: row.totalComBdi === null ? null : row.totalComBdi / 100,
+  };
+}
+
+// Colunas do documento da OS, iguais na criação e na edição
+function documentColumns(data: OrdemServicoDocumentFields) {
+  return {
+    lote_id: data.lote_id,
+    setorRequisitante: data.setorRequisitante,
+    urgencia: data.urgencia,
+    dataVistoria: data.dataVistoria,
+    descricaoProblema: data.descricaoProblema,
+    dataEmissao: data.dataEmissao,
+    prazoMobilizacaoDias: data.prazoMobilizacaoDias,
+    prazoDias: data.prazoDias,
+    totalComBdi: data.totalComBdi,
+    fiscalSetorial: data.fiscalSetorial,
+    fiscalTecnico_id: data.fiscalTecnico_id,
+    fiscalAdministrativo_id: data.fiscalAdministrativo_id,
+    condicoesEspeciais: data.condicoesEspeciais,
+  };
+}
+
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+// Número da OS: sequência por lote e ano (começa em 10), ex.: "OS 010/BAFL/2026-L1".
+// A sequência considera todos os contratos com o mesmo nº de lote, para o número nunca repetir
+async function gerarNumero(
+  tx: Tx,
+  tenant_id: string,
+  { loteNumero, ano }: { loteNumero: number | null; ano: number },
+) {
+  const [maximo, tenant] = await Promise.all([
+    tx.ordemServico.aggregate({
+      where: {
+        tenant_id,
+        anoNumeracao: ano,
+        sequencia: { not: null },
+        ...(loteNumero === null ? { lote_id: null } : { lote: { numero: loteNumero } }),
+      },
+      _max: { sequencia: true },
+    }),
+    tx.tenant.findUniqueOrThrow({ where: { id: tenant_id }, select: { apelido: true } }),
+  ]);
+  const sequencia = Math.max((maximo._max.sequencia ?? FIRST_SEQUENCIA - 1) + 1, FIRST_SEQUENCIA);
+  const sufixoLote = loteNumero === null ? "" : `-L${loteNumero}`;
+  return {
+    sequencia,
+    numero: `OS ${String(sequencia).padStart(3, "0")}/${tenant.apelido}/${ano}${sufixoLote}`,
+  };
+}
 
 // Executado por OS, em centavos: soma das notas não canceladas lançadas em cada uma
 async function sumExecutadoPorOS(ids: string[]): Promise<Map<string, number>> {
@@ -132,30 +201,38 @@ async function vinculosFinanceiros(osId: string, rows: VinculoRow[]): Promise<Or
 export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
   async create(data: OrdemServicoPersistData): Promise<OrdemServicoListItem> {
     try {
-      const newOrdemServico = await prisma.ordemServico.create({
-        data: {
-          numero: data.numero,
-          // Valor da OS = soma dos vínculos; o primeiro empenho é o principal
-          valor: data.empenhos.reduce((sum, e) => sum + e.valor, 0),
-          empenho_id: data.empenhos[0]!.empenho_id,
-          dataInicio: data.dataInicio,
-          dataPrevisaoTermino: data.dataPrevisaoTermino,
-          obra_id: data.obra_id,
-          tenant_id: data.tenant_id,
-          empenhos: {
-            create: data.empenhos.map((e) => ({ empenho_id: e.empenho_id, valor: e.valor })),
+      const newOrdemServico = await prisma.$transaction(async (tx) => {
+        const numeracao = data.numeracao ? await gerarNumero(tx, data.tenant_id, data.numeracao) : null;
+        return tx.ordemServico.create({
+          data: {
+            numero: numeracao?.numero ?? data.numero,
+            sequencia: numeracao?.sequencia ?? null,
+            anoNumeracao: data.numeracao?.ano ?? null,
+            // Valor da OS = soma dos vínculos; o primeiro empenho é o principal
+            valor: data.empenhos.reduce((sum, e) => sum + e.valor, 0),
+            empenho_id: data.empenhos[0]!.empenho_id,
+            dataInicio: data.dataInicio,
+            dataPrevisaoTermino: data.dataPrevisaoTermino,
+            obra_id: data.obra_id,
+            tenant_id: data.tenant_id,
+            ...documentColumns(data),
+            empenhos: {
+              create: data.empenhos.map((e) => ({ empenho_id: e.empenho_id, valor: e.valor })),
+            },
           },
-        },
-        include: LIST_ITEM_INCLUDE,
+          include: LIST_ITEM_INCLUDE,
+        });
       });
 
       return {
-        ...newOrdemServico,
-        valor: newOrdemServico.valor / 100,
+        ...withReais(newOrdemServico),
         empenhos: await vinculosFinanceiros(newOrdemServico.id, newOrdemServico.empenhos),
         valorExecutado: 0,
       };
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.code === "P2002") {
+        throw new DomainError("Numero already exists");
+      }
       throw new DomainError("Error creating ordem de serviço: " + error);
     }
   }
@@ -211,8 +288,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
 
       return {
         ordensServico: ordensServico.map((os) => ({
-          ...os,
-          valor: os.valor / 100,
+          ...withReais(os),
           empenhos: withFinanceiro(os.id, mapVinculos(os.empenhos), totals),
           valorExecutado: (executadoCentavos.get(os.id) ?? 0) / 100,
         })),
@@ -273,7 +349,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
     try {
       const ordemServico = await prisma.ordemServico.findUnique({ where: { id } });
       if (!ordemServico) return null;
-      return { ...ordemServico, valor: ordemServico.valor / 100 };
+      return withReais(ordemServico);
     } catch (error) {
       throw new DomainError("Error finding ordem de serviço: " + error);
     }
@@ -328,6 +404,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
             dataInicio: data.dataInicio,
             dataPrevisaoTermino: data.dataPrevisaoTermino,
             obra_id: data.obra_id,
+            ...documentColumns(data),
             updatedAt: new Date(),
           },
           include: LIST_ITEM_INCLUDE,
@@ -336,13 +413,91 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
 
       const executado = await sumExecutadoPorOS([id]);
       return {
-        ...updated,
-        valor: updated.valor / 100,
+        ...withReais(updated),
         empenhos: await vinculosFinanceiros(id, updated.empenhos),
         valorExecutado: (executado.get(id) ?? 0) / 100,
       };
     } catch (error) {
       throw new DomainError("Error updating ordem de serviço: " + error);
+    }
+  }
+
+  async findContratoByEmpenho(empenho_id: string): Promise<OrdemServicoContratoDados | null> {
+    try {
+      const empenho = await prisma.empenho.findUnique({
+        where: { id: empenho_id },
+        select: {
+          contrato: {
+            select: {
+              id: true,
+              tenant_id: true,
+              lotes: { select: { id: true, numero: true } },
+              fiscais: { select: { id: true, tipo: true } },
+            },
+          },
+        },
+      });
+      return empenho?.contrato ?? null;
+    } catch (error) {
+      throw new DomainError("Error finding contrato of empenho: " + error);
+    }
+  }
+
+  async getDocumentData(id: string): Promise<OrdemServicoDocumentData | null> {
+    try {
+      const row = await prisma.ordemServico.findUnique({
+        where: { id },
+        include: {
+          empenho: {
+            select: {
+              description: true,
+              contrato: {
+                select: {
+                  identificador: true,
+                  ePag: true,
+                  etp: true,
+                  termoReferencia: true,
+                  dataBaseSinapi: true,
+                  endereco: true,
+                  bdi: true,
+                  company_id: true,
+                  company: { select: { name: true, cnpj: true } },
+                  lotes: { orderBy: { numero: "asc" }, select: { numero: true, nome: true, desconto: true } },
+                },
+              },
+            },
+          },
+          obra: {
+            select: {
+              nome: true,
+              identificacaoPatrimonial: true,
+              idPatrimonialCompleto: true,
+              apelido: true,
+              areaConstruida: true,
+              estadoConservacao: true,
+            },
+          },
+          lote: { select: { numero: true, nome: true, desconto: true } },
+          fiscalTecnico: { select: { nome: true, ramal: true, email: true } },
+          fiscalAdministrativo: { select: { nome: true, ramal: true, email: true } },
+          tenant: { select: { city: true, apelido: true } },
+        },
+      });
+      if (!row) return null;
+
+      const { empenho, obra, lote, fiscalTecnico, fiscalAdministrativo, tenant, ...ordemServico } = row;
+      return {
+        ordemServico: withReais(ordemServico),
+        empenhoDescricao: empenho.description,
+        contrato: empenho.contrato,
+        obra,
+        lote,
+        fiscalTecnico,
+        fiscalAdministrativo,
+        tenant,
+      };
+    } catch (error) {
+      throw new DomainError("Error getting ordem de serviço document data: " + error);
     }
   }
 
@@ -386,7 +541,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
         data: { status, updatedAt: new Date() },
       });
 
-      return { ...updated, valor: updated.valor / 100 };
+      return withReais(updated);
     } catch (error) {
       throw new DomainError("Error updating ordem de serviço status: " + error);
     }

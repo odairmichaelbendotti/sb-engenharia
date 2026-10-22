@@ -17,6 +17,8 @@ type OrdensServicoState = {
   updateOrdemServico: (id: string, payload: CreateOrdemServicoPayload) => Promise<OrdemServico>;
   updateOrdemServicoStatus: (id: string, status: OrdemServicoStatus) => Promise<void>;
   deleteOrdemServico: (id: string) => Promise<void>;
+  // PDF da OS preenchido com os dados cadastrados
+  fetchOrdemServicoDocument: (id: string) => Promise<Blob>;
 };
 
 export const useOrdensServico = create<OrdensServicoState>((set) => ({
@@ -97,6 +99,15 @@ export const useOrdensServico = create<OrdensServicoState>((set) => ({
         },
       };
     });
+  },
+
+  fetchOrdemServicoDocument: async (id) => {
+    const response = await defaultFetch(`/ordem-servico/document/${id}`, { credentials: "include" });
+    if (!response.ok) {
+      const error = await response.json().catch(() => null);
+      throw new Error(error?.message || "Erro ao gerar o documento da ordem de serviço");
+    }
+    return response.blob();
   },
 
   deleteOrdemServico: async (id) => {

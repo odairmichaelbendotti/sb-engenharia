@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import {
   X,
   ClipboardList,
@@ -11,9 +11,20 @@ import {
   Flag,
   UserCog,
   MapPinOff,
+  FileDown,
+  Loader,
+  Tag,
+  Wrench,
+  ShieldCheck,
+  CalendarSearch,
+  Timer,
+  Banknote,
 } from "lucide-react";
-import type { OrdemServico, OrdemServicoObra } from "../../../types/ordem-servico";
+import { toast } from "sonner";
+import type { OrdemServico, OrdemServicoObra, OrdemServicoUrgencia } from "../../../types/ordem-servico";
 import { formatCurrency, formatDate, formatDateOnly } from "../../utils/format-currency";
+import { downloadBlob, toFilename } from "../../utils/download-file";
+import { useOrdensServico } from "../../store/ordensServico";
 import { usePermission } from "../../hooks/usePermission";
 import { OrdemServicoNumeroTag } from "../../components/OrdemServicoNumeroTag";
 import { getBalance, getOrdemServicoBalance } from "./ordem-servico-balance";
@@ -51,6 +62,13 @@ const STATUS_CLASS: Record<OrdemServico["status"], string> = {
   ATIVO: "bg-warning-bg text-warning-text border-warning-border",
   FINALIZADO: "bg-success-bg text-success-text border-success-border",
   CANCELADO: "bg-danger-bg text-danger-text border-danger-border",
+};
+
+const URGENCIA_LABEL: Record<OrdemServicoUrgencia, string> = {
+  EMERGENCIA: "Emergência (imediato – 24-48h)",
+  URGENCIA: "Urgência (1-2 semanas)",
+  PROGRAMADA: "Programada (1-3 meses)",
+  PREVENTIVA: "Preventiva (conforme disp. técnica e orçamentária)",
 };
 
 const OBRA_STATUS_LABEL: Record<string, string> = {
@@ -174,6 +192,79 @@ function ObraSection({ ordemServico, obra }: { ordemServico: OrdemServico; obra:
           {obra.responsavelTecnico}
         </Field>
       </div>
+    </div>
+  );
+}
+
+// Dados que entram no PDF da OS: mostra o que está cadastrado e o que falta (OS antigas)
+function DocumentSection({ ordemServico }: { ordemServico: OrdemServico }) {
+  const {
+    lote,
+    setorRequisitante,
+    urgencia,
+    dataVistoria,
+    prazoDias,
+    prazoMobilizacaoDias,
+    totalComBdi,
+    fiscalTecnico,
+    fiscalAdministrativo,
+    fiscalSetorial,
+    condicoesEspeciais,
+  } = ordemServico;
+  const incompleta = !setorRequisitante || !urgencia || !dataVistoria || !totalComBdi || !fiscalTecnico;
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+        {lote && (
+          <Field icon={Tag} label="Lote">
+            {String(lote.numero).padStart(2, "0")} – {lote.nome} · desconto de {String(lote.desconto).replace(".", ",")}%
+          </Field>
+        )}
+        <Field icon={Wrench} label="Setor requisitante">
+          {setorRequisitante ?? "—"}
+        </Field>
+        <Field icon={AlertTriangle} label="Classificação de urgência">
+          {urgencia ? URGENCIA_LABEL[urgencia] : "—"}
+        </Field>
+        <Field icon={CalendarSearch} label="Data da vistoria">
+          {dataVistoria ? formatDateOnly(dataVistoria) : "—"}
+        </Field>
+        <Field icon={Timer} label="Prazo">
+          {prazoDias ? `${prazoDias} dias corridos (mobilização de ${prazoMobilizacaoDias})` : "—"}
+        </Field>
+        <Field icon={Banknote} label="Total com BDI">
+          {totalComBdi ? formatCurrency(totalComBdi) : "—"}
+        </Field>
+        <Field icon={ShieldCheck} label="Fiscal técnico">
+          {fiscalTecnico ? `${fiscalTecnico.nome} – ${fiscalTecnico.ramal}` : "—"}
+        </Field>
+        <Field icon={ShieldCheck} label="Fiscal administrativo">
+          {fiscalAdministrativo ? `${fiscalAdministrativo.nome} – ${fiscalAdministrativo.ramal}` : "—"}
+        </Field>
+        <Field icon={ShieldCheck} label="Fiscal setorial">
+          {fiscalSetorial ?? "—"}
+        </Field>
+      </div>
+      {condicoesEspeciais.length > 0 && (
+        <div>
+          <p className="text-xs text-text-muted mb-1">Condições especiais</p>
+          <ul className="list-disc pl-5 space-y-0.5 text-sm text-text-primary">
+            {condicoesEspeciais.map((condicao) => (
+              <li key={condicao}>{condicao}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {incompleta && (
+        <div className="flex items-start gap-2.5 rounded-lg border border-warning-border bg-warning-bg px-3.5 py-3">
+          <AlertTriangle size={16} className="text-warning-text shrink-0 mt-0.5" />
+          <p className="text-sm text-warning-text">
+            Esta ordem de serviço tem dados do documento em branco. Edite-a para completar: o PDF sai com esses campos
+            vazios.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -312,6 +403,20 @@ export function ViewOrdemServicoModal({ ordemServico, handleClose }: ViewOrdemSe
   const { obra, empenho } = ordemServico;
   const { contrato } = empenho;
   const { canEditAdministrativo } = usePermission();
+  const { fetchOrdemServicoDocument } = useOrdensServico();
+  const [generating, setGenerating] = useState(false);
+
+  async function handleGenerateDocument() {
+    setGenerating(true);
+    try {
+      const blob = await fetchOrdemServicoDocument(ordemServico.id);
+      downloadBlob(blob, `${toFilename(ordemServico.numero)}.pdf`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erro ao gerar o documento da ordem de serviço");
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -341,13 +446,24 @@ export function ViewOrdemServicoModal({ ordemServico, handleClose }: ViewOrdemSe
               {obra?.nome ?? empenho.description}
             </h2>
           </div>
-          <button
-            onClick={handleClose}
-            className="p-2 hover:bg-surface-muted rounded-lg transition-colors cursor-pointer shrink-0"
-            title="Fechar"
-          >
-            <X size={20} className="text-text-secondary" />
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={handleGenerateDocument}
+              disabled={generating}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-primary-600 border border-primary-200 bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              title="Baixar a ordem de serviço preenchida em PDF"
+            >
+              {generating ? <Loader size={16} className="animate-spin" /> : <FileDown size={16} />}
+              <span className="hidden sm:inline">Baixar OS (PDF)</span>
+            </button>
+            <button
+              onClick={handleClose}
+              className="p-2 hover:bg-surface-muted rounded-lg transition-colors cursor-pointer"
+              title="Fechar"
+            >
+              <X size={20} className="text-text-secondary" />
+            </button>
+          </div>
         </div>
 
         <div className="p-5 overflow-y-auto space-y-5">
@@ -373,7 +489,7 @@ export function ViewOrdemServicoModal({ ordemServico, handleClose }: ViewOrdemSe
               <DateStep
                 icon={CalendarPlus}
                 label="Emissão da OS"
-                value={formatDate(ordemServico.createdAt)}
+                value={ordemServico.dataEmissao ? formatDateOnly(ordemServico.dataEmissao) : formatDate(ordemServico.createdAt)}
                 done
               />
               <DateStep
@@ -396,6 +512,11 @@ export function ViewOrdemServicoModal({ ordemServico, handleClose }: ViewOrdemSe
                 done={!!obra?.dataConclusao}
               />
             </div>
+          </section>
+
+          <section>
+            <h3 className="text-xs font-semibold text-text-secondary uppercase mb-2.5">Documento da OS</h3>
+            <DocumentSection ordemServico={ordemServico} />
           </section>
 
           <section>

@@ -1,5 +1,6 @@
 import type {
   OrdemServicoStatusValue,
+  OrdemServicoUrgenciaValue,
   PersistedOrdemServico,
 } from "../entities/OrdemServico.js";
 
@@ -33,14 +34,86 @@ export type OrdemServicoVinculo = {
   empenhoValue: number;
 };
 
+// Campos do documento da OS já validados — totalComBdi em centavos
+export type OrdemServicoDocumentFields = {
+  lote_id: string | null;
+  setorRequisitante: string | null;
+  urgencia: OrdemServicoUrgenciaValue | null;
+  dataVistoria: Date | null;
+  descricaoProblema: string | null;
+  dataEmissao: Date | null;
+  prazoMobilizacaoDias: number;
+  prazoDias: number | null;
+  totalComBdi: number | null;
+  fiscalSetorial: string | null;
+  fiscalTecnico_id: string | null;
+  fiscalAdministrativo_id: string | null;
+  condicoesEspeciais: string[];
+};
+
 // Dados já validados para gravar a OS — valores em centavos
-export type OrdemServicoPersistData = {
+export type OrdemServicoPersistData = OrdemServicoDocumentFields & {
+  // Na criação, com `numeracao` o repository gera o número (sequência por lote e ano)
   numero: string;
+  numeracao?: { loteNumero: number | null; ano: number } | undefined;
   tenant_id: string;
   empenhos: { empenho_id: string; valor: number }[];
   dataInicio: Date;
   dataPrevisaoTermino: Date;
   obra_id: string | null;
+};
+
+export type OrdemServicoLoteInfo = {
+  id: string;
+  numero: number;
+  nome: string;
+  desconto: number;
+};
+
+export type OrdemServicoFiscalInfo = {
+  id: string;
+  tipo: "TECNICO" | "ADMINISTRATIVO";
+  nome: string;
+  ramal: string;
+  email: string;
+};
+
+// Contrato do empenho: de onde saem os lotes e os fiscais que a OS pode escolher
+export type OrdemServicoContratoDados = {
+  id: string;
+  tenant_id: string;
+  lotes: { id: string; numero: number }[];
+  fiscais: { id: string; tipo: "TECNICO" | "ADMINISTRATIVO" }[];
+};
+
+// Tudo o que o PDF da OS precisa, já com os valores em reais
+export type OrdemServicoDocumentData = {
+  ordemServico: PersistedOrdemServico;
+  empenhoDescricao: string;
+  contrato: {
+    identificador: string;
+    ePag: string;
+    etp: string;
+    termoReferencia: string;
+    dataBaseSinapi: string;
+    endereco: string;
+    bdi: number;
+    company_id: string;
+    company: { name: string; cnpj: string };
+    lotes: { numero: number; nome: string; desconto: number }[];
+  };
+  obra: {
+    nome: string;
+    identificacaoPatrimonial: string;
+    idPatrimonialCompleto: string | null;
+    apelido: string | null;
+    areaConstruida: number | null;
+    estadoConservacao: string | null;
+  } | null;
+  lote: { numero: number; nome: string; desconto: number } | null;
+  fiscalTecnico: { nome: string; ramal: string; email: string } | null;
+  fiscalAdministrativo: { nome: string; ramal: string; email: string } | null;
+  tenant: { city: string; apelido: string };
 };
 
 export type OrdemServicoObra = {
@@ -65,6 +138,9 @@ export type OrdemServicoVinculoFinanceiro = OrdemServicoVinculo & {
 export type OrdemServicoListItem = PersistedOrdemServico & {
   // Empenho principal — por ele se chega ao contrato e à empresa
   empenho: OrdemServicoEmpenhoInfo;
+  lote: OrdemServicoLoteInfo | null;
+  fiscalTecnico: OrdemServicoFiscalInfo | null;
+  fiscalAdministrativo: OrdemServicoFiscalInfo | null;
   empenhos: OrdemServicoVinculoFinanceiro[];
   obra: OrdemServicoObra | null;
   // Soma das notas fiscais não canceladas lançadas nesta OS
@@ -103,6 +179,10 @@ export interface IOrdemServicoRepository {
   /** Cria a OS com seus vínculos; valor da OS = soma dos vínculos. */
   create(data: OrdemServicoPersistData): Promise<OrdemServicoListItem>;
   verifyNumero(numero: string, tenant_id: string): Promise<boolean>;
+  /** Contrato do empenho, com os ids dos lotes e dos fiscais disponíveis para a OS. */
+  findContratoByEmpenho(empenho_id: string): Promise<OrdemServicoContratoDados | null>;
+  /** Dados do documento da OS; null se não existir. */
+  getDocumentData(id: string): Promise<OrdemServicoDocumentData | null>;
   list(tenant_id?: string, company_id?: string): Promise<ListOrdensServicoResponse>;
   /** Contagem de OS ativas, agrupada por tenant — resumo multi-institucional do PLATFORM_ADMIN. */
   countActiveByTenant(): Promise<OrdemServicoActiveCountByTenant[]>;

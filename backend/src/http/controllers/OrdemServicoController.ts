@@ -5,8 +5,9 @@ import type { ListOrdemServicoOptionsForObraUseCase } from "../../application/us
 import type { UpdateOrdemServicoUseCase } from "../../application/usecases/ordem-servico/UpdateOrdemServicoUseCase.js";
 import type { UpdateOrdemServicoStatusUseCase } from "../../application/usecases/ordem-servico/UpdateOrdemServicoStatusUseCase.js";
 import type { DeleteOrdemServicoUseCase } from "../../application/usecases/ordem-servico/DeleteOrdemServicoUseCase.js";
+import type { GenerateOrdemServicoDocumentUseCase } from "../../application/usecases/ordem-servico/GenerateOrdemServicoDocumentUseCase.js";
 import { DomainError } from "../../domain/errors/DomainError.js";
-import type { OrdemServicoEmpenhoInput } from "../../domain/entities/OrdemServico.js";
+import type { OrdemServicoEmpenhoInput, OrdemServicoUrgenciaValue } from "../../domain/entities/OrdemServico.js";
 
 const VALID_STATUSES = ["ATIVO", "FINALIZADO", "CANCELADO"];
 
@@ -31,6 +32,42 @@ function parseObraId(body: Record<string, unknown>): string | null | undefined {
   return body.obra_id ? String(body.obra_id) : null;
 }
 
+// Texto opcional: campo ausente = undefined (na edição mantém o atual); vazio ou null = null (limpa)
+function optionalField(body: Record<string, unknown>, key: string): string | null | undefined {
+  if (!(key in body)) return undefined;
+  const value = body[key];
+  return value === null || value === "" ? null : String(value);
+}
+
+function optionalNumberField(body: Record<string, unknown>, key: string): number | null | undefined {
+  if (!(key in body)) return undefined;
+  const value = body[key];
+  return value === null || value === "" ? null : Number(value);
+}
+
+function parseCondicoesEspeciais(body: Record<string, unknown>): string[] | undefined {
+  return Array.isArray(body.condicoesEspeciais) ? body.condicoesEspeciais.map((c) => String(c ?? "")) : undefined;
+}
+
+// Dados do documento da OS (criação e edição)
+function parseDocumentFields(body: Record<string, unknown>) {
+  return {
+    lote_id: optionalField(body, "lote_id"),
+    setorRequisitante: optionalField(body, "setorRequisitante"),
+    urgencia: optionalField(body, "urgencia") as OrdemServicoUrgenciaValue | null | undefined,
+    dataVistoria: optionalField(body, "dataVistoria"),
+    descricaoProblema: optionalField(body, "descricaoProblema"),
+    dataEmissao: optionalField(body, "dataEmissao"),
+    prazoMobilizacaoDias: optionalNumberField(body, "prazoMobilizacaoDias") ?? undefined,
+    prazoDias: optionalNumberField(body, "prazoDias"),
+    totalComBdi: optionalNumberField(body, "totalComBdi"),
+    fiscalSetorial: optionalField(body, "fiscalSetorial"),
+    fiscalTecnico_id: optionalField(body, "fiscalTecnico_id"),
+    fiscalAdministrativo_id: optionalField(body, "fiscalAdministrativo_id"),
+    condicoesEspeciais: parseCondicoesEspeciais(body),
+  };
+}
+
 export class OrdemServicoController {
   constructor(
     private createOrdemServico: CreateOrdemServicoUseCase,
@@ -39,6 +76,7 @@ export class OrdemServicoController {
     private updateOrdemServico: UpdateOrdemServicoUseCase,
     private updateOrdemServicoStatus: UpdateOrdemServicoStatusUseCase,
     private deleteOrdemServico: DeleteOrdemServicoUseCase,
+    private generateOrdemServicoDocument: GenerateOrdemServicoDocumentUseCase,
   ) {}
 
   async create(req: Request, res: Response) {
@@ -53,6 +91,7 @@ export class OrdemServicoController {
         dataInicio: req.body.dataInicio,
         dataPrevisaoTermino: req.body.dataPrevisaoTermino,
         obra_id: parseObraId(req.body) ?? null,
+        ...parseDocumentFields(req.body),
       });
 
       res.status(201).json(ordemServico);
@@ -104,10 +143,31 @@ export class OrdemServicoController {
           dataInicio: req.body.dataInicio,
           dataPrevisaoTermino: req.body.dataPrevisaoTermino,
           obra_id: parseObraId(req.body),
+          ...parseDocumentFields(req.body),
         },
       });
 
       res.status(200).json(ordemServico);
+    } catch (error) {
+      if (error instanceof DomainError) return res.status(400).json({ message: error.message });
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  }
+
+  async document(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { user } = req;
+      if (!id || Array.isArray(id)) throw new DomainError("Invalid ID");
+      if (!user) throw new DomainError("User not found");
+
+      const { filename, content } = await this.generateOrdemServicoDocument.execute({
+        ordemServicoId: id,
+        user,
+      });
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
+      res.status(200).send(content);
     } catch (error) {
       if (error instanceof DomainError) return res.status(400).json({ message: error.message });
       return res.status(500).json({ message: "Internal server error" });

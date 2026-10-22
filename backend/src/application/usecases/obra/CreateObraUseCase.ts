@@ -31,6 +31,10 @@ export class CreateObraUseCase {
       longitude,
       responsavelTecnico,
       anotacoes,
+      idPatrimonialCompleto,
+      apelido,
+      areaConstruida,
+      estadoConservacao,
       ordemServicoIds,
     } = normalizeInput(input, OBRA_RULES);
     if (!nome || !identificacaoPatrimonial || !tipo || !responsavelTecnico) {
@@ -54,6 +58,10 @@ export class CreateObraUseCase {
       longitude,
       responsavelTecnico,
       anotacoes,
+      idPatrimonialCompleto,
+      apelido,
+      areaConstruida,
+      estadoConservacao,
       tenant_id: user.tenant_id,
     });
 

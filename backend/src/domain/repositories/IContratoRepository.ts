@@ -1,4 +1,11 @@
-import type { ContratoEntity, ContratoType, ContratoStatusValue, PersistedContrato } from "../entities/Contrato.js";
+import type {
+  ContratoEntity,
+  ContratoType,
+  ContratoStatusValue,
+  FiscalContratoRecord,
+  LoteRecord,
+  PersistedContrato,
+} from "../entities/Contrato.js";
 
 export type ContratoCompany = {
   id: string;
@@ -6,7 +13,13 @@ export type ContratoCompany = {
   cnpj: string;
 };
 
-export type ContratoListItem = PersistedContrato & {
+// Contrato com os lotes e os fiscais que alimentam a Ordem de Serviço
+export type ContratoWithOrdemServicoData = PersistedContrato & {
+  lotes: LoteRecord[];
+  fiscais: FiscalContratoRecord[];
+};
+
+export type ContratoListItem = ContratoWithOrdemServicoData & {
   company: ContratoCompany;
   empenhos: {
     id: string;
@@ -64,7 +77,8 @@ export interface IContratoRepository {
   countActiveByTenant(): Promise<ContratoActiveCountByTenant[]>;
   listOptionsForObra(tenant_id: string): Promise<ContratoOption[]>;
   findById(id: string): Promise<PersistedContrato | null>;
-  update(id: string, contrato: ContratoType): Promise<PersistedContrato>;
+  /** Atualiza o contrato e substitui o conjunto de lotes e de fiscais pelo informado. */
+  update(id: string, contrato: ContratoType): Promise<ContratoWithOrdemServicoData>;
   updateStatus(id: string, status: ContratoStatusValue): Promise<PersistedContrato>;
   delete(id: string): Promise<void>;
   /**
