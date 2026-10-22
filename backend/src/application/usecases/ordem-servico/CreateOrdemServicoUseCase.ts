@@ -7,11 +7,14 @@ import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRe
 import type { IObraRepository } from "../../../domain/repositories/IObraRepository.js";
 import { normalizeInput, ORDEM_SERVICO_RULES } from "../../../domain/normalization/input-rules.js";
 import { OrdemServicoEmpenhosValidator } from "./OrdemServicoEmpenhosValidator.js";
+import { normalizeFreeText } from "../../../domain/normalization/text-normalizers.js";
+import { OrdemServicoDocumentValidator } from "./OrdemServicoDocumentValidator.js";
 import { OrdemServicoObraValidator } from "./OrdemServicoObraValidator.js";
 
 export class CreateOrdemServicoUseCase {
   private empenhosValidator: OrdemServicoEmpenhosValidator;
   private obraValidator: OrdemServicoObraValidator;
+  private documentValidator: OrdemServicoDocumentValidator;
 
   constructor(
     private repository: IOrdemServicoRepository,
@@ -20,15 +23,15 @@ export class CreateOrdemServicoUseCase {
   ) {
     this.empenhosValidator = new OrdemServicoEmpenhosValidator(empenhoRepository);
     this.obraValidator = new OrdemServicoObraValidator(obraRepository, repository);
+    this.documentValidator = new OrdemServicoDocumentValidator(repository);
   }
 
   async execute(input: Omit<OrdemServicoType, "tenant_id"> & { user: AuthenticatedUser }) {
     // Padroniza os textos antes de validar, buscar duplicados e gravar
-    const { user, numero, empenhos, dataInicio, dataPrevisaoTermino, obra_id } = normalizeInput(
-      input,
-      ORDEM_SERVICO_RULES,
-    );
-    if (!numero || !empenhos?.length || !dataInicio || !dataPrevisaoTermino) {
+    const normalized = normalizeInput(input, ORDEM_SERVICO_RULES);
+    const { user, empenhos, dataInicio, dataPrevisaoTermino, obra_id } = normalized;
+    // Sem prazo em dias o término vem das datas; com ele é calculado a partir do início
+    if (!empenhos?.length || !dataInicio || (!normalized.prazoDias && !dataPrevisaoTermino)) {
       throw new DomainError("All fields are required");
     }
 
@@ -37,29 +40,43 @@ export class CreateOrdemServicoUseCase {
       throw new DomainError("You are not authorized to create an ordem de serviço");
     }
 
-    const numeroAlreadyExists = await this.repository.verifyNumero(numero, user.tenant_id);
-    if (numeroAlreadyExists) {
-      throw new DomainError("Numero already exists");
-    }
-
+    // O número é gerado (sequência por lote e ano); a data de emissão vem preenchida com hoje
+    const dataEmissao = normalized.dataEmissao || new Date().toISOString().slice(0, 10);
     const ordemServicoEntity = new OrdemServicoEntity({
-      numero,
-      empenhos,
-      dataInicio,
-      dataPrevisaoTermino,
-      obra_id,
+      ...normalized,
+      numero: "",
+      dataEmissao,
+      condicoesEspeciais: normalized.condicoesEspeciais?.map((c) => normalizeFreeText(c)),
       tenant_id: user.tenant_id,
     });
     const vinculos = await this.empenhosValidator.validate({ user, empenhos: ordemServicoEntity.empenhos });
     await this.obraValidator.validate({ user, obraAnterior: null, obraNova: ordemServicoEntity.obra_id });
+    const contrato = await this.documentValidator.validate({ user, ordemServico: ordemServicoEntity, isCreate: true });
 
+    const lote = contrato.lotes.find((l) => l.id === ordemServicoEntity.lote_id);
     return this.repository.create({
-      numero: ordemServicoEntity.numero,
+      numero: "",
+      numeracao: { loteNumero: lote?.numero ?? null, ano: Number(dataEmissao.slice(0, 4)) },
       tenant_id: user.tenant_id,
       empenhos: vinculos,
       dataInicio: new Date(ordemServicoEntity.dataInicio),
       dataPrevisaoTermino: new Date(ordemServicoEntity.dataPrevisaoTermino),
       obra_id: ordemServicoEntity.obra_id,
+      lote_id: ordemServicoEntity.lote_id,
+      setorRequisitante: ordemServicoEntity.setorRequisitante,
+      urgencia: ordemServicoEntity.urgencia,
+      dataVistoria: ordemServicoEntity.dataVistoria ? new Date(ordemServicoEntity.dataVistoria) : null,
+      descricaoProblema: ordemServicoEntity.descricaoProblema,
+      dataEmissao: new Date(dataEmissao),
+      prazoMobilizacaoDias: ordemServicoEntity.prazoMobilizacaoDias,
+      prazoDias: ordemServicoEntity.prazoDias,
+      // Math.round evita que erros de ponto flutuante quebrem o insert na coluna Int do Prisma
+      totalComBdi:
+        ordemServicoEntity.totalComBdi === null ? null : Math.round(ordemServicoEntity.totalComBdi * 100),
+      fiscalSetorial: ordemServicoEntity.fiscalSetorial,
+      fiscalTecnico_id: ordemServicoEntity.fiscalTecnico_id,
+      fiscalAdministrativo_id: ordemServicoEntity.fiscalAdministrativo_id,
+      condicoesEspeciais: ordemServicoEntity.condicoesEspeciais,
     });
   }
 }

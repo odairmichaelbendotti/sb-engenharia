@@ -6,8 +6,47 @@ import type { UpdateContratoUseCase } from "../../application/usecases/contrato/
 import type { UpdateContratoStatusUseCase } from "../../application/usecases/contrato/UpdateContratoStatusUseCase.js";
 import type { DeleteContratoUseCase } from "../../application/usecases/contrato/DeleteContratoUseCase.js";
 import { DomainError } from "../../domain/errors/DomainError.js";
+import type { FiscalContratoInput, LoteInput } from "../../domain/entities/Contrato.js";
 
 const VALID_STATUSES = ["ATIVO", "FINALIZADO", "CANCELADO"];
+
+// BDI padrão dos contratos da BAFL quando o cliente não envia
+const DEFAULT_BDI = 21.19;
+
+function parseLotes(body: Record<string, unknown>): LoteInput[] {
+  if (!Array.isArray(body.lotes)) return [];
+  return body.lotes.map((item: Record<string, unknown>) => ({
+    id: item?.id ? String(item.id) : undefined,
+    numero: Number(item?.numero),
+    nome: String(item?.nome ?? ""),
+    desconto: Number(item?.desconto),
+  }));
+}
+
+function parseFiscais(body: Record<string, unknown>): FiscalContratoInput[] {
+  if (!Array.isArray(body.fiscais)) return [];
+  return body.fiscais.map((item: Record<string, unknown>) => ({
+    id: item?.id ? String(item.id) : undefined,
+    tipo: String(item?.tipo ?? "") as FiscalContratoInput["tipo"],
+    nome: String(item?.nome ?? ""),
+    ramal: String(item?.ramal ?? ""),
+    email: String(item?.email ?? ""),
+  }));
+}
+
+// Campos do contrato que alimentam a Ordem de Serviço (criação e edição)
+function parseOrdemServicoData(body: Record<string, unknown>) {
+  return {
+    ePag: String(body.ePag ?? ""),
+    etp: String(body.etp ?? ""),
+    termoReferencia: String(body.termoReferencia ?? ""),
+    dataBaseSinapi: String(body.dataBaseSinapi ?? ""),
+    endereco: String(body.endereco ?? ""),
+    bdi: body.bdi === undefined || body.bdi === "" ? DEFAULT_BDI : Number(body.bdi),
+    lotes: parseLotes(body),
+    fiscais: parseFiscais(body),
+  };
+}
 
 export class ContratoController {
   constructor(
@@ -34,6 +73,7 @@ export class ContratoController {
         dataInicio,
         dataFim,
         company_id,
+        ...parseOrdemServicoData(req.body),
       });
 
       res.status(201).json(contrato);
@@ -88,6 +128,7 @@ export class ContratoController {
           dataInicio,
           dataFim,
           company_id,
+          ...parseOrdemServicoData(req.body),
         },
       });
 

@@ -7,11 +7,14 @@ import type { IObraRepository } from "../../../domain/repositories/IObraReposito
 import type { IOrdemServicoRepository } from "../../../domain/repositories/IOrdemServicoRepository.js";
 import { normalizeInput, ORDEM_SERVICO_RULES } from "../../../domain/normalization/input-rules.js";
 import { OrdemServicoEmpenhosValidator } from "./OrdemServicoEmpenhosValidator.js";
+import { normalizeFreeText } from "../../../domain/normalization/text-normalizers.js";
+import { OrdemServicoDocumentValidator } from "./OrdemServicoDocumentValidator.js";
 import { OrdemServicoObraValidator } from "./OrdemServicoObraValidator.js";
 
 export class UpdateOrdemServicoUseCase {
   private empenhosValidator: OrdemServicoEmpenhosValidator;
   private obraValidator: OrdemServicoObraValidator;
+  private documentValidator: OrdemServicoDocumentValidator;
 
   constructor(
     private repository: IOrdemServicoRepository,
@@ -20,6 +23,7 @@ export class UpdateOrdemServicoUseCase {
   ) {
     this.empenhosValidator = new OrdemServicoEmpenhosValidator(empenhoRepository);
     this.obraValidator = new OrdemServicoObraValidator(obraRepository, repository);
+    this.documentValidator = new OrdemServicoDocumentValidator(repository);
   }
 
   async execute({
@@ -44,13 +48,18 @@ export class UpdateOrdemServicoUseCase {
       throw new DomainError("OrdemServico not found");
     }
 
-    const numero = data.numero || existing.numero;
+    // O número gerado pelo sistema (com sequência) não muda; o das OS antigas ainda pode ser corrigido
+    const numero = existing.sequencia !== null ? existing.numero : data.numero || existing.numero;
     if (numero !== existing.numero) {
       const numeroAlreadyExists = await this.repository.verifyNumero(numero, user.tenant_id);
       if (numeroAlreadyExists) {
         throw new DomainError("Numero already exists");
       }
     }
+
+    // Campo ausente na edição mantém o valor atual; vazio/null limpa
+    const keep = <T,>(value: T | undefined, current: T) => (value === undefined ? current : value);
+    const day = (date: Date | null) => (date ? date.toISOString().slice(0, 10) : null);
 
     const ordemServicoEntity = new OrdemServicoEntity({
       numero,
@@ -59,6 +68,19 @@ export class UpdateOrdemServicoUseCase {
       dataPrevisaoTermino: data.dataPrevisaoTermino || existing.dataPrevisaoTermino?.toISOString() || "",
       obra_id: data.obra_id === undefined ? existing.obra_id : data.obra_id,
       tenant_id: existing.tenant_id,
+      lote_id: keep(data.lote_id, existing.lote_id),
+      setorRequisitante: keep(data.setorRequisitante, existing.setorRequisitante),
+      urgencia: keep(data.urgencia, existing.urgencia),
+      dataVistoria: keep(data.dataVistoria, day(existing.dataVistoria)),
+      descricaoProblema: keep(data.descricaoProblema, existing.descricaoProblema),
+      dataEmissao: keep(data.dataEmissao, day(existing.dataEmissao)),
+      prazoMobilizacaoDias: keep(data.prazoMobilizacaoDias, existing.prazoMobilizacaoDias),
+      prazoDias: keep(data.prazoDias, existing.prazoDias),
+      totalComBdi: keep(data.totalComBdi, existing.totalComBdi),
+      fiscalSetorial: keep(data.fiscalSetorial, existing.fiscalSetorial),
+      fiscalTecnico_id: keep(data.fiscalTecnico_id, existing.fiscalTecnico_id),
+      fiscalAdministrativo_id: keep(data.fiscalAdministrativo_id, existing.fiscalAdministrativo_id),
+      condicoesEspeciais: (data.condicoesEspeciais ?? existing.condicoesEspeciais).map((c) => normalizeFreeText(c)),
     });
 
     // Empenho só sai da OS se nenhuma nota fiscal desta OS foi lançada nele
@@ -84,12 +106,33 @@ export class UpdateOrdemServicoUseCase {
       obraNova: ordemServicoEntity.obra_id,
     });
 
+    await this.documentValidator.validate({
+      user,
+      ordemServico: ordemServicoEntity,
+      isCreate: false,
+      loteAnterior: existing.lote_id,
+    });
+
     return this.repository.update(ordemServicoId, {
       numero: ordemServicoEntity.numero,
       empenhos: vinculos,
       dataInicio: new Date(ordemServicoEntity.dataInicio),
       dataPrevisaoTermino: new Date(ordemServicoEntity.dataPrevisaoTermino),
       obra_id: ordemServicoEntity.obra_id,
+      lote_id: ordemServicoEntity.lote_id,
+      setorRequisitante: ordemServicoEntity.setorRequisitante,
+      urgencia: ordemServicoEntity.urgencia,
+      dataVistoria: ordemServicoEntity.dataVistoria ? new Date(ordemServicoEntity.dataVistoria) : null,
+      descricaoProblema: ordemServicoEntity.descricaoProblema,
+      dataEmissao: ordemServicoEntity.dataEmissao ? new Date(ordemServicoEntity.dataEmissao) : null,
+      prazoMobilizacaoDias: ordemServicoEntity.prazoMobilizacaoDias,
+      prazoDias: ordemServicoEntity.prazoDias,
+      totalComBdi:
+        ordemServicoEntity.totalComBdi === null ? null : Math.round(ordemServicoEntity.totalComBdi * 100),
+      fiscalSetorial: ordemServicoEntity.fiscalSetorial,
+      fiscalTecnico_id: ordemServicoEntity.fiscalTecnico_id,
+      fiscalAdministrativo_id: ordemServicoEntity.fiscalAdministrativo_id,
+      condicoesEspeciais: ordemServicoEntity.condicoesEspeciais,
     });
   }
 }

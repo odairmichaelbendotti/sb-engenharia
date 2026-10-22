@@ -2,6 +2,8 @@ import type {
   ContratoEntity,
   ContratoStatusValue,
   ContratoType,
+  FiscalContratoInput,
+  LoteInput,
   PersistedContrato,
 } from "../../../domain/entities/Contrato.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
@@ -9,6 +11,7 @@ import type {
   ContratoActiveCountByTenant,
   ContratoListItem,
   ContratoOption,
+  ContratoWithOrdemServicoData,
   IContratoRepository,
   ListContratosResponse,
 } from "../../../domain/repositories/IContratoRepository.js";
@@ -33,6 +36,17 @@ const CONTRATO_COLOR_PALETTE = [
   "#c9932f",
 ];
 
+const LOTES_INCLUDE = { orderBy: { numero: "asc" as const } };
+const FISCAIS_INCLUDE = { orderBy: [{ tipo: "asc" as const }, { nome: "asc" as const }] };
+
+function loteData(lote: LoteInput) {
+  return { numero: lote.numero, nome: lote.nome, desconto: lote.desconto };
+}
+
+function fiscalData(fiscal: FiscalContratoInput) {
+  return { tipo: fiscal.tipo, nome: fiscal.nome, ramal: fiscal.ramal, email: fiscal.email };
+}
+
 export class PrismaContratoRepository implements IContratoRepository {
   async create(contrato: ContratoEntity): Promise<ContratoListItem> {
     try {
@@ -49,9 +63,19 @@ export class PrismaContratoRepository implements IContratoRepository {
           company_id: contrato.company_id,
           tenant_id: contrato.tenant_id,
           cor,
+          ePag: contrato.ePag,
+          etp: contrato.etp,
+          termoReferencia: contrato.termoReferencia,
+          dataBaseSinapi: contrato.dataBaseSinapi,
+          endereco: contrato.endereco,
+          bdi: contrato.bdi,
+          lotes: { create: contrato.lotes.map(loteData) },
+          fiscais: { create: contrato.fiscais.map(fiscalData) },
         },
         include: {
           company: { select: { id: true, name: true, cnpj: true } },
+          lotes: LOTES_INCLUDE,
+          fiscais: FISCAIS_INCLUDE,
         },
       });
 
@@ -89,6 +113,8 @@ export class PrismaContratoRepository implements IContratoRepository {
           orderBy: { createdAt: "desc" },
           include: {
             company: { select: { id: true, name: true, cnpj: true } },
+            lotes: LOTES_INCLUDE,
+            fiscais: FISCAIS_INCLUDE,
             empenhos: {
               select: {
                 id: true,
@@ -203,23 +229,75 @@ export class PrismaContratoRepository implements IContratoRepository {
     }
   }
 
-  async update(id: string, contrato: ContratoType): Promise<PersistedContrato> {
+  async update(id: string, contrato: ContratoType): Promise<ContratoWithOrdemServicoData> {
     try {
-      const updatedContrato = await prisma.contrato.update({
-        where: { id },
-        data: {
-          identificador: contrato.identificador,
-          descricaoCurta: contrato.descricaoCurta,
-          valor: contrato.valor,
-          dataInicio: new Date(contrato.dataInicio),
-          dataFim: new Date(contrato.dataFim),
-          company_id: contrato.company_id,
-          updatedAt: new Date(),
-        },
+      const updatedContrato = await prisma.$transaction(async (tx) => {
+        await tx.contrato.update({
+          where: { id },
+          data: {
+            identificador: contrato.identificador,
+            descricaoCurta: contrato.descricaoCurta,
+            valor: contrato.valor,
+            dataInicio: new Date(contrato.dataInicio),
+            dataFim: new Date(contrato.dataFim),
+            company_id: contrato.company_id,
+            ePag: contrato.ePag,
+            etp: contrato.etp,
+            termoReferencia: contrato.termoReferencia,
+            dataBaseSinapi: contrato.dataBaseSinapi,
+            endereco: contrato.endereco,
+            bdi: contrato.bdi,
+            updatedAt: new Date(),
+          },
+        });
+
+        // Lotes: saem os que não vieram (se nenhuma OS usa), os com id são atualizados e os demais criados
+        const lotesAtuais = await tx.lote.findMany({ where: { contrato_id: id } });
+        const idsAtuais = new Set(lotesAtuais.map((l) => l.id));
+        const idsMantidos = new Set(contrato.lotes.flatMap((l) => (l.id && idsAtuais.has(l.id) ? [l.id] : [])));
+        for (const removido of lotesAtuais.filter((l) => !idsMantidos.has(l.id))) {
+          const emUso = await tx.ordemServico.count({ where: { lote_id: removido.id } });
+          if (emUso > 0) {
+            throw new DomainError(
+              `Não é possível remover o lote ${removido.numero}: existem ordens de serviço nele.`,
+            );
+          }
+          await tx.lote.delete({ where: { id: removido.id } });
+        }
+        for (const lote of contrato.lotes) {
+          if (lote.id && idsAtuais.has(lote.id)) {
+            await tx.lote.update({ where: { id: lote.id }, data: loteData(lote) });
+          } else {
+            await tx.lote.create({ data: { ...loteData(lote), contrato_id: id } });
+          }
+        }
+
+        // Fiscais: as OS que usavam um fiscal removido ficam sem fiscal (onDelete SetNull)
+        const fiscaisAtuais = await tx.fiscalContrato.findMany({ where: { contrato_id: id }, select: { id: true } });
+        const fiscaisIds = new Set(fiscaisAtuais.map((f) => f.id));
+        const fiscaisMantidos = new Set(
+          contrato.fiscais.flatMap((f) => (f.id && fiscaisIds.has(f.id) ? [f.id] : [])),
+        );
+        await tx.fiscalContrato.deleteMany({
+          where: { contrato_id: id, id: { notIn: [...fiscaisMantidos] } },
+        });
+        for (const fiscal of contrato.fiscais) {
+          if (fiscal.id && fiscaisIds.has(fiscal.id)) {
+            await tx.fiscalContrato.update({ where: { id: fiscal.id }, data: fiscalData(fiscal) });
+          } else {
+            await tx.fiscalContrato.create({ data: { ...fiscalData(fiscal), contrato_id: id } });
+          }
+        }
+
+        return tx.contrato.findUniqueOrThrow({
+          where: { id },
+          include: { lotes: LOTES_INCLUDE, fiscais: FISCAIS_INCLUDE },
+        });
       });
 
       return { ...updatedContrato, valor: updatedContrato.valor / 100 };
     } catch (error) {
+      if (error instanceof DomainError) throw error;
       throw new DomainError("Error updating contrato: " + error);
     }
   }

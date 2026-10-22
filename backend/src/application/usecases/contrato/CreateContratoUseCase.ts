@@ -5,6 +5,7 @@ import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.j
 import type { IContratoRepository } from "../../../domain/repositories/IContratoRepository.js";
 import type { ICompanyRepository } from "../../../domain/repositories/ICompanyRepository.js";
 import { normalizeInput, CONTRATO_RULES } from "../../../domain/normalization/input-rules.js";
+import { normalizeFiscais, normalizeLotes } from "./contrato-collections.js";
 
 export class CreateContratoUseCase {
   constructor(
@@ -22,6 +23,14 @@ export class CreateContratoUseCase {
       dataInicio,
       dataFim,
       company_id,
+      ePag,
+      etp,
+      termoReferencia,
+      dataBaseSinapi,
+      endereco,
+      bdi,
+      lotes,
+      fiscais,
     } = normalizeInput(input, CONTRATO_RULES);
     if (!identificador || !descricaoCurta || !valor || !dataInicio || !dataFim || !company_id) {
       throw new DomainError("All fields are required");
@@ -51,6 +60,14 @@ export class CreateContratoUseCase {
       dataFim,
       company_id,
       tenant_id: user.tenant_id,
+      ePag,
+      etp,
+      termoReferencia,
+      dataBaseSinapi,
+      endereco,
+      bdi,
+      lotes: normalizeLotes(lotes),
+      fiscais: normalizeFiscais(fiscais),
     });
 
     return this.repository.create({

@@ -124,6 +124,12 @@ model Obra {
   createdAt           DateTime   @default(now())
   updatedAt           DateTime   @default(now())
 
+  // Dados da edificação que saem na Ordem de Serviço; nulos nas obras anteriores a eles
+  idPatrimonialCompleto String? // ex.: SC.027-67272-E-050
+  apelido               String? // ex.: SCOAM-FL
+  areaConstruida        Float? // m²
+  estadoConservacao     String?
+
   tenant_id String
   tenant    Tenant @relation(fields: [tenant_id], references: [id])
 
@@ -168,6 +174,16 @@ model Contrato {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @default(now())
 
+  // Dados que saem na Ordem de Serviço. Obrigatórios no cadastro; os contratos que já
+  // existiam ficam com o placeholder até alguém preencher
+  ePag             String @default("A PREENCHER")
+  etp              String @default("A PREENCHER")
+  termoReferencia  String @default("A PREENCHER")
+  dataBaseSinapi   String @default("A PREENCHER")
+  endereco         String @default("A PREENCHER")
+  // BDI em porcentagem (ex.: 21.19)
+  bdi              Float  @default(21.19)
+
   tenant_id String
   tenant    Tenant @relation(fields: [tenant_id], references: [id])
 
@@ -175,8 +191,47 @@ model Contrato {
   company    Company @relation(fields: [company_id], references: [id])
 
   empenhos Empenho[]
+  lotes    Lote[]
+  fiscais  FiscalContrato[]
 
   @@unique([identificador, tenant_id])
+}
+
+// Lote da licitação (opcional por contrato): guarda o desconto que a empresa ofertou nele
+model Lote {
+  id       String @id @default(uuid())
+  numero   Int
+  nome     String
+  // Desconto em porcentagem (ex.: 24.8)
+  desconto Float
+
+  contrato_id String
+  contrato    Contrato @relation(fields: [contrato_id], references: [id], onDelete: Cascade)
+
+  ordensServico OrdemServico[]
+
+  @@unique([contrato_id, numero])
+}
+
+enum FiscalContratoTipo {
+  TECNICO
+  ADMINISTRATIVO
+}
+
+// Fiscais do contrato; cada OS escolhe entre eles o técnico e o administrativo
+model FiscalContrato {
+  id      String             @id @default(uuid())
+  tipo    FiscalContratoTipo
+  // Posto/graduação e nome, como sai no documento (ex.: "1º SGT FLORIANO")
+  nome    String
+  ramal   String
+  email   String
+
+  contrato_id String
+  contrato    Contrato @relation(fields: [contrato_id], references: [id], onDelete: Cascade)
+
+  ordensServicoTecnico        OrdemServico[] @relation("FiscalTecnicoOS")
+  ordensServicoAdministrativo OrdemServico[] @relation("FiscalAdministrativoOS")
 }
 
 model Empenho {
@@ -239,8 +294,39 @@ model OrdemServico {
 
   invoices Invoice[]
 
+  // Dados do documento da OS; nulos nas OS anteriores a eles
+  // Numeração: sequência por lote e ano (começa em 10); nula nas OS com número antigo
+  sequencia           Int?
+  anoNumeracao        Int?
+  lote_id             String?
+  lote                Lote?                @relation(fields: [lote_id], references: [id], onDelete: Restrict)
+  setorRequisitante   String?
+  urgencia            OrdemServicoUrgencia?
+  dataVistoria        DateTime?
+  descricaoProblema   String?
+  dataEmissao         DateTime?
+  // Dias de mobilização, já incluídos no prazo total
+  prazoMobilizacaoDias Int                  @default(7)
+  prazoDias           Int?
+  // Total com BDI informado pelo usuário, em centavos
+  totalComBdi         Int?
+  fiscalSetorial      String?
+  fiscalTecnico_id    String?
+  fiscalTecnico       FiscalContrato?      @relation("FiscalTecnicoOS", fields: [fiscalTecnico_id], references: [id], onDelete: SetNull)
+  fiscalAdministrativo_id String?
+  fiscalAdministrativo    FiscalContrato?  @relation("FiscalAdministrativoOS", fields: [fiscalAdministrativo_id], references: [id], onDelete: SetNull)
+  condicoesEspeciais  String[]             @default([])
+
   @@unique([numero, tenant_id])
   @@index([obra_id])
+  @@index([lote_id])
+}
+
+enum OrdemServicoUrgencia {
+  EMERGENCIA
+  URGENCIA
+  PROGRAMADA
+  PREVENTIVA
 }
 
 // Vínculo OS × empenho: quanto de cada empenho vai para a OS. Por padrão o empenho
