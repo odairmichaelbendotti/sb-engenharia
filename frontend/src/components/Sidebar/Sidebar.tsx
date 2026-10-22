@@ -11,6 +11,7 @@ import { useTenants } from "../../store/tenants";
 import { getInitials } from "../../utils/get-initial";
 import SidebarGroup from "./SidebarGroup";
 import { usePermission } from "../../hooks/usePermission";
+import { IconButton } from "../ui";
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -42,19 +43,19 @@ const Sidebar = () => {
   };
 
   return (
-    <div className="hidden md:flex max-w-72 w-full p-5 border-r border-border h-full">
+    <div className="hidden md:flex w-64 shrink-0 px-4 py-5 border-r border-border bg-surface h-full">
       <div className="w-full flex flex-col">
         {/* Logo section */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 px-1">
           <SquareDashedMousePointer
-            size={26}
-            className="text-primary-500 shrink-0"
+            size={22}
+            className="text-text-primary shrink-0"
           />
-          <p className="font-bold text-text-primary text-lg">SB Engenharia</p>
+          <p className="font-bold tracking-tight text-text-primary text-base">SB Engenharia</p>
         </div>
 
         {tenantName && (
-          <span className="mt-3 self-start inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border bg-surface-muted text-text-secondary border-border whitespace-nowrap">
+          <span className="mt-3 self-start inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border bg-surface-muted text-text-secondary border-border whitespace-nowrap">
             <Building2 size={12} />
             {tenantName}
           </span>
@@ -88,7 +89,7 @@ const Sidebar = () => {
         {/* Footer here */}
         <div className="border-t border-border flex items-center justify-between pt-4 mt-4 gap-3">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
+            <div className="w-9 h-9 bg-primary-500 rounded-full flex items-center justify-center text-white font-semibold text-xs shrink-0">
               {getInitials(user?.name || "Usuário")}
             </div>
             <div className="flex-1 min-w-0 overflow-hidden">
@@ -100,12 +101,7 @@ const Sidebar = () => {
               </p>
             </div>
           </div>
-          <button
-            className="p-2 cursor-pointer hover:bg-surface-muted rounded-md transition-colors shrink-0"
-            onClick={handleLogout}
-          >
-            <LogOut size={18} className="text-text-secondary" />
-          </button>
+          <IconButton icon={LogOut} label="Sair" size="sm" onClick={handleLogout} />
         </div>
       </div>
     </div>

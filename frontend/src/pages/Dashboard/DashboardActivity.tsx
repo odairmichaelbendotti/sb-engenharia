@@ -19,11 +19,11 @@ export default function DashboardActivity({ items }: DashboardActivityProps) {
   return (
     <div className="bg-surface border border-border rounded-xl overflow-hidden">
       <div className="px-4 py-3 border-b border-border">
-        <h3 className="font-semibold text-text-primary flex items-center gap-2">
-          <Clock size={18} className="text-primary-500" />
+        <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
+          <Clock size={16} className="text-text-muted" />
           Atividade recente
         </h3>
-        <p className="text-text-secondary text-sm">Últimos registros criados</p>
+        <p className="text-text-secondary text-xs mt-0.5">Últimos registros criados</p>
       </div>
 
       {items.length === 0 ? (
@@ -38,8 +38,8 @@ export default function DashboardActivity({ items }: DashboardActivityProps) {
                   to={item.href}
                   className="flex items-center gap-3 px-4 py-2 hover:bg-surface-muted transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center shrink-0">
-                    <Icon size={14} className="text-primary-500" />
+                  <div className="w-8 h-8 rounded-lg bg-surface-muted border border-border flex items-center justify-center shrink-0">
+                    <Icon size={14} className="text-text-primary" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-text-primary truncate">

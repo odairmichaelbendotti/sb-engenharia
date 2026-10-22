@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, UserRound, Users as UsersIcon } from "lucide-react";
 import type { User } from "../../../types/user";
+import { Badge, IconButton, Select } from "../../components/ui";
 import { getInitials } from "../../utils/get-initial";
 import { ROLE_LABELS } from "./role-labels";
 
@@ -25,19 +26,19 @@ export default function UsersTable({
   return (
     <>
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full text-table">
           <thead className="bg-surface-muted border-b border-border">
             <tr>
-              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
                 Usuário
               </th>
-              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
                 E-mail
               </th>
-              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
                 Papel
               </th>
-              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
                 Status
               </th>
             </tr>
@@ -56,27 +57,29 @@ export default function UsersTable({
                   key={user.id}
                   className="hover:bg-surface-muted/50 transition-colors"
                 >
-                  <td className="py-2.5 px-4">
+                  <td className="py-3 px-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
+                      <div className="w-9 h-9 bg-surface-muted border border-border rounded-full flex items-center justify-center text-text-primary font-semibold text-xs shrink-0">
                         {getInitials(user.name)}
                       </div>
-                      <p className="font-medium text-text-primary text-sm truncate">
+                      <p className="font-medium text-text-primary text-table truncate">
                         {user.name}
                       </p>
                     </div>
                   </td>
-                  <td className="py-2.5 px-4 text-center text-sm text-text-secondary">
+                  <td className="py-3 px-4 text-center text-table text-text-secondary">
                     {user.email}
                   </td>
-                  <td className="py-2.5 px-4 text-center">
+                  <td className="py-3 px-4 text-center">
                     {canEditRole ? (
-                      <select
+                      <Select
+                        size="sm"
+                        aria-label={`Papel de ${user.name}`}
+                        className="inline-block w-44 text-left"
                         value={user.role}
                         onChange={(e) =>
                           onRequestRoleChange(user, e.target.value as User["role"])
                         }
-                        className="px-2 py-1 rounded text-xs font-medium border bg-surface-muted text-text-secondary border-border cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-200"
                       >
                         {/* Garante que o papel atual sempre aparece, mesmo que quem edita não possa atribuí-lo (ex.: MASTER vendo um PLATFORM_ADMIN) */}
                         {!assignableRoles.includes(user.role) && (
@@ -89,24 +92,15 @@ export default function UsersTable({
                             {ROLE_LABELS[role]}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border bg-surface-muted text-text-secondary border-border whitespace-nowrap">
-                        <UserRound size={12} />
-                        {ROLE_LABELS[user.role]}
-                      </span>
+                      <Badge icon={UserRound}>{ROLE_LABELS[user.role]}</Badge>
                     )}
                   </td>
-                  <td className="py-2.5 px-4 text-center">
-                    <span
-                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium border whitespace-nowrap ${
-                        user.approved
-                          ? "bg-success-bg text-success-text border-success-border"
-                          : "bg-warning-bg text-warning-text border-warning-border"
-                      }`}
-                    >
+                  <td className="py-3 px-4 text-center">
+                    <Badge tone={user.approved ? "success" : "warning"}>
                       {user.approved ? "Aprovado" : "Pendente"}
-                    </span>
+                    </Badge>
                   </td>
                 </tr>
               );
@@ -118,28 +112,29 @@ export default function UsersTable({
       {users.length === 0 && (
         <div className="py-8 text-center">
           <UsersIcon size={32} className="mx-auto text-text-muted mb-3" />
-          <p className="text-text-secondary font-medium">Nenhum usuário encontrado</p>
+          <p className="text-sm text-text-secondary font-medium">Nenhum usuário encontrado</p>
         </div>
       )}
 
+      {/* Paginação por cursor (sem total de itens), por isso não usa o Pagination do ui */}
       {(page > 1 || hasNextPage) && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-surface-muted">
-          <p className="text-sm text-text-secondary">Página {page}</p>
-          <div className="flex items-center gap-2">
-            <button
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-t border-border bg-surface-muted">
+          <p className="text-xs text-text-secondary">Página {page}</p>
+          <div className="flex items-center gap-1">
+            <IconButton
+              icon={ChevronLeft}
+              label="Página anterior"
+              size="sm"
               onClick={() => onPageChange((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="p-2 hover:bg-surface cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <button
+            />
+            <IconButton
+              icon={ChevronRight}
+              label="Próxima página"
+              size="sm"
               onClick={() => onPageChange((p) => p + 1)}
               disabled={!hasNextPage}
-              className="p-2 hover:bg-surface cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
-            >
-              <ChevronRight size={18} />
-            </button>
+            />
           </div>
         </div>
       )}

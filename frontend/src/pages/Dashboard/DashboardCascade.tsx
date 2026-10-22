@@ -16,7 +16,7 @@ export default function DashboardCascade({ steps }: DashboardCascadeProps) {
           <div key={step.key} className="flex items-center gap-2 flex-1 min-w-0">
             <Link
               to={step.href}
-              className="flex-1 min-w-0 rounded-lg border border-border bg-surface-muted hover:border-primary-300 hover:bg-primary-50/50 transition-colors px-3 py-2"
+              className="flex-1 min-w-0 rounded-lg border border-border bg-surface-muted hover:border-border-strong hover:bg-surface transition-colors px-3 py-2"
             >
               <p className="text-xl font-bold text-text-primary leading-none">{step.count}</p>
               <p className="text-xs text-text-secondary mt-1 truncate">{step.label}</p>

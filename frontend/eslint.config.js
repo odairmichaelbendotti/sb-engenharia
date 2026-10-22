@@ -5,6 +5,23 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
+// Controles de formulário só pelos componentes de src/components/ui (mesma altura, fonte e foco em todo o app)
+const designSystemRules = [
+  {
+    selector: "JSXOpeningElement[name.name='select']",
+    message: 'Use <Select> de components/ui em vez de <select>.',
+  },
+  {
+    selector: "JSXOpeningElement[name.name='textarea']",
+    message: 'Use <Textarea> de components/ui em vez de <textarea>.',
+  },
+  {
+    selector:
+      "JSXOpeningElement[name.name='input']:not(:has(JSXAttribute[name.name='type'][value.value=/^(checkbox|radio|file|hidden|range|color)$/]))",
+    message: 'Use <Input> de components/ui em vez de <input> (só checkbox, radio, file, hidden, range e color ficam nativos).',
+  },
+]
+
 export default defineConfig([
   globalIgnores(['dist']),
   {
@@ -18,6 +35,13 @@ export default defineConfig([
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
+    },
+  },
+  {
+    files: ['src/**/*.tsx'],
+    ignores: ['src/components/ui/**'],
+    rules: {
+      'no-restricted-syntax': ['error', ...designSystemRules],
     },
   },
 ])

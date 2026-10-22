@@ -1,5 +1,6 @@
 import { Mail, User } from "lucide-react";
 import PasswordInput from "../PasswordInput";
+import { Button, Field, Input } from "../../../components/ui";
 import { normalizeEmail, normalizeProperName } from "../../../utils/normalization/text-normalizers";
 
 type SignUpStepOneProps = {
@@ -28,75 +29,49 @@ export default function SignUpStepOne({
   return (
     <>
       {/* Header */}
-      <h1 className="text-2xl font-semibold text-text-primary">Criar conta</h1>
+      <h1 className="text-xl font-semibold tracking-tight text-text-primary">Criar conta</h1>
       <p className="text-text-secondary text-sm mt-1 mb-5">
         Preencha os dados abaixo para começar
       </p>
 
       {/* Form */}
       <form onSubmit={onSubmit} className="space-y-3">
-        {/* Name Field */}
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-2">
-            Nome
-          </label>
-          <div className="flex items-center gap-3 px-4 py-2.5 border border-border rounded-lg bg-surface-muted focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent transition">
-            <User size={18} className="text-text-muted shrink-0" />
-            <input
-              type="text"
-              placeholder="João Silva"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onBlur={(e) => setName(normalizeProperName(e.target.value))}
-              className="flex-1 bg-transparent outline-none text-sm text-text-primary placeholder:text-text-muted"
-            />
-          </div>
-        </div>
+        <Field label="Nome">
+          <Input
+            type="text"
+            icon={User}
+            placeholder="João Silva"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={(e) => setName(normalizeProperName(e.target.value))}
+          />
+        </Field>
 
-        {/* Email Field */}
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-2">
-            E-mail
-          </label>
-          <div className="flex items-center gap-3 px-4 py-2.5 border border-border rounded-lg bg-surface-muted focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent transition">
-            <Mail size={18} className="text-text-muted shrink-0" />
-            <input
-              type="email"
-              placeholder="voce@exemplo.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onBlur={(e) => setEmail(normalizeEmail(e.target.value))}
-              className="flex-1 bg-transparent outline-none text-sm text-text-primary placeholder:text-text-muted"
-            />
-          </div>
-        </div>
+        <Field label="E-mail">
+          <Input
+            type="email"
+            icon={Mail}
+            placeholder="voce@exemplo.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onBlur={(e) => setEmail(normalizeEmail(e.target.value))}
+          />
+        </Field>
 
-        {/* Password Field */}
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-2">
-            Senha
-          </label>
+        <Field label="Senha">
           <PasswordInput value={password} onChange={setPassword} />
-        </div>
+        </Field>
 
-        {/* Confirm Password Field */}
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-2">
-            Confirmar senha
-          </label>
+        <Field label="Confirmar senha">
           <PasswordInput
             value={confirmPassword}
             onChange={setConfirmPassword}
           />
-        </div>
+        </Field>
 
-        {/* Next Button */}
-        <button
-          type="submit"
-          className="w-full mt-4 cursor-pointer bg-primary-500 hover:bg-primary-600 active:bg-primary-700 text-text-inverse font-medium py-2.5 px-4 rounded-lg transition flex items-center justify-center gap-2"
-        >
+        <Button type="submit" fullWidth className="mt-4">
           Continuar
-        </button>
+        </Button>
       </form>
     </>
   );

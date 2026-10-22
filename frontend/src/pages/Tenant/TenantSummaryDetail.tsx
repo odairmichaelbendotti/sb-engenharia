@@ -31,7 +31,7 @@ export default function TenantSummaryDetail() {
       </Link>
 
       {!entry ? (
-        <div className="bg-surface border border-border rounded-lg p-8 flex flex-col items-center justify-center text-center">
+        <div className="bg-surface border border-border rounded-xl p-8 flex flex-col items-center justify-center text-center">
           <Building2 size={32} className="text-text-muted mb-2" />
           <p className="text-text-secondary text-sm">
             Instituição não encontrada, ou ainda carregando os dados.
@@ -40,10 +40,10 @@ export default function TenantSummaryDetail() {
       ) : (
         <>
           <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-9 h-9 rounded-lg bg-primary-100 flex items-center justify-center shrink-0">
-              <Building2 size={18} className="text-primary-500" />
+            <div className="w-9 h-9 rounded-lg bg-surface border border-border flex items-center justify-center shrink-0">
+              <Building2 size={18} className="text-text-primary" />
             </div>
-            <h1 className="text-lg font-bold text-text-primary truncate">{entry.tenant.name}</h1>
+            <h1 className="text-lg font-semibold tracking-tight text-text-primary truncate">{entry.tenant.name}</h1>
           </div>
 
           <p className="text-xs text-text-muted mb-3">

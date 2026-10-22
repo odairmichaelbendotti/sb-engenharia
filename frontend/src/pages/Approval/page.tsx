@@ -5,6 +5,7 @@ import { useUnapprovedUsers } from "../../store/unapprovedUsers";
 import type { UnapprovedUser } from "../../../types/user";
 import type { RowStatus } from "./ApprovalRow";
 import { ConfirmModal } from "../../components/ConfirmModal";
+import { Button } from "../../components/ui";
 import ApprovalHeader from "./ApprovalHeader";
 import ApprovalFilters from "./ApprovalFilters";
 import ApprovalTable from "./ApprovalTable";
@@ -139,24 +140,21 @@ const Aprovacoes = () => {
       <ApprovalHeader />
 
       {isLoading ? (
-        <div className="bg-surface border border-border rounded-lg py-10 flex flex-col items-center justify-center gap-2">
-          <Loader2 size={24} className="animate-spin text-primary-500" />
+        <div className="bg-surface border border-border rounded-xl py-10 flex flex-col items-center justify-center gap-2">
+          <Loader2 size={24} className="animate-spin text-text-muted" />
           <p className="text-text-secondary text-sm">Carregando...</p>
         </div>
       ) : error ? (
-        <div className="bg-surface border border-border rounded-lg py-10 flex flex-col items-center justify-center gap-2">
+        <div className="bg-surface border border-border rounded-xl py-10 flex flex-col items-center justify-center gap-2">
           <AlertCircle size={24} className="text-danger-text" />
           <p className="text-text-secondary text-sm">{error}</p>
-          <button
-            onClick={() => loadUnapprovedUsers()}
-            className="mt-2 px-3 py-1.5 text-sm bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors cursor-pointer"
-          >
+          <Button size="sm" className="mt-2" onClick={() => loadUnapprovedUsers()}>
             Tentar novamente
-          </button>
+          </Button>
         </div>
       ) : (
-        <div className="bg-surface border border-border rounded-lg overflow-hidden">
-          <div className="px-4 pt-3 pb-2 border-b border-border">
+        <div className="bg-surface border border-border rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-border">
             <ApprovalFilters
               searchTerm={searchTerm}
               onSearchChange={(value) => {

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { estadosBrasil } from "../../utils/estados-brasil";
 import {
-  X,
   Building2,
   Building,
   Mail,
@@ -14,6 +13,7 @@ import {
 } from "lucide-react";
 import type { Empresa } from "../../../types/empresa";
 import { StepForm } from "../../components/StepForm";
+import { Field, FormSection, Input, Modal, ModalHeader, Select } from "../../components/ui";
 import { useCompanies } from "../../store/companies";
 import type { CreateCompanyType } from "../../../types/create-company";
 import { maskCnpj, maskPhone, maskCep, onlyDigits } from "../../utils/masks";
@@ -96,269 +96,152 @@ const RegisterOrEditCompany = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl border border-border">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-linear-to-r from-primary-50/50 to-transparent shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
-              <Building2 size={20} className="text-primary-600" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-text-primary">
-                {empresaSelecionada ? "Editar Empresa" : "Nova Empresa"}
-              </h2>
-              <p className="text-sm text-text-secondary">
-                {empresaSelecionada
-                  ? "Atualize os dados da empresa"
-                  : "Preencha os dados para cadastrar uma nova empresa"}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleClose}
-            className="p-2 cursor-pointer hover:bg-surface-muted rounded-lg transition-colors"
-          >
-            <X size={20} className="text-text-secondary" />
-          </button>
-        </div>
+    <Modal open size="xl">
+      <ModalHeader
+        icon={Building2}
+        title={empresaSelecionada ? "Editar Empresa" : "Nova Empresa"}
+        description={
+          empresaSelecionada
+            ? "Atualize os dados da empresa"
+            : "Preencha os dados para cadastrar uma nova empresa"
+        }
+        onClose={handleClose}
+      />
 
-        <StepForm
-          isEdit={empresaSelecionada !== null}
-          isSubmitting={isLoading}
-          submitLabel={empresaSelecionada ? "Salvar Alterações" : "Cadastrar Empresa"}
-          onCancel={handleClose}
-          onSubmit={submit}
-          onBlur={createBlurNormalizer(setFormData, COMPANY_FIELD_RULES)}
-          steps={[
-            {
-              id: "dados",
-              label: "Dados da empresa",
-              icon: Building,
-              validate: validateDados,
-              content: (
-                <>
-          {/* Seção: Dados da Empresa */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-              <Building size={16} className="text-primary-500" />
-              <span>Dados da Empresa</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Nome da Empresa <span className="text-danger-text">*</span>
-                </label>
-                <div className="relative">
-                  <Building2
-                    size={16}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-                  />
-                  <input
-                    type="text"
-                    required
-                    name="name"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
-                    placeholder="Ex: Construtora Silva Ltda"
-                  />
+      <StepForm
+        isEdit={empresaSelecionada !== null}
+        isSubmitting={isLoading}
+        submitLabel={empresaSelecionada ? "Salvar Alterações" : "Cadastrar Empresa"}
+        onCancel={handleClose}
+        onSubmit={submit}
+        onBlur={createBlurNormalizer(setFormData, COMPANY_FIELD_RULES)}
+        steps={[
+          {
+            id: "dados",
+            label: "Dados da empresa",
+            icon: Building,
+            validate: validateDados,
+            content: (
+              <FormSection title="Dados da Empresa" icon={Building}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Field label="Nome da Empresa" required className="md:col-span-2">
+                    <Input
+                      icon={Building2}
+                      type="text"
+                      required
+                      name="name"
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                      placeholder="Ex: Construtora Silva Ltda"
+                    />
+                  </Field>
+                  <Field label="CNPJ" required>
+                    <Input
+                      icon={FileText}
+                      type="text"
+                      required
+                      value={formData.cnpj}
+                      onChange={(e) =>
+                        setFormData({ ...formData, cnpj: maskCnpj(e.target.value) })
+                      }
+                      placeholder="00.000.000/0000-00"
+                    />
+                  </Field>
+                  <Field label="E-mail">
+                    <Input
+                      icon={Mail}
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={(e) =>
+                        setFormData({ ...formData, email: e.target.value })
+                      }
+                      placeholder="contato@empresa.com.br"
+                    />
+                  </Field>
+                  <Field label="Telefone">
+                    <Input
+                      icon={Phone}
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: maskPhone(e.target.value) })
+                      }
+                      placeholder="(00) 00000-0000"
+                    />
+                  </Field>
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  CNPJ <span className="text-danger-text">*</span>
-                </label>
-                <div className="relative">
-                  <FileText
-                    size={16}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-                  />
-                  <input
-                    type="text"
-                    required
-                    value={formData.cnpj}
-                    onChange={(e) =>
-                      setFormData({ ...formData, cnpj: maskCnpj(e.target.value) })
-                    }
-                    className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
-                    placeholder="00.000.000/0000-00"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  E-mail
-                </label>
-                <div className="relative">
-                  <Mail
-                    size={16}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-                  />
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
-                    placeholder="contato@empresa.com.br"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Telefone
-                </label>
-                <div className="relative">
-                  <Phone
-                    size={16}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-                  />
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, phone: maskPhone(e.target.value) })
-                    }
-                    className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
-                    placeholder="(00) 00000-0000"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-                </>
-              ),
-            },
-            {
-              id: "endereco",
-              label: "Endereço",
-              icon: MapPin,
-              content: (
-                <>
-          {/* Seção: Endereço */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-              <MapPin size={16} className="text-primary-500" />
-              <span>Endereço</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  CEP
-                </label>
-                <div className="relative">
-                  <Hash
-                    size={16}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-                  />
-                  <input
-                    type="text"
-                    value={formData.cep}
-                    onBlur={handleFindCep}
-                    onChange={(e) =>
-                      setFormData({ ...formData, cep: maskCep(e.target.value) })
-                    }
-                    className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
-                    placeholder="00000-000"
-                  />
-                </div>
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Endereço
-                </label>
-                <div className="relative">
-                  <MapPinned
-                    size={16}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-                  />
-                  <input
-                    type="text"
-                    name="address"
-                    value={formData.address}
-                    onChange={(e) =>
-                      setFormData({ ...formData, address: e.target.value })
-                    }
-                    className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
-                    placeholder="Rua, número, bairro"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Cidade
-                </label>
-                <div className="relative">
-                  <MapPin
-                    size={16}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-                  />
-                  <input
-                    type="text"
-                    name="city"
-                    value={formData.city}
-                    onChange={(e) =>
-                      setFormData({ ...formData, city: e.target.value })
-                    }
-                    className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
-                    placeholder="Ex: São Paulo"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Estado
-                </label>
-                <div className="relative">
-                  <select
-                    value={formData.state}
-                    onChange={(e) =>
-                      setFormData({ ...formData, state: e.target.value })
-                    }
-                    className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="">Selecione</option>
-                    {estadosBrasil.map((uf) => (
-                      <option key={uf} value={uf}>
-                        {uf}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <svg
-                      className="w-4 h-4 text-text-muted"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+              </FormSection>
+            ),
+          },
+          {
+            id: "endereco",
+            label: "Endereço",
+            icon: MapPin,
+            content: (
+              <FormSection title="Endereço" icon={MapPin}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Field label="CEP">
+                    {/* Ao sair do campo, busca o endereço pelo CEP */}
+                    <Input
+                      icon={Hash}
+                      type="text"
+                      value={formData.cep}
+                      onBlur={handleFindCep}
+                      onChange={(e) =>
+                        setFormData({ ...formData, cep: maskCep(e.target.value) })
+                      }
+                      placeholder="00000-000"
+                    />
+                  </Field>
+                  <Field label="Endereço" className="md:col-span-2">
+                    <Input
+                      icon={MapPinned}
+                      type="text"
+                      name="address"
+                      value={formData.address}
+                      onChange={(e) =>
+                        setFormData({ ...formData, address: e.target.value })
+                      }
+                      placeholder="Rua, número, bairro"
+                    />
+                  </Field>
+                  <Field label="Cidade">
+                    <Input
+                      icon={MapPin}
+                      type="text"
+                      name="city"
+                      value={formData.city}
+                      onChange={(e) =>
+                        setFormData({ ...formData, city: e.target.value })
+                      }
+                      placeholder="Ex: São Paulo"
+                    />
+                  </Field>
+                  <Field label="Estado">
+                    <Select
+                      value={formData.state}
+                      onChange={(e) =>
+                        setFormData({ ...formData, state: e.target.value })
+                      }
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </div>
+                      <option value="">Selecione</option>
+                      {estadosBrasil.map((uf) => (
+                        <option key={uf} value={uf}>
+                          {uf}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
                 </div>
-              </div>
-            </div>
-          </div>
-
-                </>
-              ),
-            },
-          ]}
-        />
-      </div>
-    </div>
+              </FormSection>
+            ),
+          },
+        ]}
+      />
+    </Modal>
   );
 };
 

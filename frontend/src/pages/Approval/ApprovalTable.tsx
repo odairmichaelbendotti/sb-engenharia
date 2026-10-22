@@ -1,5 +1,6 @@
-import { ChevronLeft, ChevronRight, UserCheck } from "lucide-react";
+import { UserCheck } from "lucide-react";
 import type { UnapprovedUser } from "../../../types/user";
+import { Pagination } from "../../components/ui";
 import { ApprovalRow, type RowStatus } from "./ApprovalRow";
 
 type ApprovalTableProps = {
@@ -32,19 +33,19 @@ export default function ApprovalTable({
   return (
     <>
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full text-table">
           <thead className="bg-surface-muted border-b border-border">
             <tr>
-              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
                 Usuário
               </th>
-              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
                 E-mail
               </th>
-              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
                 Organização
               </th>
-              <th className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
                 Ações
               </th>
             </tr>
@@ -66,12 +67,12 @@ export default function ApprovalTable({
       {paginatedPending.length === 0 && (
         <div className="py-8 text-center">
           <UserCheck size={32} className="mx-auto text-text-muted mb-3" />
-          <p className="text-text-secondary font-medium">
+          <p className="text-sm text-text-secondary font-medium">
             {!hasPending
               ? "Nenhuma solicitação pendente"
               : "Nenhuma solicitação encontrada"}
           </p>
-          <p className="text-text-muted text-sm mt-1">
+          <p className="text-text-muted text-xs mt-1">
             {!hasPending
               ? "Novas solicitações de acesso aparecem aqui"
               : "Tente ajustar a busca"}
@@ -79,34 +80,15 @@ export default function ApprovalTable({
         </div>
       )}
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-surface-muted">
-          <p className="text-sm text-text-secondary">
-            Mostrando {startIndex + 1} a{" "}
-            {Math.min(startIndex + itemsPerPage, filteredCount)} de{" "}
-            {filteredCount} solicitações
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => onPageChange((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-2 hover:bg-surface cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <span className="text-sm text-text-secondary">
-              Página {currentPage} de {totalPages}
-            </span>
-            <button
-              onClick={() => onPageChange((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-2 hover:bg-surface cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        startIndex={startIndex}
+        totalItems={filteredCount}
+        itemsPerPage={itemsPerPage}
+        itemLabel="solicitações"
+        onPageChange={(next) => onPageChange(() => next)}
+      />
     </>
   );
 }

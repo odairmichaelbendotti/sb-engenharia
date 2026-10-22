@@ -1,4 +1,5 @@
-import { Trash2, Edit2, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
+import { Trash2, Edit2, ArrowUp, ArrowDown, CheckCircle2 } from "lucide-react";
+import { IconButton, Pagination } from "../../components/ui";
 import { useMemo, useState } from "react";
 import type { Obra } from "../../../types/obra";
 import { formatCurrency, formatDate, formatDateOnly } from "../../utils/format-currency";
@@ -22,9 +23,9 @@ type SortDir = "asc" | "desc";
 function SortIcon({ k, sortKey, sortDir }: { k: SortKey; sortKey: SortKey; sortDir: SortDir }) {
   if (sortKey !== k) return <ArrowUp size={12} className="text-text-muted" />;
   return sortDir === "asc" ? (
-    <ArrowUp size={12} className="text-primary-500" />
+    <ArrowUp size={12} className="text-text-primary" />
   ) : (
-    <ArrowDown size={12} className="text-primary-500" />
+    <ArrowDown size={12} className="text-text-primary" />
   );
 }
 
@@ -98,7 +99,7 @@ function SaldoCell({ obra, canComplete }: { obra: Obra; canComplete: boolean }) 
       title={`${formatCurrency(obra.valorExecutado)} liquidados de ${formatCurrency(obra.valor)}`}
     >
       <p className="text-[11px] font-semibold uppercase tracking-wide text-text-secondary">A liquidar</p>
-      <p className="text-sm font-bold text-text-primary tabular-nums">{formatCurrency(balance.saldo)}</p>
+      <p className="text-sm font-semibold text-text-primary tabular-nums">{formatCurrency(balance.saldo)}</p>
       {balance.kind !== "empty" && (
         <div className="mt-1 h-1.5 rounded-full bg-surface-muted overflow-hidden">
           <div
@@ -116,7 +117,7 @@ function SaldoCell({ obra, canComplete }: { obra: Obra; canComplete: boolean }) 
   );
 }
 
-const thClass = "py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase";
+const thClass = "py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide";
 const sortableClass = "cursor-pointer hover:text-text-primary transition-colors";
 
 export function ObraTable({ obras, onView, onEdit, onDelete }: ObraTableProps) {
@@ -160,7 +161,7 @@ export function ObraTable({ obras, onView, onEdit, onDelete }: ObraTableProps) {
   return (
     <div>
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full text-table">
           <thead className="bg-surface-muted border-b border-border">
             <tr>
               <th className={`text-left ${thClass} ${sortableClass}`} onClick={() => handleSort("nome")}>
@@ -202,17 +203,17 @@ export function ObraTable({ obras, onView, onEdit, onDelete }: ObraTableProps) {
                       onView(obra);
                     }
                   }}
-                  className={`group cursor-pointer hover:bg-primary-50/40 focus-visible:outline-none focus-visible:bg-primary-50/60 transition-colors ${
+                  className={`group cursor-pointer hover:bg-surface-muted/60 focus-visible:outline-none focus-visible:bg-surface-muted transition-colors ${
                     obra.status === "CANCELADA" ? "opacity-60" : ""
                   }`}
                 >
                   <td className="py-3 px-4">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="px-1.5 py-0.5 rounded bg-primary-100 text-primary-700 text-xs font-semibold shrink-0">
+                        <span className="px-1.5 py-0.5 rounded-md bg-surface-muted border border-border text-text-primary text-xs font-semibold shrink-0">
                           {obra.identificacaoPatrimonial}
                         </span>
-                        <p className="font-medium text-text-primary text-sm truncate max-w-64" title={obra.nome}>
+                        <p className="font-medium text-text-primary text-table truncate max-w-64" title={obra.nome}>
                           {obra.nome}
                         </p>
                       </div>
@@ -235,7 +236,7 @@ export function ObraTable({ obras, onView, onEdit, onDelete }: ObraTableProps) {
                   <td className="py-3 px-4 hidden lg:table-cell">
                     {obra.dataPrevisaoTermino ? (
                       <>
-                        <p className="text-sm text-text-primary tabular-nums">{formatDateOnly(obra.dataPrevisaoTermino)}</p>
+                        <p className="text-table text-text-primary tabular-nums">{formatDateOnly(obra.dataPrevisaoTermino)}</p>
                         {hint && <p className={`text-xs mt-0.5 ${hint.className}`}>{hint.label}</p>}
                       </>
                     ) : (
@@ -244,7 +245,7 @@ export function ObraTable({ obras, onView, onEdit, onDelete }: ObraTableProps) {
                   </td>
                   {/* Uma linha só: nome longo termina em reticências e aparece inteiro ao passar o mouse */}
                   <td className="py-3 px-4 hidden md:table-cell max-w-56">
-                    <p className="text-sm text-text-secondary truncate" title={empresas}>
+                    <p className="text-table text-text-secondary truncate" title={empresas}>
                       {empresas || "—"}
                     </p>
                   </td>
@@ -258,20 +259,14 @@ export function ObraTable({ obras, onView, onEdit, onDelete }: ObraTableProps) {
                         className="flex items-center justify-end gap-0.5 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <button
-                          onClick={() => onEdit(obra)}
-                          className="p-1.5 cursor-pointer text-text-muted hover:text-primary-500 hover:bg-primary-100 rounded-md transition-colors"
-                          title="Editar obra"
-                        >
-                          <Edit2 size={15} />
-                        </button>
-                        <button
+                        <IconButton icon={Edit2} label="Editar obra" size="sm" onClick={() => onEdit(obra)} />
+                        <IconButton
+                          icon={Trash2}
+                          label="Excluir obra"
+                          variant="danger"
+                          size="sm"
                           onClick={() => onDelete(obra)}
-                          className="p-1.5 cursor-pointer text-text-muted hover:text-danger-text hover:bg-danger-bg rounded-md transition-colors"
-                          title="Excluir obra"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        />
                       </div>
                     </td>
                   )}
@@ -281,32 +276,15 @@ export function ObraTable({ obras, onView, onEdit, onDelete }: ObraTableProps) {
           </tbody>
         </table>
       </div>
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-surface-muted">
-          <p className="text-sm text-text-secondary">
-            Mostrando {startIndex + 1} a {Math.min(startIndex + ITEMS_PER_PAGE, sorted.length)} de {sorted.length} obras
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-2 hover:bg-surface cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <span className="text-sm text-text-secondary">
-              Página {currentPage} de {totalPages}
-            </span>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-2 hover:bg-surface cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        startIndex={startIndex}
+        totalItems={sorted.length}
+        itemsPerPage={ITEMS_PER_PAGE}
+        itemLabel="obras"
+        onPageChange={setPage}
+      />
     </div>
   );
 }

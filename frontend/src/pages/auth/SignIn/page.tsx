@@ -3,6 +3,7 @@ import { Mail, Loader } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useUser } from "../../../store/user";
 import PasswordInput from "../PasswordInput";
+import { Button, Field, Input } from "../../../components/ui";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
@@ -35,7 +36,7 @@ export default function SignIn() {
   if (checkingSession) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader size={32} className="animate-spin text-primary-500" />
+        <Loader size={32} className="animate-spin text-text-muted" />
       </div>
     );
   }
@@ -63,7 +64,7 @@ export default function SignIn() {
         <div className="w-9 h-9 bg-primary-500 rounded-md mb-8" />
 
         {/* Header */}
-        <h1 className="text-2xl font-semibold text-text-primary">
+        <h1 className="text-xl font-semibold tracking-tight text-text-primary">
           Fazer login
         </h1>
         <p className="text-text-secondary text-sm mt-1 mb-6">
@@ -72,39 +73,23 @@ export default function SignIn() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Email Field */}
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              E-mail
-            </label>
-            <div className="flex items-center gap-3 px-4 py-2.5 border border-border rounded-lg bg-surface-muted focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent transition">
-              <Mail size={18} className="text-text-muted shrink-0" />
-              <input
-                type="email"
-                placeholder="voce@exemplo.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="flex-1 bg-transparent outline-none text-sm text-text-primary placeholder:text-text-muted"
-              />
-            </div>
-          </div>
+          <Field label="E-mail">
+            <Input
+              type="email"
+              icon={Mail}
+              placeholder="voce@exemplo.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </Field>
 
-          {/* Password Field */}
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Senha
-            </label>
+          <Field label="Senha">
             <PasswordInput value={password} onChange={setPassword} />
-          </div>
+          </Field>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full mt-6 cursor-pointer bg-primary-500 hover:bg-primary-600 active:bg-primary-700 disabled:bg-border text-text-inverse font-medium py-2.5 px-4 rounded-lg transition flex items-center justify-center gap-2"
-          >
-            {isLoading ? <Loader className="animate-spin" /> : "Entrar"}
-          </button>
+          <Button type="submit" fullWidth loading={isLoading} className="mt-6">
+            Entrar
+          </Button>
         </form>
 
         {/* Footer */}
@@ -114,7 +99,7 @@ export default function SignIn() {
             <button
               type="button"
               onClick={() => navigate("/signup")}
-              className="text-primary-600 font-medium hover:text-primary-500 transition-colors"
+              className="text-text-primary font-semibold underline-offset-2 hover:underline cursor-pointer"
             >
               Criar conta
             </button>

@@ -12,6 +12,7 @@ import { SummaryStrip, type SummaryCell } from "../../components/SummaryStrip";
 import { matchesScope, resolveScope, scopeChips, type ScopeRef } from "../../components/filters/scope-options";
 import { FilterSummary } from "../../components/filters/FilterSummary";
 import { formatCurrency } from "../../utils/format-currency";
+import { Button } from "../../components/ui";
 
 // Origem de cada OS da obra: empresa e contrato da OS, uma por empenho
 function obraOsScopeRefs(os: ObraOrdemServico): ScopeRef[] {
@@ -186,30 +187,29 @@ export default function Obras() {
       />
 
       {isLoading ? (
-        <div className="bg-surface border border-border rounded-lg p-8 flex flex-col items-center justify-center">
-          <Loader2 size={32} className="text-primary-500 animate-spin mb-3" />
+        <div className="bg-surface border border-border rounded-xl p-8 flex flex-col items-center justify-center">
+          <Loader2 size={32} className="text-text-muted animate-spin mb-3" />
           <p className="text-text-secondary text-sm">Carregando obras...</p>
         </div>
       ) : error ? (
-        <div className="bg-surface border border-border rounded-lg p-8 flex flex-col items-center justify-center">
+        <div className="bg-surface border border-border rounded-xl p-8 flex flex-col items-center justify-center">
           <AlertCircle size={32} className="text-danger-text mb-3" />
           <p className="text-text-secondary text-sm mb-4">{error}</p>
-          <button
+          <Button
             onClick={() => {
               setError(null);
               setIsLoading(true);
               fetchObras().finally(() => setIsLoading(false));
             }}
-            className="cursor-pointer px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium"
           >
             Tentar novamente
-          </button>
+          </Button>
         </div>
       ) : (
         <>
           {/* Sem overflow-hidden: o painel de filtros precisa sair do card */}
-          <div className="bg-surface border border-border rounded-lg">
-            <SummaryStrip cells={summaryCells} className="rounded-t-lg" />
+          <div className="bg-surface border border-border rounded-xl">
+            <SummaryStrip cells={summaryCells} className="rounded-t-xl" />
             <div className="px-4 pt-3 pb-3 border-b border-border space-y-2">
               <ObraFilters
                 search={search}
@@ -233,17 +233,13 @@ export default function Obras() {
                   {obras.length === 0 ? "Nenhuma obra cadastrada" : "Nenhuma obra encontrada com os filtros aplicados"}
                 </p>
                 {obras.length === 0 && canCreateAndEditContent && (
-                  <button
-                    onClick={handleOpenCreate}
-                    className="mt-3 cursor-pointer flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium"
-                  >
-                    <Plus size={16} />
+                  <Button icon={Plus} onClick={handleOpenCreate} className="mt-3">
                     Criar primeira obra
-                  </button>
+                  </Button>
                 )}
               </div>
             ) : (
-              <div className="rounded-b-lg overflow-hidden">
+              <div className="rounded-b-xl overflow-hidden">
                 {/* key reinicia a paginação quando os filtros mudam */}
                 <ObraTable
                   key={`${search}|${scopeKey}|${activeOnlyOverdue}`}

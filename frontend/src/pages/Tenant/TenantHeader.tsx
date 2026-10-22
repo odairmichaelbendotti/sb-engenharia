@@ -1,4 +1,5 @@
 import { Building2, Plus } from "lucide-react";
+import { Button } from "../../components/ui";
 
 type TenantHeaderProps = {
   canManageOrganization: boolean;
@@ -11,23 +12,21 @@ export default function TenantHeader({
 }: TenantHeaderProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-      <div>
-        <h1 className="text-xl font-bold text-text-primary flex items-center gap-2">
-          <Building2 size={20} className="text-primary-500" />
-          Organizações
-        </h1>
-        <p className="text-text-secondary text-xs mt-0.5">
-          Organizações cadastradas na plataforma
-        </p>
+      <div className="flex items-center gap-2.5 min-w-0">
+        <div className="w-9 h-9 rounded-lg bg-surface border border-border flex items-center justify-center shrink-0">
+          <Building2 size={18} className="text-text-primary" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold tracking-tight text-text-primary truncate">Organizações</h1>
+          <p className="text-text-secondary text-xs mt-0.5">
+            Organizações cadastradas na plataforma
+          </p>
+        </div>
       </div>
       {canManageOrganization && (
-        <button
-          onClick={onAdd}
-          className="flex items-center cursor-pointer text-white justify-center gap-2 px-4 py-2 bg-primary-500 rounded-md hover:bg-primary-600 transition-colors text-sm font-medium shrink-0"
-        >
-          <Plus size={16} />
+        <Button icon={Plus} onClick={onAdd}>
           Nova Organização
-        </button>
+        </Button>
       )}
     </div>
   );

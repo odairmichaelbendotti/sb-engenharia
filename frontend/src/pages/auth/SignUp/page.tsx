@@ -50,7 +50,7 @@ export default function SignUp() {
   if (checkingSession) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader size={32} className="animate-spin text-primary-500" />
+        <Loader size={32} className="animate-spin text-text-muted" />
       </div>
     );
   }
@@ -149,7 +149,7 @@ export default function SignUp() {
             <button
               type="button"
               onClick={() => navigate("/signin")}
-              className="text-primary-600 font-medium hover:text-primary-500 transition-colors"
+              className="text-text-primary font-semibold underline-offset-2 hover:underline cursor-pointer"
             >
               Fazer login
             </button>

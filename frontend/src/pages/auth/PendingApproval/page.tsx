@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useUser } from "../../../store/user";
 import { getInitials } from "../../../utils/get-initial";
+import { Badge, Button } from "../../../components/ui";
 
 const POLL_INTERVAL_MS = 15000;
 
@@ -61,17 +62,8 @@ export default function PendingApproval() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Ambient glow */}
-      <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-140 h-140 rounded-full pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(circle, var(--color-primary-100) 0%, transparent 70%)",
-        }}
-      />
-
       <div className="relative w-full max-w-md">
-        <div className="bg-surface border border-border rounded-2xl shadow-sm p-8 flex flex-col items-center text-center">
+        <div className="bg-surface border border-border rounded-xl shadow-sm p-8 flex flex-col items-center text-center">
           {/* Sonar / pulse indicator */}
           <div className="relative w-24 h-24 mb-6 flex items-center justify-center">
             <span className="absolute inset-0 rounded-full bg-primary-400/25 animate-ping-slow" />
@@ -81,12 +73,12 @@ export default function PendingApproval() {
             </div>
           </div>
 
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-warning-bg text-warning-text border border-warning-border mb-4">
+          <Badge tone="warning" className="mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-warning-text animate-pulse" />
             Aguardando aprovação
-          </span>
+          </Badge>
 
-          <h1 className="text-xl font-bold text-text-primary">
+          <h1 className="text-xl font-semibold tracking-tight text-text-primary">
             Sua conta está quase pronta
           </h1>
           <p className="text-text-secondary text-sm mt-2 leading-relaxed">
@@ -97,7 +89,7 @@ export default function PendingApproval() {
 
           {/* User card */}
           <div className="w-full mt-6 flex items-center gap-3 bg-surface-muted border border-border rounded-xl p-3 text-left">
-            <div className="w-10 h-10 shrink-0 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-10 h-10 shrink-0 bg-primary-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
               {getInitials(user?.name || "Usuário")}
             </div>
             <div className="min-w-0 flex-1">
@@ -132,20 +124,12 @@ export default function PendingApproval() {
 
           {/* Actions */}
           <div className="w-full flex flex-col gap-2 mt-6">
-            <button
-              onClick={handleManualCheck}
-              disabled={checking}
-              className="cursor-pointer w-full py-2.5 px-4 rounded-lg text-sm font-medium bg-primary-500 text-white hover:bg-primary-600 active:bg-primary-700 disabled:opacity-60 transition-colors"
-            >
+            <Button fullWidth loading={checking} onClick={handleManualCheck}>
               {checking ? "Verificando status…" : "Verificar agora"}
-            </button>
-            <button
-              onClick={handleLogout}
-              className="cursor-pointer w-full py-2.5 px-4 rounded-lg text-sm font-medium text-text-secondary hover:bg-surface-muted transition-colors flex items-center justify-center gap-2"
-            >
-              <LogOut size={15} />
+            </Button>
+            <Button variant="ghost" fullWidth icon={LogOut} onClick={handleLogout}>
               Sair
-            </button>
+            </Button>
           </div>
         </div>
 

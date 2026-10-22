@@ -34,6 +34,7 @@ import { ContratoEmpenhosModal } from "./ContratoEmpenhosModal";
 import { ObraInfoModal } from "./ObraInfoModal";
 import { ObraTimeline } from "./ObraTimeline";
 import { maskCnpj } from "../../utils/masks";
+import { Badge, Button, IconButton, type BadgeTone } from "../../components/ui";
 
 /**
  * Painel lateral de detalhe da obra, no Mapa de Obras. Mostra a cadeia
@@ -46,11 +47,11 @@ import { maskCnpj } from "../../utils/masks";
 
 type Tab = "geral" | "notas-fiscais" | "cronograma";
 
-const STATUS_BADGE: Record<ObraStatus, { label: string; icon: typeof Wrench; className: string }> = {
-  EM_ANDAMENTO: { label: "Em Andamento", icon: Wrench, className: "bg-accent-500 text-white" },
-  CONCLUIDA: { label: "Concluída", icon: CheckCircle2, className: "bg-secondary-500 text-white" },
-  PARALISADA: { label: "Paralisada", icon: PauseCircle, className: "bg-warning-text text-white" },
-  CANCELADA: { label: "Cancelada", icon: XCircle, className: "bg-danger-text text-white" },
+const STATUS_BADGE: Record<ObraStatus, { label: string; icon: typeof Wrench; tone: BadgeTone }> = {
+  EM_ANDAMENTO: { label: "Em Andamento", icon: Wrench, tone: "warning" },
+  CONCLUIDA: { label: "Concluída", icon: CheckCircle2, tone: "success" },
+  PARALISADA: { label: "Paralisada", icon: PauseCircle, tone: "neutral" },
+  CANCELADA: { label: "Cancelada", icon: XCircle, tone: "danger" },
 };
 
 type Deadline = { label: string; className: string; elapsed: number };
@@ -218,8 +219,9 @@ function ObraCard({ detail, onOpenInfo }: { detail: ObraDetail; onOpenInfo: () =
       </ul>
 
       <button
+        type="button"
         onClick={onOpenInfo}
-        className="mt-3 w-full flex items-center justify-between gap-2 text-xs font-semibold text-primary-600 hover:text-primary-700 cursor-pointer"
+        className="mt-3 w-full flex items-center justify-between gap-2 text-xs font-semibold text-text-primary hover:text-text-secondary transition-colors cursor-pointer"
       >
         <span className="inline-flex items-center gap-1.5">
           <Info size={13} />
@@ -257,7 +259,7 @@ function EmpenhoCard({
           <EmpenhoCommitmentBar financial={financial} />
           <p className="text-xs text-text-secondary mt-2">
             As OS desta obra recebem{" "}
-            <span className="font-bold text-accent-600">
+            <span className="font-semibold text-accent-600">
               {formatCurrency(financial.valorNaOS)} ({formatPercent(percentOf(financial.valorNaOS, financial.value))})
             </span>{" "}
             do empenho ({plural(financial.ordensServicoCount, "OS ativa", "OS ativas")}).
@@ -278,7 +280,7 @@ function EmpenhoCard({
             <Metric
               label="Livre p/ novas OS"
               value={formatCurrency(financial.value - financial.comprometidoOS)}
-              tone={financial.value - financial.comprometidoOS < 0 ? "text-danger-text" : "text-primary-600"}
+              tone={financial.value - financial.comprometidoOS < 0 ? "text-danger-text" : "text-text-primary"}
             />
           </div>
           <div className="mb-3">
@@ -310,7 +312,7 @@ function ContratoCard({ detail, onOpenEmpenhos }: { detail: ObraDetail; onOpenEm
       <div className="flex items-start gap-2 mb-2.5">
         <span className="w-2.5 h-2.5 rounded-full shrink-0 mt-1" style={{ backgroundColor: contrato.cor }} />
         <div className="min-w-0">
-          <p className="text-sm font-bold text-text-primary">{contrato.identificador}</p>
+          <p className="text-sm font-semibold text-text-primary">{contrato.identificador}</p>
           <p className="text-xs text-text-secondary mt-0.5">{contrato.descricaoCurta}</p>
         </div>
       </div>
@@ -358,8 +360,9 @@ function ContratoCard({ detail, onOpenEmpenhos }: { detail: ObraDetail; onOpenEm
 
       {financial && (
         <button
+          type="button"
           onClick={onOpenEmpenhos}
-          className="mt-3 w-full flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary-600 hover:bg-primary-50 hover:border-primary-200 transition-colors cursor-pointer"
+          className="mt-3 w-full flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-text-primary hover:bg-surface-muted hover:border-border-strong transition-colors cursor-pointer"
         >
           Ver empenhos do contrato ({financial.contrato.empenhos.length})
           <ChevronRight size={14} />
@@ -380,13 +383,13 @@ function InvoicesTab({ financial }: { financial: ObraDetailFinancial }) {
         </p>
       ) : (
         <div className="overflow-x-auto -mx-1">
-          <table className="w-full text-sm min-w-[340px]">
+          <table className="w-full text-table min-w-[340px]">
             <thead>
-              <tr className="text-[10.5px] text-text-muted uppercase tracking-wide border-b border-border">
-                <th className="text-left font-bold py-1.5 px-1">Nota</th>
-                <th className="text-left font-bold py-1.5 px-1">Vencimento</th>
-                <th className="text-left font-bold py-1.5 px-1">Situação</th>
-                <th className="text-right font-bold py-1.5 px-1">Valor</th>
+              <tr className="text-xs text-text-secondary uppercase tracking-wide border-b border-border">
+                <th className="text-left font-semibold py-2.5 px-1">Nota</th>
+                <th className="text-left font-semibold py-2.5 px-1">Vencimento</th>
+                <th className="text-left font-semibold py-2.5 px-1">Situação</th>
+                <th className="text-right font-semibold py-2.5 px-1">Valor</th>
               </tr>
             </thead>
             <tbody>
@@ -419,14 +422,14 @@ function InvoicesTab({ financial }: { financial: ObraDetailFinancial }) {
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={3} className="pt-2.5 px-1 font-bold text-text-primary">
+                <td colSpan={3} className="pt-2.5 px-1 font-semibold text-text-primary">
                   Total liquidado
                   <span className="block text-[10.5px] font-normal text-text-muted">
                     {formatPercent(percentOf(obra.liquidado, obra.valor))} do valor das OS ·
                     canceladas não somam
                   </span>
                 </td>
-                <td className="pt-2.5 px-1 text-right font-bold text-success-text whitespace-nowrap align-top">
+                <td className="pt-2.5 px-1 text-right font-semibold text-success-text whitespace-nowrap align-top">
                   {formatCurrency(obra.liquidado)}
                 </td>
               </tr>
@@ -547,8 +550,7 @@ export default function ObraDetailPanel({ obra, onClose }: { obra: Obra | null; 
   if (!obra) return null;
 
   const statusBadge = STATUS_BADGE[obra.status];
-  const StatusIcon = statusBadge.icon;
-  const contratoCor = detail?.contrato.cor ?? obra.contrato?.cor ?? "#4478b6";
+  const contratoCor = detail?.contrato.cor ?? obra.contrato?.cor ?? "#27272a";
   const financial = detail?.financial ?? null;
 
   const tabs: { id: Tab; label: string; count?: number }[] = [
@@ -560,29 +562,20 @@ export default function ObraDetailPanel({ obra, onClose }: { obra: Obra | null; 
   return (
     <>
       {/* Backdrop — clique fora fecha o painel, igual um drawer/modal */}
-      <div className="fixed inset-0 bg-black/20 z-[1200]" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/20 z-1200" onClick={onClose} />
 
-      <aside className="fixed inset-y-0 right-0 z-[1201] w-full sm:w-[480px] bg-background shadow-2xl flex flex-col animate-slide-in-right">
+      <aside className="fixed inset-y-0 right-0 z-1201 w-full sm:w-[480px] bg-background shadow-2xl flex flex-col animate-slide-in-right">
         {/* Faixa na cor do contrato — mesma identidade visual usada nos marcadores do mapa */}
         <div className="h-1 w-full shrink-0" style={{ backgroundColor: contratoCor }} />
 
         <div className="relative bg-surface border-b border-border px-5 pt-4 pb-4 shrink-0">
-          <button
-            onClick={onClose}
-            className="absolute top-3 right-3 w-7 h-7 rounded-full flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-muted transition-colors cursor-pointer"
-            aria-label="Fechar"
-          >
-            <X size={16} />
-          </button>
+          <IconButton icon={X} label="Fechar" size="sm" onClick={onClose} className="absolute top-3 right-3" />
 
-          <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide ${statusBadge.className}`}
-          >
-            <StatusIcon size={12} />
+          <Badge tone={statusBadge.tone} icon={statusBadge.icon}>
             {statusBadge.label}
-          </span>
+          </Badge>
 
-          <h2 className="mt-2.5 text-lg font-bold leading-tight text-text-primary break-words pr-8">{obra.nome}</h2>
+          <h2 className="mt-2.5 text-lg font-semibold leading-tight text-text-primary break-words pr-8">{obra.nome}</h2>
           <p className="mt-1 text-xs text-text-secondary flex items-center gap-1.5 flex-wrap">
             <span>{obra.identificacaoPatrimonial}</span>
             <span className="w-1 h-1 rounded-full bg-text-muted shrink-0" />
@@ -600,18 +593,19 @@ export default function ObraDetailPanel({ obra, onClose }: { obra: Obra | null; 
           {tabs.map((t) => (
             <button
               key={t.id}
+              type="button"
               onClick={() => setTab(t.id)}
               className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-3 text-xs font-semibold border-b-2 cursor-pointer transition-colors ${
                 tab === t.id
-                  ? "border-accent-500 text-accent-600"
+                  ? "border-primary-500 text-text-primary"
                   : "border-transparent text-text-muted hover:text-text-secondary"
               }`}
             >
               {t.label}
               {t.count !== undefined && (
                 <span
-                  className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 ${
-                    tab === t.id ? "bg-accent-50 text-accent-600" : "bg-surface-muted text-text-muted"
+                  className={`text-[10px] font-semibold rounded-md px-1.5 py-0.5 ${
+                    tab === t.id ? "bg-primary-100 text-text-primary" : "bg-surface-muted text-text-muted"
                   }`}
                 >
                   {t.count}
@@ -625,13 +619,9 @@ export default function ObraDetailPanel({ obra, onClose }: { obra: Obra | null; 
           {error ? (
             <div className="rounded-xl border border-danger-border bg-danger-bg px-4 py-5 text-center">
               <p className="text-sm text-danger-text">Não foi possível carregar os detalhes da obra.</p>
-              <button
-                onClick={retry}
-                className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 hover:text-primary-700 cursor-pointer"
-              >
-                <RefreshCw size={13} />
+              <Button variant="secondary" size="sm" icon={RefreshCw} onClick={retry} className="mt-3">
                 Tentar novamente
-              </button>
+              </Button>
             </div>
           ) : !detail ? (
             <LoadingState />

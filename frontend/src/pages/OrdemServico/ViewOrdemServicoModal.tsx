@@ -12,7 +12,6 @@ import {
   UserCog,
   MapPinOff,
   FileDown,
-  Loader,
   Tag,
   Wrench,
   ShieldCheck,
@@ -29,6 +28,7 @@ import { usePermission } from "../../hooks/usePermission";
 import { OrdemServicoNumeroTag } from "../../components/OrdemServicoNumeroTag";
 import { getBalance, getOrdemServicoBalance } from "./ordem-servico-balance";
 import { FinalizeOrdemServicoCallout } from "./FinalizeOrdemServico";
+import { Badge, Button, IconButton, Modal, ModalBody, type BadgeTone } from "../../components/ui";
 
 // Leaflet só é baixado quando o modal de uma OS com obra georreferenciada abre
 const ObraMiniMap = lazy(() => import("./ObraMiniMap"));
@@ -58,10 +58,10 @@ const STATUS_LABEL: Record<OrdemServico["status"], string> = {
   CANCELADO: "Cancelada",
 };
 
-const STATUS_CLASS: Record<OrdemServico["status"], string> = {
-  ATIVO: "bg-warning-bg text-warning-text border-warning-border",
-  FINALIZADO: "bg-success-bg text-success-text border-success-border",
-  CANCELADO: "bg-danger-bg text-danger-text border-danger-border",
+const STATUS_TONE: Record<OrdemServico["status"], BadgeTone> = {
+  ATIVO: "warning",
+  FINALIZADO: "success",
+  CANCELADO: "danger",
 };
 
 const URGENCIA_LABEL: Record<OrdemServicoUrgencia, string> = {
@@ -88,7 +88,7 @@ const OBRA_TIPO_LABEL: Record<string, string> = {
   OUTRO: "Outro",
 };
 
-function Field({
+function InfoItem({
   icon: Icon,
   label,
   children,
@@ -124,11 +124,11 @@ function DateStep({
   return (
     <div
       className={`rounded-lg border px-3 py-2.5 ${
-        done ? "border-primary-200 bg-primary-50/50" : "border-border bg-surface-muted"
+        done ? "border-border-strong bg-surface" : "border-border bg-surface-muted"
       }`}
     >
       <div className="flex items-center gap-1.5 text-xs text-text-muted">
-        <Icon size={13} className={done ? "text-primary-500" : "text-text-muted"} />
+        <Icon size={14} className={done ? "text-text-primary" : "text-text-muted"} />
         {label}
       </div>
       <p
@@ -179,18 +179,18 @@ function ObraSection({ ordemServico, obra }: { ordemServico: OrdemServico; obra:
     <div className="space-y-3">
       <ObraLocation ordemServico={ordemServico} obra={obra} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
-        <Field icon={HardHat} label="Obra">
+        <InfoItem icon={HardHat} label="Obra">
           {obra.nome}
-        </Field>
-        <Field icon={ClipboardList} label="Identificação patrimonial">
+        </InfoItem>
+        <InfoItem icon={ClipboardList} label="Identificação patrimonial">
           {obra.identificacaoPatrimonial}
-        </Field>
-        <Field icon={HardHat} label="Tipo / Situação">
+        </InfoItem>
+        <InfoItem icon={HardHat} label="Tipo / Situação">
           {OBRA_TIPO_LABEL[obra.tipo] ?? obra.tipo} · {OBRA_STATUS_LABEL[obra.status] ?? obra.status}
-        </Field>
-        <Field icon={UserCog} label="Responsável técnico">
+        </InfoItem>
+        <InfoItem icon={UserCog} label="Responsável técnico">
           {obra.responsavelTecnico}
-        </Field>
+        </InfoItem>
       </div>
     </div>
   );
@@ -217,34 +217,34 @@ function DocumentSection({ ordemServico }: { ordemServico: OrdemServico }) {
     <div className="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
         {lote && (
-          <Field icon={Tag} label="Lote">
+          <InfoItem icon={Tag} label="Lote">
             {String(lote.numero).padStart(2, "0")} – {lote.nome} · desconto de {String(lote.desconto).replace(".", ",")}%
-          </Field>
+          </InfoItem>
         )}
-        <Field icon={Wrench} label="Setor requisitante">
+        <InfoItem icon={Wrench} label="Setor requisitante">
           {setorRequisitante ?? "—"}
-        </Field>
-        <Field icon={AlertTriangle} label="Classificação de urgência">
+        </InfoItem>
+        <InfoItem icon={AlertTriangle} label="Classificação de urgência">
           {urgencia ? URGENCIA_LABEL[urgencia] : "—"}
-        </Field>
-        <Field icon={CalendarSearch} label="Data da vistoria">
+        </InfoItem>
+        <InfoItem icon={CalendarSearch} label="Data da vistoria">
           {dataVistoria ? formatDateOnly(dataVistoria) : "—"}
-        </Field>
-        <Field icon={Timer} label="Prazo">
+        </InfoItem>
+        <InfoItem icon={Timer} label="Prazo">
           {prazoDias ? `${prazoDias} dias corridos (mobilização de ${prazoMobilizacaoDias})` : "—"}
-        </Field>
-        <Field icon={Banknote} label="Total com BDI">
+        </InfoItem>
+        <InfoItem icon={Banknote} label="Total com BDI">
           {totalComBdi ? formatCurrency(totalComBdi) : "—"}
-        </Field>
-        <Field icon={ShieldCheck} label="Fiscal técnico">
+        </InfoItem>
+        <InfoItem icon={ShieldCheck} label="Fiscal técnico">
           {fiscalTecnico ? `${fiscalTecnico.nome} – ${fiscalTecnico.ramal}` : "—"}
-        </Field>
-        <Field icon={ShieldCheck} label="Fiscal administrativo">
+        </InfoItem>
+        <InfoItem icon={ShieldCheck} label="Fiscal administrativo">
           {fiscalAdministrativo ? `${fiscalAdministrativo.nome} – ${fiscalAdministrativo.ramal}` : "—"}
-        </Field>
-        <Field icon={ShieldCheck} label="Fiscal setorial">
+        </InfoItem>
+        <InfoItem icon={ShieldCheck} label="Fiscal setorial">
           {fiscalSetorial ?? "—"}
-        </Field>
+        </InfoItem>
       </div>
       {condicoesEspeciais.length > 0 && (
         <div>
@@ -283,7 +283,7 @@ function BalanceSection({ ordemServico, canFinalize }: { ordemServico: OrdemServ
     <div>
       <div className="flex items-end justify-between gap-3 flex-wrap">
         <div>
-          <p className="text-xs font-semibold text-text-secondary uppercase">
+          <p className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
             {balance.kind === "over" ? "Liquidado acima do valor" : balance.kind === "paid" ? "Saldo" : "A liquidar nesta OS"}
           </p>
           <p
@@ -335,7 +335,7 @@ function EmpenhosTable({ ordemServico }: { ordemServico: OrdemServico }) {
     <div className="space-y-2">
       <div className="overflow-x-auto">
         {/* Largura fixa: o empenho fica estreito (descrição cortada) e os valores ganham espaço */}
-        <table className="w-full table-fixed text-sm min-w-136">
+        <table className="w-full table-fixed text-table min-w-136">
           <colgroup>
             <col className="w-[31%]" />
             <col className="w-[23%]" />
@@ -343,7 +343,7 @@ function EmpenhosTable({ ordemServico }: { ordemServico: OrdemServico }) {
             <col className="w-[23%]" />
           </colgroup>
           <thead>
-            <tr className="text-[11px] uppercase text-text-muted border-b border-border">
+            <tr className="text-xs uppercase text-text-secondary border-b border-border">
               <th className="text-left font-semibold pb-2 pr-4">Empenho</th>
               <th className="text-right font-semibold pb-2 pl-4">Destinado à OS</th>
               <th className="text-right font-semibold pb-2 pl-4">Liquidado</th>
@@ -367,7 +367,7 @@ function EmpenhosTable({ ordemServico }: { ordemServico: OrdemServico }) {
                   <td className="py-2.5 pl-4 text-right whitespace-nowrap">{formatCurrency(v.liquidado)}</td>
                   <td
                     className={`py-2.5 pl-4 text-right font-semibold whitespace-nowrap ${
-                      saldo.kind === "over" ? "text-danger-text" : saldo.saldo === 0 ? "text-success-text" : "text-primary-600"
+                      saldo.kind === "over" ? "text-danger-text" : saldo.saldo === 0 ? "text-success-text" : "text-text-primary"
                     }`}
                   >
                     {saldo.kind === "over" ? `+${formatCurrency(saldo.excesso)}` : formatCurrency(saldo.saldo)}
@@ -427,116 +427,107 @@ export function ViewOrdemServicoModal({ ordemServico, handleClose }: ViewOrdemSe
   }, [handleClose]);
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border border-border">
-        <div className="relative flex items-start justify-between gap-3 pl-6 pr-4 py-4 border-b border-border shrink-0">
-          {/* Faixa na cor do contrato, igual à da linha da lista */}
-          <span aria-hidden className="absolute left-0 inset-y-0 w-1.5 rounded-tl-2xl" style={{ backgroundColor: contrato.cor }} />
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-secondary">
-              <OrdemServicoNumeroTag numero={ordemServico.numero} />
-              <span className={`px-2 py-px rounded-full text-[11px] font-medium border ${STATUS_CLASS[ordemServico.status]}`}>
-                {STATUS_LABEL[ordemServico.status]}
-              </span>
-              <span>
-                {contrato.company.name} <span className="text-text-muted">·</span> {contrato.identificador}
-              </span>
-            </div>
-            <h2 className={`text-lg font-semibold mt-1.5 leading-snug ${obra ? "text-text-primary" : "text-text-secondary"}`}>
-              {obra?.nome ?? empenho.description}
-            </h2>
+    <Modal open size="lg">
+      <div className="relative shrink-0 flex items-start justify-between gap-3 pl-6 pr-4 py-4 border-b border-border">
+        {/* Faixa na cor do contrato, igual à da linha da lista */}
+        <span aria-hidden className="absolute left-0 inset-y-0 w-1.5 rounded-tl-xl" style={{ backgroundColor: contrato.cor }} />
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-secondary">
+            <OrdemServicoNumeroTag numero={ordemServico.numero} />
+            <Badge tone={STATUS_TONE[ordemServico.status]}>{STATUS_LABEL[ordemServico.status]}</Badge>
+            <span>
+              {contrato.company.name} <span className="text-text-muted">·</span> {contrato.identificador}
+            </span>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={handleGenerateDocument}
-              disabled={generating}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-primary-600 border border-primary-200 bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-              title="Baixar a ordem de serviço preenchida em PDF"
-            >
-              {generating ? <Loader size={16} className="animate-spin" /> : <FileDown size={16} />}
-              <span className="hidden sm:inline">Baixar OS (PDF)</span>
-            </button>
-            <button
-              onClick={handleClose}
-              className="p-2 hover:bg-surface-muted rounded-lg transition-colors cursor-pointer"
-              title="Fechar"
-            >
-              <X size={20} className="text-text-secondary" />
-            </button>
-          </div>
+          <h2 className={`text-base font-semibold mt-1.5 leading-snug ${obra ? "text-text-primary" : "text-text-secondary"}`}>
+            {obra?.nome ?? empenho.description}
+          </h2>
         </div>
-
-        <div className="p-5 overflow-y-auto space-y-5">
-          <section>
-            <BalanceSection ordemServico={ordemServico} canFinalize={canEditAdministrativo} />
-          </section>
-
-          <section>
-            <h3 className="text-xs font-semibold text-text-secondary uppercase mb-2">
-              {ordemServico.empenhos.length > 1 ? "Empenhos" : "Empenho"}
-            </h3>
-            <EmpenhosTable ordemServico={ordemServico} />
-          </section>
-
-          <section>
-            <h3 className="text-xs font-semibold text-text-secondary uppercase mb-1">Cronograma</h3>
-            <p className="text-xs text-text-muted mb-2.5">
-              {ordemServico.dataInicio
-                ? "Prazos de execução desta ordem de serviço."
-                : "Esta ordem de serviço ainda não tem prazo: edite-a e informe o início e a previsão de término."}
-            </p>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-              <DateStep
-                icon={CalendarPlus}
-                label="Emissão da OS"
-                value={ordemServico.dataEmissao ? formatDateOnly(ordemServico.dataEmissao) : formatDate(ordemServico.createdAt)}
-                done
-              />
-              <DateStep
-                icon={CalendarClock}
-                label="Início"
-                value={ordemServico.dataInicio ? formatDateOnly(ordemServico.dataInicio) : null}
-                done={!!ordemServico.dataInicio}
-              />
-              <DateStep
-                icon={Flag}
-                label="Previsão de término"
-                value={ordemServico.dataPrevisaoTermino ? formatDateOnly(ordemServico.dataPrevisaoTermino) : null}
-                done={!!ordemServico.dataPrevisaoTermino}
-              />
-              <DateStep
-                icon={CalendarCheck}
-                label="Conclusão da obra"
-                value={obra?.dataConclusao ? formatDate(obra.dataConclusao) : null}
-                hint={obra && !obra.dataConclusao ? "Ainda não concluída" : undefined}
-                done={!!obra?.dataConclusao}
-              />
-            </div>
-          </section>
-
-          <section>
-            <h3 className="text-xs font-semibold text-text-secondary uppercase mb-2.5">Documento da OS</h3>
-            <DocumentSection ordemServico={ordemServico} />
-          </section>
-
-          <section>
-            <h3 className="text-xs font-semibold text-text-secondary uppercase mb-2.5">
-              Obra vinculada
-            </h3>
-            {obra ? (
-              <ObraSection ordemServico={ordemServico} obra={obra} />
-            ) : (
-              <div className="flex items-start gap-2.5 rounded-lg border border-warning-border bg-warning-bg px-3.5 py-3">
-                <AlertTriangle size={16} className="text-warning-text shrink-0 mt-0.5" />
-                <p className="text-sm text-warning-text">
-                  Nenhuma obra vinculada. Edite esta ordem de serviço e escolha a obra, ou vincule-a pelo
-                  cadastro da obra em Engenharia &gt; Obras.
-                </p>
-              </div>
-            )}
-          </section>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={FileDown}
+            loading={generating}
+            onClick={handleGenerateDocument}
+            title="Baixar a ordem de serviço preenchida em PDF"
+          >
+            <span className="hidden sm:inline">Baixar OS (PDF)</span>
+          </Button>
+          <IconButton icon={X} label="Fechar" size="sm" onClick={handleClose} />
         </div>
       </div>
-    </div>
+
+      <ModalBody className="space-y-5">
+        <section>
+          <BalanceSection ordemServico={ordemServico} canFinalize={canEditAdministrativo} />
+        </section>
+
+        <section>
+          <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">
+            {ordemServico.empenhos.length > 1 ? "Empenhos" : "Empenho"}
+          </h3>
+          <EmpenhosTable ordemServico={ordemServico} />
+        </section>
+
+        <section>
+          <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-1">Cronograma</h3>
+          <p className="text-xs text-text-muted mb-2.5">
+            {ordemServico.dataInicio
+              ? "Prazos de execução desta ordem de serviço."
+              : "Esta ordem de serviço ainda não tem prazo: edite-a e informe o início e a previsão de término."}
+          </p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <DateStep
+              icon={CalendarPlus}
+              label="Emissão da OS"
+              value={ordemServico.dataEmissao ? formatDateOnly(ordemServico.dataEmissao) : formatDate(ordemServico.createdAt)}
+              done
+            />
+            <DateStep
+              icon={CalendarClock}
+              label="Início"
+              value={ordemServico.dataInicio ? formatDateOnly(ordemServico.dataInicio) : null}
+              done={!!ordemServico.dataInicio}
+            />
+            <DateStep
+              icon={Flag}
+              label="Previsão de término"
+              value={ordemServico.dataPrevisaoTermino ? formatDateOnly(ordemServico.dataPrevisaoTermino) : null}
+              done={!!ordemServico.dataPrevisaoTermino}
+            />
+            <DateStep
+              icon={CalendarCheck}
+              label="Conclusão da obra"
+              value={obra?.dataConclusao ? formatDate(obra.dataConclusao) : null}
+              hint={obra && !obra.dataConclusao ? "Ainda não concluída" : undefined}
+              done={!!obra?.dataConclusao}
+            />
+          </div>
+        </section>
+
+        <section>
+          <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2.5">Documento da OS</h3>
+          <DocumentSection ordemServico={ordemServico} />
+        </section>
+
+        <section>
+          <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2.5">
+            Obra vinculada
+          </h3>
+          {obra ? (
+            <ObraSection ordemServico={ordemServico} obra={obra} />
+          ) : (
+            <div className="flex items-start gap-2.5 rounded-lg border border-warning-border bg-warning-bg px-3.5 py-3">
+              <AlertTriangle size={16} className="text-warning-text shrink-0 mt-0.5" />
+              <p className="text-sm text-warning-text">
+                Nenhuma obra vinculada. Edite esta ordem de serviço e escolha a obra, ou vincule-a pelo
+                cadastro da obra em Engenharia &gt; Obras.
+              </p>
+            </div>
+          )}
+        </section>
+      </ModalBody>
+    </Modal>
   );
 }

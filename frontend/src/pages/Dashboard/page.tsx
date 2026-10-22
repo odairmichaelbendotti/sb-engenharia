@@ -38,8 +38,8 @@ export default function Dashboard() {
       )}
 
       {isLoading ? (
-        <div className="bg-surface border border-border rounded-lg p-8 flex flex-col items-center justify-center">
-          <Loader2 size={32} className="text-primary-500 animate-spin mb-3" />
+        <div className="bg-surface border border-border rounded-xl p-8 flex flex-col items-center justify-center">
+          <Loader2 size={32} className="text-text-muted animate-spin mb-3" />
           <p className="text-text-secondary text-sm">Carregando dashboard...</p>
         </div>
       ) : canManageOrganization ? (

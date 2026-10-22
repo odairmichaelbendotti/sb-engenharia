@@ -1,11 +1,9 @@
 import {
-  X,
   ClipboardList,
   Hash,
   FileSignature,
   Layers2,
   DollarSign,
-  Loader,
   Activity,
   CheckCircle2,
   XCircle,
@@ -21,6 +19,19 @@ import {
 import { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { StepForm, type FormStep } from "../../components/StepForm";
+import {
+  Button,
+  Field,
+  FormSection,
+  IconButton,
+  Input,
+  Modal,
+  ModalHeader,
+  SegmentedControl,
+  Select,
+  Textarea,
+  type SegmentOption,
+} from "../../components/ui";
 import { useEmpenhos } from "../../store/empenhos";
 import { useContratos } from "../../store/contratos";
 import { useOrdensServico } from "../../store/ordensServico";
@@ -49,10 +60,10 @@ interface OrdemServicoModalProps {
   handleClose: () => void;
 }
 
-const STATUS_OPTIONS: { value: OrdemServicoStatus; label: string; icon: React.ElementType; activeClass: string; hoverClass: string }[] = [
-  { value: "ATIVO", label: "Ativa", icon: Activity, activeClass: "bg-warning-text text-white border-warning-text", hoverClass: "hover:border-warning-border hover:text-warning-text" },
-  { value: "FINALIZADO", label: "Finalizada", icon: CheckCircle2, activeClass: "bg-success-text text-white border-success-text", hoverClass: "hover:border-success-border hover:text-success-text" },
-  { value: "CANCELADO", label: "Cancelada", icon: XCircle, activeClass: "bg-danger-text text-white border-danger-text", hoverClass: "hover:border-danger-border hover:text-danger-text" },
+const STATUS_OPTIONS: SegmentOption<OrdemServicoStatus>[] = [
+  { value: "ATIVO", label: "Ativa", icon: Activity, tone: "warning" },
+  { value: "FINALIZADO", label: "Finalizada", icon: CheckCircle2, tone: "success" },
+  { value: "CANCELADO", label: "Cancelada", icon: XCircle, tone: "danger" },
 ];
 
 const URGENCIA_OPTIONS: { value: OrdemServicoUrgencia; label: string; hint: string }[] = [
@@ -104,30 +115,6 @@ type VinculoForm = {
 };
 
 type CondicaoForm = { key: number; texto: string };
-
-const inputClass =
-  "w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all";
-
-const iconInputClass =
-  "w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all";
-
-function SectionTitle({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
-  return (
-    <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-      <Icon size={16} className="text-primary-500" />
-      <span>{label}</span>
-      <div className="flex-1 h-px bg-border" />
-    </div>
-  );
-}
-
-function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
-  return (
-    <label className="block text-sm font-medium text-text-secondary mb-1.5">
-      {children} {required && <span className="text-danger-text">*</span>}
-    </label>
-  );
-}
 
 export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoModalProps) {
   const {
@@ -462,8 +449,7 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
       content: (
         <>
           {/* Identificação: o número só aparece depois de escolher o contrato e o lote */}
-          <div className="space-y-4">
-            <SectionTitle icon={Hash} label="Identificação" />
+          <FormSection title="Identificação" icon={Hash}>
             <div
               className={`grid transition-[grid-template-columns] duration-500 ease-out ${
                 mostrarNumero ? "grid-cols-[1fr_1fr]" : "grid-cols-[0fr_1fr]"
@@ -473,44 +459,39 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
                 <div
                   className={`pr-4 transition-opacity duration-500 ${mostrarNumero ? "opacity-100" : "opacity-0"}`}
                 >
-                  <Label required={!isCreate && !numeroFixo}>Número</Label>
-                  {!isCreate && !numeroFixo ? (
-                    <div className="relative">
-                      <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-                      <input
+                  <Field label="Número" required={!isCreate && !numeroFixo}>
+                    {!isCreate && !numeroFixo ? (
+                      <Input
+                        icon={Hash}
                         name="numero"
                         value={form.numero}
                         onChange={handleChange}
                         placeholder="04/01/BAFL/2026"
-                        className={iconInputClass}
                       />
-                    </div>
-                  ) : (
-                    <p className="text-sm font-semibold text-text-primary rounded-lg border border-border bg-surface-muted px-3 py-2.5 wrap-break-word">
-                      {ordemServico?.numero ?? numeroRevelado}
-                    </p>
-                  )}
+                    ) : (
+                      <p className="min-h-10 flex items-center px-3 py-2 rounded-lg border border-border bg-surface-muted text-sm font-semibold text-text-primary wrap-break-word">
+                        {ordemServico?.numero ?? numeroRevelado}
+                      </p>
+                    )}
+                  </Field>
                 </div>
               </div>
-              <div className="min-w-0">
-                <Label>Data de emissão</Label>
-                <input type="date" name="dataEmissao" value={form.dataEmissao} onChange={handleChange} className={inputClass} />
-              </div>
+              <Field label="Data de emissão">
+                <Input type="date" name="dataEmissao" value={form.dataEmissao} onChange={handleChange} />
+              </Field>
             </div>
             {isCreate && !mostrarNumero && (
               <p className="text-xs text-text-muted">
                 O número da OS aparece aqui quando você escolher o contrato{lotes.length > 0 ? " e o lote" : ""}.
               </p>
             )}
-          </div>
+          </FormSection>
 
-          {/* Contrato */}
-          <div className="space-y-4">
-            <SectionTitle icon={FileSignature} label="Contrato" />
+          <FormSection title="Contrato" icon={FileSignature}>
             {contratoFixo ? (
               <div className="bg-surface-muted rounded-lg p-4 border border-border flex items-center gap-3">
-                <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center shrink-0">
-                  <FileSignature size={18} className="text-primary-500" />
+                <div className="w-10 h-10 bg-surface border border-border rounded-lg flex items-center justify-center shrink-0">
+                  <FileSignature size={18} className="text-text-primary" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-text-primary">
@@ -522,12 +503,11 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
                 </div>
               </div>
             ) : (
-              <div>
-                <Label required>Contrato</Label>
-                <select
+              <Field label="Contrato" required>
+                <Select
+                  icon={FileSignature}
                   value={selectedContratoId}
                   onChange={(e) => handleContratoChange(e.target.value)}
-                  className={`${inputClass} cursor-pointer`}
                 >
                   <option value="">Selecione um contrato</option>
                   {contratos.map((c) => (
@@ -535,37 +515,36 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
                       {c.identificador} — {c.descricaoCurta}
                     </option>
                   ))}
-                </select>
-              </div>
+                </Select>
+              </Field>
             )}
 
             {lotes.length > 0 && (
-              <div>
-                <Label required={!ordemServico}>Lote</Label>
-                <div className="relative">
-                  <Tag size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-                  <select
-                    value={form.lote_id}
-                    onChange={(e) => handleLoteChange(e.target.value)}
-                    disabled={Boolean(ordemServico?.lote_id)}
-                    className={`${iconInputClass} cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed`}
-                  >
-                    <option value="">Selecione o lote</option>
-                    {lotes.map((l) => (
-                      <option key={l.id} value={l.id}>
-                        Lote {String(l.numero).padStart(2, "0")} – {l.nome} (desconto de {String(l.desconto).replace(".", ",")}%)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <p className="text-xs text-text-muted mt-1">
-                  {ordemServico?.lote_id
+              <Field
+                label="Lote"
+                required={!ordemServico}
+                hint={
+                  ordemServico?.lote_id
                     ? "O lote de uma OS já emitida não muda."
-                    : "O desconto do lote entra no cálculo do valor da OS."}
-                </p>
-              </div>
+                    : "O desconto do lote entra no cálculo do valor da OS."
+                }
+              >
+                <Select
+                  icon={Tag}
+                  value={form.lote_id}
+                  onChange={(e) => handleLoteChange(e.target.value)}
+                  disabled={Boolean(ordemServico?.lote_id)}
+                >
+                  <option value="">Selecione o lote</option>
+                  {lotes.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      Lote {String(l.numero).padStart(2, "0")} – {l.nome} (desconto de {String(l.desconto).replace(".", ",")}%)
+                    </option>
+                  ))}
+                </Select>
+              </Field>
             )}
-          </div>
+          </FormSection>
         </>
       ),
     },
@@ -576,9 +555,7 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
       validate: validateEmpenhos,
       content: (
         <>
-          {/* Empenhos */}
-          <div className="space-y-3">
-            <SectionTitle icon={Layers2} label="Empenhos" />
+          <FormSection title="Empenhos" icon={Layers2}>
             <p className="text-xs text-text-muted">
               Ao escolher o empenho, o valor já vem com todo o saldo livre dele (ou com o valor final calculado, se o
               total com BDI já foi informado). Diminua só se o empenho for dividido entre várias ordens de serviço.
@@ -592,11 +569,12 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
               return (
                 <div key={vinculo.key} className="rounded-lg border border-border p-3 space-y-2">
                   <div className="flex flex-col sm:flex-row gap-2">
-                    <select
+                    <Select
+                      aria-label="Empenho"
                       value={vinculo.empenho_id}
                       onChange={(e) => handleEmpenhoChange(vinculo.key, e.target.value)}
                       disabled={!selectedContratoId}
-                      className={`${inputClass} flex-1 min-w-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
+                      className="flex-1 min-w-0"
                     >
                       <option value="">
                         {selectedContratoId ? "Selecione um empenho" : "Selecione um contrato primeiro"}
@@ -606,28 +584,24 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
                           {e.numero} — {e.description}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                     <div className="flex gap-2">
-                      <div className="relative sm:w-44 flex-1">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-medium text-sm">R$</span>
-                        <input
-                          inputMode="numeric"
-                          aria-label="Valor destinado à OS"
-                          value={vinculo.valor}
-                          onChange={(e) => handleValorChange(vinculo.key, e.target.value)}
-                          placeholder="0,00"
-                          className={iconInputClass}
-                        />
-                      </div>
-                      <button
-                        type="button"
+                      <Input
+                        prefix="R$"
+                        inputMode="numeric"
+                        aria-label="Valor destinado à OS"
+                        value={vinculo.valor}
+                        onChange={(e) => handleValorChange(vinculo.key, e.target.value)}
+                        placeholder="0,00"
+                        className="sm:w-44 flex-1"
+                      />
+                      <IconButton
+                        icon={Trash2}
+                        label="Remover empenho da OS"
+                        variant="danger"
                         onClick={() => removeVinculo(vinculo.key)}
                         disabled={vinculos.length === 1}
-                        title="Remover empenho da OS"
-                        className="p-2.5 cursor-pointer text-text-secondary hover:bg-danger-bg hover:text-danger-text rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      />
                     </div>
                   </div>
                   {empenho && (
@@ -643,28 +617,33 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
               <p className="text-xs text-warning-text">Este contrato não possui empenhos disponíveis para vincular.</p>
             )}
 
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={Plus}
               onClick={addVinculo}
               disabled={!selectedContratoId || vinculos.length >= empenhosDoContrato.length}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary-600 border border-primary-200 bg-primary-50 hover:bg-primary-100 rounded-md cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Plus size={14} />
               Adicionar outro empenho
-            </button>
-          </div>
+            </Button>
+          </FormSection>
 
           {/* Obra: só depois do empenho, para listar apenas as obras dele e do mesmo contrato */}
-          <div className="space-y-3">
-            <SectionTitle icon={HardHat} label="Obra" />
-            <div className="relative">
-              <HardHat size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-              <select
+          <FormSection title="Obra" icon={HardHat}>
+            <Field
+              hint={
+                empenhosEscolhidos.length === 0
+                  ? "Escolha o empenho acima para ver as obras disponíveis."
+                  : "Uma obra pode ter várias OS (ex.: um serviço que faltou vira uma nova OS na mesma obra)."
+              }
+            >
+              <Select
+                icon={HardHat}
+                aria-label="Obra"
                 name="obra_id"
                 value={obraId}
                 onChange={handleChange}
                 disabled={empenhosEscolhidos.length === 0}
-                className={`${iconInputClass} cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 <option value="">
                   {empenhosEscolhidos.length === 0 ? "Selecione um empenho primeiro" : "Sem obra por enquanto"}
@@ -687,14 +666,9 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
                     ))}
                   </optgroup>
                 )}
-              </select>
-            </div>
-            <p className="text-xs text-text-muted">
-              {empenhosEscolhidos.length === 0
-                ? "Escolha o empenho acima para ver as obras disponíveis."
-                : "Uma obra pode ter várias OS (ex.: um serviço que faltou vira uma nova OS na mesma obra)."}
-            </p>
-          </div>
+              </Select>
+            </Field>
+          </FormSection>
         </>
       ),
     },
@@ -704,26 +678,21 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
       icon: Wrench,
       validate: validateServico,
       content: (
-        <div className="space-y-4">
-          <SectionTitle icon={Wrench} label="Serviço" />
+        <FormSection title="Serviço" icon={Wrench}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label required={!ordemServico}>Setor requisitante</Label>
-              <input
+            <Field label="Setor requisitante" required={!ordemServico}>
+              <Input
                 name="setorRequisitante"
                 value={form.setorRequisitante}
                 onChange={handleChange}
                 placeholder="SCOAM-FL"
-                className={inputClass}
               />
-            </div>
-            <div>
-              <Label required={!ordemServico}>Data da vistoria</Label>
-              <input type="date" name="dataVistoria" value={form.dataVistoria} onChange={handleChange} className={inputClass} />
-            </div>
+            </Field>
+            <Field label="Data da vistoria" required={!ordemServico}>
+              <Input type="date" name="dataVistoria" value={form.dataVistoria} onChange={handleChange} />
+            </Field>
           </div>
-          <div>
-            <Label required={!ordemServico}>Classificação de urgência</Label>
+          <Field label="Classificação de urgência" required={!ordemServico} group>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {URGENCIA_OPTIONS.map((option) => {
                 const selected = form.urgencia === option.value;
@@ -735,8 +704,8 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
                     onClick={() => setForm((prev) => ({ ...prev, urgencia: option.value }))}
                     className={`text-left px-3 py-2 rounded-lg border transition-colors cursor-pointer ${
                       selected
-                        ? "bg-primary-50 border-primary-300 text-primary-700"
-                        : "bg-surface border-border text-text-secondary hover:border-primary-200"
+                        ? "bg-surface-muted border-primary-500 ring-1 ring-primary-500 text-text-primary"
+                        : "bg-surface border-border text-text-secondary hover:border-border-strong"
                     }`}
                   >
                     <span className="block text-sm font-medium">{option.label}</span>
@@ -745,19 +714,17 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
                 );
               })}
             </div>
-          </div>
-          <div>
-            <Label required={!ordemServico}>Descrição do problema</Label>
-            <textarea
+          </Field>
+          <Field label="Descrição do problema" required={!ordemServico}>
+            <Textarea
               name="descricaoProblema"
               value={form.descricaoProblema}
               onChange={handleChange}
               rows={4}
               placeholder="Descreva o problema encontrado na vistoria e o serviço necessário"
-              className={`${inputClass} resize-y`}
             />
-          </div>
-        </div>
+          </Field>
+        </FormSection>
       ),
     },
     {
@@ -766,74 +733,64 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
       icon: CalendarDays,
       validate: validatePrazo,
       content: (
-        <>
-          {/* Cronograma */}
-          <div className="space-y-4">
-            <SectionTitle icon={CalendarDays} label="Cronograma" />
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <Label required>Início</Label>
-                <input type="date" name="dataInicio" value={form.dataInicio} onChange={handleChange} className={inputClass} />
-              </div>
-              <div>
-                <Label required>Prazo (dias corridos)</Label>
-                <input
-                  name="prazoDias"
-                  inputMode="numeric"
-                  value={form.prazoDias}
-                  onChange={(e) => setForm((prev) => ({ ...prev, prazoDias: e.target.value.replace(/\D/g, "") }))}
-                  placeholder="49"
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <Label>Mobilização (dias)</Label>
-                <input
-                  name="prazoMobilizacaoDias"
-                  inputMode="numeric"
-                  value={form.prazoMobilizacaoDias}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, prazoMobilizacaoDias: e.target.value.replace(/\D/g, "") }))
-                  }
-                  placeholder={String(DEFAULT_PRAZO_MOBILIZACAO_DIAS)}
-                  className={inputClass}
-                />
-              </div>
-            </div>
-            <div className="bg-surface-muted rounded-lg p-4 border border-border grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <p className="text-xs text-text-muted">Início</p>
-                <p className="text-sm font-semibold text-text-primary">
-                  {form.dataInicio ? (
-                    <>
-                      {formatInputDate(form.dataInicio)}{" "}
-                      <span className="font-normal text-text-secondary">· {diaDaSemana(form.dataInicio)}</span>
-                    </>
-                  ) : (
-                    "—"
-                  )}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-text-muted">Término previsto</p>
-                <p className="text-sm font-semibold text-text-primary">
-                  {termino ? (
-                    <>
-                      {formatInputDate(termino)}{" "}
-                      <span className="font-normal text-text-secondary">· {diaDaSemana(termino)}</span>
-                    </>
-                  ) : (
-                    "—"
-                  )}
-                </p>
-              </div>
-              <p className="sm:col-span-2 text-xs text-text-muted">
-                O dia do início conta como o primeiro dia do prazo. A mobilização já está incluída no prazo total.
+        <FormSection title="Cronograma" icon={CalendarDays}>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Field label="Início" required>
+              <Input type="date" name="dataInicio" value={form.dataInicio} onChange={handleChange} />
+            </Field>
+            <Field label="Prazo (dias corridos)" required>
+              <Input
+                name="prazoDias"
+                inputMode="numeric"
+                value={form.prazoDias}
+                onChange={(e) => setForm((prev) => ({ ...prev, prazoDias: e.target.value.replace(/\D/g, "") }))}
+                placeholder="49"
+              />
+            </Field>
+            <Field label="Mobilização (dias)">
+              <Input
+                name="prazoMobilizacaoDias"
+                inputMode="numeric"
+                value={form.prazoMobilizacaoDias}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, prazoMobilizacaoDias: e.target.value.replace(/\D/g, "") }))
+                }
+                placeholder={String(DEFAULT_PRAZO_MOBILIZACAO_DIAS)}
+              />
+            </Field>
+          </div>
+          <div className="bg-surface-muted rounded-lg p-4 border border-border grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-text-muted">Início</p>
+              <p className="text-sm font-semibold text-text-primary">
+                {form.dataInicio ? (
+                  <>
+                    {formatInputDate(form.dataInicio)}{" "}
+                    <span className="font-normal text-text-secondary">· {diaDaSemana(form.dataInicio)}</span>
+                  </>
+                ) : (
+                  "—"
+                )}
               </p>
             </div>
+            <div>
+              <p className="text-xs text-text-muted">Término previsto</p>
+              <p className="text-sm font-semibold text-text-primary">
+                {termino ? (
+                  <>
+                    {formatInputDate(termino)}{" "}
+                    <span className="font-normal text-text-secondary">· {diaDaSemana(termino)}</span>
+                  </>
+                ) : (
+                  "—"
+                )}
+              </p>
+            </div>
+            <p className="sm:col-span-2 text-xs text-text-muted">
+              O dia do início conta como o primeiro dia do prazo. A mobilização já está incluída no prazo total.
+            </p>
           </div>
-
-        </>
+        </FormSection>
       ),
     },
     {
@@ -842,56 +799,52 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
       icon: DollarSign,
       validate: validateValor,
       content: (
-        <>
-          {/* Financeiro */}
-          <div className="space-y-3">
-            <SectionTitle icon={DollarSign} label="Financeiro" />
-            <div>
-              <Label required={!ordemServico}>Total com BDI (R$)</Label>
-              <div className="relative sm:w-64">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-medium text-sm">R$</span>
-                <input
-                  name="totalComBdi"
-                  inputMode="numeric"
-                  value={form.totalComBdi}
-                  onChange={(e) => handleTotalChange(e.target.value)}
-                  placeholder="0,00"
-                  className={iconInputClass}
-                />
-              </div>
-              <p className="text-xs text-text-muted mt-1">
-                {contratoDados
-                  ? `O total sem BDI e o valor final saem dele (BDI de ${String(contratoDados.bdi).replace(".", ",")}%${lote ? ` e desconto de ${String(lote.desconto).replace(".", ",")}%` : ""}).`
-                  : "Escolha o contrato para calcular o total sem BDI e o valor final."}
-              </p>
-            </div>
-            {orcamento && (
-              <div className="bg-surface-muted rounded-lg p-3 border border-border grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <p className="text-xs text-text-muted">Total (sem BDI)</p>
-                  <p className="text-sm font-semibold text-text-primary tabular-nums">{formatCurrency(orcamento.totalSemBdi)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-text-muted">Valor final calculado (com BDI e desconto)</p>
-                  <p className="text-sm font-semibold text-text-primary tabular-nums">{formatCurrency(orcamento.valorFinal)}</p>
-                </div>
-              </div>
-            )}
-            <div className="bg-surface-muted rounded-lg p-4 border border-border flex items-center justify-between gap-4">
+        <FormSection title="Financeiro" icon={DollarSign}>
+          <Field
+            label="Total com BDI (R$)"
+            required={!ordemServico}
+            hint={
+              contratoDados
+                ? `O total sem BDI e o valor final saem dele (BDI de ${String(contratoDados.bdi).replace(".", ",")}%${lote ? ` e desconto de ${String(lote.desconto).replace(".", ",")}%` : ""}).`
+                : "Escolha o contrato para calcular o total sem BDI e o valor final."
+            }
+          >
+            <Input
+              prefix="R$"
+              name="totalComBdi"
+              inputMode="numeric"
+              value={form.totalComBdi}
+              onChange={(e) => handleTotalChange(e.target.value)}
+              placeholder="0,00"
+              className="sm:w-64"
+            />
+          </Field>
+          {orcamento && (
+            <div className="bg-surface-muted rounded-lg p-3 border border-border grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <p className="text-xs text-text-muted">Valor da Ordem de Serviço</p>
-                <p className="text-xs text-text-secondary">Soma dos valores destinados pelos empenhos</p>
+                <p className="text-xs text-text-muted">Total (sem BDI)</p>
+                <p className="text-sm font-semibold text-text-primary tabular-nums">{formatCurrency(orcamento.totalSemBdi)}</p>
               </div>
-              <p className="text-lg font-semibold text-text-primary">{formatCurrency(valorTotal)}</p>
+              <div>
+                <p className="text-xs text-text-muted">Valor final calculado (com BDI e desconto)</p>
+                <p className="text-sm font-semibold text-text-primary tabular-nums">{formatCurrency(orcamento.valorFinal)}</p>
+              </div>
             </div>
-            {valorDifere && orcamento && (
-              <p className="text-xs text-warning-text">
-                A soma dos empenhos ({formatCurrency(valorTotal)}) é diferente do valor final calculado (
-                {formatCurrency(orcamento.valorFinal)}). Ajuste o valor do empenho se o valor oficial da OS for outro.
-              </p>
-            )}
+          )}
+          <div className="bg-surface-muted rounded-lg p-4 border border-border flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs text-text-muted">Valor da Ordem de Serviço</p>
+              <p className="text-xs text-text-secondary">Soma dos valores destinados pelos empenhos</p>
+            </div>
+            <p className="text-lg font-semibold text-text-primary tabular-nums">{formatCurrency(valorTotal)}</p>
           </div>
-        </>
+          {valorDifere && orcamento && (
+            <p className="text-xs text-warning-text">
+              A soma dos empenhos ({formatCurrency(valorTotal)}) é diferente do valor final calculado (
+              {formatCurrency(orcamento.valorFinal)}). Ajuste o valor do empenho se o valor oficial da OS for outro.
+            </p>
+          )}
+        </FormSection>
       ),
     },
     {
@@ -901,18 +854,14 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
       validate: validateFiscais,
       content: (
         <>
-          {/* Fiscais */}
-          <div className="space-y-4">
-            <SectionTitle icon={ShieldCheck} label="Fiscais" />
+          <FormSection title="Fiscais" icon={ShieldCheck}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label required={!ordemServico}>Fiscal técnico</Label>
-                <select
+              <Field label="Fiscal técnico" required={!ordemServico}>
+                <Select
                   name="fiscalTecnico_id"
                   value={form.fiscalTecnico_id}
                   onChange={handleChange}
                   disabled={!selectedContratoId}
-                  className={`${inputClass} cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   <option value="">{selectedContratoId ? "Selecione o fiscal técnico" : "Selecione um contrato primeiro"}</option>
                   {fiscaisTecnicos.map((f) => (
@@ -920,16 +869,14 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
                       {f.nome} – {f.ramal}
                     </option>
                   ))}
-                </select>
-              </div>
-              <div>
-                <Label required={!ordemServico}>Fiscal administrativo</Label>
-                <select
+                </Select>
+              </Field>
+              <Field label="Fiscal administrativo" required={!ordemServico}>
+                <Select
                   name="fiscalAdministrativo_id"
                   value={form.fiscalAdministrativo_id}
                   onChange={handleChange}
                   disabled={!selectedContratoId}
-                  className={`${inputClass} cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   <option value="">
                     {selectedContratoId ? "Selecione o fiscal administrativo" : "Selecione um contrato primeiro"}
@@ -939,8 +886,8 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
                       {f.nome} – {f.ramal}
                     </option>
                   ))}
-                </select>
-              </div>
+                </Select>
+              </Field>
             </div>
             {selectedContratoId && contratoDados && (fiscaisTecnicos.length === 0 || fiscaisAdministrativos.length === 0) && (
               <p className="text-xs text-warning-text">
@@ -948,54 +895,48 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
                 cadastre em Administrativo &gt; Contratos.
               </p>
             )}
-            <div>
-              <Label required={!ordemServico}>Fiscal setorial</Label>
-              <input
+            <Field label="Fiscal setorial" required={!ordemServico}>
+              <Input
                 name="fiscalSetorial"
                 value={form.fiscalSetorial}
                 onChange={handleChange}
                 placeholder="SO RAPHAEL C. – 5012 / raphaelrcc@fab.mil.br"
-                className={inputClass}
               />
-            </div>
-          </div>
+            </Field>
+          </FormSection>
 
-          {/* Condições especiais */}
-          <div className="space-y-3">
-            <SectionTitle icon={ListChecks} label="Condições especiais desta OS" />
+          <FormSection title="Condições especiais desta OS" icon={ListChecks}>
             <p className="text-xs text-text-muted">
               Opcional. Cada item entra no fim da seção de condições e responsabilidades do documento.
             </p>
             {condicoes.map((condicao) => (
               <div key={condicao.key} className="flex gap-2">
-                <input
+                <Input
                   aria-label="Condição especial"
                   value={condicao.texto}
                   onChange={(e) =>
                     setCondicoes((prev) => prev.map((c) => (c.key === condicao.key ? { ...c, texto: e.target.value } : c)))
                   }
                   placeholder="Ex.: Trabalhos em altura só com autorização prévia da Fiscalização"
-                  className={`${inputClass} flex-1 min-w-0`}
+                  className="flex-1 min-w-0"
                 />
-                <button
-                  type="button"
+                <IconButton
+                  icon={Trash2}
+                  label="Remover condição"
+                  variant="danger"
                   onClick={() => setCondicoes((prev) => prev.filter((c) => c.key !== condicao.key))}
-                  title="Remover condição"
-                  className="p-2.5 cursor-pointer text-text-secondary hover:bg-danger-bg hover:text-danger-text rounded-lg transition-colors"
-                >
-                  <Trash2 size={16} />
-                </button>
+                />
               </div>
             ))}
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={Plus}
               onClick={() => setCondicoes((prev) => [...prev, { key: nextKey.current++, texto: "" }])}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary-600 border border-primary-200 bg-primary-50 hover:bg-primary-100 rounded-md cursor-pointer transition-colors"
             >
-              <Plus size={14} />
               Adicionar condição
-            </button>
-          </div>
+            </Button>
+          </FormSection>
         </>
       ),
     },
@@ -1007,27 +948,15 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
             label: "Situação",
             icon: Activity,
             content: (
-              <div className="space-y-4">
-                <SectionTitle icon={Activity} label="Status da Ordem de Serviço" />
-                <div className="bg-surface-muted rounded-lg p-4 border border-border">
-                  <div className="flex flex-wrap gap-2">
-                    {STATUS_OPTIONS.map(({ value, label, icon: Icon, activeClass, hoverClass }) => (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => handleStatusChange(value)}
-                        disabled={updatingStatus !== null}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium border transition-colors
-                          ${currentStatus === value ? activeClass : `bg-surface text-text-secondary border-border ${hoverClass}`}
-                          ${updatingStatus !== null ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
-                      >
-                        {updatingStatus === value ? <Loader size={14} className="animate-spin" /> : <Icon size={14} />}
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <FormSection title="Status da Ordem de Serviço" icon={Activity}>
+                <SegmentedControl
+                  label="Status da ordem de serviço"
+                  options={STATUS_OPTIONS}
+                  value={currentStatus}
+                  loadingValue={updatingStatus}
+                  onChange={handleStatusChange}
+                />
+              </FormSection>
             ),
           } satisfies FormStep,
         ]
@@ -1035,38 +964,23 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl border border-border">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-linear-to-r from-primary-50/50 to-transparent shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
-              <ClipboardList size={20} className="text-primary-600" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-text-primary">
-                {ordemServico ? "Editar Ordem de Serviço" : "Nova Ordem de Serviço"}
-              </h2>
-              <p className="text-sm text-text-secondary">
-                {ordemServico ? `Editando: ${ordemServico.numero}` : "Preencha os dados para cadastrar a ordem de serviço"}
-              </p>
-            </div>
-          </div>
-          <button onClick={handleClose} className="p-2 cursor-pointer hover:bg-surface-muted rounded-lg transition-colors">
-            <X size={20} className="text-text-secondary" />
-          </button>
-        </div>
+    <Modal open size="xl">
+      <ModalHeader
+        icon={ClipboardList}
+        title={ordemServico ? "Editar Ordem de Serviço" : "Nova Ordem de Serviço"}
+        description={ordemServico ? `Editando: ${ordemServico.numero}` : "Preencha os dados para cadastrar a ordem de serviço"}
+        onClose={handleClose}
+      />
 
-        <StepForm
-          steps={steps}
-          isEdit={ordemServico !== null}
-          isSubmitting={isLoading}
-          submitLabel={ordemServico ? "Salvar Alterações" : "Cadastrar Ordem de Serviço"}
-          onCancel={handleClose}
-          onSubmit={submit}
-          onBlur={createBlurNormalizer(setForm, ORDEM_SERVICO_FIELD_RULES)}
-        />
-      </div>
-    </div>
+      <StepForm
+        steps={steps}
+        isEdit={ordemServico !== null}
+        isSubmitting={isLoading}
+        submitLabel={ordemServico ? "Salvar Alterações" : "Cadastrar Ordem de Serviço"}
+        onCancel={handleClose}
+        onSubmit={submit}
+        onBlur={createBlurNormalizer(setForm, ORDEM_SERVICO_FIELD_RULES)}
+      />
+    </Modal>
   );
 }

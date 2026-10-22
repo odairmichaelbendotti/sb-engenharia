@@ -1,6 +1,7 @@
 import { FileSignature } from "lucide-react";
 import type { ObraDetail, ObraDetailFinancial } from "../../../types/obra";
 import { formatCurrency, formatDateOnly } from "../../utils/format-currency";
+import { Badge } from "../../components/ui";
 import { PanelModal, ProgressBar, StatusPill } from "./obra-detail-shared";
 import { formatPercent, percentOf, RECORD_STATUS } from "./obra-detail-utils";
 
@@ -16,7 +17,7 @@ function Summary({ label, value, hint, tone }: { label: string; value: string; h
   return (
     <div className="rounded-lg border border-border bg-surface-muted/60 px-3 py-2.5 min-w-0">
       <p className="text-[11px] text-text-muted">{label}</p>
-      <p className={`text-sm font-bold truncate ${tone ?? "text-text-primary"}`}>{value}</p>
+      <p className={`text-sm font-semibold truncate ${tone ?? "text-text-primary"}`}>{value}</p>
       {hint && <p className="text-[11px] text-text-secondary mt-0.5">{hint}</p>}
     </div>
   );
@@ -29,7 +30,7 @@ export function ContratoEmpenhosModal({ contrato, financial, currentEmpenhoIds, 
 
   return (
     <PanelModal
-      icon={<FileSignature size={20} />}
+      icon={FileSignature}
       title={`Empenhos do contrato ${contrato.identificador}`}
       subtitle={
         <>
@@ -37,7 +38,7 @@ export function ContratoEmpenhosModal({ contrato, financial, currentEmpenhoIds, 
         </>
       }
       onClose={onClose}
-      maxWidthClassName="max-w-3xl"
+      size="xl"
     >
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
         <Summary label="Valor do contrato" value={formatCurrency(financial.valor)} />
@@ -59,17 +60,17 @@ export function ContratoEmpenhosModal({ contrato, financial, currentEmpenhoIds, 
         />
       </div>
 
-      <div className="overflow-x-auto -mx-1">
-        <table className="w-full text-sm min-w-[620px]">
+      <div className="overflow-x-auto -mx-2">
+        <table className="w-full text-table min-w-[620px]">
           <thead>
-            <tr className="text-[10.5px] text-text-muted uppercase tracking-wide border-b border-border">
-              <th className="text-left font-bold py-2 px-1">Empenho</th>
-              <th className="text-left font-bold py-2 px-1">Vigência</th>
-              <th className="text-right font-bold py-2 px-1">Valor</th>
-              <th className="text-right font-bold py-2 px-1">Liquidado</th>
-              <th className="text-left font-bold py-2 px-1 w-28">% liquidado</th>
-              <th className="text-center font-bold py-2 px-1">OS</th>
-              <th className="text-left font-bold py-2 px-1">Situação</th>
+            <tr className="text-xs text-text-secondary uppercase tracking-wide border-b border-border">
+              <th className="text-left font-semibold py-2.5 px-2">Empenho</th>
+              <th className="text-left font-semibold py-2.5 px-2">Vigência</th>
+              <th className="text-right font-semibold py-2.5 px-2">Valor</th>
+              <th className="text-right font-semibold py-2.5 px-2">Liquidado</th>
+              <th className="text-left font-semibold py-2.5 px-2 w-28">% liquidado</th>
+              <th className="text-center font-semibold py-2.5 px-2">OS</th>
+              <th className="text-left font-semibold py-2.5 px-2">Situação</th>
             </tr>
           </thead>
           <tbody>
@@ -79,38 +80,34 @@ export function ContratoEmpenhosModal({ contrato, financial, currentEmpenhoIds, 
               return (
                 <tr
                   key={empenho.id}
-                  className={`border-b border-border/60 ${isCurrent ? "bg-primary-50/60" : ""} ${
+                  className={`border-b border-border/60 ${isCurrent ? "bg-surface-muted/60" : ""} ${
                     empenho.status === "CANCELADO" ? "opacity-60" : ""
                   }`}
                 >
-                  <td className="py-2 px-1">
+                  <td className="py-3 px-2">
                     <p className="font-semibold text-text-primary flex items-center gap-1.5">
                       {empenho.numero}
-                      {isCurrent && (
-                        <span className="text-[10px] font-semibold text-primary-600 bg-primary-100 rounded-full px-1.5 py-0.5">
-                          desta obra
-                        </span>
-                      )}
+                      {isCurrent && <Badge>desta obra</Badge>}
                     </p>
                     <p className="text-[11px] text-text-muted truncate max-w-[200px]" title={empenho.description}>
                       {empenho.description}
                     </p>
                   </td>
-                  <td className="py-2 px-1 text-xs text-text-secondary whitespace-nowrap">
+                  <td className="py-3 px-2 text-xs text-text-secondary whitespace-nowrap">
                     {formatDateOnly(empenho.startAt)} → {formatDateOnly(empenho.endAt)}
                   </td>
-                  <td className="py-2 px-1 text-right font-medium text-text-primary whitespace-nowrap">
+                  <td className="py-3 px-2 text-right font-medium text-text-primary whitespace-nowrap">
                     {formatCurrency(empenho.value)}
                   </td>
-                  <td className="py-2 px-1 text-right text-success-text whitespace-nowrap">
+                  <td className="py-3 px-2 text-right text-success-text whitespace-nowrap">
                     {formatCurrency(empenho.liquidado)}
                   </td>
-                  <td className="py-2 px-1">
+                  <td className="py-3 px-2">
                     <ProgressBar percent={liquidadoPercent} colorClassName="bg-secondary-500" />
                     <p className="text-[10px] text-text-muted mt-0.5">{formatPercent(liquidadoPercent)}</p>
                   </td>
-                  <td className="py-2 px-1 text-center text-text-secondary">{empenho.ordensServicoCount}</td>
-                  <td className="py-2 px-1">
+                  <td className="py-3 px-2 text-center text-text-secondary">{empenho.ordensServicoCount}</td>
+                  <td className="py-3 px-2">
                     <StatusPill status={empenho.status} map={RECORD_STATUS} />
                   </td>
                 </tr>
@@ -118,16 +115,16 @@ export function ContratoEmpenhosModal({ contrato, financial, currentEmpenhoIds, 
             })}
           </tbody>
           <tfoot>
-            <tr className="font-bold text-text-primary">
-              <td colSpan={2} className="py-2 px-1">
+            <tr className="font-semibold text-text-primary">
+              <td colSpan={2} className="py-3 px-2">
                 Total empenhado
                 <span className="block text-[10.5px] font-normal text-text-muted">sem empenhos cancelados</span>
               </td>
-              <td className="py-2 px-1 text-right whitespace-nowrap">{formatCurrency(financial.totalEmpenhado)}</td>
-              <td className="py-2 px-1 text-right text-success-text whitespace-nowrap">
+              <td className="py-3 px-2 text-right whitespace-nowrap">{formatCurrency(financial.totalEmpenhado)}</td>
+              <td className="py-3 px-2 text-right text-success-text whitespace-nowrap">
                 {formatCurrency(financial.totalLiquidado)}
               </td>
-              <td colSpan={3} className="py-2 px-1 text-xs font-medium text-text-secondary">
+              <td colSpan={3} className="py-3 px-2 text-xs font-medium text-text-secondary">
                 {formatPercent(percentOf(financial.totalLiquidado, financial.totalEmpenhado))} do empenhado
               </td>
             </tr>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { Button } from "../../components/ui";
 import { useTenants } from "../../store/tenants";
 import { usePermission } from "../../hooks/usePermission";
 import TenantTable from "./TenantTable";
@@ -63,26 +64,23 @@ export default function Organizacoes() {
         onAdd={handleOpen}
       />
 
-      <div className="bg-surface border border-border rounded-lg overflow-hidden">
+      <div className="bg-surface border border-border rounded-xl overflow-hidden">
         <div className="px-4 pt-3 pb-2 border-b border-border">
           <TenantFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} />
         </div>
 
         {isLoading && (
           <div className="py-8 flex items-center justify-center">
-            <Loader2 size={28} className="animate-spin text-primary-500" />
+            <Loader2 size={28} className="animate-spin text-text-muted" />
           </div>
         )}
 
         {!isLoading && error && (
           <div className="py-8 text-center">
-            <p className="text-danger-text font-medium">{error}</p>
-            <button
-              onClick={() => listTenants()}
-              className="mt-3 px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors text-sm font-medium"
-            >
+            <p className="text-sm text-danger-text font-medium">{error}</p>
+            <Button onClick={() => listTenants()} className="mt-3">
               Tentar novamente
-            </button>
+            </Button>
           </div>
         )}
 

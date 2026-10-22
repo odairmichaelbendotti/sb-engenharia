@@ -116,15 +116,15 @@ export default function DashboardPlatform({ entries }: { entries: TenantSummaryE
 
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-border">
-          <h3 className="font-semibold text-text-primary flex items-center gap-2">
-            <Building2 size={18} className="text-primary-500" />
+          <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
+            <Building2 size={16} className="text-text-muted" />
             Organizações
           </h3>
-          <p className="text-text-secondary text-sm">Clique em uma linha para ver o detalhe</p>
+          <p className="text-text-secondary text-xs mt-0.5">Clique em uma linha para ver o detalhe</p>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-table">
             <thead className="bg-surface-muted border-b border-border">
               <tr>
                 {COLUMNS.map((col) => {
@@ -133,7 +133,7 @@ export default function DashboardPlatform({ entries }: { entries: TenantSummaryE
                   return (
                     <th
                       key={col.label}
-                      className={`px-4 py-2.5 font-medium text-text-secondary whitespace-nowrap ${col.align === "right" ? "text-right" : "text-left"}`}
+                      className={`px-4 py-2.5 text-xs font-semibold text-text-secondary uppercase tracking-wide whitespace-nowrap ${col.align === "right" ? "text-right" : "text-left"}`}
                     >
                       {col.key ? (
                         <button
@@ -162,23 +162,23 @@ export default function DashboardPlatform({ entries }: { entries: TenantSummaryE
                     onClick={() => navigate(`/organizacoes/${entry.tenant.id}`)}
                     className="cursor-pointer hover:bg-surface-muted transition-colors"
                   >
-                    <td className="px-4 py-2.5 font-medium text-text-primary">
+                    <td className="px-4 py-3 font-medium text-text-primary">
                       <Link
                         to={`/organizacoes/${entry.tenant.id}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="hover:text-primary-600"
+                        className="hover:underline"
                       >
                         {entry.tenant.name}
                       </Link>
                     </td>
-                    <td className="px-4 py-2.5 text-right text-text-primary">{entry.stats.contratosAtivos}</td>
-                    <td className="px-4 py-2.5 text-right">
+                    <td className="px-4 py-3 text-right text-text-primary">{entry.stats.contratosAtivos}</td>
+                    <td className="px-4 py-3 text-right">
                       <p className="text-text-primary">{formatCurrency(entry.stats.empenhosAtivosValor)}</p>
                       <p className="text-xs text-text-muted">{entry.stats.empenhosAtivos} ativos</p>
                     </td>
-                    <td className="px-4 py-2.5 text-right text-text-primary">{entry.stats.osAtivas}</td>
-                    <td className="px-4 py-2.5 text-right text-text-primary">{entry.stats.obrasEmAndamento}</td>
-                    <td className="px-4 py-2.5 text-right">
+                    <td className="px-4 py-3 text-right text-text-primary">{entry.stats.osAtivas}</td>
+                    <td className="px-4 py-3 text-right text-text-primary">{entry.stats.obrasEmAndamento}</td>
+                    <td className="px-4 py-3 text-right">
                       <p className="text-text-primary">{formatCurrency(entry.stats.valorExecutadoTotal)}</p>
                       <div className="flex items-center justify-end gap-2 mt-1">
                         <div className="w-16 h-1.5 rounded-full bg-border overflow-hidden">
@@ -187,7 +187,7 @@ export default function DashboardPlatform({ entries }: { entries: TenantSummaryE
                         <span className="text-xs text-text-muted w-9 text-right">{pct.toFixed(0)}%</span>
                       </div>
                     </td>
-                    <td className="px-4 py-2.5 text-right">
+                    <td className="px-4 py-3 text-right">
                       <p className={hasNotas ? "text-warning-text font-medium" : "text-text-muted"}>
                         {entry.stats.notasPendentesVencidasCount}
                       </p>

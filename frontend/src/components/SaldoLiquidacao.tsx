@@ -1,5 +1,6 @@
 import { CheckCircle2 } from "lucide-react";
 import { formatCurrency } from "../utils/format-currency";
+import { Badge } from "./ui";
 
 interface SaldoLiquidacaoProps {
   valor: number;
@@ -21,10 +22,9 @@ export function SaldoLiquidacao({ valor, liquidado, saldo, liquidadoLabel }: Sal
   if (isLiquidado) {
     return (
       <div className="space-y-1">
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium bg-success-bg text-success-text border-success-border">
-          <CheckCircle2 size={12} />
+        <Badge tone="success" icon={CheckCircle2}>
           {liquidadoLabel}
-        </span>
+        </Badge>
         <p className="text-xs text-text-secondary">
           Pago <span className="font-semibold text-text-primary">{formatCurrency(liquidado)}</span>
         </p>

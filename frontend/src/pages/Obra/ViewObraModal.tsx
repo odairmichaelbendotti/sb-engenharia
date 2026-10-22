@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import {
-  X,
   HardHat,
   Edit2,
   ClipboardList,
@@ -28,6 +27,16 @@ import {
 import { OBRA_STATUS, OBRA_TIPO_LABEL, getObraBalance, getObraDeadlineHint } from "./obra-display";
 import { getBalance } from "../OrdemServico/ordem-servico-balance";
 import { CompleteObraButton } from "./CompleteObraButton";
+import {
+  Badge,
+  Button,
+  FormSection,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  type BadgeTone,
+} from "../../components/ui";
 
 interface ViewObraModalProps {
   obra: Obra;
@@ -35,17 +44,18 @@ interface ViewObraModalProps {
   handleClose: () => void;
 }
 
-const OS_STATUS: Record<string, { label: string; className: string }> = {
-  ATIVO: { label: "Ativa", className: "bg-warning-bg text-warning-text border-warning-border" },
-  FINALIZADO: { label: "Finalizada", className: "bg-success-bg text-success-text border-success-border" },
-  CANCELADO: { label: "Cancelada", className: "bg-surface-muted text-text-secondary border-border" },
+const OS_STATUS: Record<string, { label: string; tone: BadgeTone }> = {
+  ATIVO: { label: "Ativa", tone: "warning" },
+  FINALIZADO: { label: "Finalizada", tone: "success" },
+  CANCELADO: { label: "Cancelada", tone: "neutral" },
 };
 
-const TONE_CHIP: Record<ScheduleTone, string> = {
-  danger: "bg-danger-bg text-danger-text border-danger-border",
-  warning: "bg-warning-bg text-warning-text border-warning-border",
-  success: "bg-success-bg text-success-text border-success-border",
-  neutral: "bg-surface-muted text-text-secondary border-border",
+// Cor da etiqueta de status da obra no cabeçalho
+const OBRA_STATUS_TONE: Record<Obra["status"], BadgeTone> = {
+  EM_ANDAMENTO: "warning",
+  CONCLUIDA: "success",
+  PARALISADA: "danger",
+  CANCELADA: "neutral",
 };
 
 const TONE_FILL: Record<ScheduleTone, string> = {
@@ -101,14 +111,10 @@ function ProgressBar({ percent, className }: { percent: number; className: strin
 }
 
 function ScheduleChip({ schedule }: { schedule: OrdemServicoSchedule }) {
-  const Icon = SCHEDULE_ICON[schedule.kind];
   return (
-    <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium whitespace-nowrap ${TONE_CHIP[schedule.tone]}`}
-    >
-      <Icon size={12} />
+    <Badge tone={schedule.tone} icon={SCHEDULE_ICON[schedule.kind]}>
       {schedule.label}
-    </span>
+    </Badge>
   );
 }
 
@@ -133,9 +139,7 @@ function OrdemServicoCard({ os, obra }: { os: ObraOrdemServico; obra: Obra }) {
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-text-primary">OS {os.numero}</span>
-            <span className={`px-1.5 py-0.5 rounded-full border text-[11px] font-medium ${status.className}`}>
-              {status.label}
-            </span>
+            <Badge tone={status.tone}>{status.label}</Badge>
           </div>
           <p className="text-xs text-text-muted mt-0.5 truncate">
             {os.contrato.identificador} · {os.contrato.company.name}
@@ -213,167 +217,118 @@ export function ViewObraModal({ obra, onEdit, handleClose }: ViewObraModalProps)
   }, [handleClose]);
 
   return (
-    <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-      onClick={handleClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Obra ${obra.nome}`}
-        className="bg-surface rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl border border-border"
-        onClick={(e) => e.stopPropagation()}
+    <Modal open size="xl" onBackdropClick={handleClose}>
+      <ModalHeader
+        icon={HardHat}
+        title={`${obra.identificacaoPatrimonial} · ${obra.nome}`}
+        description={OBRA_TIPO_LABEL[obra.tipo] ?? obra.tipo}
+        onClose={handleClose}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border bg-linear-to-r from-primary-50/50 to-transparent shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center shrink-0">
-              <HardHat size={20} className="text-primary-600" />
-            </div>
-            <div className="min-w-0">
-              <h2 className="text-lg font-semibold text-text-primary truncate">
-                <span className="text-primary-600">{obra.identificacaoPatrimonial}</span> · {obra.nome}
-              </h2>
-              <div className="flex items-center gap-2 mt-0.5 text-xs">
-                <span className={`px-2 py-0.5 rounded-full border font-medium ${status.badge}`}>{status.label}</span>
-                <span className="text-text-muted">{OBRA_TIPO_LABEL[obra.tipo] ?? obra.tipo}</span>
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={handleClose}
-            className="p-2 hover:bg-surface-muted rounded-lg transition-colors cursor-pointer shrink-0"
-            title="Fechar"
-          >
-            <X size={20} className="text-text-secondary" />
-          </button>
-        </div>
+        <Badge tone={OBRA_STATUS_TONE[obra.status] ?? "neutral"}>{status.label}</Badge>
+      </ModalHeader>
 
-        <div className="p-5 overflow-y-auto space-y-6">
-          {/* Resumo: orçamento, execução e prazo vêm das OS da obra */}
-          <section className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-              <SummaryTile label="Emitido em OS" value={formatCurrency(obra.valor)}>
-                <p className="text-xs text-text-muted mt-0.5">
-                  {obra.ordensServico.length} OS
-                </p>
-              </SummaryTile>
-              <SummaryTile label="Liquidado" value={formatCurrency(obra.valorExecutado)}>
-                <p className="text-xs text-text-muted mt-0.5">{executado}% do emitido</p>
-              </SummaryTile>
-              <SummaryTile
-                label="A liquidar"
-                value={balance.kind === "paid" || balance.kind === "concluded" ? "Sem saldo" : formatCurrency(balance.saldo)}
-              >
-                <p className="text-xs text-text-muted mt-0.5">
-                  {balance.kind === "paid" ? "Obra paga" : "nas OS ativas"}
-                </p>
-              </SummaryTile>
-              <SummaryTile
-                label="Prazo da obra"
-                value={obra.dataPrevisaoTermino ? formatDateOnly(obra.dataPrevisaoTermino) : "Sem prazo"}
-              >
-                <p className={`text-xs mt-0.5 ${hint ? hint.className : "text-text-muted"}`}>
-                  {obra.dataConclusao
-                    ? `Concluída em ${formatDate(obra.dataConclusao)}`
-                    : hint
-                      ? hint.label
-                      : obra.dataInicio
-                        ? `Início ${formatDateOnly(obra.dataInicio)}`
-                        : "Defina os prazos nas OS"}
-                </p>
-              </SummaryTile>
-            </div>
-            <ProgressBar percent={executado} className={executado > 100 ? "bg-danger-text" : "bg-primary-500"} />
-            {/* Todas as OS sem saldo: a obra já pode ser concluída */}
-            {balance.kind === "paid" && (
-              <div className="flex items-center justify-between gap-3 flex-wrap rounded-lg border border-success-border bg-success-bg px-3.5 py-3">
-                <p className="text-sm text-success-text">
-                  <span className="font-semibold">Obra paga.</span> Nenhuma OS desta obra tem saldo a liquidar.
-                </p>
-                {canEditEngenharia && <CompleteObraButton obra={obra} />}
-              </div>
-            )}
-          </section>
-
-          {/* Ordens de serviço da obra */}
-          <section>
-            <div className="flex items-center gap-2 mb-2.5">
-              <ClipboardList size={15} className="text-primary-500" />
-              <h3 className="text-xs font-semibold text-text-secondary uppercase">
-                Ordens de serviço ({obra.ordensServico.length})
-              </h3>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-            {obra.ordensServico.length > 0 ? (
-              <ul className="space-y-2.5">
-                {obra.ordensServico.map((os) => (
-                  <OrdemServicoCard key={os.id} os={os} obra={obra} />
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-text-muted">Nenhuma ordem de serviço vinculada.</p>
-            )}
-          </section>
-
-          {/* Dados da obra */}
-          <section>
-            <div className="flex items-center gap-2 mb-2.5">
-              <HardHat size={15} className="text-primary-500" />
-              <h3 className="text-xs font-semibold text-text-secondary uppercase">Dados da obra</h3>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
-              <Detail icon={UserCog} label="Responsável técnico">
-                {obra.responsavelTecnico}
-              </Detail>
-              {obra.contrato && (
-                <Detail icon={Building2} label="Contrato / empresa">
-                  {obra.contrato.identificador} · {obra.contrato.company.name}
-                </Detail>
-              )}
-              {obra.descricao && (
-                <div className="sm:col-span-2">
-                  <Detail icon={AlignLeft} label="Descrição">
-                    {obra.descricao}
-                  </Detail>
-                </div>
-              )}
-              {obra.anotacoes && (
-                <div className="sm:col-span-2">
-                  <Detail icon={StickyNote} label="Anotações de campo">
-                    {obra.anotacoes}
-                  </Detail>
-                </div>
-              )}
-              {obra.latitude != null && obra.longitude != null && (
-                <Detail icon={MapPin} label="Coordenadas">
-                  {obra.latitude}, {obra.longitude}
-                </Detail>
-              )}
-            </div>
-          </section>
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-end gap-3 px-5 py-3.5 border-t border-border shrink-0">
-          <button
-            onClick={handleClose}
-            className="px-4 py-2 cursor-pointer text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium text-sm"
-          >
-            Fechar
-          </button>
-          {canEditEngenharia && onEdit && (
-            <button
-              onClick={() => onEdit(obra)}
-              className="inline-flex items-center gap-2 px-4 py-2 cursor-pointer bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium text-sm"
+      <ModalBody className="space-y-6">
+        {/* Resumo: orçamento, execução e prazo vêm das OS da obra */}
+        <section className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <SummaryTile label="Emitido em OS" value={formatCurrency(obra.valor)}>
+              <p className="text-xs text-text-muted mt-0.5">{obra.ordensServico.length} OS</p>
+            </SummaryTile>
+            <SummaryTile label="Liquidado" value={formatCurrency(obra.valorExecutado)}>
+              <p className="text-xs text-text-muted mt-0.5">{executado}% do emitido</p>
+            </SummaryTile>
+            <SummaryTile
+              label="A liquidar"
+              value={balance.kind === "paid" || balance.kind === "concluded" ? "Sem saldo" : formatCurrency(balance.saldo)}
             >
-              <Edit2 size={15} />
-              Editar obra
-            </button>
+              <p className="text-xs text-text-muted mt-0.5">
+                {balance.kind === "paid" ? "Obra paga" : "nas OS ativas"}
+              </p>
+            </SummaryTile>
+            <SummaryTile
+              label="Prazo da obra"
+              value={obra.dataPrevisaoTermino ? formatDateOnly(obra.dataPrevisaoTermino) : "Sem prazo"}
+            >
+              <p className={`text-xs mt-0.5 ${hint ? hint.className : "text-text-muted"}`}>
+                {obra.dataConclusao
+                  ? `Concluída em ${formatDate(obra.dataConclusao)}`
+                  : hint
+                    ? hint.label
+                    : obra.dataInicio
+                      ? `Início ${formatDateOnly(obra.dataInicio)}`
+                      : "Defina os prazos nas OS"}
+              </p>
+            </SummaryTile>
+          </div>
+          <ProgressBar percent={executado} className={executado > 100 ? "bg-danger-text" : "bg-primary-500"} />
+          {/* Todas as OS sem saldo: a obra já pode ser concluída */}
+          {balance.kind === "paid" && (
+            <div className="flex items-center justify-between gap-3 flex-wrap rounded-lg border border-success-border bg-success-bg px-3.5 py-3">
+              <p className="text-sm text-success-text">
+                <span className="font-semibold">Obra paga.</span> Nenhuma OS desta obra tem saldo a liquidar.
+              </p>
+              {canEditEngenharia && <CompleteObraButton obra={obra} />}
+            </div>
           )}
-        </div>
-      </div>
-    </div>
+        </section>
+
+        {/* Ordens de serviço da obra */}
+        <FormSection title={`Ordens de serviço (${obra.ordensServico.length})`} icon={ClipboardList}>
+          {obra.ordensServico.length > 0 ? (
+            <ul className="space-y-2.5">
+              {obra.ordensServico.map((os) => (
+                <OrdemServicoCard key={os.id} os={os} obra={obra} />
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-text-muted">Nenhuma ordem de serviço vinculada.</p>
+          )}
+        </FormSection>
+
+        {/* Dados da obra */}
+        <FormSection title="Dados da obra" icon={HardHat}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+            <Detail icon={UserCog} label="Responsável técnico">
+              {obra.responsavelTecnico}
+            </Detail>
+            {obra.contrato && (
+              <Detail icon={Building2} label="Contrato / empresa">
+                {obra.contrato.identificador} · {obra.contrato.company.name}
+              </Detail>
+            )}
+            {obra.descricao && (
+              <div className="sm:col-span-2">
+                <Detail icon={AlignLeft} label="Descrição">
+                  {obra.descricao}
+                </Detail>
+              </div>
+            )}
+            {obra.anotacoes && (
+              <div className="sm:col-span-2">
+                <Detail icon={StickyNote} label="Anotações de campo">
+                  {obra.anotacoes}
+                </Detail>
+              </div>
+            )}
+            {obra.latitude != null && obra.longitude != null && (
+              <Detail icon={MapPin} label="Coordenadas">
+                {obra.latitude}, {obra.longitude}
+              </Detail>
+            )}
+          </div>
+        </FormSection>
+      </ModalBody>
+
+      <ModalFooter>
+        <Button variant="ghost" onClick={handleClose}>
+          Fechar
+        </Button>
+        {canEditEngenharia && onEdit && (
+          <Button icon={Edit2} onClick={() => onEdit(obra)}>
+            Editar obra
+          </Button>
+        )}
+      </ModalFooter>
+    </Modal>
   );
 }

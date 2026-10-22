@@ -4,7 +4,7 @@ export function OrdemServicoNumeroTag({ numero, className = "" }: { numero: stri
   const label = /^OS\b/i.test(numero) ? numero : `OS ${numero}`;
   return (
     <span
-      className={`inline-block font-mono text-[10.5px] leading-4 tracking-wide text-text-secondary bg-surface-muted border border-border rounded px-1.5 whitespace-nowrap ${className}`}
+      className={`inline-block font-mono text-[10.5px] leading-4 tracking-wide text-text-secondary bg-surface-muted border border-border rounded-md px-1.5 whitespace-nowrap ${className}`}
     >
       {label}
     </span>

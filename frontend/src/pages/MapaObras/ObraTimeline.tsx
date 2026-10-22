@@ -78,7 +78,7 @@ export function ObraTimeline({ detail }: { detail: ObraDetail }) {
         {/* Marcador de hoje atravessa todas as faixas */}
         <div className="absolute inset-y-0 left-20 right-0 pointer-events-none">
           <div className="absolute inset-y-0 w-px bg-danger-text/70" style={{ left: `${pos(today)}%` }}>
-            <span className="absolute -top-4 -translate-x-1/2 text-[9.5px] font-bold text-danger-text whitespace-nowrap">
+            <span className="absolute -top-4 -translate-x-1/2 text-[9.5px] font-semibold text-danger-text whitespace-nowrap">
               hoje
             </span>
           </div>

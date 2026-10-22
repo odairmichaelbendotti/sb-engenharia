@@ -120,8 +120,8 @@ export default function Contratos() {
       />
 
       {/* Sem overflow-hidden: o painel de filtros precisa sair do card */}
-      <div className="bg-surface border border-border rounded-lg">
-        <SummaryStrip cells={summaryCells} className="rounded-t-lg" />
+      <div className="bg-surface border border-border rounded-xl">
+        <SummaryStrip cells={summaryCells} className="rounded-t-xl" />
         <div className="px-4 pt-3 pb-3 border-b border-border space-y-2">
           <ContratoFilters
             searchTerm={searchTerm}
@@ -140,7 +140,7 @@ export default function Contratos() {
             }}
           />
         </div>
-        <div className="rounded-b-lg overflow-hidden">
+        <div className="rounded-b-xl overflow-hidden">
           <ContratoTable
             key={`${searchTerm}|${scopeKey}`}
             contratos={filteredContratos}

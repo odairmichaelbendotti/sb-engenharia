@@ -11,6 +11,7 @@ import { useTenants } from "../../store/tenants";
 import { getInitials } from "../../utils/get-initial";
 import SidebarGroup from "./SidebarGroup";
 import { usePermission } from "../../hooks/usePermission";
+import { IconButton } from "../ui";
 
 const MobileSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -51,15 +52,13 @@ const MobileSidebar = () => {
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-surface border-b border-border z-40 flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
-          <span className="font-bold text-text-primary text-lg">SB Engenharia</span>
+          <span className="font-bold tracking-tight text-text-primary text-base">SB Engenharia</span>
         </div>
-        <button
+        <IconButton
+          icon={isOpen ? X : Menu}
+          label={isOpen ? "Fechar menu" : "Abrir menu"}
           onClick={() => setIsOpen(!isOpen)}
-          className="p-2 hover:bg-surface-muted rounded-md transition-colors"
-          aria-label={isOpen ? "Fechar menu" : "Abrir menu"}
-        >
-          {isOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        />
       </div>
 
       {/* Mobile Sidebar Overlay */}
@@ -80,19 +79,13 @@ const MobileSidebar = () => {
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <span className="font-bold text-text-primary text-lg">SB Engenharia</span>
+              <span className="font-bold tracking-tight text-text-primary text-base">SB Engenharia</span>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="p-2 hover:bg-surface-muted rounded-md transition-colors"
-              aria-label="Fechar menu"
-            >
-              <X size={24} />
-            </button>
+            <IconButton icon={X} label="Fechar menu" onClick={() => setIsOpen(false)} />
           </div>
 
           {tenantName && (
-            <span className="mb-4 self-start inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border bg-surface-muted text-text-secondary border-border whitespace-nowrap">
+            <span className="mb-4 self-start inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border bg-surface-muted text-text-secondary border-border whitespace-nowrap">
               <Building2 size={12} />
               {tenantName}
             </span>
@@ -143,7 +136,7 @@ const MobileSidebar = () => {
           {/* Footer */}
           <div className="border-t border-border pt-4 mt-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
+              <div className="w-9 h-9 bg-primary-500 rounded-full flex items-center justify-center text-white font-semibold text-xs shrink-0">
                 {getInitials(user?.name || "Usuário")}
               </div>
               <div className="flex-1 min-w-0">
@@ -154,13 +147,7 @@ const MobileSidebar = () => {
                   {user?.email || "email@email.com"}
                 </p>
               </div>
-              <button
-                className="p-2 cursor-pointer hover:bg-surface-muted rounded-md transition-colors shrink-0"
-                onClick={handleLogout}
-                aria-label="Sair"
-              >
-                <LogOut size={18} className="text-text-secondary" />
-              </button>
+              <IconButton icon={LogOut} label="Sair" size="sm" onClick={handleLogout} />
             </div>
           </div>
         </div>

@@ -1,16 +1,17 @@
 import { useEffect } from "react";
 import {
   Layers2,
-  X,
   Calendar,
   CheckCircle2,
   XCircle,
   Clock,
   FileText,
   Building2,
+  type LucideIcon,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "../../utils/format-currency";
 import type { Empresa } from "../../../types/empresa";
+import { Badge, Button, Modal, ModalBody, ModalFooter, ModalHeader, type BadgeTone } from "../../components/ui";
 
 type ModelEmpenhoProps = {
   isOpen: boolean;
@@ -50,172 +51,112 @@ const ModalEmpenho = ({
   }, [handleClose]);
 
   const getStatusConfig = (status: string) => {
-    const configs: Record<
-      string,
-      {
-        bg: string;
-        text: string;
-        border: string;
-        icon: typeof CheckCircle2;
-        label: string;
-      }
-    > = {
-      ATIVO: {
-        bg: "bg-success-bg",
-        text: "text-success-text",
-        border: "border-success-border",
-        icon: CheckCircle2,
-        label: "Ativo",
-      },
-      FINALIZADO: {
-        bg: "bg-blue-100",
-        text: "text-blue-600",
-        border: "border-blue-200",
-        icon: Clock,
-        label: "Finalizado",
-      },
-      CANCELADO: {
-        bg: "bg-danger-bg",
-        text: "text-danger-text",
-        border: "border-danger-border",
-        icon: XCircle,
-        label: "Cancelado",
-      },
+    const configs: Record<string, { tone: BadgeTone; icon: LucideIcon; label: string }> = {
+      ATIVO: { tone: "success", icon: CheckCircle2, label: "Ativo" },
+      FINALIZADO: { tone: "info", icon: Clock, label: "Finalizado" },
+      CANCELADO: { tone: "danger", icon: XCircle, label: "Cancelado" },
     };
     return (
       configs[status.toUpperCase()] || {
-        bg: "bg-surface-muted",
-        text: "text-text-secondary",
-        border: "border-border",
+        tone: "neutral" as const,
         icon: FileText,
         label: status || "Desconhecido",
       }
     );
   };
 
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) handleClose();
-  };
-
   if (!isOpen) return null;
 
   return (
-    <div
-      onClick={handleBackdropClick}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-    >
-      <div className="bg-surface rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border border-border overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-linear-to-r from-primary-50/50 to-transparent shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
-              <Building2 size={20} className="text-primary-600" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-text-primary">
-                {empresaSelecionada.name}
-              </h2>
-              <p className="text-sm text-text-secondary">
-                {empresaSelecionada.empenhos.length} empenho
-                {empresaSelecionada.empenhos.length !== 1 ? "s" : ""} vinculado
-                {empresaSelecionada.empenhos.length !== 1 ? "s" : ""}
-                {empenhosAtivos > 0 && (
-                  <span className="ml-2 text-success-text font-medium">
-                    ({empenhosAtivos} ativo{empenhosAtivos !== 1 ? "s" : ""})
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleClose}
-            className="p-2 cursor-pointer hover:bg-surface-muted rounded-lg transition-colors"
-          >
-            <X size={20} className="text-text-secondary" />
-          </button>
-        </div>
-        <div className="p-4 overflow-y-auto">
-          {empenhosOrdenados.length > 0 ? (
-            <div className="space-y-3">
-              {empenhosOrdenados.map((empenho) => {
-                const statusConfig = getStatusConfig(empenho.status || "");
-                const StatusIcon = statusConfig.icon;
+    <Modal open size="lg" onBackdropClick={handleClose}>
+      <ModalHeader
+        icon={Building2}
+        title={empresaSelecionada.name}
+        description={
+          <>
+            {empresaSelecionada.empenhos.length} empenho
+            {empresaSelecionada.empenhos.length !== 1 ? "s" : ""} vinculado
+            {empresaSelecionada.empenhos.length !== 1 ? "s" : ""}
+            {empenhosAtivos > 0 && (
+              <span className="ml-2 text-success-text font-medium">
+                ({empenhosAtivos} ativo{empenhosAtivos !== 1 ? "s" : ""})
+              </span>
+            )}
+          </>
+        }
+        onClose={handleClose}
+      />
+      <ModalBody>
+        {empenhosOrdenados.length > 0 ? (
+          <div className="space-y-3">
+            {empenhosOrdenados.map((empenho) => {
+              const statusConfig = getStatusConfig(empenho.status || "");
 
-                return (
-                  <div
-                    key={empenho.id}
-                    className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-surface-muted hover:border-primary-200 transition-all duration-200 group"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 bg-secondary-100 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-primary-100 transition-colors">
-                        <Layers2
-                          size={18}
-                          className="text-secondary-500 group-hover:text-primary-500 transition-colors"
-                        />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-text-secondary truncate max-w-50">
-                          {empenho.description}
-                        </p>
-                        <p className="font-medium text-text-primary text-xs truncate">
-                          {empenho.numero}
-                        </p>
-                        <div className="flex items-center gap-2 text-xs text-text-muted mt-0.5">
-                          <Calendar size={12} />
-                          <span>
-                            {formatDate(empenho.startAt)} -{" "}
-                            {formatDate(empenho.endAt)}
-                          </span>
-                        </div>
-                      </div>
+              return (
+                <div
+                  key={empenho.id}
+                  className="flex items-center justify-between p-4 border border-border rounded-xl hover:bg-surface-muted hover:border-border-strong transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 bg-surface-muted border border-border rounded-lg flex items-center justify-center shrink-0">
+                      <Layers2 size={16} className="text-text-primary" />
                     </div>
-                    <div className="text-right shrink-0 ml-3">
-                      <p className="font-semibold text-text-primary">
-                        {formatCurrency(empenho.value)}
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-text-primary truncate max-w-50">
+                        {empenho.description}
                       </p>
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}
-                      >
-                        <StatusIcon size={12} />
-                        {statusConfig.label}
-                      </span>
+                      <p className="font-medium text-text-secondary text-xs truncate">
+                        {empenho.numero}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-text-muted mt-0.5">
+                        <Calendar size={12} />
+                        <span>
+                          {formatDate(empenho.startAt)} -{" "}
+                          {formatDate(empenho.endAt)}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                );
-              })}
-              <div className="pt-4 border-t border-border mt-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-text-secondary text-sm">
-                    Valor total dos empenhos:
-                  </span>
-                  <span className="text-lg font-bold text-primary-600">
-                    {formatCurrency(valorTotal)}
-                  </span>
+                  <div className="flex flex-col items-end gap-1 shrink-0 ml-3">
+                    <p className="text-sm font-semibold text-text-primary tabular-nums">
+                      {formatCurrency(empenho.value)}
+                    </p>
+                    <Badge tone={statusConfig.tone} icon={statusConfig.icon}>
+                      {statusConfig.label}
+                    </Badge>
+                  </div>
                 </div>
+              );
+            })}
+            <div className="pt-4 border-t border-border mt-4">
+              <div className="flex justify-between items-center">
+                <span className="text-text-secondary text-sm">
+                  Valor total dos empenhos:
+                </span>
+                <span className="text-lg font-semibold text-text-primary tabular-nums">
+                  {formatCurrency(valorTotal)}
+                </span>
               </div>
             </div>
-          ) : (
-            <div className="text-center py-8">
-              <Layers2 size={32} className="mx-auto text-text-muted mb-3" />
-              <p className="text-text-secondary font-medium">
-                Nenhum empenho vinculado
-              </p>
-              <p className="text-text-muted text-sm mt-1">
-                Esta empresa ainda não possui empenhos cadastrados
-              </p>
-            </div>
-          )}
-        </div>
-        <div className="flex justify-end p-4 border-t border-border shrink-0">
-          <button
-            onClick={handleClose}
-            className="cursor-pointer px-4 py-2 text-text-secondary hover:bg-surface-muted rounded-md transition-colors"
-          >
-            Fechar
-          </button>
-        </div>
-      </div>
-    </div>
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <Layers2 size={32} className="mx-auto text-text-muted mb-3" />
+            <p className="text-sm text-text-secondary font-medium">
+              Nenhum empenho vinculado
+            </p>
+            <p className="text-text-muted text-sm mt-1">
+              Esta empresa ainda não possui empenhos cadastrados
+            </p>
+          </div>
+        )}
+      </ModalBody>
+      <ModalFooter>
+        <Button variant="secondary" onClick={handleClose}>
+          Fechar
+        </Button>
+      </ModalFooter>
+    </Modal>
   );
 };
 

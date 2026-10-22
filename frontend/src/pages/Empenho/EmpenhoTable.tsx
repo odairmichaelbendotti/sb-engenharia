@@ -10,10 +10,12 @@ import { useMemo, useState } from "react";
 import type { EmpenhoList } from "../../../types/empenho";
 import { formatDate } from "../../utils/format-currency";
 import { usePermission } from "../../hooks/usePermission";
-import { EmpenhoPagination } from "./EmpenhoPagination";
 import { SaldoLiquidacao } from "../../components/SaldoLiquidacao";
+import { Button, IconButton, Pagination } from "../../components/ui";
 
 const ITEMS_PER_PAGE = 10;
+
+const thClass = "text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide";
 
 interface EmpenhoTableProps {
   empenhos: EmpenhoList[];
@@ -44,26 +46,16 @@ export function EmpenhoTable({
   return (
     <div>
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full text-table">
           <thead className="bg-surface-muted border-b border-border">
             <tr>
-              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
-                Empenho
-              </th>
-              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
-                Contrato
-              </th>
-              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase hidden lg:table-cell">
-                Descrição
-              </th>
-              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
-                Prazo
-              </th>
-              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
-                Saldo
-              </th>
+              <th className={thClass}>Empenho</th>
+              <th className={thClass}>Contrato</th>
+              <th className={`${thClass} hidden lg:table-cell`}>Descrição</th>
+              <th className={`${thClass} hidden md:table-cell`}>Prazo</th>
+              <th className={thClass}>Saldo</th>
               {canEditAdministrativo && (
-                <th className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
+                <th className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
                   Ações
                 </th>
               )}
@@ -81,13 +73,13 @@ export function EmpenhoTable({
                   key={empenho.id}
                   className="hover:bg-surface-muted/50 transition-colors"
                 >
-                  <td className="py-2.5 px-4">
+                  <td className="py-3 px-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center shrink-0">
-                        <Layers2 size={18} className="text-primary-500" />
+                      <div className="w-9 h-9 bg-surface-muted border border-border rounded-lg flex items-center justify-center shrink-0">
+                        <Layers2 size={16} className="text-text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium text-text-primary text-sm">
+                        <p className="font-medium text-text-primary text-table">
                           {empenho.numero}
                         </p>
                         <p className="text-xs text-text-secondary">
@@ -96,11 +88,11 @@ export function EmpenhoTable({
                       </div>
                     </div>
                   </td>
-                  <td className="py-2.5 px-4">
+                  <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
                       <Building2 size={14} className="text-text-muted" />
                       <div>
-                        <span className="text-sm text-text-primary">
+                        <span className="text-table text-text-primary">
                           {empenho.contrato.identificador}
                         </span>
                         <p className="text-xs text-text-secondary">
@@ -109,14 +101,14 @@ export function EmpenhoTable({
                       </div>
                     </div>
                   </td>
-                  <td className="py-2.5 px-4 text-sm text-text-secondary hidden lg:table-cell">
+                  <td className="py-3 px-4 text-table text-text-secondary hidden lg:table-cell">
                     <p className="truncate max-w-50">{empenho.description}</p>
                   </td>
-                  <td className="py-2.5 px-4 hidden md:table-cell">
-                    <div className="text-sm">
+                  <td className="py-3 px-4 hidden md:table-cell">
+                    <div className="text-table">
                       <span
                         className={
-                          isNearDeadline ? "text-warning-text font-medium" : ""
+                          isNearDeadline ? "text-warning-text font-medium" : "text-text-primary"
                         }
                       >
                         {formatDate(empenho.endAt)}
@@ -127,7 +119,7 @@ export function EmpenhoTable({
                     </div>
                   </td>
                   {/* O valor do empenho já aparece no saldo ("de R$ ..."): sem coluna própria */}
-                  <td className="py-2.5 px-4 min-w-44">
+                  <td className="py-3 px-4 min-w-44">
                     <SaldoLiquidacao
                       valor={empenho.value}
                       liquidado={empenho.valorLiquidado}
@@ -137,22 +129,21 @@ export function EmpenhoTable({
                   </td>
 
                   {canEditAdministrativo && (
-                    <td className="py-2.5 px-4">
+                    <td className="py-3 px-4">
                       <div className="flex items-center justify-end gap-1">
-                        <button
+                        <IconButton
+                          icon={Edit2}
+                          label="Gerenciar"
+                          size="sm"
                           onClick={() => onEdit(empenho)}
-                          className="p-2 hover:bg-primary-100 cursor-pointer text-text-secondary hover:text-primary-500 rounded-md transition-colors"
-                          title="Gerenciar"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
+                        />
+                        <IconButton
+                          icon={Trash2}
+                          label="Excluir"
+                          size="sm"
+                          variant="danger"
                           onClick={() => onDelete(empenho)}
-                          className="p-2 hover:bg-danger-bg cursor-pointer text-text-secondary hover:text-danger-text rounded-md transition-colors"
-                          title="Excluir"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        />
                       </div>
                     </td>
                   )}
@@ -169,7 +160,7 @@ export function EmpenhoTable({
           <div className="py-8 text-center">
             <Loader2
               size={32}
-              className="mx-auto text-primary-500 animate-spin mb-3"
+              className="mx-auto text-text-muted animate-spin mb-3"
             />
             <p className="text-text-secondary text-sm">
               Carregando empenhos...
@@ -178,30 +169,27 @@ export function EmpenhoTable({
         ) : (
           <div className="py-8 text-center">
             <Layers2 size={32} className="mx-auto text-text-muted mb-3" />
-            <p className="text-text-secondary font-medium">
+            <p className="text-sm text-text-secondary font-medium">
               Nenhum empenho encontrado
             </p>
             <p className="text-text-muted text-sm mt-1">
               Tente ajustar os filtros ou cadastre um novo empenho
             </p>
             {onAdd && (
-              <button
-                onClick={onAdd}
-                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-md cursor-pointer transition-colors"
-              >
-                <Plus size={16} />
+              <Button icon={Plus} onClick={onAdd} className="mt-4">
                 Cadastrar empenho
-              </button>
+              </Button>
             )}
           </div>
         ))}
 
-      <EmpenhoPagination
+      <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
         startIndex={startIndex}
         totalItems={empenhos.length}
         itemsPerPage={ITEMS_PER_PAGE}
+        itemLabel="empenhos"
         onPageChange={setPage}
       />
     </div>

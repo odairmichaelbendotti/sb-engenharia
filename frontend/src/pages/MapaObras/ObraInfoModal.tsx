@@ -14,7 +14,7 @@ import { formatDate, formatDateOnly } from "../../utils/format-currency";
 import { PanelModal, StatusPill } from "./obra-detail-shared";
 import { OBRA_STATUS_LABEL, OBRA_TIPO_LABEL, RECORD_STATUS } from "./obra-detail-utils";
 
-function Field({ icon: Icon, label, children }: { icon: typeof HardHat; label: string; children: React.ReactNode }) {
+function InfoItem({ icon: Icon, label, children }: { icon: typeof HardHat; label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-2 min-w-0">
       <Icon size={14} className="text-text-muted mt-0.5 shrink-0" />
@@ -36,14 +36,14 @@ export function ObraInfoModal({ detail, onClose }: ObraInfoModalProps) {
 
   return (
     <PanelModal
-      icon={<HardHat size={20} />}
+      icon={HardHat}
       title={obra.nome}
       subtitle={`${obra.identificacaoPatrimonial} · ${OBRA_TIPO_LABEL[obra.tipo]} · ${OBRA_STATUS_LABEL[obra.status]}`}
       onClose={onClose}
     >
       <div className="space-y-5">
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
-          <Field icon={ClipboardList} label={ordensServico.length > 1 ? "Ordens de serviço" : "Ordem de serviço"}>
+          <InfoItem icon={ClipboardList} label={ordensServico.length > 1 ? "Ordens de serviço" : "Ordem de serviço"}>
             <span className="flex flex-col gap-1">
               {ordensServico.map((os) => (
                 <span key={os.id} className="inline-flex items-center gap-2">
@@ -52,18 +52,18 @@ export function ObraInfoModal({ detail, onClose }: ObraInfoModalProps) {
                 </span>
               ))}
             </span>
-          </Field>
-          <Field icon={UserCog} label="Responsável técnico">
+          </InfoItem>
+          <InfoItem icon={UserCog} label="Responsável técnico">
             {obra.responsavelTecnico}
-          </Field>
-          <Field icon={Tag} label="Tipo">
+          </InfoItem>
+          <InfoItem icon={Tag} label="Tipo">
             {OBRA_TIPO_LABEL[obra.tipo]}
-          </Field>
-          <Field icon={MapPin} label="Coordenadas">
+          </InfoItem>
+          <InfoItem icon={MapPin} label="Coordenadas">
             {typeof obra.latitude === "number" && typeof obra.longitude === "number"
               ? `${obra.latitude.toFixed(6)}, ${obra.longitude.toFixed(6)}`
               : "Não informadas"}
-          </Field>
+          </InfoItem>
         </section>
 
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -94,7 +94,7 @@ export function ObraInfoModal({ detail, onClose }: ObraInfoModalProps) {
         </section>
 
         <section>
-          <h3 className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary uppercase mb-2">
+          <h3 className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
             <FileText size={13} /> Descrição
           </h3>
           <p className="text-sm text-text-primary whitespace-pre-line leading-relaxed">{obra.descricao}</p>

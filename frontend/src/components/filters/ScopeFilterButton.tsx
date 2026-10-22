@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Building2, ChevronDown, FileSignature, FileText, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import type { ScopeFilter } from "../../hooks/useScopeFilter";
 import type { ScopeOption, ScopeOptions } from "./scope-options";
+import { Button, Field, Select } from "../ui";
 
 interface ScopeFilterButtonProps {
   options: ScopeOptions;
@@ -46,16 +47,16 @@ export function ScopeFilterButton({ options, value, onChange }: ScopeFilterButto
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-3 py-2 border rounded-lg text-sm cursor-pointer transition-colors ${
+        className={`w-full sm:w-auto h-8 inline-flex items-center justify-center gap-1.5 px-3 border rounded-lg text-xs font-semibold shadow-xs cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-200 ${
           activeCount > 0
-            ? "border-primary-300 bg-primary-50 text-primary-700 font-medium"
-            : "border-border bg-surface text-text-secondary hover:bg-surface-muted"
+            ? "border-primary-300 bg-primary-50 text-text-primary"
+            : "border-border bg-surface text-text-secondary hover:bg-surface-muted hover:border-border-strong hover:text-text-primary"
         }`}
       >
         <SlidersHorizontal size={14} />
         Filtros
         {activeCount > 0 && (
-          <span className="min-w-5 h-5 px-1 rounded-full bg-primary-500 text-white text-[11px] font-semibold tabular-nums inline-flex items-center justify-center">
+          <span className="min-w-4 h-4 px-1 rounded-full bg-primary-500 text-white text-[10px] font-semibold tabular-nums inline-flex items-center justify-center">
             {activeCount}
           </span>
         )}
@@ -66,10 +67,10 @@ export function ScopeFilterButton({ options, value, onChange }: ScopeFilterButto
         <div
           role="dialog"
           aria-label="Filtros"
-          className="absolute right-0 top-full mt-1.5 z-30 w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-border bg-surface shadow-lg p-3 space-y-3"
+          className="absolute right-0 top-full mt-1.5 z-30 w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-border bg-surface shadow-lg p-4 space-y-3"
         >
           {nothingToFilter && (
-            <p className="text-sm text-text-muted">Todos os itens são da mesma empresa, contrato e empenho.</p>
+            <p className="text-xs text-text-muted">Todos os itens são da mesma empresa, contrato e empenho.</p>
           )}
           {showEmpresa && (
             <ScopeSelect
@@ -101,22 +102,18 @@ export function ScopeFilterButton({ options, value, onChange }: ScopeFilterButto
               onChange={(empenho) => onChange({ empenho })}
             />
           )}
-          <div className="flex items-center justify-between pt-1 border-t border-border">
-            <button
-              type="button"
+          <div className="flex items-center justify-between pt-3 border-t border-border">
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => onChange({ empresa: "", contrato: "", empenho: "" })}
               disabled={activeCount === 0}
-              className="text-sm text-primary-500 hover:text-primary-600 font-medium cursor-pointer disabled:text-text-muted disabled:cursor-default pt-2"
             >
               Limpar
-            </button>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="text-sm text-text-secondary hover:text-text-primary cursor-pointer pt-2"
-            >
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setOpen(false)}>
               Fechar
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -140,30 +137,15 @@ function ScopeSelect({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="block">
-      <span className="text-xs font-medium text-text-secondary">{label}</span>
-      <span className="relative block mt-1">
-        <Icon
-          size={14}
-          className={`absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none ${
-            value ? "text-primary-500" : "text-text-muted"
-          }`}
-        />
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className={`w-full pl-8 pr-3 py-2 border rounded-lg bg-surface text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 cursor-pointer ${
-            value ? "border-primary-300 font-medium" : "border-border"
-          }`}
-        >
-          <option value="">{allLabel}</option>
-          {options.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label} ({option.count})
-            </option>
-          ))}
-        </select>
-      </span>
-    </label>
+    <Field label={label}>
+      <Select size="sm" icon={Icon} value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">{allLabel}</option>
+        {options.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.label} ({option.count})
+          </option>
+        ))}
+      </Select>
+    </Field>
   );
 }
