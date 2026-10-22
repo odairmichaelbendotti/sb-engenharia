@@ -1,0 +1,2 @@
+# Scripts de shell rodam na VPS (Linux): sempre com quebra de linha LF
+*.sh text eol=lf
