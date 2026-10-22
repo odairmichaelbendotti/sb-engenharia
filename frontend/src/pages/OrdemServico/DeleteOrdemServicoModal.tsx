@@ -45,7 +45,7 @@ export function DeleteOrdemServicoModal({
   const hasObra = ordemServico.obra !== null;
 
   return (
-    <Modal open size="md">
+    <Modal open size="md" onClose={handleClose}>
       <ModalHeader
         icon={AlertTriangle}
         title="Excluir Ordem de Serviço Permanentemente"

@@ -157,7 +157,7 @@ export default function DesignSystem() {
         </Block>
       </div>
 
-      <Modal open={modalOpen} size="md" onBackdropClick={() => setModalOpen(false)}>
+      <Modal open={modalOpen} size="md" onClose={() => setModalOpen(false)}>
         <ModalHeader
           icon={FileSignature}
           title="Novo contrato"

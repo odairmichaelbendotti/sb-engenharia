@@ -217,7 +217,7 @@ export function ViewObraModal({ obra, onEdit, handleClose }: ViewObraModalProps)
   }, [handleClose]);
 
   return (
-    <Modal open size="xl" onBackdropClick={handleClose}>
+    <Modal open size="xl" onClose={handleClose}>
       <ModalHeader
         icon={HardHat}
         title={`${obra.identificacaoPatrimonial} · ${obra.nome}`}

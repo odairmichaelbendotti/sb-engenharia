@@ -68,7 +68,7 @@ export function CreateCompanyAccessModal({
   }
 
   return (
-    <Modal open size="sm">
+    <Modal open size="sm" onClose={handleClose}>
       <ModalHeader
         icon={KeyRound}
         title={result ? "Acesso criado" : "Criar Acesso da Empresa"}

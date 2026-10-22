@@ -233,7 +233,7 @@ export function EmpenhoModal({
 
   if (!isOpen) return null;
   return (
-    <Modal open size="xl">
+    <Modal open size="xl" onClose={handleClose}>
       <ModalHeader
         icon={Receipt}
         title={empenho ? "Editar Empenho" : "Novo Empenho"}

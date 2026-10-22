@@ -40,7 +40,7 @@ export function RoleGuideModal({ open, assignableRoles, onClose }: RoleGuideModa
   if (!open) return null;
 
   return (
-    <Modal open size="2xl" onBackdropClick={onClose}>
+    <Modal open size="2xl" onClose={onClose}>
       <ModalHeader
         icon={BookOpen}
         title="O que cada perfil pode fazer"

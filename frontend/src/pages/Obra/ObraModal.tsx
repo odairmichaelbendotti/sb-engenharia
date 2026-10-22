@@ -248,7 +248,7 @@ export function ObraModal({ obra, handleClose }: ObraModalProps) {
   }
 
   return (
-    <Modal open size="xl">
+    <Modal open size="xl" onClose={handleClose}>
       <ModalHeader
         icon={HardHat}
         title={obra ? "Editar Obra" : "Nova Obra"}

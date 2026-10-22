@@ -49,7 +49,7 @@ Todo controle de formulário e botão de ação usa os componentes base, importa
 | `Textarea` | mesma borda/foco; altura por `rows` |
 | `Field` | rótulo + controle + `hint`/`error`; `required` põe o asterisco; liga o `<label>` ao controle filho sozinho (contexto com `useId`), sem precisar de `id` |
 | `FormSection` | título de seção de formulário (ícone + texto em caixa alta + linha) com `space-y-4` nos filhos |
-| `Modal` + `ModalHeader`/`ModalBody`/`ModalFooter` | casca padrão (`size` sm–2xl, `flex flex-col`, 90vh). Com `StepForm`: Modal + ModalHeader + StepForm. `onBackdropClick` só se clicar fora deve fechar |
+| `Modal` + `ModalHeader`/`ModalBody`/`ModalFooter` | casca padrão (`size` sm–2xl, `flex flex-col`, 90vh). Com `StepForm`: Modal + ModalHeader + StepForm. `onClose` é **obrigatório**: todo modal fecha ao clicar fora (pedido do usuário, 2026-10-22); o clique precisa começar e terminar no fundo, para arrastar uma seleção de texto para fora não fechar o formulário. `elevated` põe o modal acima do mapa/painel lateral |
 | `SegmentedControl` | escolha única entre poucas opções (status Ativo/Finalizado/Cancelado); `tone` colore só o ícone da opção selecionada |
 | `Pagination` | rodapé de paginação das tabelas (`itemLabel` = "empenhos"...) |
 | `Badge` | etiqueta de status/categoria, `tone` neutral/success/warning/danger/info |
