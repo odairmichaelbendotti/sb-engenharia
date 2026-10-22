@@ -19,7 +19,6 @@
     "@types/cors": "^2.8.19",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.5.2",
-    "@types/pdfkit": "^0.17.6",
     "@types/pg": "^8.18.0",
     "prisma": "^7.4.2",
     "tsx": "^4.21.0",
@@ -27,6 +26,8 @@
     "vitest": "^5.0.2"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/source-serif-4": "^5.3.1",
     "@prisma/adapter-pg": "^7.4.2",
     "@prisma/client": "^7.4.2",
     "@types/express": "^5.0.6",
@@ -36,7 +37,7 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "pdfkit": "^0.17.2",
-    "pg": "^8.20.0"
+    "pg": "^8.20.0",
+    "puppeteer": "^24.43.1"
   }
 }

@@ -3,3 +3,6 @@ node_modules
 .env
 
 /src/generated/prisma
+
+# Chrome baixado pelo puppeteer para o PDF da OS (ver .puppeteerrc.cjs)
+/.cache

@@ -9,7 +9,7 @@ import { UpdateOrdemServicoUseCase } from "../../application/usecases/ordem-serv
 import { UpdateOrdemServicoStatusUseCase } from "../../application/usecases/ordem-servico/UpdateOrdemServicoStatusUseCase.js";
 import { DeleteOrdemServicoUseCase } from "../../application/usecases/ordem-servico/DeleteOrdemServicoUseCase.js";
 import { GenerateOrdemServicoDocumentUseCase } from "../../application/usecases/ordem-servico/GenerateOrdemServicoDocumentUseCase.js";
-import { PdfKitOrdemServicoGenerator } from "../../infrastructure/pdf/PdfKitOrdemServicoGenerator.js";
+import { PuppeteerOrdemServicoGenerator } from "../../infrastructure/pdf/PuppeteerOrdemServicoGenerator.js";
 import { GetProximoNumeroOrdemServicoUseCase } from "../../application/usecases/ordem-servico/GetProximoNumeroOrdemServicoUseCase.js";
 import { OrdemServicoController } from "../controllers/OrdemServicoController.js";
 import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
@@ -31,7 +31,7 @@ const updateOrdemServicoStatusUseCase = new UpdateOrdemServicoStatusUseCase(repo
 const deleteOrdemServicoUseCase = new DeleteOrdemServicoUseCase(repository);
 const generateOrdemServicoDocumentUseCase = new GenerateOrdemServicoDocumentUseCase(
   repository,
-  new PdfKitOrdemServicoGenerator(),
+  new PuppeteerOrdemServicoGenerator(),
 );
 const getProximoNumeroOrdemServicoUseCase = new GetProximoNumeroOrdemServicoUseCase(repository);
 
