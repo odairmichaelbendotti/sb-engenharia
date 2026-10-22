@@ -10,6 +10,7 @@ import { UpdateOrdemServicoStatusUseCase } from "../../application/usecases/orde
 import { DeleteOrdemServicoUseCase } from "../../application/usecases/ordem-servico/DeleteOrdemServicoUseCase.js";
 import { GenerateOrdemServicoDocumentUseCase } from "../../application/usecases/ordem-servico/GenerateOrdemServicoDocumentUseCase.js";
 import { PdfKitOrdemServicoGenerator } from "../../infrastructure/pdf/PdfKitOrdemServicoGenerator.js";
+import { GetProximoNumeroOrdemServicoUseCase } from "../../application/usecases/ordem-servico/GetProximoNumeroOrdemServicoUseCase.js";
 import { OrdemServicoController } from "../controllers/OrdemServicoController.js";
 import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
@@ -32,6 +33,7 @@ const generateOrdemServicoDocumentUseCase = new GenerateOrdemServicoDocumentUseC
   repository,
   new PdfKitOrdemServicoGenerator(),
 );
+const getProximoNumeroOrdemServicoUseCase = new GetProximoNumeroOrdemServicoUseCase(repository);
 
 const ordemServicoController = new OrdemServicoController(
   createOrdemServicoUseCase,
@@ -41,6 +43,7 @@ const ordemServicoController = new OrdemServicoController(
   updateOrdemServicoStatusUseCase,
   deleteOrdemServicoUseCase,
   generateOrdemServicoDocumentUseCase,
+  getProximoNumeroOrdemServicoUseCase,
 );
 
 const token = new TokenGenerator();
@@ -56,6 +59,14 @@ OrdemServicoRoutes.post(
   // ENGENHARIA só visualiza o administrativo, mas pode abrir OS
   requireCapability.handle("createOrdemServico"),
   (req, res) => ordemServicoController.create(req, res),
+);
+
+// Número que a próxima OS do lote receberia: o formulário de criação o mostra ao escolher contrato e lote
+OrdemServicoRoutes.get(
+  "/ordem-servico/proximo-numero",
+  authMiddleware.handle,
+  requireCapability.handle("createOrdemServico"),
+  (req, res) => ordemServicoController.proximoNumero(req, res),
 );
 
 // EMPRESA também lista, restrita às OS dos próprios contratos (escopo aplicado no use case)

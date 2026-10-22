@@ -6,6 +6,7 @@ import type { UpdateOrdemServicoUseCase } from "../../application/usecases/ordem
 import type { UpdateOrdemServicoStatusUseCase } from "../../application/usecases/ordem-servico/UpdateOrdemServicoStatusUseCase.js";
 import type { DeleteOrdemServicoUseCase } from "../../application/usecases/ordem-servico/DeleteOrdemServicoUseCase.js";
 import type { GenerateOrdemServicoDocumentUseCase } from "../../application/usecases/ordem-servico/GenerateOrdemServicoDocumentUseCase.js";
+import type { GetProximoNumeroOrdemServicoUseCase } from "../../application/usecases/ordem-servico/GetProximoNumeroOrdemServicoUseCase.js";
 import { DomainError } from "../../domain/errors/DomainError.js";
 import type { OrdemServicoEmpenhoInput, OrdemServicoUrgenciaValue } from "../../domain/entities/OrdemServico.js";
 
@@ -77,7 +78,28 @@ export class OrdemServicoController {
     private updateOrdemServicoStatus: UpdateOrdemServicoStatusUseCase,
     private deleteOrdemServico: DeleteOrdemServicoUseCase,
     private generateOrdemServicoDocument: GenerateOrdemServicoDocumentUseCase,
+    private getProximoNumero: GetProximoNumeroOrdemServicoUseCase,
   ) {}
+
+  async proximoNumero(req: Request, res: Response) {
+    try {
+      const { user } = req;
+      if (!user) throw new DomainError("User not found");
+
+      const { lote_id, ano } = req.query;
+      if (Array.isArray(lote_id) || Array.isArray(ano)) throw new DomainError("Invalid query");
+      const data = await this.getProximoNumero.execute({
+        user,
+        lote_id: typeof lote_id === "string" && lote_id ? lote_id : null,
+        // Sem ano na consulta vale o ano corrente (a OS nova nasce com a data de hoje)
+        ano: typeof ano === "string" && ano ? Number(ano) : new Date().getFullYear(),
+      });
+      res.status(200).json(data);
+    } catch (error) {
+      if (error instanceof DomainError) return res.status(400).json({ message: error.message });
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  }
 
   async create(req: Request, res: Response) {
     try {

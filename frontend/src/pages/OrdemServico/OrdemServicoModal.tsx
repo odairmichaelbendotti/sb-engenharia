@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
+import { StepForm, type FormStep } from "../../components/StepForm";
 import { useEmpenhos } from "../../store/empenhos";
 import { useContratos } from "../../store/contratos";
 import { useOrdensServico } from "../../store/ordensServico";
@@ -129,7 +130,13 @@ function Label({ children, required }: { children: React.ReactNode; required?: b
 }
 
 export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoModalProps) {
-  const { createOrdemServico, updateOrdemServico, updateOrdemServicoStatus, fetchOrdensServico } = useOrdensServico();
+  const {
+    createOrdemServico,
+    updateOrdemServico,
+    updateOrdemServicoStatus,
+    fetchOrdensServico,
+    fetchProximoNumero,
+  } = useOrdensServico();
   const { data: empenhosData, fetchListEmpenhos } = useEmpenhos();
   const { data: contratosData, fetchContratos } = useContratos();
   const { obraOptions, fetchObraOptions } = useObras();
@@ -213,6 +220,32 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
   const lote = lotes.find((l) => l.id === form.lote_id);
   const fiscaisTecnicos = (contratoDados?.fiscais ?? []).filter((f) => f.tipo === "TECNICO");
   const fiscaisAdministrativos = (contratoDados?.fiscais ?? []).filter((f) => f.tipo === "ADMINISTRATIVO");
+
+  // Número da OS nova: fica oculto até o contrato (e o lote, se o contrato tiver) serem escolhidos.
+  // É o próximo da sequência; o número definitivo sai na criação
+  const anoEmissao = form.dataEmissao ? Number(form.dataEmissao.slice(0, 4)) : new Date().getFullYear();
+  const numeroKey =
+    !ordemServico && contratoDados && (lotes.length === 0 || form.lote_id)
+      ? `${selectedContratoId}|${form.lote_id}|${anoEmissao}`
+      : null;
+  const [numeroPrevisto, setNumeroPrevisto] = useState<{ key: string; numero: string } | null>(null);
+  useEffect(() => {
+    if (!numeroKey) return;
+    let cancelled = false;
+    fetchProximoNumero(form.lote_id, anoEmissao)
+      .then((numero) => {
+        if (!cancelled) setNumeroPrevisto({ key: numeroKey, numero });
+      })
+      .catch(() => {
+        if (!cancelled) setNumeroPrevisto(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [numeroKey, form.lote_id, anoEmissao, fetchProximoNumero]);
+  const numeroRevelado = numeroKey !== null && numeroPrevisto?.key === numeroKey ? numeroPrevisto.numero : null;
+  // Na edição o número já existe e aparece desde o começo
+  const mostrarNumero = ordemServico !== null || numeroRevelado !== null;
 
   // Na edição, o que esta OS já usa de cada empenho volta a contar como saldo livre dela
   const valorJaNaOS = useMemo(
@@ -318,71 +351,69 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const isCreate = ordemServico === null;
+  // OS com número gerado pelo sistema não tem o número editado; as antigas ainda podem corrigi-lo
+  const numeroFixo = ordemServico !== null && ordemServico.sequencia !== null;
+  const mobilizacaoNum = parseInt(form.prazoMobilizacaoDias, 10);
+  const empenhosPreenchidos = vinculos.filter((v) => v.empenho_id);
 
-    const isCreate = !ordemServico;
-    // O número só é digitado na edição de uma OS antiga (as novas têm número gerado pelo sistema)
-    if (!isCreate && ordemServico.sequencia === null && !form.numero) {
-      toast.error("Preencha o número da ordem de serviço");
-      return;
-    }
-    if (!form.dataInicio || !termino) {
-      toast.error("Informe o início e o prazo em dias da ordem de serviço");
-      return;
-    }
-    const mobilizacao = parseInt(form.prazoMobilizacaoDias, 10);
-    if (isNaN(mobilizacao) || mobilizacao < 0 || mobilizacao > prazoDiasNum) {
-      toast.error("O prazo de mobilização deve ser de 0 até o prazo total da OS");
-      return;
-    }
-    if (!selectedContratoId) {
-      toast.error("Selecione o contrato da ordem de serviço");
-      return;
-    }
-    if (lotes.length > 0 && isCreate && !form.lote_id) {
-      toast.error("Selecione o lote da ordem de serviço");
-      return;
-    }
+  // Validação de cada etapa (os campos do documento só são obrigatórios no cadastro: as OS
+  // antigas ainda não os têm)
+  function validateContrato() {
+    if (!isCreate && ordemServico.sequencia === null && !form.numero) return "Preencha o número da ordem de serviço";
+    if (!selectedContratoId) return "Selecione o contrato da ordem de serviço";
+    if (lotes.length > 0 && isCreate && !form.lote_id) return "Selecione o lote da ordem de serviço";
+    return null;
+  }
 
-    if (isCreate) {
-      const faltando = [
-        [form.setorRequisitante, "o setor requisitante"],
-        [form.urgencia, "a classificação de urgência"],
-        [form.dataVistoria, "a data da vistoria"],
-        [form.descricaoProblema.trim(), "a descrição do problema"],
-        [totalComBdi > 0 ? "ok" : "", "o total com BDI"],
-        [form.fiscalTecnico_id, "o fiscal técnico"],
-        [form.fiscalAdministrativo_id, "o fiscal administrativo"],
-        [form.fiscalSetorial.trim(), "o fiscal setorial"],
-      ].find(([valor]) => !valor);
-      if (faltando) {
-        toast.error(`Informe ${faltando[1]} da ordem de serviço`);
-        return;
-      }
-    }
-
-    const preenchidos = vinculos.filter((v) => v.empenho_id);
-    if (preenchidos.length === 0) {
-      toast.error("Vincule pelo menos um empenho à ordem de serviço");
-      return;
-    }
-    for (const v of preenchidos) {
+  function validateEmpenhos() {
+    if (empenhosPreenchidos.length === 0) return "Vincule pelo menos um empenho à ordem de serviço";
+    for (const v of empenhosPreenchidos) {
       const valor = parseCurrencyMask(v.valor);
       const numero = empenhos.find((e) => e.id === v.empenho_id)?.numero ?? "";
-      if (valor <= 0) {
-        toast.error(`Informe o valor destinado do empenho ${numero}`);
-        return;
-      }
+      if (valor <= 0) return `Informe o valor destinado do empenho ${numero}`;
       if (Math.round(valor * 100) > Math.round(saldoLivre(v.empenho_id) * 100)) {
-        toast.error(`O valor do empenho ${numero} excede o saldo livre dele (${formatCurrency(saldoLivre(v.empenho_id))})`);
-        return;
+        return `O valor do empenho ${numero} excede o saldo livre dele (${formatCurrency(saldoLivre(v.empenho_id))})`;
       }
     }
+    return null;
+  }
 
+  function validateServico() {
+    if (!isCreate) return null;
+    if (!form.setorRequisitante) return "Informe o setor requisitante da ordem de serviço";
+    if (!form.dataVistoria) return "Informe a data da vistoria da ordem de serviço";
+    if (!form.urgencia) return "Informe a classificação de urgência da ordem de serviço";
+    if (!form.descricaoProblema.trim()) return "Informe a descrição do problema da ordem de serviço";
+    return null;
+  }
+
+  function validatePrazo() {
+    if (!form.dataInicio || !termino) return "Informe o início e o prazo em dias da ordem de serviço";
+    if (isNaN(mobilizacaoNum) || mobilizacaoNum < 0 || mobilizacaoNum > prazoDiasNum) {
+      return "O prazo de mobilização deve ser de 0 até o prazo total da OS";
+    }
+    return null;
+  }
+
+  function validateValor() {
+    if (isCreate && !(totalComBdi > 0)) return "Informe o total com BDI da ordem de serviço";
+    return null;
+  }
+
+  function validateFiscais() {
+    if (!isCreate) return null;
+    if (!form.fiscalTecnico_id) return "Informe o fiscal técnico da ordem de serviço";
+    if (!form.fiscalAdministrativo_id) return "Informe o fiscal administrativo da ordem de serviço";
+    if (!form.fiscalSetorial.trim()) return "Informe o fiscal setorial da ordem de serviço";
+    return null;
+  }
+
+  async function submit() {
+    if (!termino) return;
     const payload: CreateOrdemServicoPayload = {
       ...(isCreate ? {} : { numero: form.numero }),
-      empenhos: preenchidos.map((v) => ({ empenho_id: v.empenho_id, valor: parseCurrencyMask(v.valor) })),
+      empenhos: empenhosPreenchidos.map((v) => ({ empenho_id: v.empenho_id, valor: parseCurrencyMask(v.valor) })),
       dataInicio: form.dataInicio,
       dataPrevisaoTermino: termino,
       obra_id: obraId || null,
@@ -392,7 +423,7 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
       dataVistoria: form.dataVistoria || null,
       descricaoProblema: form.descricaoProblema,
       dataEmissao: form.dataEmissao,
-      prazoMobilizacaoDias: mobilizacao,
+      prazoMobilizacaoDias: mobilizacaoNum,
       prazoDias: prazoDiasNum,
       totalComBdi: totalComBdi > 0 ? totalComBdi : null,
       fiscalSetorial: form.fiscalSetorial,
@@ -421,65 +452,56 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
   }
 
   const contratoFixo = ordemServico?.empenho.contrato;
-  // OS com número gerado pelo sistema não tem o número editado; as antigas ainda podem corrigi-lo
-  const numeroFixo = ordemServico !== null && ordemServico.sequencia !== null;
 
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl border border-border">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-linear-to-r from-primary-50/50 to-transparent shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
-              <ClipboardList size={20} className="text-primary-600" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-text-primary">
-                {ordemServico ? "Editar Ordem de Serviço" : "Nova Ordem de Serviço"}
-              </h2>
-              <p className="text-sm text-text-secondary">
-                {ordemServico ? `Editando: ${ordemServico.numero}` : "Preencha os dados para cadastrar a ordem de serviço"}
-              </p>
-            </div>
-          </div>
-          <button onClick={handleClose} className="p-2 cursor-pointer hover:bg-surface-muted rounded-lg transition-colors">
-            <X size={20} className="text-text-secondary" />
-          </button>
-        </div>
-
-        <form onBlur={createBlurNormalizer(setForm, ORDEM_SERVICO_FIELD_RULES)} className="p-5 overflow-y-auto space-y-5" onSubmit={handleSubmit}>
-          {/* Identificação */}
+  const steps: FormStep[] = [
+    {
+      id: "contrato",
+      label: "Contrato",
+      icon: FileSignature,
+      validate: validateContrato,
+      content: (
+        <>
+          {/* Identificação: o número só aparece depois de escolher o contrato e o lote */}
           <div className="space-y-4">
             <SectionTitle icon={Hash} label="Identificação" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label required={ordemServico !== null && !numeroFixo}>Número</Label>
-                {!ordemServico ? (
-                  <p className="text-sm text-text-secondary rounded-lg border border-dashed border-border bg-surface-muted px-3 py-2.5">
-                    Gerado automaticamente ao cadastrar (ex.: OS 010/BAFL/2026-L1)
-                  </p>
-                ) : numeroFixo ? (
-                  <p className="text-sm font-medium text-text-primary rounded-lg border border-border bg-surface-muted px-3 py-2.5">
-                    {ordemServico.numero}
-                  </p>
-                ) : (
-                  <div className="relative">
-                    <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-                    <input
-                      name="numero"
-                      value={form.numero}
-                      onChange={handleChange}
-                      placeholder="04/01/BAFL/2026"
-                      className={iconInputClass}
-                    />
-                  </div>
-                )}
+            <div
+              className={`grid transition-[grid-template-columns] duration-500 ease-out ${
+                mostrarNumero ? "grid-cols-[1fr_1fr]" : "grid-cols-[0fr_1fr]"
+              }`}
+            >
+              <div className="overflow-hidden min-w-0" aria-hidden={!mostrarNumero}>
+                <div
+                  className={`pr-4 transition-opacity duration-500 ${mostrarNumero ? "opacity-100" : "opacity-0"}`}
+                >
+                  <Label required={!isCreate && !numeroFixo}>Número</Label>
+                  {!isCreate && !numeroFixo ? (
+                    <div className="relative">
+                      <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                      <input
+                        name="numero"
+                        value={form.numero}
+                        onChange={handleChange}
+                        placeholder="04/01/BAFL/2026"
+                        className={iconInputClass}
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-sm font-semibold text-text-primary rounded-lg border border-border bg-surface-muted px-3 py-2.5 wrap-break-word">
+                      {ordemServico?.numero ?? numeroRevelado}
+                    </p>
+                  )}
+                </div>
               </div>
-              <div>
+              <div className="min-w-0">
                 <Label>Data de emissão</Label>
                 <input type="date" name="dataEmissao" value={form.dataEmissao} onChange={handleChange} className={inputClass} />
               </div>
             </div>
+            {isCreate && !mostrarNumero && (
+              <p className="text-xs text-text-muted">
+                O número da OS aparece aqui quando você escolher o contrato{lotes.length > 0 ? " e o lote" : ""}.
+              </p>
+            )}
           </div>
 
           {/* Contrato */}
@@ -495,7 +517,7 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
                     {contratoFixo.identificador} — {contratoFixo.descricaoCurta}
                   </p>
                   <p className="text-xs text-text-secondary">
-                    {contratoFixo.company.name} · o contrato da OS não muda; os empenhos abaixo são dele
+                    {contratoFixo.company.name} · o contrato da OS não muda; os empenhos são dele
                   </p>
                 </div>
               </div>
@@ -544,7 +566,16 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
               </div>
             )}
           </div>
-
+        </>
+      ),
+    },
+    {
+      id: "empenhos",
+      label: "Empenhos e obra",
+      icon: Layers2,
+      validate: validateEmpenhos,
+      content: (
+        <>
           {/* Empenhos */}
           <div className="space-y-3">
             <SectionTitle icon={Layers2} label="Empenhos" />
@@ -660,67 +691,82 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
             </div>
             <p className="text-xs text-text-muted">
               {empenhosEscolhidos.length === 0
-                ? "Escolha o contrato e o empenho acima para ver as obras disponíveis."
+                ? "Escolha o empenho acima para ver as obras disponíveis."
                 : "Uma obra pode ter várias OS (ex.: um serviço que faltou vira uma nova OS na mesma obra)."}
             </p>
           </div>
-
-          {/* Serviço */}
-          <div className="space-y-4">
-            <SectionTitle icon={Wrench} label="Serviço" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label required={!ordemServico}>Setor requisitante</Label>
-                <input
-                  name="setorRequisitante"
-                  value={form.setorRequisitante}
-                  onChange={handleChange}
-                  placeholder="SCOAM-FL"
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <Label required={!ordemServico}>Data da vistoria</Label>
-                <input type="date" name="dataVistoria" value={form.dataVistoria} onChange={handleChange} className={inputClass} />
-              </div>
-            </div>
+        </>
+      ),
+    },
+    {
+      id: "servico",
+      label: "Serviço",
+      icon: Wrench,
+      validate: validateServico,
+      content: (
+        <div className="space-y-4">
+          <SectionTitle icon={Wrench} label="Serviço" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <Label required={!ordemServico}>Classificação de urgência</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {URGENCIA_OPTIONS.map((option) => {
-                  const selected = form.urgencia === option.value;
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => setForm((prev) => ({ ...prev, urgencia: option.value }))}
-                      className={`text-left px-3 py-2 rounded-lg border transition-colors cursor-pointer ${
-                        selected
-                          ? "bg-primary-50 border-primary-300 text-primary-700"
-                          : "bg-surface border-border text-text-secondary hover:border-primary-200"
-                      }`}
-                    >
-                      <span className="block text-sm font-medium">{option.label}</span>
-                      <span className="block text-xs text-text-muted">{option.hint}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div>
-              <Label required={!ordemServico}>Descrição do problema</Label>
-              <textarea
-                name="descricaoProblema"
-                value={form.descricaoProblema}
+              <Label required={!ordemServico}>Setor requisitante</Label>
+              <input
+                name="setorRequisitante"
+                value={form.setorRequisitante}
                 onChange={handleChange}
-                rows={5}
-                placeholder="Descreva o problema encontrado na vistoria e o serviço necessário"
-                className={`${inputClass} resize-y`}
+                placeholder="SCOAM-FL"
+                className={inputClass}
               />
             </div>
+            <div>
+              <Label required={!ordemServico}>Data da vistoria</Label>
+              <input type="date" name="dataVistoria" value={form.dataVistoria} onChange={handleChange} className={inputClass} />
+            </div>
           </div>
-
+          <div>
+            <Label required={!ordemServico}>Classificação de urgência</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {URGENCIA_OPTIONS.map((option) => {
+                const selected = form.urgencia === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setForm((prev) => ({ ...prev, urgencia: option.value }))}
+                    className={`text-left px-3 py-2 rounded-lg border transition-colors cursor-pointer ${
+                      selected
+                        ? "bg-primary-50 border-primary-300 text-primary-700"
+                        : "bg-surface border-border text-text-secondary hover:border-primary-200"
+                    }`}
+                  >
+                    <span className="block text-sm font-medium">{option.label}</span>
+                    <span className="block text-xs text-text-muted">{option.hint}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <Label required={!ordemServico}>Descrição do problema</Label>
+            <textarea
+              name="descricaoProblema"
+              value={form.descricaoProblema}
+              onChange={handleChange}
+              rows={4}
+              placeholder="Descreva o problema encontrado na vistoria e o serviço necessário"
+              className={`${inputClass} resize-y`}
+            />
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "prazo",
+      label: "Prazo",
+      icon: CalendarDays,
+      validate: validatePrazo,
+      content: (
+        <>
           {/* Cronograma */}
           <div className="space-y-4">
             <SectionTitle icon={CalendarDays} label="Cronograma" />
@@ -787,6 +833,16 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
             </div>
           </div>
 
+        </>
+      ),
+    },
+    {
+      id: "valor",
+      label: "Valor",
+      icon: DollarSign,
+      validate: validateValor,
+      content: (
+        <>
           {/* Financeiro */}
           <div className="space-y-3">
             <SectionTitle icon={DollarSign} label="Financeiro" />
@@ -835,7 +891,16 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
               </p>
             )}
           </div>
-
+        </>
+      ),
+    },
+    {
+      id: "fiscais",
+      label: "Fiscais e condições",
+      icon: ShieldCheck,
+      validate: validateFiscais,
+      content: (
+        <>
           {/* Fiscais */}
           <div className="space-y-4">
             <SectionTitle icon={ShieldCheck} label="Fiscais" />
@@ -931,60 +996,76 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
               Adicionar condição
             </button>
           </div>
-
-          {/* Status (somente edição) */}
-          {ordemServico && (
-            <div className="space-y-4">
-              <SectionTitle icon={Activity} label="Status da Ordem de Serviço" />
-              <div className="bg-surface-muted rounded-lg p-4 border border-border">
-                <div className="flex flex-wrap gap-2">
-                  {STATUS_OPTIONS.map(({ value, label, icon: Icon, activeClass, hoverClass }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => handleStatusChange(value)}
-                      disabled={updatingStatus !== null}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium border transition-colors
-                        ${currentStatus === value ? activeClass : `bg-surface text-text-secondary border-border ${hoverClass}`}
-                        ${updatingStatus !== null ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
-                    >
-                      {updatingStatus === value ? (
-                        <Loader size={14} className="animate-spin" />
-                      ) : (
-                        <Icon size={14} />
-                      )}
-                      {label}
-                    </button>
-                  ))}
+        </>
+      ),
+    },
+    // Situação: só na edição
+    ...(ordemServico
+      ? [
+          {
+            id: "situacao",
+            label: "Situação",
+            icon: Activity,
+            content: (
+              <div className="space-y-4">
+                <SectionTitle icon={Activity} label="Status da Ordem de Serviço" />
+                <div className="bg-surface-muted rounded-lg p-4 border border-border">
+                  <div className="flex flex-wrap gap-2">
+                    {STATUS_OPTIONS.map(({ value, label, icon: Icon, activeClass, hoverClass }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => handleStatusChange(value)}
+                        disabled={updatingStatus !== null}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium border transition-colors
+                          ${currentStatus === value ? activeClass : `bg-surface text-text-secondary border-border ${hoverClass}`}
+                          ${updatingStatus !== null ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+                      >
+                        {updatingStatus === value ? <Loader size={14} className="animate-spin" /> : <Icon size={14} />}
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            ),
+          } satisfies FormStep,
+        ]
+      : []),
+  ];
 
-          {/* Footer */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-border">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="px-5 py-2.5 cursor-pointer text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium shadow-sm hover:shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <Loader size={18} className="animate-spin" />
-              ) : ordemServico ? (
-                "Salvar Alterações"
-              ) : (
-                "Cadastrar Ordem de Serviço"
-              )}
-            </button>
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-surface rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl border border-border">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-linear-to-r from-primary-50/50 to-transparent shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
+              <ClipboardList size={20} className="text-primary-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-text-primary">
+                {ordemServico ? "Editar Ordem de Serviço" : "Nova Ordem de Serviço"}
+              </h2>
+              <p className="text-sm text-text-secondary">
+                {ordemServico ? `Editando: ${ordemServico.numero}` : "Preencha os dados para cadastrar a ordem de serviço"}
+              </p>
+            </div>
           </div>
-        </form>
+          <button onClick={handleClose} className="p-2 cursor-pointer hover:bg-surface-muted rounded-lg transition-colors">
+            <X size={20} className="text-text-secondary" />
+          </button>
+        </div>
+
+        <StepForm
+          steps={steps}
+          isEdit={ordemServico !== null}
+          isSubmitting={isLoading}
+          submitLabel={ordemServico ? "Salvar Alterações" : "Cadastrar Ordem de Serviço"}
+          onCancel={handleClose}
+          onSubmit={submit}
+          onBlur={createBlurNormalizer(setForm, ORDEM_SERVICO_FIELD_RULES)}
+        />
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ import {
   Activity,
   AlertCircle,
 } from "lucide-react";
+import { StepForm, type FormStep } from "../../components/StepForm";
 import { useContratos } from "../../store/contratos";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -134,30 +135,30 @@ export function EmpenhoModal({
     }));
   }
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  const numericValue = parseCurrencyMask(formState.value);
 
-    if (!formState.numero || !formState.description || !formState.category || !formState.value) {
-      toast.error("Preencha todos os campos obrigatórios");
-      return;
+  // Validação de cada etapa: devolve a mensagem do primeiro problema ou null
+  function validateIdentificacao() {
+    if (!formState.numero || !formState.category || !formState.value) {
+      return "Preencha o número, o valor e a categoria do empenho";
     }
+    if (numericValue <= 0) return "Valor deve ser um número válido maior que zero";
+    return null;
+  }
 
-    if (!formState.contrato_id) {
-      toast.error("Selecione um contrato");
-      return;
-    }
+  function validateContrato() {
+    return formState.contrato_id ? null : "Selecione um contrato";
+  }
 
-    const numericValue = parseCurrencyMask(formState.value);
-    if (numericValue <= 0) {
-      toast.error("Valor deve ser um número válido maior que zero");
-      return;
-    }
-
+  function validateDescricao() {
+    if (!formState.description) return "Preencha a descrição do empenho";
     if (new Date(formState.startAt) > new Date(formState.endAt)) {
-      toast.error("Data de início deve ser menor que a data de término");
-      return;
+      return "Data de início deve ser menor que a data de término";
     }
+    return null;
+  }
 
+  async function submit() {
     const payload = { ...formState, value: numericValue };
 
     try {
@@ -234,7 +235,21 @@ export function EmpenhoModal({
           </button>
         </div>
 
-        <form onBlur={createBlurNormalizer(setFormState, EMPENHO_FIELD_RULES)} className="p-5 overflow-y-auto space-y-5" onSubmit={handleSubmit}>
+        <StepForm
+          isEdit={empenho !== null}
+          isSubmitting={isLoading}
+          submitLabel={empenho ? "Salvar Alterações" : "Criar Empenho"}
+          onCancel={handleClose}
+          onSubmit={submit}
+          onBlur={createBlurNormalizer(setFormState, EMPENHO_FIELD_RULES)}
+          steps={[
+            {
+              id: "identificacao",
+              label: "Identificação",
+              icon: Hash,
+              validate: validateIdentificacao,
+              content: (
+                <>
           {/* Seção: Identificação */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
@@ -305,6 +320,16 @@ export function EmpenhoModal({
             </div>
           </div>
 
+                </>
+              ),
+            },
+            {
+              id: "contrato",
+              label: "Contrato",
+              icon: FileSignature,
+              validate: validateContrato,
+              content: (
+                <>
           {/* Seção: Contrato */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
@@ -362,6 +387,16 @@ export function EmpenhoModal({
             </div>
           </div>
 
+                </>
+              ),
+            },
+            {
+              id: "descricao",
+              label: "Descrição e vigência",
+              icon: AlignLeft,
+              validate: validateDescricao,
+              content: (
+                <>
           {/* Seção: Descrição */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
@@ -416,8 +451,19 @@ export function EmpenhoModal({
             </div>
           </div>
 
+                </>
+              ),
+            },
+            // Situação: só na edição
+            ...(empenho
+              ? [
+                  {
+                    id: "situacao",
+                    label: "Situação",
+                    icon: Activity,
+                    content: (
+                      <>
           {/* Seção: Status e Ações (apenas em edição) */}
-          {empenho && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
                 <AlertCircle size={16} className="text-primary-500" />
@@ -498,32 +544,13 @@ export function EmpenhoModal({
                 </div>
               </div>
             </div>
-          )}
-
-          {/* Footer Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-border shrink-0">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="px-5 py-2.5 cursor-pointer text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex items-center justify-center px-5 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <Loader className="animate-spin" size={18} />
-              ) : empenho ? (
-                "Salvar Alterações"
-              ) : (
-                "Criar Empenho"
-              )}
-            </button>
-          </div>
-        </form>
+                      </>
+                    ),
+                  } satisfies FormStep,
+                ]
+              : []),
+          ]}
+        />
       </div>
     </div>
   );
