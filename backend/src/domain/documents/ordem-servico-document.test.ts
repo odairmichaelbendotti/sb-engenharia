@@ -109,6 +109,8 @@ describe("buildOrdemServicoDocumentModel", () => {
     // 50.547,24 / 1,2119 e 50.547,24 x (1 - 0,248)
     expect(model.orcamento.total).toBe("R$ 41.709,08");
     expect(model.orcamento.totalComBdiEDesconto).toBe("R$ 38.011,52");
+    expect(model.orcamento.valorDesconto).toBe("R$ 12.535,72");
+    expect(model.preco.lotes[1]).toEqual({ lote: "04 – DO", desconto: "24,8%", selecionado: true });
     expect(model.identificacao.lotes.map((l) => l.selecionado)).toEqual([false, true]);
     expect(model.identificacao.urgencias.filter((u) => u.selecionado).map((u) => u.texto)).toEqual([
       "Programada (1-3 meses)",
@@ -117,7 +119,12 @@ describe("buildOrdemServicoDocumentModel", () => {
     expect(model.identificacao.areaConstruida).toBe("60,06 m²");
     expect(model.inicio.prazo).toBe("49 (quarenta e nove) dias corridos");
     expect(model.mobilizacao).toEqual({ dias: 7, extenso: "sete" });
-    expect(model.fiscais.tecnico).toBe("1º SGT FLORIANO – 5174 / florianocaagf@fab.mil.br");
+    expect(model.objeto).toBe("MANUTENÇÃO PREDIAL BAFL");
+    expect(model.cronograma).toEqual({ inicio: "19/08/2026", termino: "06/10/2026" });
+    expect(model.fiscais.tecnico).toEqual({
+      nome: "1º SGT FLORIANO",
+      contato: "Ramal 5174 · florianocaagf@fab.mil.br",
+    });
     expect(model.local).toBe("Florianópolis, 18 de agosto de 2026.");
   });
 

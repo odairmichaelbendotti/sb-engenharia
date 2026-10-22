@@ -4,9 +4,14 @@ import type { OrdemServicoDocumentData } from "../repositories/IOrdemServicoRepo
 // Item de uma lista de opções do documento ("[ X ] 04 - DO"), com a marcada em destaque
 export type DocumentOption = { texto: string; selecionado: boolean };
 
+// Fiscal do contrato designado na OS; contato = ramal e e-mail
+export type DocumentFiscal = { nome: string; contato: string };
+
 // Tudo o que o PDF mostra, já formatado. Valores vazios ficam como string vazia (OS antigas)
 export type OrdemServicoDocumentModel = {
   titulo: string;
+  // Objeto da OS no cabeçalho ("MANUTENÇÃO PREDIAL BAFL")
+  objeto: string;
   dataEmissao: string;
   numero: string;
   processo: string;
@@ -30,20 +35,24 @@ export type OrdemServicoDocumentModel = {
   };
   preco: {
     // Lotes e descontos do contrato; vazio quando o contrato não tem lotes
-    lotes: DocumentOption[];
+    lotes: { lote: string; desconto: string; selecionado: boolean }[];
     bdi: string;
   };
   orcamento: {
     total: string;
     totalComBdi: string;
+    // Quanto o desconto do lote abate do total com BDI (vazio sem total com BDI)
+    valorDesconto: string;
     totalComBdiEDesconto: string;
     bdi: string;
     desconto: string;
     dataBaseSinapi: string;
   };
   prazo: { dias: string };
+  // Datas do cronograma da OS em dd/mm/aaaa, para o quadro-resumo
+  cronograma: { inicio: string; termino: string };
   condicoesEspeciais: string[];
-  fiscais: { tecnico: string; administrativo: string; setorial: string };
+  fiscais: { tecnico: DocumentFiscal; administrativo: DocumentFiscal; setorial: string };
   inicio: { data: string; prazo: string };
   assinaturas: { empresa: string; cnpj: string; fiscalTecnico: string };
   local: string;
@@ -165,8 +174,10 @@ function formatEdificacao(obra: OrdemServicoDocumentData["obra"]): string {
   return partes.length > 0 ? partes.join(" / ") : obra.identificacaoPatrimonial;
 }
 
-function formatFiscal(fiscal: { nome: string; ramal: string; email: string } | null): string {
-  return fiscal ? `${fiscal.nome} – ${fiscal.ramal} / ${fiscal.email}` : "";
+function formatFiscal(fiscal: { nome: string; ramal: string; email: string } | null): DocumentFiscal {
+  if (!fiscal) return { nome: "", contato: "" };
+  const contato = [fiscal.ramal && `Ramal ${fiscal.ramal}`, fiscal.email].filter(Boolean).join(" · ");
+  return { nome: fiscal.nome, contato };
 }
 
 export function buildOrdemServicoDocumentModel(data: OrdemServicoDocumentData): OrdemServicoDocumentModel {
@@ -182,9 +193,13 @@ export function buildOrdemServicoDocumentModel(data: OrdemServicoDocumentData): 
       ? {
           total: formatMoeda(arredondar(totalComBdi / (1 + bdi / 100))),
           totalComBdi: formatMoeda(arredondar(totalComBdi)),
+          // Diferença dos valores já arredondados, para a conta fechar no papel
+          valorDesconto: formatMoeda(
+            arredondar(arredondar(totalComBdi) - arredondar(totalComBdi * (1 - desconto / 100))),
+          ),
           totalComBdiEDesconto: formatMoeda(arredondar(totalComBdi * (1 - desconto / 100))),
         }
-      : { total: "", totalComBdi: "", totalComBdiEDesconto: formatMoeda(os.valor) };
+      : { total: "", totalComBdi: "", valorDesconto: "", totalComBdiEDesconto: formatMoeda(os.valor) };
 
   const empresa = contrato.company.name;
   const cnpj = formatCnpj(contrato.company.cnpj);
@@ -193,8 +208,9 @@ export function buildOrdemServicoDocumentModel(data: OrdemServicoDocumentData): 
       texto: `${String(l.numero).padStart(2, "0")} – ${l.nome}`,
       selecionado: loteSelecionado && l.numero === lote?.numero,
     }));
-  const lotesComDesconto: DocumentOption[] = contrato.lotes.map((l) => ({
-    texto: `Lote ${String(l.numero).padStart(2, "0")} – ${l.nome} [${formatPercentual(l.desconto)}]`,
+  const lotesComDesconto = contrato.lotes.map((l) => ({
+    lote: `${String(l.numero).padStart(2, "0")} – ${l.nome}`,
+    desconto: formatPercentual(l.desconto),
     selecionado: l.numero === lote?.numero,
   }));
 
@@ -203,8 +219,11 @@ export function buildOrdemServicoDocumentModel(data: OrdemServicoDocumentData): 
     prazoDias === null ? "" : `${prazoDias} (${numeroPorExtenso(prazoDias)}) dias corridos`;
   const emissao = formatDataExtensa(os.dataEmissao);
 
+  const objeto = `${data.empenhoDescricao.toLocaleUpperCase("pt-BR")} ${tenant.apelido.toLocaleUpperCase("pt-BR")}`;
+
   return {
-    titulo: `ORDEM DE SERVIÇO (OS) – ${data.empenhoDescricao.toLocaleUpperCase("pt-BR")} ${tenant.apelido.toLocaleUpperCase("pt-BR")}`,
+    titulo: `ORDEM DE SERVIÇO (OS) – ${objeto}`,
+    objeto,
     dataEmissao: emissao,
     numero: os.numero,
     processo: contrato.ePag,
@@ -245,6 +264,7 @@ export function buildOrdemServicoDocumentModel(data: OrdemServicoDocumentData): 
       dataBaseSinapi: contrato.dataBaseSinapi,
     },
     prazo: { dias: prazoDias === null ? "" : `${prazoDias} dias corridos` },
+    cronograma: { inicio: formatDataCurta(os.dataInicio), termino: formatDataCurta(os.dataPrevisaoTermino) },
     condicoesEspeciais: os.condicoesEspeciais,
     fiscais: {
       tecnico: formatFiscal(data.fiscalTecnico),
