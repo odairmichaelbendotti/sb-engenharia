@@ -1,4 +1,5 @@
 import {
+  cleanText,
   digitsOnly,
   normalizeCode,
   normalizeEmail,
@@ -85,7 +86,8 @@ export const EMPENHO_RULES: InputRules = {
 export const ORDEM_SERVICO_RULES: InputRules = {
   numero: normalizeCode,
   setorRequisitante: normalizeCode,
-  fiscalSetorial: normalizeUpperName,
+  // Linha livre (posto, nome, ramal e e-mail): só a limpeza de espaços, sem forçar maiúsculas
+  fiscalSetorial: cleanText,
   descricaoProblema: normalizeMultilineText,
 };
 

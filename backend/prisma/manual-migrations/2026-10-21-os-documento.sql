@@ -28,7 +28,7 @@ ALTER TABLE "Contrato"
 
 -- Lote
 CREATE TABLE IF NOT EXISTS "Lote" (
-  "id"          TEXT NOT NULL DEFAULT gen_random_uuid()::text,
+  "id"          TEXT NOT NULL,
   "numero"      INTEGER NOT NULL,
   "nome"        TEXT NOT NULL,
   "desconto"    DOUBLE PRECISION NOT NULL,
@@ -47,7 +47,7 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 CREATE TABLE IF NOT EXISTS "FiscalContrato" (
-  "id"          TEXT NOT NULL DEFAULT gen_random_uuid()::text,
+  "id"          TEXT NOT NULL,
   "tipo"        "FiscalContratoTipo" NOT NULL,
   "nome"        TEXT NOT NULL,
   "ramal"       TEXT NOT NULL,

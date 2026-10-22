@@ -1,5 +1,6 @@
 import type { Dispatch, FocusEvent, SetStateAction } from "react";
 import {
+  cleanText,
   normalizeCode,
   normalizeEmail,
   normalizeEmpenhoNumero,
@@ -32,6 +33,11 @@ export const TENANT_FIELD_RULES: FieldRules = {
 export const CONTRATO_FIELD_RULES: FieldRules = {
   identificador: normalizeCode,
   descricaoCurta: normalizeFreeText,
+  ePag: normalizeCode,
+  etp: normalizeCode,
+  termoReferencia: normalizeCode,
+  dataBaseSinapi: normalizeFreeText,
+  endereco: normalizeFreeText,
 };
 
 export const EMPENHO_FIELD_RULES: FieldRules = {
@@ -41,6 +47,10 @@ export const EMPENHO_FIELD_RULES: FieldRules = {
 
 export const ORDEM_SERVICO_FIELD_RULES: FieldRules = {
   numero: normalizeCode,
+  setorRequisitante: normalizeCode,
+  // Linha livre (posto, nome, ramal e e-mail): só a limpeza de espaços, sem forçar maiúsculas
+  fiscalSetorial: cleanText,
+  descricaoProblema: normalizeMultilineText,
 };
 
 export const INVOICE_FIELD_RULES: FieldRules = {
@@ -54,6 +64,9 @@ export const OBRA_FIELD_RULES: FieldRules = {
   descricao: normalizeMultilineText,
   responsavelTecnico: normalizeProperName,
   anotacoes: normalizeMultilineText,
+  idPatrimonialCompleto: normalizeCode,
+  apelido: normalizeCode,
+  estadoConservacao: normalizeFreeText,
 };
 
 export const USER_FIELD_RULES: FieldRules = {

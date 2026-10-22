@@ -2,6 +2,7 @@ import PDFDocument from "pdfkit";
 import type { IOrdemServicoDocumentGenerator } from "../../domain/documents/IOrdemServicoDocumentGenerator.js";
 import type { DocumentOption, OrdemServicoDocumentModel } from "../../domain/documents/ordem-servico-document.js";
 import { BRASAO_BASE64 } from "./brasao.js";
+import { sanitizeForPdf } from "./pdf-text.js";
 
 const MARGIN_X = 71;
 const MARGIN_TOP = 56;
@@ -430,7 +431,8 @@ function renderAssinaturas(doc: Doc, m: OrdemServicoDocumentModel) {
 }
 
 export class PdfKitOrdemServicoGenerator implements IOrdemServicoDocumentGenerator {
-  generate(model: OrdemServicoDocumentModel): Promise<Buffer> {
+  generate(rawModel: OrdemServicoDocumentModel): Promise<Buffer> {
+    const model = sanitizeForPdf(rawModel);
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({
         size: "A4",

@@ -49,6 +49,24 @@ export type OrdemServicoObra = {
   responsavelTecnico: string;
 };
 
+export type OrdemServicoUrgencia = "EMERGENCIA" | "URGENCIA" | "PROGRAMADA" | "PREVENTIVA";
+
+export type OrdemServicoLote = {
+  id: string;
+  numero: number;
+  nome: string;
+  // Porcentagem
+  desconto: number;
+};
+
+export type OrdemServicoFiscal = {
+  id: string;
+  tipo: "TECNICO" | "ADMINISTRATIVO";
+  nome: string;
+  ramal: string;
+  email: string;
+};
+
 export type OrdemServico = {
   id: string;
   numero: string;
@@ -65,6 +83,28 @@ export type OrdemServico = {
   obra: OrdemServicoObra | null;
   // Soma das notas fiscais não canceladas lançadas nesta OS
   valorExecutado: number;
+  // Dados do documento da OS; nulos nas OS anteriores a eles
+  // Sequência do número gerado pelo sistema; nula nas OS com número antigo (esse ainda pode ser corrigido)
+  sequencia: number | null;
+  lote_id: string | null;
+  lote: OrdemServicoLote | null;
+  setorRequisitante: string | null;
+  urgencia: OrdemServicoUrgencia | null;
+  // Datas sem horário (meia-noite UTC)
+  dataVistoria: string | null;
+  descricaoProblema: string | null;
+  dataEmissao: string | null;
+  // Dias de mobilização, já incluídos no prazo total
+  prazoMobilizacaoDias: number;
+  prazoDias: number | null;
+  // Total com BDI informado na criação, em reais
+  totalComBdi: number | null;
+  fiscalSetorial: string | null;
+  fiscalTecnico_id: string | null;
+  fiscalTecnico: OrdemServicoFiscal | null;
+  fiscalAdministrativo_id: string | null;
+  fiscalAdministrativo: OrdemServicoFiscal | null;
+  condicoesEspeciais: string[];
   createdAt: Date;
   updatedAt: Date;
 };
@@ -83,13 +123,28 @@ export type ListOrdensServico = {
 };
 
 export type CreateOrdemServicoPayload = {
-  numero: string;
+  // Na criação o número é gerado pelo sistema; na edição de OS antiga ainda pode ser corrigido
+  numero?: string;
   // Valor da OS = soma do que cada empenho destina a ela (em reais)
   empenhos: { empenho_id: string; valor: number }[];
   dataInicio: string;
+  // O backend calcula o término a partir do início e do prazo em dias
   dataPrevisaoTermino: string;
   // Obra em que a OS é executada; null = ainda sem obra
   obra_id: string | null;
+  lote_id: string | null;
+  setorRequisitante: string;
+  urgencia: OrdemServicoUrgencia | null;
+  dataVistoria: string | null;
+  descricaoProblema: string;
+  dataEmissao: string;
+  prazoMobilizacaoDias: number;
+  prazoDias: number | null;
+  totalComBdi: number | null;
+  fiscalSetorial: string;
+  fiscalTecnico_id: string | null;
+  fiscalAdministrativo_id: string | null;
+  condicoesEspeciais: string[];
 };
 
 export type OrdemServicoOption = {
