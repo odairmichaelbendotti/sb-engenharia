@@ -8,6 +8,8 @@ import { ListOrdemServicoOptionsForObraUseCase } from "../../application/usecase
 import { UpdateOrdemServicoUseCase } from "../../application/usecases/ordem-servico/UpdateOrdemServicoUseCase.js";
 import { UpdateOrdemServicoStatusUseCase } from "../../application/usecases/ordem-servico/UpdateOrdemServicoStatusUseCase.js";
 import { DeleteOrdemServicoUseCase } from "../../application/usecases/ordem-servico/DeleteOrdemServicoUseCase.js";
+import { GenerateOrdemServicoDocumentUseCase } from "../../application/usecases/ordem-servico/GenerateOrdemServicoDocumentUseCase.js";
+import { PdfKitOrdemServicoGenerator } from "../../infrastructure/pdf/PdfKitOrdemServicoGenerator.js";
 import { OrdemServicoController } from "../controllers/OrdemServicoController.js";
 import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
@@ -26,6 +28,10 @@ const listOrdemServicoOptionsForObraUseCase = new ListOrdemServicoOptionsForObra
 const updateOrdemServicoUseCase = new UpdateOrdemServicoUseCase(repository, empenhoRepository, obraRepository);
 const updateOrdemServicoStatusUseCase = new UpdateOrdemServicoStatusUseCase(repository);
 const deleteOrdemServicoUseCase = new DeleteOrdemServicoUseCase(repository);
+const generateOrdemServicoDocumentUseCase = new GenerateOrdemServicoDocumentUseCase(
+  repository,
+  new PdfKitOrdemServicoGenerator(),
+);
 
 const ordemServicoController = new OrdemServicoController(
   createOrdemServicoUseCase,
@@ -34,6 +40,7 @@ const ordemServicoController = new OrdemServicoController(
   updateOrdemServicoUseCase,
   updateOrdemServicoStatusUseCase,
   deleteOrdemServicoUseCase,
+  generateOrdemServicoDocumentUseCase,
 );
 
 const token = new TokenGenerator();
@@ -69,6 +76,15 @@ OrdemServicoRoutes.get(
   authMiddleware.handle,
   requireDomainAccess.handle("engenharia", "edit"),
   (req, res) => ordemServicoController.listOptionsForObra(req, res),
+);
+
+// PDF da OS preenchido com os dados cadastrados. Mesmo acesso da listagem: EMPRESA só baixa
+// as OS dos próprios contratos (escopo aplicado no use case)
+OrdemServicoRoutes.get(
+  "/ordem-servico/document/:id",
+  authMiddleware.handle,
+  requireCapability.handle("viewOrdensServico"),
+  (req, res) => ordemServicoController.document(req, res),
 );
 
 OrdemServicoRoutes.put(

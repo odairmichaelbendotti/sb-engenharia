@@ -5,6 +5,7 @@ import type { ListOrdemServicoOptionsForObraUseCase } from "../../application/us
 import type { UpdateOrdemServicoUseCase } from "../../application/usecases/ordem-servico/UpdateOrdemServicoUseCase.js";
 import type { UpdateOrdemServicoStatusUseCase } from "../../application/usecases/ordem-servico/UpdateOrdemServicoStatusUseCase.js";
 import type { DeleteOrdemServicoUseCase } from "../../application/usecases/ordem-servico/DeleteOrdemServicoUseCase.js";
+import type { GenerateOrdemServicoDocumentUseCase } from "../../application/usecases/ordem-servico/GenerateOrdemServicoDocumentUseCase.js";
 import { DomainError } from "../../domain/errors/DomainError.js";
 import type { OrdemServicoEmpenhoInput, OrdemServicoUrgenciaValue } from "../../domain/entities/OrdemServico.js";
 
@@ -75,6 +76,7 @@ export class OrdemServicoController {
     private updateOrdemServico: UpdateOrdemServicoUseCase,
     private updateOrdemServicoStatus: UpdateOrdemServicoStatusUseCase,
     private deleteOrdemServico: DeleteOrdemServicoUseCase,
+    private generateOrdemServicoDocument: GenerateOrdemServicoDocumentUseCase,
   ) {}
 
   async create(req: Request, res: Response) {
@@ -146,6 +148,26 @@ export class OrdemServicoController {
       });
 
       res.status(200).json(ordemServico);
+    } catch (error) {
+      if (error instanceof DomainError) return res.status(400).json({ message: error.message });
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  }
+
+  async document(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { user } = req;
+      if (!id || Array.isArray(id)) throw new DomainError("Invalid ID");
+      if (!user) throw new DomainError("User not found");
+
+      const { filename, content } = await this.generateOrdemServicoDocument.execute({
+        ordemServicoId: id,
+        user,
+      });
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
+      res.status(200).send(content);
     } catch (error) {
       if (error instanceof DomainError) return res.status(400).json({ message: error.message });
       return res.status(500).json({ message: "Internal server error" });
