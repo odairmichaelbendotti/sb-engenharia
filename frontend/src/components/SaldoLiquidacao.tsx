@@ -33,7 +33,7 @@ export function SaldoLiquidacao({ valor, liquidado, saldo, liquidadoLabel }: Sal
   }
 
   return (
-    <div className="space-y-1" title="Valor total menos as notas fiscais emitidas">
+    <div className="space-y-1 min-w-44" title="Valor total menos as notas fiscais emitidas">
       <div className="flex items-center justify-between gap-2 text-xs">
         <span className="font-semibold text-text-primary">{formatCurrency(saldo)}</span>
         <span className="text-text-muted shrink-0">de {formatCurrency(valor)}</span>

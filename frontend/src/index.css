@@ -153,3 +153,76 @@
     background-color: var(--color-primary-200);
   }
 }
+
+/*
+ * Tabela padrão do sistema (componentes Table/Th/Td de components/ui).
+ * Alinhamento por posição, igual em todas as telas: primeira coluna à esquerda,
+ * última à direita e as do meio centralizadas. Cada coluna ocupa o que o conteúdo
+ * pede e a sobra da largura se divide entre todas (nenhuma coluna "engole" a tabela).
+ * Texto longo (ex.: descrição) usa `wrap`: quebra linha com largura máxima.
+ */
+@layer components {
+  .data-table {
+    width: 100%;
+    font-size: var(--text-table);
+    line-height: var(--text-table--line-height);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .data-table :is(th, td) {
+    padding: 0.75rem 1rem;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  .data-table :is(th, td):first-child {
+    text-align: left;
+  }
+
+  .data-table :is(th, td):last-child {
+    text-align: right;
+  }
+
+  .data-table th {
+    padding-block: 0.625rem;
+    font-size: var(--text-xs);
+    line-height: var(--text-xs--line-height);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    color: var(--color-text-secondary);
+    background-color: var(--color-surface-muted);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .data-table tbody tr {
+    transition: background-color 150ms;
+  }
+
+  .data-table tbody tr + tr {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .data-table tbody tr:hover {
+    background-color: color-mix(in srgb, var(--color-surface-muted) 50%, transparent);
+  }
+
+  /* Rodapé de totais */
+  .data-table tfoot {
+    border-top: 1px solid var(--color-border);
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  /* Coluna de texto longo: pode quebrar linha, mas não toma o espaço das outras.
+     O conteúdo vai até 22rem (wrapper do Td); a sobra se divide entre todas as colunas */
+  .data-table .cell-wrap {
+    white-space: normal;
+  }
+
+  /* Tabelas dentro de painéis e modais estreitos */
+  .data-table-compact :is(th, td) {
+    padding: 0.5rem;
+  }
+}

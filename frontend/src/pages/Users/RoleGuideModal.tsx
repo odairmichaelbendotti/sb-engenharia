@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { BookOpen, Info } from "lucide-react";
-import { Badge, Modal, ModalBody, ModalHeader } from "../../components/ui";
+import { Badge, Modal, ModalBody, ModalHeader, Table, TableBody, TableHead, Td, Th, Tr } from "../../components/ui";
 import type { User } from "../../../types/user";
 import { ROLE_LABELS } from "./role-labels";
 import { GUIDE_COLUMNS, GUIDE_RULES, ROLE_GUIDE, type GuideLevel } from "./role-guide";
@@ -60,44 +60,42 @@ export function RoleGuideModal({ open, assignableRoles, onClose }: RoleGuideModa
               </span>
             ))}
           </div>
-          <div className="overflow-x-auto border border-border rounded-lg">
-            <table className="w-full text-table min-w-[760px]">
-              <thead className="bg-surface-muted border-b border-border">
-                <tr>
-                  <th className="text-left py-2 px-3 text-xs font-semibold text-text-secondary uppercase tracking-wide">Perfil</th>
-                  {GUIDE_COLUMNS.map((column) => (
-                    <th
-                      key={column.key}
-                      title={column.hint}
-                      className="text-center py-2 px-2 text-xs font-semibold text-text-secondary uppercase tracking-wide cursor-help"
-                    >
+          {/* Moldura com borda; a rolagem horizontal fica com o Table */}
+          <div className="border border-border rounded-lg overflow-hidden">
+            <Table compact className="min-w-[760px]">
+              <TableHead>
+                <Th>Perfil</Th>
+                {GUIDE_COLUMNS.map((column) => (
+                  <Th key={column.key}>
+                    {/* O Th não repassa title: a dica fica no texto do cabeçalho */}
+                    <span title={column.hint} className="cursor-help">
                       {column.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
+                    </span>
+                  </Th>
+                ))}
+              </TableHead>
+              <TableBody>
                 {ROLE_GUIDE.map((guide) => (
-                  <tr key={guide.role}>
-                    <td className="py-2 px-3 font-semibold text-text-primary whitespace-nowrap">
-                      {ROLE_LABELS[guide.role]}
-                    </td>
+                  <Tr key={guide.role}>
+                    <Td>
+                      <span className="font-semibold text-text-primary">{ROLE_LABELS[guide.role]}</span>
+                    </Td>
                     {GUIDE_COLUMNS.map((column) => {
                       const cell = guide.cells[column.key];
                       return (
-                        <td key={column.key} className="py-2 px-2 text-center">
+                        <Td key={column.key}>
                           <span
-                            className={`inline-flex px-1.5 py-0.5 rounded-md border text-[11px] font-medium whitespace-nowrap ${LEVEL_STYLES[cell.level]}`}
+                            className={`inline-flex px-1.5 py-0.5 rounded-md border text-[11px] font-medium ${LEVEL_STYLES[cell.level]}`}
                           >
                             {cell.text}
                           </span>
-                        </td>
+                        </Td>
                       );
                     })}
-                  </tr>
+                  </Tr>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </section>
 

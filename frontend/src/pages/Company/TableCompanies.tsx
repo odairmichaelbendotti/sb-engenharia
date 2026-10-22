@@ -16,7 +16,7 @@ import type { Empresa } from "../../../types/empresa";
 import { usePermission } from "../../hooks/usePermission";
 import { maskCnpj, maskPhone } from "../../utils/masks";
 import { matchesCompanySearch } from "./company-search";
-import { Button, IconButton, Pagination } from "../../components/ui";
+import { Button, IconButton, Pagination, Table, TableBody, TableHead, Td, Th, Tr } from "../../components/ui";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -60,122 +60,102 @@ const TableCompanies = ({
 
   return (
     <div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-table">
-          <thead className="bg-surface-muted border-b border-border">
-            <tr>
-              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide cursor-pointer hover:text-text-primary transition-colors">
-                <div className="flex items-center gap-1">
-                  Empresa
-                  <ArrowUp size={12} className="text-text-muted" />
+      <Table>
+        <TableHead>
+          {/* Setas decorativas (pendência conhecida: a ordenação não existe) */}
+          <Th wrap>
+            <span className="inline-flex items-center gap-1">
+              Empresa
+              <ArrowUp size={12} className="text-text-muted" />
+            </span>
+          </Th>
+          <Th className="hidden md:table-cell">CNPJ</Th>
+          <Th className="hidden sm:table-cell">Contato</Th>
+          <Th>
+            <span className="inline-flex items-center gap-1">
+              Empenhos
+              <ArrowDown size={12} className="text-text-muted" />
+            </span>
+          </Th>
+          {showActions && <Th>Ações</Th>}
+        </TableHead>
+        <TableBody>
+          {paginatedEmpresas.map((empresa) => (
+            <Tr key={empresa.id}>
+              {/* Nome longo quebra em até duas linhas; nome completo ao passar o mouse */}
+              <Td wrap>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-surface-muted border border-border rounded-lg flex items-center justify-center shrink-0">
+                    <Building2 size={16} className="text-text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-text-primary line-clamp-2" title={empresa.name}>
+                      {empresa.name}
+                    </p>
+                    <p className="text-xs text-text-secondary md:hidden">{maskCnpj(empresa.cnpj)}</p>
+                  </div>
                 </div>
-              </th>
-              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide hidden md:table-cell">
-                CNPJ
-              </th>
-              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide hidden sm:table-cell">
-                Contato
-              </th>
-              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide cursor-pointer hover:text-text-primary transition-colors">
-                <div className="flex items-center gap-1">
-                  Empenhos
-                  <ArrowDown size={12} className="text-text-muted" />
+              </Td>
+              <Td className="hidden md:table-cell">
+                <span className="text-text-secondary">{maskCnpj(empresa.cnpj)}</span>
+              </Td>
+              <Td className="hidden sm:table-cell">
+                <div className="text-xs text-text-secondary">
+                  <p className="flex items-center gap-1">
+                    <Phone size={12} />
+                    {maskPhone(empresa.phone)}
+                  </p>
+                  <p className="flex items-center gap-1 text-xs mt-1">
+                    <Mail size={12} />
+                    {empresa.email}
+                  </p>
                 </div>
-              </th>
+              </Td>
+              <Td>
+                <button
+                  type="button"
+                  onClick={() => handleOpenEmpenhos(empresa)}
+                  className={`cursor-pointer inline-flex items-center gap-1 h-6 px-2 rounded-md border text-xs font-medium transition-colors ${
+                    empresa.empenhos.length > 0
+                      ? "bg-surface-muted border-border text-text-primary hover:border-border-strong hover:bg-primary-100"
+                      : "bg-surface border-border text-text-muted hover:bg-surface-muted"
+                  }`}
+                >
+                  <Layers2 size={12} />
+                  {empresa.empenhos.length} empenho
+                  {empresa.empenhos.length !== 1 ? "s" : ""}
+                </button>
+              </Td>
               {showActions && (
-                <th className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
-                  Ações
-                </th>
-              )}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {paginatedEmpresas.map((empresa) => (
-              <tr
-                key={empresa.id}
-                className="hover:bg-surface-muted/50 transition-colors"
-              >
-                <td className="py-3 px-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-surface-muted border border-border rounded-lg flex items-center justify-center shrink-0">
-                      <Building2 size={16} className="text-text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-text-primary text-table">
-                        {empresa.name}
-                      </p>
-                      <p className="text-xs text-text-secondary md:hidden">
-                        {maskCnpj(empresa.cnpj)}
-                      </p>
-                    </div>
-                  </div>
-                </td>
-                <td className="py-3 px-4 text-table text-text-secondary whitespace-nowrap hidden md:table-cell">
-                  {maskCnpj(empresa.cnpj)}
-                </td>
-                <td className="py-3 px-4 hidden sm:table-cell">
-                  <div className="text-xs text-text-secondary">
-                    <p className="flex items-center gap-1">
-                      <Phone size={12} />
-                      {maskPhone(empresa.phone)}
-                    </p>
-                    <p className="flex items-center gap-1 text-xs mt-1">
-                      <Mail size={12} />
-                      {empresa.email}
-                    </p>
-                  </div>
-                </td>
-                <td className="py-3 px-4">
-                  <button
-                    type="button"
-                    onClick={() => handleOpenEmpenhos(empresa)}
-                    className={`cursor-pointer inline-flex items-center gap-1 h-6 px-2 rounded-md border text-xs font-medium whitespace-nowrap transition-colors ${
-                      empresa.empenhos.length > 0
-                        ? "bg-surface-muted border-border text-text-primary hover:border-border-strong hover:bg-primary-100"
-                        : "bg-surface border-border text-text-muted hover:bg-surface-muted"
-                    }`}
-                  >
-                    <Layers2 size={12} />
-                    {empresa.empenhos.length} empenho
-                    {empresa.empenhos.length !== 1 ? "s" : ""}
-                  </button>
-                </td>
-                {showActions && (
-                  <td className="py-3 px-4">
-                    <div className="flex items-center justify-end gap-1">
-                      {canCreateCompanyAccess && (
+                <Td>
+                  <div className="flex items-center gap-1">
+                    {canCreateCompanyAccess && (
+                      <IconButton
+                        icon={KeyRound}
+                        label="Criar acesso"
+                        size="sm"
+                        onClick={() => handleOpenAccess(empresa)}
+                      />
+                    )}
+                    {canEditAdministrativo && (
+                      <>
+                        <IconButton icon={Edit2} label="Editar" size="sm" onClick={() => handleOpen(empresa)} />
                         <IconButton
-                          icon={KeyRound}
-                          label="Criar acesso"
+                          icon={Trash2}
+                          label="Excluir"
                           size="sm"
-                          onClick={() => handleOpenAccess(empresa)}
+                          variant="danger"
+                          onClick={() => handleOpenDelete(empresa)}
                         />
-                      )}
-                      {canEditAdministrativo && (
-                        <>
-                          <IconButton
-                            icon={Edit2}
-                            label="Editar"
-                            size="sm"
-                            onClick={() => handleOpen(empresa)}
-                          />
-                          <IconButton
-                            icon={Trash2}
-                            label="Excluir"
-                            size="sm"
-                            variant="danger"
-                            onClick={() => handleOpenDelete(empresa)}
-                          />
-                        </>
-                      )}
-                    </div>
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                      </>
+                    )}
+                  </div>
+                </Td>
+              )}
+            </Tr>
+          ))}
+        </TableBody>
+      </Table>
 
       {/* Empty State */}
       {paginatedEmpresas.length === 0 &&

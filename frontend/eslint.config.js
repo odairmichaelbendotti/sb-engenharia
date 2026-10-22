@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
-// Controles de formulário só pelos componentes de src/components/ui (mesma altura, fonte e foco em todo o app)
+// Controles de formulário e tabelas só pelos componentes de src/components/ui (mesmo padrão em todo o app)
 const designSystemRules = [
   {
     selector: "JSXOpeningElement[name.name='select']",
@@ -14,6 +14,10 @@ const designSystemRules = [
   {
     selector: "JSXOpeningElement[name.name='textarea']",
     message: 'Use <Textarea> de components/ui em vez de <textarea>.',
+  },
+  {
+    selector: "JSXOpeningElement[name.name=/^(table|thead|tbody|tfoot|tr|th|td)$/]",
+    message: 'Use <Table> de components/ui (alinhamento e espaçamento padrão de todas as tabelas).',
   },
   {
     selector:

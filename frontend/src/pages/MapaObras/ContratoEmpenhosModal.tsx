@@ -1,7 +1,8 @@
 import { FileSignature } from "lucide-react";
 import type { ObraDetail, ObraDetailFinancial } from "../../../types/obra";
 import { formatCurrency, formatDateOnly } from "../../utils/format-currency";
-import { Badge } from "../../components/ui";
+import { Badge, Table, TableBody, TableHead, Td, Th, Tr, TableFoot } from "../../components/ui";
+import { cx } from "../../utils/cx";
 import { PanelModal, ProgressBar, StatusPill } from "./obra-detail-shared";
 import { formatPercent, percentOf, RECORD_STATUS } from "./obra-detail-utils";
 
@@ -60,77 +61,84 @@ export function ContratoEmpenhosModal({ contrato, financial, currentEmpenhoIds, 
         />
       </div>
 
-      <div className="overflow-x-auto -mx-2">
-        <table className="w-full text-table min-w-[620px]">
-          <thead>
-            <tr className="text-xs text-text-secondary uppercase tracking-wide border-b border-border">
-              <th className="text-left font-semibold py-2.5 px-2">Empenho</th>
-              <th className="text-left font-semibold py-2.5 px-2">Vigência</th>
-              <th className="text-right font-semibold py-2.5 px-2">Valor</th>
-              <th className="text-right font-semibold py-2.5 px-2">Liquidado</th>
-              <th className="text-left font-semibold py-2.5 px-2 w-28">% liquidado</th>
-              <th className="text-center font-semibold py-2.5 px-2">OS</th>
-              <th className="text-left font-semibold py-2.5 px-2">Situação</th>
-            </tr>
-          </thead>
-          <tbody>
-            {financial.empenhos.map((empenho) => {
-              const isCurrent = currentEmpenhoIds.includes(empenho.id);
-              const liquidadoPercent = percentOf(empenho.liquidado, empenho.value);
-              return (
-                <tr
-                  key={empenho.id}
-                  className={`border-b border-border/60 ${isCurrent ? "bg-surface-muted/60" : ""} ${
-                    empenho.status === "CANCELADO" ? "opacity-60" : ""
-                  }`}
-                >
-                  <td className="py-3 px-2">
-                    <p className="font-semibold text-text-primary flex items-center gap-1.5">
-                      {empenho.numero}
-                      {isCurrent && <Badge>desta obra</Badge>}
-                    </p>
-                    <p className="text-[11px] text-text-muted truncate max-w-[200px]" title={empenho.description}>
-                      {empenho.description}
-                    </p>
-                  </td>
-                  <td className="py-3 px-2 text-xs text-text-secondary whitespace-nowrap">
+      <Table compact className="min-w-[620px]">
+        <TableHead>
+          <Th wrap>Empenho</Th>
+          <Th>Vigência</Th>
+          <Th>Valor</Th>
+          <Th>Liquidado</Th>
+          <Th>% liquidado</Th>
+          <Th>OS</Th>
+          <Th>Situação</Th>
+        </TableHead>
+        <TableBody>
+          {financial.empenhos.map((empenho) => {
+            const isCurrent = currentEmpenhoIds.includes(empenho.id);
+            const liquidadoPercent = percentOf(empenho.liquidado, empenho.value);
+            return (
+              <Tr
+                key={empenho.id}
+                className={cx(isCurrent && "bg-surface-muted/60", empenho.status === "CANCELADO" && "opacity-60")}
+              >
+                <Td wrap>
+                  <p className="font-semibold text-text-primary flex items-center gap-1.5">
+                    {empenho.numero}
+                    {isCurrent && <Badge>desta obra</Badge>}
+                  </p>
+                  <p className="text-[11px] text-text-muted line-clamp-2" title={empenho.description}>
+                    {empenho.description}
+                  </p>
+                </Td>
+                <Td>
+                  <span className="text-xs text-text-secondary">
                     {formatDateOnly(empenho.startAt)} → {formatDateOnly(empenho.endAt)}
-                  </td>
-                  <td className="py-3 px-2 text-right font-medium text-text-primary whitespace-nowrap">
-                    {formatCurrency(empenho.value)}
-                  </td>
-                  <td className="py-3 px-2 text-right text-success-text whitespace-nowrap">
-                    {formatCurrency(empenho.liquidado)}
-                  </td>
-                  <td className="py-3 px-2">
+                  </span>
+                </Td>
+                <Td>
+                  <span className="font-medium text-text-primary">{formatCurrency(empenho.value)}</span>
+                </Td>
+                <Td>
+                  <span className="text-success-text">{formatCurrency(empenho.liquidado)}</span>
+                </Td>
+                <Td>
+                  {/* A barra não tem largura própria: o bloco fixa a largura dela dentro da célula */}
+                  <div className="w-24">
                     <ProgressBar percent={liquidadoPercent} colorClassName="bg-secondary-500" />
                     <p className="text-[10px] text-text-muted mt-0.5">{formatPercent(liquidadoPercent)}</p>
-                  </td>
-                  <td className="py-3 px-2 text-center text-text-secondary">{empenho.ordensServicoCount}</td>
-                  <td className="py-3 px-2">
-                    <StatusPill status={empenho.status} map={RECORD_STATUS} />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-          <tfoot>
-            <tr className="font-semibold text-text-primary">
-              <td colSpan={2} className="py-3 px-2">
-                Total empenhado
-                <span className="block text-[10.5px] font-normal text-text-muted">sem empenhos cancelados</span>
-              </td>
-              <td className="py-3 px-2 text-right whitespace-nowrap">{formatCurrency(financial.totalEmpenhado)}</td>
-              <td className="py-3 px-2 text-right text-success-text whitespace-nowrap">
-                {formatCurrency(financial.totalLiquidado)}
-              </td>
-              <td colSpan={3} className="py-3 px-2 text-xs font-medium text-text-secondary">
+                  </div>
+                </Td>
+                <Td>
+                  <span className="text-text-secondary">{empenho.ordensServicoCount}</span>
+                </Td>
+                <Td>
+                  <StatusPill status={empenho.status} map={RECORD_STATUS} />
+                </Td>
+              </Tr>
+            );
+          })}
+        </TableBody>
+        {/* Rodapé sem colSpan (o Td não aceita): cada total fica sob a sua coluna */}
+        <TableFoot>
+          <Tr className="font-semibold text-text-primary">
+            <Td wrap>
+              Total empenhado
+              <span className="block text-[10.5px] font-normal text-text-muted">sem empenhos cancelados</span>
+            </Td>
+            <Td />
+            <Td>{formatCurrency(financial.totalEmpenhado)}</Td>
+            <Td>
+              <span className="text-success-text">{formatCurrency(financial.totalLiquidado)}</span>
+            </Td>
+            <Td>
+              <span className="text-xs font-medium text-text-secondary">
                 {formatPercent(percentOf(financial.totalLiquidado, financial.totalEmpenhado))} do empenhado
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+              </span>
+            </Td>
+            <Td />
+            <Td />
+          </Tr>
+        </TableFoot>
+      </Table>
     </PanelModal>
   );
 }

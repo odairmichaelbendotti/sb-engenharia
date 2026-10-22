@@ -10,11 +10,9 @@ import type { EmpenhoList } from "../../../types/empenho";
 import { formatDate } from "../../utils/format-currency";
 import { usePermission } from "../../hooks/usePermission";
 import { SaldoLiquidacao } from "../../components/SaldoLiquidacao";
-import { Button, IconButton, Pagination } from "../../components/ui";
+import { Button, IconButton, Pagination, Table, TableBody, TableHead, Td, Th, Tr } from "../../components/ui";
 
 const ITEMS_PER_PAGE = 10;
-
-const thClass = "text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide";
 
 interface EmpenhoTableProps {
   empenhos: EmpenhoList[];
@@ -44,103 +42,74 @@ export function EmpenhoTable({
 
   return (
     <div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-table">
-          <thead className="bg-surface-muted border-b border-border">
-            <tr>
-              <th className={thClass}>Empenho</th>
-              <th className={`${thClass} hidden md:table-cell`}>Descrição</th>
-              <th className={`${thClass} hidden md:table-cell`}>Prazo</th>
-              <th className={thClass}>Saldo</th>
-              {canEditAdministrativo && (
-                <th className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
-                  Ações
-                </th>
-              )}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {paginatedEmpenhos.map((empenho) => {
-              const isNearDeadline =
-                empenho.status.toLowerCase() === "ativo" &&
-                new Date(empenho.endAt) <
-                  new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
+      <Table>
+        <TableHead>
+          <Th>Empenho</Th>
+          <Th wrap className="hidden md:table-cell">Descrição</Th>
+          <Th className="hidden md:table-cell">Prazo</Th>
+          <Th>Saldo</Th>
+          {canEditAdministrativo && <Th>Ações</Th>}
+        </TableHead>
+        <TableBody>
+          {paginatedEmpenhos.map((empenho) => {
+            const isNearDeadline =
+              empenho.status.toLowerCase() === "ativo" &&
+              new Date(empenho.endAt) <
+                new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000);
 
-              return (
-                <tr
-                  key={empenho.id}
-                  className="hover:bg-surface-muted/50 transition-colors"
-                >
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-surface-muted border border-border rounded-lg flex items-center justify-center shrink-0">
-                        <Layers2 size={16} className="text-text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-text-primary text-table">
-                          {empenho.numero}
-                        </p>
-                        <p className="text-xs text-text-secondary">
-                          {formatDate(empenho.startAt)}
-                        </p>
-                      </div>
+            return (
+              <Tr key={empenho.id}>
+                <Td>
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 bg-surface-muted border border-border rounded-lg flex items-center justify-center shrink-0">
+                      <Layers2 size={16} className="text-text-primary" />
                     </div>
-                  </td>
-                  {/* Descrição ocupa o espaço livre: até duas linhas, texto completo ao passar o mouse */}
-                  <td className="py-3 px-4 text-table text-text-secondary hidden md:table-cell w-full">
-                    <p className="line-clamp-2 min-w-48" title={empenho.description}>
-                      {empenho.description}
-                    </p>
-                  </td>
-                  <td className="py-3 px-4 whitespace-nowrap hidden md:table-cell">
-                    <div className="text-table">
-                      <span
-                        className={
-                          isNearDeadline ? "text-warning-text font-medium" : "text-text-primary"
-                        }
-                      >
-                        {formatDate(empenho.endAt)}
-                      </span>
-                      {isNearDeadline && (
-                        <p className="text-xs text-warning-text">Prazo próximo</p>
-                      )}
+                    <div>
+                      <p className="font-medium text-text-primary">{empenho.numero}</p>
+                      <p className="text-xs text-text-secondary">{formatDate(empenho.startAt)}</p>
                     </div>
-                  </td>
-                  {/* O valor do empenho já aparece no saldo ("de R$ ..."): sem coluna própria */}
-                  <td className="py-3 px-4 min-w-44">
-                    <SaldoLiquidacao
-                      valor={empenho.value}
-                      liquidado={empenho.valorLiquidado}
-                      saldo={empenho.saldoALiquidar}
-                      liquidadoLabel="Empenho liquidado"
-                    />
-                  </td>
-
-                  {canEditAdministrativo && (
-                    <td className="py-3 px-4">
-                      <div className="flex items-center justify-end gap-1">
-                        <IconButton
-                          icon={Edit2}
-                          label="Gerenciar"
-                          size="sm"
-                          onClick={() => onEdit(empenho)}
-                        />
-                        <IconButton
-                          icon={Trash2}
-                          label="Excluir"
-                          size="sm"
-                          variant="danger"
-                          onClick={() => onDelete(empenho)}
-                        />
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                  </div>
+                </Td>
+                {/* Descrição: até duas linhas, texto completo ao passar o mouse */}
+                <Td wrap className="hidden md:table-cell">
+                  <p className="line-clamp-2 text-text-secondary" title={empenho.description}>
+                    {empenho.description}
+                  </p>
+                </Td>
+                <Td className="hidden md:table-cell">
+                  <span className={isNearDeadline ? "text-warning-text font-medium" : "text-text-primary"}>
+                    {formatDate(empenho.endAt)}
+                  </span>
+                  {isNearDeadline && <p className="text-xs text-warning-text">Prazo próximo</p>}
+                </Td>
+                {/* O valor do empenho já aparece no saldo ("de R$ ..."): sem coluna própria */}
+                <Td>
+                  <SaldoLiquidacao
+                    valor={empenho.value}
+                    liquidado={empenho.valorLiquidado}
+                    saldo={empenho.saldoALiquidar}
+                    liquidadoLabel="Empenho liquidado"
+                  />
+                </Td>
+                {canEditAdministrativo && (
+                  <Td>
+                    <div className="flex items-center gap-1">
+                      <IconButton icon={Edit2} label="Gerenciar" size="sm" onClick={() => onEdit(empenho)} />
+                      <IconButton
+                        icon={Trash2}
+                        label="Excluir"
+                        size="sm"
+                        variant="danger"
+                        onClick={() => onDelete(empenho)}
+                      />
+                    </div>
+                  </Td>
+                )}
+              </Tr>
+            );
+          })}
+        </TableBody>
+      </Table>
 
       {/* Empty State */}
       {paginatedEmpenhos.length === 0 &&

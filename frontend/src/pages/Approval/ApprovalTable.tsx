@@ -1,6 +1,6 @@
 import { UserCheck } from "lucide-react";
 import type { UnapprovedUser } from "../../../types/user";
-import { Pagination } from "../../components/ui";
+import { Pagination, Table, TableBody, TableHead, Th } from "../../components/ui";
 import { ApprovalRow, type RowStatus } from "./ApprovalRow";
 
 type ApprovalTableProps = {
@@ -32,37 +32,25 @@ export default function ApprovalTable({
 }: ApprovalTableProps) {
   return (
     <>
-      <div className="overflow-x-auto">
-        <table className="w-full text-table">
-          <thead className="bg-surface-muted border-b border-border">
-            <tr>
-              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
-                Usuário
-              </th>
-              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
-                E-mail
-              </th>
-              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
-                Organização
-              </th>
-              <th className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
-                Ações
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {paginatedPending.map((user) => (
-              <ApprovalRow
-                key={user.id}
-                user={user}
-                status={rowStatus[user.id]}
-                onRequestApprove={onRequestApprove}
-                onRequestReject={onRequestReject}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Table>
+        <TableHead>
+          <Th wrap>Usuário</Th>
+          <Th>E-mail</Th>
+          <Th>Organização</Th>
+          <Th>Ações</Th>
+        </TableHead>
+        <TableBody>
+          {paginatedPending.map((user) => (
+            <ApprovalRow
+              key={user.id}
+              user={user}
+              status={rowStatus[user.id]}
+              onRequestApprove={onRequestApprove}
+              onRequestReject={onRequestReject}
+            />
+          ))}
+        </TableBody>
+      </Table>
 
       {paginatedPending.length === 0 && (
         <div className="py-8 text-center">
