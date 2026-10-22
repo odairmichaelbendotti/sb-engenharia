@@ -10,7 +10,6 @@ import {
 import { Badge, Button, IconButton, Pagination, type BadgeTone } from "../../components/ui";
 import { useMemo, useState } from "react";
 import type { Contrato } from "../../../types/contrato";
-import { formatDate } from "../../utils/format-currency";
 import { usePermission } from "../../hooks/usePermission";
 import { SaldoLiquidacao } from "../../components/SaldoLiquidacao";
 
@@ -66,9 +65,6 @@ export function ContratoTable({
               <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
                 Empresa
               </th>
-              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide hidden md:table-cell">
-                Vigência
-              </th>
               <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide hidden lg:table-cell">
                 Empenhos
               </th>
@@ -120,11 +116,6 @@ export function ContratoTable({
                       {contrato.company.name}
                     </span>
                   </div>
-                </td>
-                <td className="py-3 px-4 hidden md:table-cell">
-                  <p className="text-table text-text-secondary">
-                    {formatDate(contrato.dataInicio)} — {formatDate(contrato.dataFim)}
-                  </p>
                 </td>
                 <td className="py-3 px-4 text-center hidden lg:table-cell">
                   <div className="inline-flex items-center gap-1 text-table text-text-secondary">
