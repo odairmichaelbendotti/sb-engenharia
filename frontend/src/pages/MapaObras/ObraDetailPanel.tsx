@@ -34,7 +34,8 @@ import { ContratoEmpenhosModal } from "./ContratoEmpenhosModal";
 import { ObraInfoModal } from "./ObraInfoModal";
 import { ObraTimeline } from "./ObraTimeline";
 import { maskCnpj } from "../../utils/masks";
-import { Badge, Button, IconButton, type BadgeTone } from "../../components/ui";
+import { cx } from "../../utils/cx";
+import { Badge, Button, IconButton, Table, TableBody, TableHead, Td, Th, Tr, type BadgeTone, TableFoot } from "../../components/ui";
 
 /**
  * Painel lateral de detalhe da obra, no Mapa de Obras. Mostra a cadeia
@@ -382,60 +383,57 @@ function InvoicesTab({ financial }: { financial: ObraDetailFinancial }) {
           Nenhuma nota fiscal vinculada a esta obra.
         </p>
       ) : (
-        <div className="overflow-x-auto -mx-1">
-          <table className="w-full text-table min-w-[340px]">
-            <thead>
-              <tr className="text-xs text-text-secondary uppercase tracking-wide border-b border-border">
-                <th className="text-left font-semibold py-2.5 px-1">Nota</th>
-                <th className="text-left font-semibold py-2.5 px-1">Vencimento</th>
-                <th className="text-left font-semibold py-2.5 px-1">Situação</th>
-                <th className="text-right font-semibold py-2.5 px-1">Valor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoices.map((invoice) => {
-                const cancelled = invoice.status === "CANCELADO";
-                return (
-                  <tr key={invoice.id} className="border-b border-border/60">
-                    <td className="py-2 px-1">
-                      <p className={`text-text-primary ${cancelled ? "line-through text-text-muted" : ""}`}>
-                        {invoice.numero}
-                      </p>
-                      <p className="text-[10.5px] text-text-muted truncate max-w-[120px]" title={invoice.description}>
-                        {invoice.description}
-                      </p>
-                    </td>
-                    <td className="py-2 px-1 text-text-secondary">{formatDateOnly(invoice.vencimento)}</td>
-                    <td className="py-2 px-1">
-                      <StatusPill status={invoice.status} map={INVOICE_STATUS} />
-                    </td>
-                    <td
-                      className={`py-2 px-1 text-right font-medium whitespace-nowrap ${
-                        cancelled ? "line-through text-text-muted" : "text-text-primary"
-                      }`}
-                    >
+        // Painel de 480px: a descrição da nota fica numa linha cortada (com `wrap` a coluna não caberia)
+        <Table compact className="min-w-[340px]">
+          <TableHead>
+            <Th>Nota</Th>
+            <Th>Vencimento</Th>
+            <Th>Situação</Th>
+            <Th>Valor</Th>
+          </TableHead>
+          <TableBody>
+            {invoices.map((invoice) => {
+              const cancelled = invoice.status === "CANCELADO";
+              return (
+                <Tr key={invoice.id}>
+                  <Td>
+                    <p className={cancelled ? "line-through text-text-muted" : "text-text-primary"}>{invoice.numero}</p>
+                    <p className="text-[10.5px] text-text-muted truncate max-w-30" title={invoice.description}>
+                      {invoice.description}
+                    </p>
+                  </Td>
+                  <Td>
+                    <span className="text-text-secondary">{formatDateOnly(invoice.vencimento)}</span>
+                  </Td>
+                  <Td>
+                    <StatusPill status={invoice.status} map={INVOICE_STATUS} />
+                  </Td>
+                  <Td>
+                    <span className={cx("font-medium", cancelled ? "line-through text-text-muted" : "text-text-primary")}>
                       {formatCurrency(invoice.value)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan={3} className="pt-2.5 px-1 font-semibold text-text-primary">
-                  Total liquidado
-                  <span className="block text-[10.5px] font-normal text-text-muted">
-                    {formatPercent(percentOf(obra.liquidado, obra.valor))} do valor das OS ·
-                    canceladas não somam
-                  </span>
-                </td>
-                <td className="pt-2.5 px-1 text-right font-semibold text-success-text whitespace-nowrap align-top">
-                  {formatCurrency(obra.liquidado)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+                    </span>
+                  </Td>
+                </Tr>
+              );
+            })}
+          </TableBody>
+          {/* Rodapé sem colSpan (o Td não aceita): o rótulo quebra linha para não alargar a 1ª coluna */}
+          <TableFoot>
+            <Tr>
+              <Td>
+                <p className="font-semibold text-text-primary">Total liquidado</p>
+                <p className="max-w-30 whitespace-normal text-[10.5px] text-text-muted">
+                  {formatPercent(percentOf(obra.liquidado, obra.valor))} do valor das OS · canceladas não somam
+                </p>
+              </Td>
+              <Td />
+              <Td />
+              <Td>
+                <span className="font-semibold text-success-text">{formatCurrency(obra.liquidado)}</span>
+              </Td>
+            </Tr>
+          </TableFoot>
+        </Table>
       )}
     </Card>
   );

@@ -192,8 +192,8 @@ function OrdemServicoRow({ ordemServico: os, canEdit, onView, onEdit, onDelete }
         </div>
       </div>
 
-      {/* Prazo da própria OS: aparece mesmo antes de ela ter obra */}
-      <div className={`min-w-0 ${muted ? "opacity-60" : ""}`}>
+      {/* Prazo da própria OS: aparece mesmo antes de ela ter obra. Coluna do meio: centralizada, como nas tabelas */}
+      <div className={`min-w-0 md:text-center ${muted ? "opacity-60" : ""}`}>
         {os.dataInicio && os.dataPrevisaoTermino ? (
           <ScheduleTimeline start={os.dataInicio} end={os.dataPrevisaoTermino} schedule={schedule} />
         ) : (
@@ -305,10 +305,11 @@ function BalanceCell({
   const closed = balance.kind === "paid" || balance.kind === "over";
 
   return (
-    <div className="flex flex-col items-start md:items-end gap-1 md:text-right">
+    // Coluna do meio da grade: centralizada no desktop, como nas tabelas; no celular segue à esquerda
+    <div className="flex flex-col items-start md:items-center gap-1 md:text-center">
       {/* O detalhe (% liquidado do valor) fica no modal da OS; aqui só como dica ao passar o mouse */}
       <div
-        className={`flex flex-col items-start md:items-end gap-1 w-full ${muted ? "opacity-60" : ""}`}
+        className={`flex flex-col items-start md:items-center gap-1 w-full ${muted ? "opacity-60" : ""}`}
         title={
           balance.kind === "empty"
             ? `Nenhuma nota lançada · ${formatCurrency(os.valor)}`

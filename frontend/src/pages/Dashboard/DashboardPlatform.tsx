@@ -2,19 +2,21 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Building2, ArrowDown, ArrowUp } from "lucide-react";
 import { SummaryStrip } from "../../components/SummaryStrip";
+import { Table, TableBody, TableHead, Td, Th, Tr } from "../../components/ui";
 import { formatCurrency } from "../../utils/format-currency";
 import type { TenantSummaryEntry } from "../../../types/tenant";
 
 type SortKey = "name" | "empenhos" | "execucao" | "notas";
 
-const COLUMNS: { key: SortKey | null; label: string; align: "left" | "right" }[] = [
-  { key: "name", label: "Organização", align: "left" },
-  { key: null, label: "Contratos", align: "right" },
-  { key: "empenhos", label: "Empenhos ativos", align: "right" },
-  { key: null, label: "OS ativas", align: "right" },
-  { key: null, label: "Obras em andamento", align: "right" },
-  { key: "execucao", label: "Execução de obras", align: "right" },
-  { key: "notas", label: "Notas pendentes/vencidas", align: "right" },
+// O alinhamento vem da posição da coluna (tabela padrão); só a organização quebra linha
+const COLUMNS: { key: SortKey | null; label: string; wrap?: boolean }[] = [
+  { key: "name", label: "Organização", wrap: true },
+  { key: null, label: "Contratos" },
+  { key: "empenhos", label: "Empenhos ativos" },
+  { key: null, label: "OS ativas" },
+  { key: null, label: "Obras em andamento" },
+  { key: "execucao", label: "Execução de obras" },
+  { key: "notas", label: "Notas pendentes/vencidas" },
 ];
 
 function execPercent(e: TenantSummaryEntry) {
@@ -123,46 +125,38 @@ export default function DashboardPlatform({ entries }: { entries: TenantSummaryE
           <p className="text-text-secondary text-xs mt-0.5">Clique em uma linha para ver o detalhe</p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-table">
-            <thead className="bg-surface-muted border-b border-border">
-              <tr>
-                {COLUMNS.map((col) => {
-                  const active = col.key !== null && sort.key === col.key;
-                  const SortIcon = sort.dir === "asc" ? ArrowUp : ArrowDown;
-                  return (
-                    <th
-                      key={col.label}
-                      className={`px-4 py-2.5 text-xs font-semibold text-text-secondary uppercase tracking-wide whitespace-nowrap ${col.align === "right" ? "text-right" : "text-left"}`}
+        <Table>
+          <TableHead>
+            {COLUMNS.map((col) => {
+              const active = col.key !== null && sort.key === col.key;
+              const SortIcon = sort.dir === "asc" ? ArrowUp : ArrowDown;
+              return (
+                <Th key={col.label} wrap={col.wrap}>
+                  {col.key ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleSort(col.key!)}
+                      className={`cursor-pointer inline-flex items-center gap-1 hover:text-text-primary transition-colors ${active ? "text-text-primary" : ""}`}
                     >
-                      {col.key ? (
-                        <button
-                          type="button"
-                          onClick={() => toggleSort(col.key!)}
-                          className={`cursor-pointer inline-flex items-center gap-1 hover:text-text-primary transition-colors ${active ? "text-text-primary" : ""}`}
-                        >
-                          {col.label}
-                          {active && <SortIcon size={12} />}
-                        </button>
-                      ) : (
-                        col.label
-                      )}
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {sorted.map((entry) => {
-                const pct = execPercent(entry);
-                const hasNotas = entry.stats.notasPendentesVencidasCount > 0;
-                return (
-                  <tr
-                    key={entry.tenant.id}
-                    onClick={() => navigate(`/organizacoes/${entry.tenant.id}`)}
-                    className="cursor-pointer hover:bg-surface-muted transition-colors"
-                  >
-                    <td className="px-4 py-3 font-medium text-text-primary">
+                      {col.label}
+                      {active && <SortIcon size={12} />}
+                    </button>
+                  ) : (
+                    col.label
+                  )}
+                </Th>
+              );
+            })}
+          </TableHead>
+          <TableBody>
+            {sorted.map((entry) => {
+              const pct = execPercent(entry);
+              const hasNotas = entry.stats.notasPendentesVencidasCount > 0;
+              return (
+                <Tr key={entry.tenant.id} onClick={() => navigate(`/organizacoes/${entry.tenant.id}`)}>
+                  {/* Nome da organização quebra linha: até duas linhas, completo ao passar o mouse */}
+                  <Td wrap>
+                    <p className="line-clamp-2 font-medium text-text-primary" title={entry.tenant.name}>
                       <Link
                         to={`/organizacoes/${entry.tenant.id}`}
                         onClick={(e) => e.stopPropagation()}
@@ -170,39 +164,46 @@ export default function DashboardPlatform({ entries }: { entries: TenantSummaryE
                       >
                         {entry.tenant.name}
                       </Link>
-                    </td>
-                    <td className="px-4 py-3 text-right text-text-primary">{entry.stats.contratosAtivos}</td>
-                    <td className="px-4 py-3 text-right">
-                      <p className="text-text-primary">{formatCurrency(entry.stats.empenhosAtivosValor)}</p>
-                      <p className="text-xs text-text-muted">{entry.stats.empenhosAtivos} ativos</p>
-                    </td>
-                    <td className="px-4 py-3 text-right text-text-primary">{entry.stats.osAtivas}</td>
-                    <td className="px-4 py-3 text-right text-text-primary">{entry.stats.obrasEmAndamento}</td>
-                    <td className="px-4 py-3 text-right">
-                      <p className="text-text-primary">{formatCurrency(entry.stats.valorExecutadoTotal)}</p>
-                      <div className="flex items-center justify-end gap-2 mt-1">
-                        <div className="w-16 h-1.5 rounded-full bg-border overflow-hidden">
-                          <div className="h-full bg-accent-500" style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="text-xs text-text-muted w-9 text-right">{pct.toFixed(0)}%</span>
+                    </p>
+                  </Td>
+                  <Td>
+                    <span className="text-text-primary">{entry.stats.contratosAtivos}</span>
+                  </Td>
+                  <Td>
+                    <p className="text-text-primary">{formatCurrency(entry.stats.empenhosAtivosValor)}</p>
+                    <p className="text-xs text-text-muted">{entry.stats.empenhosAtivos} ativos</p>
+                  </Td>
+                  <Td>
+                    <span className="text-text-primary">{entry.stats.osAtivas}</span>
+                  </Td>
+                  <Td>
+                    <span className="text-text-primary">{entry.stats.obrasEmAndamento}</span>
+                  </Td>
+                  <Td>
+                    <p className="text-text-primary">{formatCurrency(entry.stats.valorExecutadoTotal)}</p>
+                    {/* inline-flex: a barra segue o alinhamento da coluna */}
+                    <div className="inline-flex items-center gap-2 mt-1">
+                      <div className="w-16 h-1.5 rounded-full bg-border overflow-hidden">
+                        <div className="h-full bg-accent-500" style={{ width: `${pct}%` }} />
                       </div>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <p className={hasNotas ? "text-warning-text font-medium" : "text-text-muted"}>
-                        {entry.stats.notasPendentesVencidasCount}
+                      <span className="text-xs text-text-muted w-9 text-right">{pct.toFixed(0)}%</span>
+                    </div>
+                  </Td>
+                  <Td>
+                    <p className={hasNotas ? "text-warning-text font-medium" : "text-text-muted"}>
+                      {entry.stats.notasPendentesVencidasCount}
+                    </p>
+                    {hasNotas && (
+                      <p className="text-xs text-warning-text">
+                        {formatCurrency(entry.stats.notasPendentesVencidasValor)}
                       </p>
-                      {hasNotas && (
-                        <p className="text-xs text-warning-text">
-                          {formatCurrency(entry.stats.notasPendentesVencidasValor)}
-                        </p>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    )}
+                  </Td>
+                </Tr>
+              );
+            })}
+          </TableBody>
+        </Table>
 
         {sorted.length === 0 && (
           <p className="p-4 text-center text-sm text-text-secondary">Nenhuma organização cadastrada</p>

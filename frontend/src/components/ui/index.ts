@@ -11,3 +11,4 @@ export type { ControlSize } from "./control";
 export { SegmentedControl, type SegmentOption, type SegmentTone } from "./SegmentedControl";
 export { Pagination } from "./Pagination";
 export { Badge, type BadgeTone } from "./Badge";
+export { Table, TableHead, TableBody, TableFoot, Tr, Th, Td } from "./Table";

@@ -23,12 +23,13 @@ import { toast } from "sonner";
 import type { OrdemServico, OrdemServicoObra, OrdemServicoUrgencia } from "../../../types/ordem-servico";
 import { formatCurrency, formatDate, formatDateOnly } from "../../utils/format-currency";
 import { downloadBlob, toFilename } from "../../utils/download-file";
+import { cx } from "../../utils/cx";
 import { useOrdensServico } from "../../store/ordensServico";
 import { usePermission } from "../../hooks/usePermission";
 import { OrdemServicoNumeroTag } from "../../components/OrdemServicoNumeroTag";
 import { getBalance, getOrdemServicoBalance } from "./ordem-servico-balance";
 import { FinalizeOrdemServicoCallout } from "./FinalizeOrdemServico";
-import { Badge, Button, IconButton, Modal, ModalBody, type BadgeTone } from "../../components/ui";
+import { Badge, Button, IconButton, Modal, ModalBody, Table, TableBody, TableHead, Td, Th, Tr, type BadgeTone, TableFoot } from "../../components/ui";
 
 // Leaflet só é baixado quando o modal de uma OS com obra georreferenciada abre
 const ObraMiniMap = lazy(() => import("./ObraMiniMap"));
@@ -333,63 +334,55 @@ function EmpenhosTable({ ordemServico }: { ordemServico: OrdemServico }) {
 
   return (
     <div className="space-y-2">
-      <div className="overflow-x-auto">
-        {/* Largura fixa: o empenho fica estreito (descrição cortada) e os valores ganham espaço */}
-        <table className="w-full table-fixed text-table min-w-136">
-          <colgroup>
-            <col className="w-[31%]" />
-            <col className="w-[23%]" />
-            <col className="w-[23%]" />
-            <col className="w-[23%]" />
-          </colgroup>
-          <thead>
-            <tr className="text-xs uppercase text-text-secondary border-b border-border">
-              <th className="text-left font-semibold pb-2 pr-4">Empenho</th>
-              <th className="text-right font-semibold pb-2 pl-4">Destinado à OS</th>
-              <th className="text-right font-semibold pb-2 pl-4">Liquidado</th>
-              <th className="text-right font-semibold pb-2 pl-4">A liquidar</th>
-            </tr>
-          </thead>
-          <tbody className="tabular-nums">
-            {ordemServico.empenhos.map((v) => {
-              const saldo = getBalance(v.valor, v.liquidado);
-              const livreEmpenho = Math.max(0, v.empenhoValue - v.empenhoComprometido);
-              return (
-                <tr key={v.empenho_id} className="border-b border-border align-top">
-                  <td
-                    className="py-2.5 pr-4"
+      {/* Valores em nowrap nunca são cortados; a descrição do empenho quebra em até duas linhas */}
+      <Table compact className="min-w-136">
+        <TableHead>
+          <Th wrap>Empenho</Th>
+          <Th>Destinado à OS</Th>
+          <Th>Liquidado</Th>
+          <Th>A liquidar</Th>
+        </TableHead>
+        <TableBody>
+          {ordemServico.empenhos.map((v) => {
+            const saldo = getBalance(v.valor, v.liquidado);
+            const livreEmpenho = Math.max(0, v.empenhoValue - v.empenhoComprometido);
+            return (
+              <Tr key={v.empenho_id}>
+                <Td wrap>
+                  <div
                     title={`${v.numero} · ${v.description}\nEmpenho de ${formatCurrency(v.empenhoValue)} · ${formatCurrency(livreEmpenho)} livres para novas OS`}
                   >
-                    <span className="block font-mono text-[13px] text-text-primary truncate">{v.numero}</span>
-                    <span className="block text-xs text-text-muted mt-0.5 truncate">{v.description}</span>
-                  </td>
-                  <td className="py-2.5 pl-4 text-right whitespace-nowrap">{formatCurrency(v.valor)}</td>
-                  <td className="py-2.5 pl-4 text-right whitespace-nowrap">{formatCurrency(v.liquidado)}</td>
-                  <td
-                    className={`py-2.5 pl-4 text-right font-semibold whitespace-nowrap ${
-                      saldo.kind === "over" ? "text-danger-text" : saldo.saldo === 0 ? "text-success-text" : "text-text-primary"
-                    }`}
+                    <span className="block font-mono text-[13px] text-text-primary">{v.numero}</span>
+                    <span className="block text-xs text-text-muted mt-0.5 line-clamp-2">{v.description}</span>
+                  </div>
+                </Td>
+                <Td>{formatCurrency(v.valor)}</Td>
+                <Td>{formatCurrency(v.liquidado)}</Td>
+                <Td>
+                  <span
+                    className={cx(
+                      "font-semibold",
+                      saldo.kind === "over" ? "text-danger-text" : saldo.saldo === 0 ? "text-success-text" : "text-text-primary",
+                    )}
                   >
                     {saldo.kind === "over" ? `+${formatCurrency(saldo.excesso)}` : formatCurrency(saldo.saldo)}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-          {ordemServico.empenhos.length > 1 && (
-            <tfoot className="tabular-nums font-semibold text-text-primary">
-              <tr>
-                <td className="pt-2.5 pr-4">Total</td>
-                <td className="pt-2.5 pl-4 text-right whitespace-nowrap">{formatCurrency(totals.valor)}</td>
-                <td className="pt-2.5 pl-4 text-right whitespace-nowrap">{formatCurrency(totals.liquidado)}</td>
-                <td className="pt-2.5 pl-4 text-right whitespace-nowrap">
-                  {formatCurrency(Math.max(0, totals.valor - totals.liquidado))}
-                </td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
-      </div>
+                  </span>
+                </Td>
+              </Tr>
+            );
+          })}
+        </TableBody>
+        {ordemServico.empenhos.length > 1 && (
+          <TableFoot>
+            <Tr>
+              <Td wrap>Total</Td>
+              <Td>{formatCurrency(totals.valor)}</Td>
+              <Td>{formatCurrency(totals.liquidado)}</Td>
+              <Td>{formatCurrency(Math.max(0, totals.valor - totals.liquidado))}</Td>
+            </Tr>
+          </TableFoot>
+        )}
+      </Table>
       <p className="text-xs text-text-muted tabular-nums">
         {livre > 0
           ? `${formatCurrency(livre)} livres ${ordemServico.empenhos.length > 1 ? "nestes empenhos" : "neste empenho"} para novas OS`

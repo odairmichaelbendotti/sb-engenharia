@@ -1,7 +1,7 @@
 import { Building2, Check, Loader2, X } from "lucide-react";
 import { getInitials } from "../../utils/get-initial";
 import type { UnapprovedUser } from "../../../types/user";
-import { Badge } from "../../components/ui";
+import { Badge, Td, Tr } from "../../components/ui";
 
 export type RowStatus = "approving" | "approved" | "rejected";
 
@@ -20,38 +20,40 @@ export function ApprovalRow({
 }: ApprovalRowProps) {
   const isResolved = status === "approved" || status === "rejected";
   const isBusy = status === "approving";
+  // Destaque verde/vermelho ao resolver; o hover padrão vem da tabela
   const flashClass =
     status === "approved"
       ? "bg-success-bg"
       : status === "rejected"
         ? "bg-danger-bg"
-        : "hover:bg-surface-muted/50";
+        : "";
 
   return (
-    <tr
+    <Tr
       className={`transition-all duration-250 ${flashClass} ${
         isResolved ? "opacity-0" : "opacity-100"
       }`}
     >
-      <td className="py-3 px-4">
+      {/* Nome quebra linha: até duas linhas, completo ao passar o mouse */}
+      <Td wrap>
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-surface-muted border border-border rounded-full flex items-center justify-center text-text-primary font-semibold text-xs shrink-0">
             {getInitials(user.name)}
           </div>
-          <p className="font-medium text-text-primary text-table truncate">
+          <p className="font-medium text-text-primary line-clamp-2" title={user.name}>
             {user.name}
           </p>
         </div>
-      </td>
-      <td className="py-3 px-4 text-center text-table text-text-secondary">
-        {user.email}
-      </td>
-      <td className="py-3 px-4 text-center">
+      </Td>
+      <Td>
+        <span className="text-text-secondary">{user.email}</span>
+      </Td>
+      <Td>
         <Badge icon={Building2}>{user.tenant.name}</Badge>
-      </td>
-      <td className="py-3 px-4">
+      </Td>
+      <Td>
         {/* Botões nativos: precisam do spinner e da animação "pop" no ícone, que o IconButton não oferece */}
-        <div className="flex items-center justify-end gap-1">
+        <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => onRequestApprove(user)}
@@ -83,7 +85,7 @@ export function ApprovalRow({
             />
           </button>
         </div>
-      </td>
-    </tr>
+      </Td>
+    </Tr>
   );
 }
