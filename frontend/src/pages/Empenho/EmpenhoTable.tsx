@@ -1,6 +1,5 @@
 import {
   Layers2,
-  Building2,
   Trash2,
   Edit2,
   Loader2,
@@ -50,8 +49,7 @@ export function EmpenhoTable({
           <thead className="bg-surface-muted border-b border-border">
             <tr>
               <th className={thClass}>Empenho</th>
-              <th className={thClass}>Contrato</th>
-              <th className={`${thClass} hidden lg:table-cell`}>Descrição</th>
+              <th className={`${thClass} hidden md:table-cell`}>Descrição</th>
               <th className={`${thClass} hidden md:table-cell`}>Prazo</th>
               <th className={thClass}>Saldo</th>
               {canEditAdministrativo && (
@@ -88,23 +86,13 @@ export function EmpenhoTable({
                       </div>
                     </div>
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <Building2 size={14} className="text-text-muted" />
-                      <div>
-                        <span className="text-table text-text-primary">
-                          {empenho.contrato.identificador}
-                        </span>
-                        <p className="text-xs text-text-secondary">
-                          {empenho.contrato.company.name}
-                        </p>
-                      </div>
-                    </div>
+                  {/* Descrição ocupa o espaço livre: até duas linhas, texto completo ao passar o mouse */}
+                  <td className="py-3 px-4 text-table text-text-secondary hidden md:table-cell w-full">
+                    <p className="line-clamp-2 min-w-48" title={empenho.description}>
+                      {empenho.description}
+                    </p>
                   </td>
-                  <td className="py-3 px-4 text-table text-text-secondary hidden lg:table-cell">
-                    <p className="truncate max-w-50">{empenho.description}</p>
-                  </td>
-                  <td className="py-3 px-4 hidden md:table-cell">
+                  <td className="py-3 px-4 whitespace-nowrap hidden md:table-cell">
                     <div className="text-table">
                       <span
                         className={
