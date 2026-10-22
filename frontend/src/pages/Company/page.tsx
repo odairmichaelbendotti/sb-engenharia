@@ -187,9 +187,9 @@ export default function Empresas() {
       />
 
       {/* Filters + Table */}
-      <div className="bg-surface border border-border rounded-lg overflow-hidden">
-        <SummaryStrip cells={summaryCells} className="rounded-t-lg" />
-        <div className="px-4 pt-3 pb-2 border-b border-border">
+      <div className="bg-surface border border-border rounded-xl overflow-hidden">
+        <SummaryStrip cells={summaryCells} className="rounded-t-xl" />
+        <div className="px-4 pt-3 pb-3 border-b border-border">
           <FilterCompany
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}

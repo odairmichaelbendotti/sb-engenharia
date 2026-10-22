@@ -11,6 +11,7 @@ export function SearchInput({ value, onChange, placeholder }: SearchInputProps) 
   return (
     <Input
       type="text"
+      size="sm"
       icon={Search}
       placeholder={placeholder}
       value={value}

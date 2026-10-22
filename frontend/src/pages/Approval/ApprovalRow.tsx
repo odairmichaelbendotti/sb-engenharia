@@ -1,6 +1,7 @@
 import { Building2, Check, Loader2, X } from "lucide-react";
 import { getInitials } from "../../utils/get-initial";
 import type { UnapprovedUser } from "../../../types/user";
+import { Badge } from "../../components/ui";
 
 export type RowStatus = "approving" | "approved" | "rejected";
 
@@ -32,32 +33,32 @@ export function ApprovalRow({
         isResolved ? "opacity-0" : "opacity-100"
       }`}
     >
-      <td className="py-2.5 px-4">
+      <td className="py-3 px-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
+          <div className="w-9 h-9 bg-surface-muted border border-border rounded-full flex items-center justify-center text-text-primary font-semibold text-xs shrink-0">
             {getInitials(user.name)}
           </div>
-          <p className="font-medium text-text-primary text-sm truncate">
+          <p className="font-medium text-text-primary text-table truncate">
             {user.name}
           </p>
         </div>
       </td>
-      <td className="py-2.5 px-4 text-center text-sm text-text-secondary">
+      <td className="py-3 px-4 text-center text-table text-text-secondary">
         {user.email}
       </td>
-      <td className="py-2.5 px-4 text-center">
-        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border bg-surface-muted text-text-secondary border-border whitespace-nowrap">
-          <Building2 size={12} />
-          {user.tenant.name}
-        </span>
+      <td className="py-3 px-4 text-center">
+        <Badge icon={Building2}>{user.tenant.name}</Badge>
       </td>
-      <td className="py-2.5 px-4">
+      <td className="py-3 px-4">
+        {/* Botões nativos: precisam do spinner e da animação "pop" no ícone, que o IconButton não oferece */}
         <div className="flex items-center justify-end gap-1">
           <button
+            type="button"
             onClick={() => onRequestApprove(user)}
             disabled={!!status}
-            className="p-2 cursor-pointer hover:bg-success-bg text-text-secondary hover:text-success-text rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center justify-center w-8 h-8 cursor-pointer hover:bg-success-bg text-text-secondary hover:text-success-text rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-200"
             title="Aprovar"
+            aria-label="Aprovar"
           >
             {isBusy ? (
               <Loader2 size={16} className="animate-spin" />
@@ -69,10 +70,12 @@ export function ApprovalRow({
             )}
           </button>
           <button
+            type="button"
             onClick={() => onRequestReject(user)}
             disabled={!!status}
-            className="p-2 cursor-pointer hover:bg-danger-bg text-text-secondary hover:text-danger-text rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center justify-center w-8 h-8 cursor-pointer hover:bg-danger-bg text-text-secondary hover:text-danger-text rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-200"
             title="Recusar"
+            aria-label="Recusar"
           >
             <X
               size={16}

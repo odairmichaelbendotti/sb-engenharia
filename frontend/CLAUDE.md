@@ -22,20 +22,43 @@ npm run preview   # vite preview
 
 Estado atual: `npx tsc -b` e `npx eslint src` rodam **limpos, zero erros/warnings**. Manter assim — qualquer PR que introduza erro de tipo ou lint é regressão.
 
-## Paleta e tipografia (`src/index.css`)
+## Paleta e tipografia (`src/index.css`) — design system de 2026-10-22
 
-Fundo/superfície em bege/off-white neutro (`--color-background: #faf9f5`, `--color-surface`, `--color-border`), com três escalas de marca:
-- **`primary`** — azul (`#4478b6` no 500), cor de ação principal
-- **`secondary`** — verde (`#3c8567` no 500)
-- **`accent`** — âmbar/dourado (`#d48a12` no 500)
+A pedido do usuário (2026-10-22: "fontes padronizadas, estilo mais monocromático, botões e inputs proporcionais, componentização como regra, fonte Montserrat"), o visual passou a ser **monocromático**:
+- **Fonte Montserrat** (400/500/600/700), carregada por Google Fonts no `index.html`, definida em `--font-sans` no `@theme`. Não existe mais o `* { font-family: helvetica }`.
+- **Neutros sem matiz**: `--color-background: #f6f6f7`, `surface` branco, `surface-muted`, `border`/`border-strong`, `text-primary|secondary|muted|inverse`.
+- **`primary`** — escala **grafite** (500 = `#27272a`), cor de ação (botão principal, item ativo do menu, foco).
+- **`secondary`** (verde) e **`accent`** (âmbar) — **só para significado de dado** (pago/concluído, em andamento, barras de progresso). Nunca em chrome: abas, botões, ícones decorativos, foco.
+- Cores semânticas (`success`/`warning`/`danger`/`info`) só têm `-bg`/`-text`/`-border`. Paleta crua do Tailwind (`gray-*`, `red-*`, `blue-*`...) não deve ser usada.
+- `@layer base`: números tabulares em `<table>`, `accent-color` grafite em checkbox/radio.
 
-Cada escala tem tons 50–700 (sem 800/900). Cores semânticas (`success`/`warning`/`danger`/`info`) só têm `-bg`/`-text`/`-border`, sem escala numérica.
+Animações customizadas: `ping-slow`/`ping-slower` (PendingApproval), `row-in`, `pop`, `slide-in-right`.
 
-**Tipografia é `helvetica, sans-serif`** aplicado via seletor universal `*` — é fallback do sistema, não uma fonte carregada de verdade (sem `@font-face`, sem Google Fonts). Isso já foi levantado como possível melhoria e **rejeitado pelo usuário** ("o original está melhor") — não trocar a fonte por conta própria; se for reabrir essa discussão, perguntar primeiro.
+Histórico: antes disso houve propostas de redesign rejeitadas ("militar/carimbo", "futurista dark/light", refinamento tipográfico com troca de fonte). A troca para Montserrat + monocromático foi **pedida pelo próprio usuário**; mudanças de identidade visual além disso continuam precisando de alinhamento.
 
-Duas animações customizadas (`ping-slow`/`ping-slower`), usadas só em `PendingApproval.tsx` (efeito de "sonar" pulsante).
+## Design system (`src/components/ui/`) — regra obrigatória
 
-**Não mudar paleta, tipografia ou conceito visual sem alinhamento explícito** — já houve duas rodadas de proposta de redesign (uma "militar/carimbo", rejeitada; uma "futurista minimalista dark/light", aprovada mas depois o usuário pediu para não remodelar; uma proposta de refinamento tipográfico, também rejeitada). O padrão atual é: melhorias pontuais de UX/organização de código são bem-vindas, mudança de identidade visual não.
+Todo controle de formulário e botão de ação usa os componentes base, importados do barrel `components/ui`. Vitrine com todos eles em **`/design-system`** (rota só em `import.meta.env.DEV`, `pages/DesignSystem/page.tsx`).
+
+| Componente | Uso |
+|---|---|
+| `Button` | `variant`: `primary` (ação principal, uma por contexto), `secondary` (contorno), `ghost` (Cancelar/Voltar), `danger`, `success`; `size` `md` (40px, padrão) ou `sm` (32px); `icon`, `iconRight`, `loading` (spinner + desabilita), `fullWidth`. **`type="button"` por padrão** — envio de formulário precisa de `type="submit"` |
+| `IconButton` | botão só com ícone; `label` obrigatório (aria-label + title); `variant` `ghost`/`secondary`/`danger` (lixeira na linha) |
+| `Input` | `size`, `icon` (à esquerda), `prefix` ("R$"), `suffix` ("dias", "%"), `invalid` |
+| `Select` | `<select>` nativo com a mesma aparência do Input + chevron; `size`, `icon`; opções como filhos |
+| `Textarea` | mesma borda/foco; altura por `rows` |
+| `Field` | rótulo + controle + `hint`/`error`; `required` põe o asterisco; liga o `<label>` ao controle filho sozinho (contexto com `useId`), sem precisar de `id` |
+| `FormSection` | título de seção de formulário (ícone + texto em caixa alta + linha) com `space-y-4` nos filhos |
+| `Modal` + `ModalHeader`/`ModalBody`/`ModalFooter` | casca padrão (`size` sm–2xl, `flex flex-col`, 90vh). Com `StepForm`: Modal + ModalHeader + StepForm. `onBackdropClick` só se clicar fora deve fechar |
+| `SegmentedControl` | escolha única entre poucas opções (status Ativo/Finalizado/Cancelado); `tone` colore só o ícone da opção selecionada |
+| `Pagination` | rodapé de paginação das tabelas (`itemLabel` = "empenhos"...) |
+| `Badge` | etiqueta de status/categoria, `tone` neutral/success/warning/danger/info |
+
+Densidade (pedido do usuário, 2026-10-22, achou a fonte desproporcional): **corpo de tabela usa `text-table`** (13px, token do `@theme`; o `<table>` já leva a classe, cabeçalho continua `text-xs`) e **barras de filtro das listagens usam `size="sm"`** (`SearchInput` já é sm; `ScopeFilterButton` tem 32px; abas de status com `h-7 text-xs`). A lista de OS também usa `text-table` nos títulos e mostra só o valor a liquidar + barra; o "% liquidado de R$ X" fica no modal da OS (e no `title` da célula). O prazo atrasado na lista é texto colorido pequeno, sem fundo. A tabela de Empresas não mostra Localização.
+
+Regras de proporção: controles e botões do mesmo tamanho têm **a mesma altura** (md 40px / sm 32px, texto 14px / 12px, ícone 16 / 14); numa mesma barra, todos no mesmo `size`. Rótulos `text-xs font-semibold text-text-secondary`; títulos `font-semibold` (evitar `font-bold`); dentro de modal, títulos no máximo `text-base`. Raios: controles/botões `rounded-lg`, cartões/modais `rounded-xl`, badges `rounded-md`. `className` nos componentes base serve **só para layout** (largura, margem) — sem `tailwind-merge`, uma classe de aparência passada por fora não sobrescreve a interna de forma confiável; para variar aparência, criar uma `variant`/`size` no componente. `utils/cx.ts` junta classes condicionais.
+
+**Imposto pelo ESLint** (`eslint.config.js`, `no-restricted-syntax`): `<input>` (exceto checkbox/radio/file/hidden/range/color), `<select>` e `<textarea>` crus dão erro fora de `src/components/ui/`. Botões não são bloqueados pelo lint (abas, linhas e cartões clicáveis continuam `<button>`), mas botão de **ação** deve ser `Button`/`IconButton`. Precisa de um controle novo (checkbox estilizado, combobox com busca...)? Criar em `components/ui/`, exportar no `index.ts` e adicionar na vitrine.
 
 ## Estrutura
 
@@ -228,10 +251,10 @@ Proposta aprovada em `https://claude.ai/artifact/DcYjbW1oo2JVvCV7cBzj6P`. A linh
 - Datas sem horário (início/previsão de obra, vigência de contrato/empenho) são gravadas como meia-noite UTC: formatar com `formatDateOnly` (fuso UTC). `formatDate` usa o fuso local e no Brasil mostra o **dia anterior** para esses campos; ela só serve para timestamps reais (`createdAt`, `dataConclusao`). Só `ViewOrdemServicoModal` usa `formatDateOnly` até agora — os demais usos de `formatDate` em campos de data pura ainda estão com o problema.
 - Nomes de props/exports em português quando o domínio é português (`empresa`, `empenho`), mas nomenclatura de código/arquivos em inglês para conceitos técnicos (`Invoice`, não `NotaFiscal` — já foi renomeado propositalmente).
 - Ícones de ordenação/paginação só devem aparecer se a funcionalidade realmente existir — já houve casos de ícone decorativo sem `onClick` (`ArrowUp`/`ArrowDown` em `TableCompanies.tsx`/`EmpenhoTable.tsx`); ao copiar um componente de tabela como modelo, verificar se o sort é real antes de reusar.
-- Qualquer alteração visual de peso (paleta, tipografia, densidade de espaçamento) deve ser proposta e confirmada antes de implementar — ver seção Paleta acima.
+- Qualquer alteração visual de peso (paleta, tipografia, densidade de espaçamento) além do design system atual deve ser proposta e confirmada antes de implementar — ver seção Paleta acima.
 - Navegação interna sempre com `Link` (ou `useNavigate`) de `react-router` — nunca tag `<a href>` crua. Projeto usa React Router v7, não Next.js (não existe `next/link` aqui); `<a>` força reload de página inteira e perde o estado do SPA.
 - Não existe mais componente de breadcrumb — foi removido (`components/Breadcrumb.tsx` deletado, uso retirado de todas as páginas) por ocupar espaço vertical sem agregar navegação real além do que a sidebar já oferece. Não reintroduzir sem alinhar antes.
 - **Todo `<button>` (e qualquer elemento clicável) deve ter a classe `cursor-pointer` do Tailwind.** Não é automático no Tailwind v4 (Preflight não força `cursor: pointer` em botões, diferente do comportamento nativo esperado do HTML). Os botões de fechar (`X`) e "Cancelar" de vários modais (`RegisterOrEditCompany`, `ObraModal`, `DeleteObraModal`, `DeleteCompany`, `DeleteEmpenhoModal`, `EmpenhoModal`, `ModalEmpenho`) estavam sem essa classe — corrigido. Ao criar um componente novo com botão (modal, linha de tabela, paginação), conferir que **todo** botão (não só o de submit/ação principal) tem `cursor-pointer`.
   - Os botões de paginação (seta anterior/próxima, ícones `ChevronLeft`/`ChevronRight`) em `TableCompanies.tsx`, `InvoiceTable.tsx`, `ObraTable.tsx`, `TenantTable.tsx`, `EmpenhoPagination.tsx` e `ApprovalTable.tsx` tinham esse mesmo gap (só `disabled:cursor-not-allowed`, sem `cursor-pointer` pro estado habilitado) — encontrado e corrigido nesta sessão nos 6 arquivos (12 botões). Se copiar esse bloco de paginação como modelo pra uma tabela nova, já sai com `cursor-pointer`.
 - Tabelas de listagem (`TableCompanies`, `InvoiceTable`, `EmpenhoTable`, etc.) devem sempre renderizar `<table>`/`<thead>` mesmo com lista vazia — o estado vazio é um bloco condicional **depois** de `</table>` (checando o array já paginado), nunca um `return` antecipado que substitui a tabela inteira. `EmpenhoTable.tsx` tinha esse desvio (cabeçalho sumia junto com o corpo quando vazio) e foi corrigido para bater com o padrão das outras tabelas.
-- Componentes de filtro/busca (`EmpenhoFilters`, `FilterCompany`, etc.) devem usar as mesmas classes do input: ícone `size={16}`, `pl-9 pr-3 py-2`, `rounded-lg`, `text-sm`, `focus:border-primary-300 transition-all`. `EmpenhoFilters.tsx` divergia (ícone `18px`, `pl-10 pr-4`, `rounded-md`, sem `text-sm`) e foi corrigido para bater com `FilterCompany.tsx`.
+- Campos de busca/filtro usam `SearchInput` (`components/filters`) ou `Input` com `icon={Search}` — nunca classes de input copiadas à mão (ver "Design system").

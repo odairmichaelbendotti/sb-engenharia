@@ -4,6 +4,10 @@
   /* Tipografia: Montserrat carregada no index.html, com fallback do sistema */
   --font-sans: "Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
+  /* Corpo das tabelas: entre text-xs (12px) e text-sm (14px), mais denso */
+  --text-table: 0.8125rem;
+  --text-table--line-height: 1.25rem;
+
   /* Base (neutros, sem matiz) */
   --color-white: #ffffff;
   --color-background: #f6f6f7;

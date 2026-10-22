@@ -2,6 +2,7 @@ import { ArrowDownUp } from "lucide-react";
 import { ScopeFilterButton } from "../../components/filters/ScopeFilterButton";
 import type { ScopeOptions } from "../../components/filters/scope-options";
 import { SearchInput } from "../../components/filters/SearchInput";
+import { Select } from "../../components/ui";
 import type { ScopeFilter } from "../../hooks/useScopeFilter";
 
 export type OrdemServicoSort = "URGENCY" | "NUMERO" | "SALDO";
@@ -39,24 +40,20 @@ export function OrdemServicoFilters({
         placeholder="Buscar por serviço, OS, empenho, contrato ou empresa..."
       />
       <ScopeFilterButton options={scopeOptions} value={scope} onChange={onScopeChange} />
-      <label className="relative sm:w-56">
-        <span className="sr-only">Ordenar por</span>
-        <ArrowDownUp
-          size={14}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
-        />
-        <select
-          value={sort}
-          onChange={(e) => onSortChange(e.target.value as OrdemServicoSort)}
-          className="w-full pl-8 pr-3 py-2 border border-border rounded-lg bg-surface text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 cursor-pointer"
-        >
-          {(Object.keys(SORT_LABEL) as OrdemServicoSort[]).map((key) => (
-            <option key={key} value={key}>
-              {SORT_LABEL[key]}
-            </option>
-          ))}
-        </select>
-      </label>
+      <Select
+        size="sm"
+        icon={ArrowDownUp}
+        aria-label="Ordenar por"
+        value={sort}
+        onChange={(e) => onSortChange(e.target.value as OrdemServicoSort)}
+        className="sm:w-52"
+      >
+        {(Object.keys(SORT_LABEL) as OrdemServicoSort[]).map((key) => (
+          <option key={key} value={key}>
+            {SORT_LABEL[key]}
+          </option>
+        ))}
+      </Select>
     </div>
   );
 }

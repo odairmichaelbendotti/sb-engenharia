@@ -1,11 +1,9 @@
 import {
-  X,
   FileSignature,
   Hash,
   Building2,
   CalendarDays,
   DollarSign,
-  Loader,
   Activity,
   CheckCircle2,
   XCircle,
@@ -19,6 +17,18 @@ import {
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { StepForm, type FormStep } from "../../components/StepForm";
+import {
+  Button,
+  Field,
+  FormSection,
+  IconButton,
+  Input,
+  Modal,
+  ModalHeader,
+  SegmentedControl,
+  Select,
+  type SegmentOption,
+} from "../../components/ui";
 import { useCompanies } from "../../store/companies";
 import { useContratos } from "../../store/contratos";
 import { formatCurrency } from "../../utils/format-currency";
@@ -37,10 +47,10 @@ interface ContratoModalProps {
   handleClose: () => void;
 }
 
-const STATUS_OPTIONS: { value: ContratoStatus; label: string; icon: React.ElementType; activeClass: string; hoverClass: string }[] = [
-  { value: "ATIVO", label: "Ativo", icon: Activity, activeClass: "bg-warning-text text-white border-warning-text", hoverClass: "hover:border-warning-border hover:text-warning-text" },
-  { value: "FINALIZADO", label: "Finalizado", icon: CheckCircle2, activeClass: "bg-success-text text-white border-success-text", hoverClass: "hover:border-success-border hover:text-success-text" },
-  { value: "CANCELADO", label: "Cancelado", icon: XCircle, activeClass: "bg-danger-text text-white border-danger-text", hoverClass: "hover:border-danger-border hover:text-danger-text" },
+const STATUS_OPTIONS: SegmentOption<ContratoStatus>[] = [
+  { value: "ATIVO", label: "Ativo", icon: Activity, tone: "warning" },
+  { value: "FINALIZADO", label: "Finalizado", icon: CheckCircle2, tone: "success" },
+  { value: "CANCELADO", label: "Cancelado", icon: XCircle, tone: "danger" },
 ];
 
 const DESCRICAO_CURTA_MAX_LENGTH = 20;
@@ -104,23 +114,6 @@ function toDecimalInput(value: number) {
 function toDateInput(d: Date | string | undefined) {
   if (!d) return "";
   return (d instanceof Date ? d : new Date(d)).toISOString().split("T")[0];
-}
-
-const inputClass =
-  "w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all";
-
-const iconInputClass =
-  "w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all";
-
-function SectionTitle({ icon: Icon, label, hint }: { icon: React.ElementType; label: string; hint?: string }) {
-  return (
-    <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-      <Icon size={16} className="text-primary-500" />
-      <span>{label}</span>
-      {hint && <span className="text-xs font-normal text-text-muted">{hint}</span>}
-      <div className="flex-1 h-px bg-border" />
-    </div>
-  );
 }
 
 export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
@@ -305,6 +298,7 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
     }
   }
 
+
   const steps: FormStep[] = [
     {
       id: "identificacao",
@@ -313,59 +307,49 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
       validate: validateIdentificacao,
       content: (
         <>
-          {/* Identificação */}
-          <div className="space-y-4">
-            <SectionTitle icon={Hash} label="Identificação" />
+          <FormSection title="Identificação" icon={Hash}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Identificador <span className="text-danger-text">*</span>
-                </label>
-                <div className="relative">
-                  <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-                  <input
-                    name="identificador"
-                    value={form.identificador}
-                    onChange={handleChange}
-                    placeholder="02/BAFL/2026"
-                    className={iconInputClass}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Descrição curta <span className="text-danger-text">*</span>
-                  <span className="text-text-muted font-normal"> ({form.descricaoCurta.length}/{DESCRICAO_CURTA_MAX_LENGTH})</span>
-                </label>
-                <input
+              <Field label="Identificador" required>
+                <Input
+                  icon={Hash}
+                  name="identificador"
+                  value={form.identificador}
+                  onChange={handleChange}
+                  placeholder="02/BAFL/2026"
+                />
+              </Field>
+              <Field
+                label="Descrição curta"
+                required
+                action={
+                  <span className="text-xs text-text-muted tabular-nums">
+                    ({form.descricaoCurta.length}/{DESCRICAO_CURTA_MAX_LENGTH})
+                  </span>
+                }
+              >
+                <Input
                   name="descricaoCurta"
                   value={form.descricaoCurta}
                   onChange={handleChange}
                   maxLength={DESCRICAO_CURTA_MAX_LENGTH}
                   placeholder="Manutenção Predial"
-                  className={inputClass}
                 />
-              </div>
+              </Field>
             </div>
-          </div>
+          </FormSection>
 
-          {/* Empresa */}
-          <div className="space-y-4">
-            <SectionTitle icon={Building2} label="Empresa" />
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                Empresa <span className="text-danger-text">*</span>
-              </label>
-              <select name="company_id" value={form.company_id} onChange={handleChange} className={`${inputClass} cursor-pointer`}>
+          <FormSection title="Empresa" icon={Building2}>
+            <Field label="Empresa" required>
+              <Select icon={Building2} name="company_id" value={form.company_id} onChange={handleChange}>
                 <option value="">Selecione uma empresa</option>
                 {companies.map((empresa) => (
                   <option key={empresa.id} value={empresa.id}>
                     {empresa.name} - {maskCnpj(empresa.cnpj)}
                   </option>
                 ))}
-              </select>
-            </div>
-          </div>
+              </Select>
+            </Field>
+          </FormSection>
         </>
       ),
     },
@@ -376,25 +360,17 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
       validate: validateValores,
       content: (
         <>
-          {/* Financeiro */}
-          <div className="space-y-4">
-            <SectionTitle icon={DollarSign} label="Financeiro" />
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                Valor do Contrato (R$) <span className="text-danger-text">*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-medium text-sm">R$</span>
-                <input
-                  name="valor"
-                  inputMode="numeric"
-                  value={form.valor}
-                  onChange={handleChange}
-                  placeholder="0,00"
-                  className={iconInputClass}
-                />
-              </div>
-            </div>
+          <FormSection title="Financeiro" icon={DollarSign}>
+            <Field label="Valor do Contrato (R$)" required>
+              <Input
+                prefix="R$"
+                name="valor"
+                inputMode="numeric"
+                value={form.valor}
+                onChange={handleChange}
+                placeholder="0,00"
+              />
+            </Field>
             {contrato && (
               <div className="bg-surface-muted rounded-lg p-3 border border-border grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
@@ -415,26 +391,18 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
                 </div>
               </div>
             )}
-          </div>
+          </FormSection>
 
-          {/* Vigência */}
-          <div className="space-y-4">
-            <SectionTitle icon={CalendarDays} label="Vigência" />
+          <FormSection title="Vigência" icon={CalendarDays}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Data de Início <span className="text-danger-text">*</span>
-                </label>
-                <input type="date" name="dataInicio" value={form.dataInicio} onChange={handleChange} className={inputClass} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Data de Fim <span className="text-danger-text">*</span>
-                </label>
-                <input type="date" name="dataFim" value={form.dataFim} onChange={handleChange} className={inputClass} />
-              </div>
+              <Field label="Data de Início" required>
+                <Input type="date" name="dataInicio" value={form.dataInicio} onChange={handleChange} />
+              </Field>
+              <Field label="Data de Fim" required>
+                <Input type="date" name="dataFim" value={form.dataFim} onChange={handleChange} />
+              </Field>
             </div>
-          </div>
+          </FormSection>
         </>
       ),
     },
@@ -444,78 +412,53 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
       icon: FileText,
       validate: validateDadosOS,
       content: (
-        <div className="space-y-4">
-          <SectionTitle icon={FileText} label="Dados da Ordem de Serviço" />
+        <FormSection title="Dados da Ordem de Serviço" icon={FileText}>
           <p className="text-xs text-text-muted">Saem no documento de cada ordem de serviço deste contrato.</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                e-PAG <span className="text-danger-text">*</span>
-              </label>
-              <input name="ePag" value={form.ePag} onChange={handleChange} placeholder="67272.002300/2026-41" className={inputClass} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                ETP <span className="text-danger-text">*</span>
-              </label>
-              <input name="etp" value={form.etp} onChange={handleChange} placeholder="79/2025" className={inputClass} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                Termo de Referência (TR) <span className="text-danger-text">*</span>
-              </label>
-              <input
+            <Field label="e-PAG" required>
+              <Input name="ePag" value={form.ePag} onChange={handleChange} placeholder="67272.002300/2026-41" />
+            </Field>
+            <Field label="ETP" required>
+              <Input name="etp" value={form.etp} onChange={handleChange} placeholder="79/2025" />
+            </Field>
+            <Field label="Termo de Referência (TR)" required>
+              <Input
                 name="termoReferencia"
                 value={form.termoReferencia}
                 onChange={handleChange}
                 placeholder="26/2026"
-                className={inputClass}
               />
-            </div>
+            </Field>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                Data-base SINAPI <span className="text-danger-text">*</span>
-              </label>
-              <input
+            <Field label="Data-base SINAPI" required className="md:col-span-2">
+              <Input
                 name="dataBaseSinapi"
                 value={form.dataBaseSinapi}
                 onChange={handleChange}
                 placeholder="Maio/2026 - Florianópolis (Não Desonerada)"
-                className={inputClass}
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                BDI (%) <span className="text-danger-text">*</span>
-              </label>
-              <input
+            </Field>
+            <Field label="BDI (%)" required>
+              <Input
                 name="bdi"
                 inputMode="decimal"
                 value={form.bdi}
                 onChange={(e) => setForm((prev) => ({ ...prev, bdi: e.target.value.replace(/[^\d,]/g, "") }))}
                 placeholder="21,19"
-                className={inputClass}
               />
-            </div>
+            </Field>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">
-              Endereço do local dos serviços <span className="text-danger-text">*</span>
-            </label>
-            <div className="relative">
-              <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-              <input
-                name="endereco"
-                value={form.endereco}
-                onChange={handleChange}
-                placeholder="Base Aérea de Florianópolis - Av. Santos Dumont, s/n, CEP 88049-000"
-                className={iconInputClass}
-              />
-            </div>
-          </div>
-        </div>
+          <Field label="Endereço do local dos serviços" required>
+            <Input
+              icon={MapPin}
+              name="endereco"
+              value={form.endereco}
+              onChange={handleChange}
+              placeholder="Base Aérea de Florianópolis - Av. Santos Dumont, s/n, CEP 88049-000"
+            />
+          </Field>
+        </FormSection>
       ),
     },
     {
@@ -524,62 +467,52 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
       icon: Layers2,
       validate: validateLotes,
       content: (
-        <>
-          {/* Lotes */}
-          <div className="space-y-3">
-            <SectionTitle icon={Layers2} label="Lotes" hint="(opcional)" />
-            <p className="text-xs text-text-muted">
-              Cadastre os lotes se a licitação teve desconto por lote: toda ordem de serviço do contrato escolhe um deles.
-            </p>
-            {lotes.map((lote) => (
-              <div key={lote.key} className="grid grid-cols-[4.5rem_1fr_6.5rem_auto] gap-2 items-center">
-                <input
-                  aria-label="Número do lote"
-                  inputMode="numeric"
-                  value={lote.numero}
-                  onChange={(e) => updateLote(lote.key, { numero: e.target.value.replace(/\D/g, "") })}
-                  placeholder="Nº"
-                  className={inputClass}
-                />
-                <input
-                  aria-label="Nome do lote"
-                  value={lote.nome}
-                  onChange={(e) => updateLote(lote.key, { nome: e.target.value })}
-                  placeholder="Nome (ex.: DO)"
-                  className={inputClass}
-                />
-                <div className="relative">
-                  <input
-                    aria-label="Desconto do lote (%)"
-                    inputMode="decimal"
-                    value={lote.desconto}
-                    onChange={(e) => updateLote(lote.key, { desconto: e.target.value.replace(/[^\d,]/g, "") })}
-                    placeholder="24,8"
-                    className={`${inputClass} pr-7`}
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted text-sm">%</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setLotes((prev) => prev.filter((l) => l.key !== lote.key))}
-                  title="Remover lote"
-                  className="p-2.5 cursor-pointer text-text-secondary hover:bg-danger-bg hover:text-danger-text rounded-lg transition-colors"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={addLote}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary-600 border border-primary-200 bg-primary-50 hover:bg-primary-100 rounded-md cursor-pointer transition-colors"
-            >
-              <Plus size={14} />
-              Adicionar lote
-            </button>
-          </div>
-
-        </>
+        <FormSection
+          title={
+            <>
+              Lotes <span className="normal-case tracking-normal font-normal text-text-muted">(opcional)</span>
+            </>
+          }
+          icon={Layers2}
+        >
+          <p className="text-xs text-text-muted">
+            Cadastre os lotes se a licitação teve desconto por lote: toda ordem de serviço do contrato escolhe um deles.
+          </p>
+          {lotes.map((lote) => (
+            <div key={lote.key} className="grid grid-cols-[4.5rem_1fr_6.5rem_auto] gap-2 items-center">
+              <Input
+                aria-label="Número do lote"
+                inputMode="numeric"
+                value={lote.numero}
+                onChange={(e) => updateLote(lote.key, { numero: e.target.value.replace(/\D/g, "") })}
+                placeholder="Nº"
+              />
+              <Input
+                aria-label="Nome do lote"
+                value={lote.nome}
+                onChange={(e) => updateLote(lote.key, { nome: e.target.value })}
+                placeholder="Nome (ex.: DO)"
+              />
+              <Input
+                aria-label="Desconto do lote (%)"
+                inputMode="decimal"
+                suffix="%"
+                value={lote.desconto}
+                onChange={(e) => updateLote(lote.key, { desconto: e.target.value.replace(/[^\d,]/g, "") })}
+                placeholder="24,8"
+              />
+              <IconButton
+                icon={Trash2}
+                label="Remover lote"
+                variant="danger"
+                onClick={() => setLotes((prev) => prev.filter((l) => l.key !== lote.key))}
+              />
+            </div>
+          ))}
+          <Button variant="secondary" size="sm" icon={Plus} onClick={addLote}>
+            Adicionar lote
+          </Button>
+        </FormSection>
       ),
     },
     {
@@ -588,79 +521,64 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
       icon: ShieldCheck,
       validate: validateFiscais,
       content: (
-        <>
-          {/* Fiscais */}
-          <div className="space-y-3">
-            <SectionTitle icon={ShieldCheck} label="Fiscais do contrato" />
-            <p className="text-xs text-text-muted">
-              Cada ordem de serviço escolhe, entre estes, o fiscal técnico e o administrativo. Cadastre ao menos um de
-              cada tipo para poder emitir OS.
-            </p>
-            {fiscais.map((fiscal) => (
-              <div key={fiscal.key} className="rounded-lg border border-border p-3 space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <select
-                    aria-label="Tipo do fiscal"
-                    value={fiscal.tipo}
-                    onChange={(e) => updateFiscal(fiscal.key, { tipo: e.target.value as FiscalTipo })}
-                    className={`${inputClass} w-auto cursor-pointer`}
-                  >
-                    {(Object.keys(FISCAL_TIPO_LABEL) as FiscalTipo[]).map((tipo) => (
-                      <option key={tipo} value={tipo}>
-                        Fiscal {FISCAL_TIPO_LABEL[tipo]}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => setFiscais((prev) => prev.filter((f) => f.key !== fiscal.key))}
-                    title="Remover fiscal"
-                    className="p-2 cursor-pointer text-text-secondary hover:bg-danger-bg hover:text-danger-text rounded-lg transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-[1fr_6rem_1fr] gap-2">
-                  <input
-                    aria-label="Posto e nome do fiscal"
-                    value={fiscal.nome}
-                    onChange={(e) => updateFiscal(fiscal.key, { nome: e.target.value })}
-                    placeholder="Posto e nome (ex.: 1º SGT FLORIANO)"
-                    className={inputClass}
-                  />
-                  <input
-                    aria-label="Ramal do fiscal"
-                    value={fiscal.ramal}
-                    onChange={(e) => updateFiscal(fiscal.key, { ramal: e.target.value })}
-                    placeholder="Ramal"
-                    className={inputClass}
-                  />
-                  <input
-                    aria-label="E-mail do fiscal"
-                    type="email"
-                    value={fiscal.email}
-                    onChange={(e) => updateFiscal(fiscal.key, { email: e.target.value })}
-                    placeholder="e-mail@fab.mil.br"
-                    className={inputClass}
-                  />
-                </div>
-              </div>
-            ))}
-            <div className="flex flex-wrap gap-2">
-              {(Object.keys(FISCAL_TIPO_LABEL) as FiscalTipo[]).map((tipo) => (
-                <button
-                  key={tipo}
-                  type="button"
-                  onClick={() => addFiscal(tipo)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary-600 border border-primary-200 bg-primary-50 hover:bg-primary-100 rounded-md cursor-pointer transition-colors"
+        <FormSection title="Fiscais do contrato" icon={ShieldCheck}>
+          <p className="text-xs text-text-muted">
+            Cada ordem de serviço escolhe, entre estes, o fiscal técnico e o administrativo. Cadastre ao menos um de
+            cada tipo para poder emitir OS.
+          </p>
+          {fiscais.map((fiscal) => (
+            <div key={fiscal.key} className="rounded-lg border border-border p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Select
+                  aria-label="Tipo do fiscal"
+                  value={fiscal.tipo}
+                  onChange={(e) => updateFiscal(fiscal.key, { tipo: e.target.value as FiscalTipo })}
+                  className="w-auto"
                 >
-                  <Plus size={14} />
-                  Fiscal {FISCAL_TIPO_LABEL[tipo].toLowerCase()}
-                </button>
-              ))}
+                  {(Object.keys(FISCAL_TIPO_LABEL) as FiscalTipo[]).map((tipo) => (
+                    <option key={tipo} value={tipo}>
+                      Fiscal {FISCAL_TIPO_LABEL[tipo]}
+                    </option>
+                  ))}
+                </Select>
+                <IconButton
+                  icon={Trash2}
+                  label="Remover fiscal"
+                  variant="danger"
+                  onClick={() => setFiscais((prev) => prev.filter((f) => f.key !== fiscal.key))}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_6rem_1fr] gap-2">
+                <Input
+                  aria-label="Posto e nome do fiscal"
+                  value={fiscal.nome}
+                  onChange={(e) => updateFiscal(fiscal.key, { nome: e.target.value })}
+                  placeholder="Posto e nome (ex.: 1º SGT FLORIANO)"
+                />
+                <Input
+                  aria-label="Ramal do fiscal"
+                  value={fiscal.ramal}
+                  onChange={(e) => updateFiscal(fiscal.key, { ramal: e.target.value })}
+                  placeholder="Ramal"
+                />
+                <Input
+                  aria-label="E-mail do fiscal"
+                  type="email"
+                  value={fiscal.email}
+                  onChange={(e) => updateFiscal(fiscal.key, { email: e.target.value })}
+                  placeholder="e-mail@fab.mil.br"
+                />
+              </div>
             </div>
+          ))}
+          <div className="flex flex-wrap gap-2">
+            {(Object.keys(FISCAL_TIPO_LABEL) as FiscalTipo[]).map((tipo) => (
+              <Button key={tipo} variant="secondary" size="sm" icon={Plus} onClick={() => addFiscal(tipo)}>
+                Fiscal {FISCAL_TIPO_LABEL[tipo].toLowerCase()}
+              </Button>
+            ))}
           </div>
-        </>
+        </FormSection>
       ),
     },
     // Situação: só na edição
@@ -671,27 +589,15 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
             label: "Situação",
             icon: Activity,
             content: (
-              <div className="space-y-4">
-                <SectionTitle icon={Activity} label="Status do Contrato" />
-                <div className="bg-surface-muted rounded-lg p-4 border border-border">
-                  <div className="flex flex-wrap gap-2">
-                    {STATUS_OPTIONS.map(({ value, label, icon: Icon, activeClass, hoverClass }) => (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => handleStatusChange(value)}
-                        disabled={updatingStatus !== null}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium border transition-colors
-                          ${currentStatus === value ? activeClass : `bg-surface text-text-secondary border-border ${hoverClass}`}
-                          ${updatingStatus !== null ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
-                      >
-                        {updatingStatus === value ? <Loader size={14} className="animate-spin" /> : <Icon size={14} />}
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <FormSection title="Status do Contrato" icon={Activity}>
+                <SegmentedControl
+                  label="Status do contrato"
+                  options={STATUS_OPTIONS}
+                  value={currentStatus}
+                  loadingValue={updatingStatus}
+                  onChange={handleStatusChange}
+                />
+              </FormSection>
             ),
           } satisfies FormStep,
         ]
@@ -699,38 +605,23 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl border border-border">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-linear-to-r from-primary-50/50 to-transparent shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
-              <FileSignature size={20} className="text-primary-600" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-text-primary">
-                {contrato ? "Editar Contrato" : "Novo Contrato"}
-              </h2>
-              <p className="text-sm text-text-secondary">
-                {contrato ? `Editando: ${contrato.identificador}` : "Preencha os dados para cadastrar o contrato"}
-              </p>
-            </div>
-          </div>
-          <button onClick={handleClose} className="p-2 cursor-pointer hover:bg-surface-muted rounded-lg transition-colors">
-            <X size={20} className="text-text-secondary" />
-          </button>
-        </div>
+    <Modal open size="lg">
+      <ModalHeader
+        icon={FileSignature}
+        title={contrato ? "Editar Contrato" : "Novo Contrato"}
+        description={contrato ? `Editando: ${contrato.identificador}` : "Preencha os dados para cadastrar o contrato"}
+        onClose={handleClose}
+      />
 
-        <StepForm
-          steps={steps}
-          isEdit={contrato !== null}
-          isSubmitting={isLoading}
-          submitLabel={contrato ? "Salvar Alterações" : "Cadastrar Contrato"}
-          onCancel={handleClose}
-          onSubmit={submit}
-          onBlur={createBlurNormalizer(setForm, CONTRATO_FIELD_RULES)}
-        />
-      </div>
-    </div>
+      <StepForm
+        steps={steps}
+        isEdit={contrato !== null}
+        isSubmitting={isLoading}
+        submitLabel={contrato ? "Salvar Alterações" : "Cadastrar Contrato"}
+        onCancel={handleClose}
+        onSubmit={submit}
+        onBlur={createBlurNormalizer(setForm, CONTRATO_FIELD_RULES)}
+      />
+    </Modal>
   );
 }

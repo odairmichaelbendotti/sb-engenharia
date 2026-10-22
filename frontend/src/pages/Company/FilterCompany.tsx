@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { SearchInput } from "../../components/filters/SearchInput";
 
 type FilterCompanyProps = {
   searchTerm: string;
@@ -8,19 +8,11 @@ type FilterCompanyProps = {
 const FilterCompany = ({ searchTerm, setSearchTerm }: FilterCompanyProps) => {
   return (
     <div className="flex flex-col sm:flex-row gap-2">
-      <div className="relative flex-1">
-        <Search
-          size={16}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-        />
-        <input
-          type="text"
-          placeholder="Buscar por nome, CNPJ ou cidade..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-9 pr-3 py-2 border border-border rounded-lg bg-surface text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all"
-        />
-      </div>
+      <SearchInput
+        value={searchTerm}
+        onChange={setSearchTerm}
+        placeholder="Buscar por nome, CNPJ ou cidade..."
+      />
     </div>
   );
 };

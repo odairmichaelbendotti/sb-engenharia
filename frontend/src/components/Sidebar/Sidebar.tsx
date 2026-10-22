@@ -11,6 +11,7 @@ import { useTenants } from "../../store/tenants";
 import { getInitials } from "../../utils/get-initial";
 import SidebarGroup from "./SidebarGroup";
 import { usePermission } from "../../hooks/usePermission";
+import { IconButton } from "../ui";
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -100,12 +101,7 @@ const Sidebar = () => {
               </p>
             </div>
           </div>
-          <button
-            className="w-8 h-8 flex items-center justify-center cursor-pointer hover:bg-surface-muted rounded-lg transition-colors shrink-0"
-            onClick={handleLogout}
-          >
-            <LogOut size={16} className="text-text-secondary" />
-          </button>
+          <IconButton icon={LogOut} label="Sair" size="sm" onClick={handleLogout} />
         </div>
       </div>
     </div>

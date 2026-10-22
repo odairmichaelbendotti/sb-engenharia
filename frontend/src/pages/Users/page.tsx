@@ -5,6 +5,7 @@ import { useUsers } from "../../store/users";
 import { useUser } from "../../store/user";
 import type { User } from "../../../types/user";
 import { ConfirmModal } from "../../components/ConfirmModal";
+import { Button } from "../../components/ui";
 import UsersHeader from "./UsersHeader";
 import UsersTable from "./UsersTable";
 import { ROLE_LABELS } from "./role-labels";
@@ -82,23 +83,20 @@ const Usuarios = () => {
       />
 
       {isLoading ? (
-        <div className="bg-surface border border-border rounded-lg py-10 flex flex-col items-center justify-center gap-2">
-          <Loader2 size={24} className="animate-spin text-primary-500" />
+        <div className="bg-surface border border-border rounded-xl py-10 flex flex-col items-center justify-center gap-2">
+          <Loader2 size={24} className="animate-spin text-text-muted" />
           <p className="text-text-secondary text-sm">Carregando...</p>
         </div>
       ) : error ? (
-        <div className="bg-surface border border-border rounded-lg py-10 flex flex-col items-center justify-center gap-2">
+        <div className="bg-surface border border-border rounded-xl py-10 flex flex-col items-center justify-center gap-2">
           <AlertCircle size={24} className="text-danger-text" />
           <p className="text-text-secondary text-sm">{error}</p>
-          <button
-            onClick={() => loadUsers(page)}
-            className="mt-2 px-3 py-1.5 text-sm bg-primary-500 text-white rounded-md hover:bg-primary-600 transition-colors cursor-pointer"
-          >
+          <Button size="sm" className="mt-2" onClick={() => loadUsers(page)}>
             Tentar novamente
-          </button>
+          </Button>
         </div>
       ) : (
-        <div className="bg-surface border border-border rounded-lg overflow-hidden">
+        <div className="bg-surface border border-border rounded-xl overflow-hidden">
           <UsersTable
             users={users}
             page={page}

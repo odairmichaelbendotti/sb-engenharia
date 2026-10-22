@@ -11,6 +11,7 @@ import { useTenants } from "../../store/tenants";
 import { getInitials } from "../../utils/get-initial";
 import SidebarGroup from "./SidebarGroup";
 import { usePermission } from "../../hooks/usePermission";
+import { IconButton } from "../ui";
 
 const MobileSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -53,13 +54,11 @@ const MobileSidebar = () => {
         <div className="flex items-center gap-3">
           <span className="font-bold tracking-tight text-text-primary text-base">SB Engenharia</span>
         </div>
-        <button
+        <IconButton
+          icon={isOpen ? X : Menu}
+          label={isOpen ? "Fechar menu" : "Abrir menu"}
           onClick={() => setIsOpen(!isOpen)}
-          className="w-9 h-9 flex items-center justify-center cursor-pointer hover:bg-surface-muted rounded-lg transition-colors"
-          aria-label={isOpen ? "Fechar menu" : "Abrir menu"}
-        >
-          {isOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        />
       </div>
 
       {/* Mobile Sidebar Overlay */}
@@ -82,13 +81,7 @@ const MobileSidebar = () => {
             <div className="flex items-center gap-3">
               <span className="font-bold tracking-tight text-text-primary text-base">SB Engenharia</span>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="w-9 h-9 flex items-center justify-center cursor-pointer hover:bg-surface-muted rounded-lg transition-colors"
-              aria-label="Fechar menu"
-            >
-              <X size={24} />
-            </button>
+            <IconButton icon={X} label="Fechar menu" onClick={() => setIsOpen(false)} />
           </div>
 
           {tenantName && (
@@ -154,13 +147,7 @@ const MobileSidebar = () => {
                   {user?.email || "email@email.com"}
                 </p>
               </div>
-              <button
-                className="w-8 h-8 flex items-center justify-center cursor-pointer hover:bg-surface-muted rounded-lg transition-colors shrink-0"
-                onClick={handleLogout}
-                aria-label="Sair"
-              >
-                <LogOut size={16} className="text-text-secondary" />
-              </button>
+              <IconButton icon={LogOut} label="Sair" size="sm" onClick={handleLogout} />
             </div>
           </div>
         </div>

@@ -18,7 +18,7 @@ import type { OrdemServico } from "../../../types/ordem-servico";
 import { usePermission } from "../../hooks/usePermission";
 import { formatCurrency, formatDateOnly } from "../../utils/format-currency";
 import { OrdemServicoNumeroTag } from "../../components/OrdemServicoNumeroTag";
-import { OrdemServicoPagination } from "./OrdemServicoPagination";
+import { Badge, Button, IconButton, Pagination } from "../../components/ui";
 import { FinalizeOrdemServicoButton } from "./FinalizeOrdemServico";
 import { getOrdemServicoBalance, isQuitada } from "./ordem-servico-balance";
 import {
@@ -34,13 +34,6 @@ const STATUS_LABEL: Record<OrdemServico["status"], string> = {
   ATIVO: "Ativa",
   FINALIZADO: "Finalizada",
   CANCELADO: "Cancelada",
-};
-
-const TONE_CHIP: Record<ScheduleTone, string> = {
-  danger: "bg-danger-bg text-danger-text border-danger-border",
-  warning: "bg-warning-bg text-warning-text border-warning-border",
-  success: "bg-success-bg text-success-text border-success-border",
-  neutral: "bg-surface-muted text-text-secondary border-border",
 };
 
 const TONE_FILL: Record<ScheduleTone, string> = {
@@ -92,7 +85,7 @@ export function OrdemServicoList({
   if (paginated.length === 0) {
     return isLoading ? (
       <div className="py-12 text-center">
-        <Loader2 size={32} className="mx-auto text-primary-500 animate-spin mb-3" />
+        <Loader2 size={32} className="mx-auto text-text-muted animate-spin mb-3" />
         <p className="text-text-secondary text-sm">Carregando ordens de serviço...</p>
       </div>
     ) : (
@@ -103,13 +96,9 @@ export function OrdemServicoList({
           Tente ajustar os filtros ou cadastre uma nova ordem de serviço
         </p>
         {onAdd && canCreateOrdemServico && (
-          <button
-            onClick={onAdd}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-md cursor-pointer transition-colors"
-          >
-            <Plus size={16} />
+          <Button icon={Plus} onClick={onAdd} className="mt-4">
             Cadastrar ordem de serviço
-          </button>
+          </Button>
         )}
       </div>
     );
@@ -130,12 +119,13 @@ export function OrdemServicoList({
         ))}
       </ul>
 
-      <OrdemServicoPagination
+      <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
         startIndex={startIndex}
         totalItems={ordensServico.length}
         itemsPerPage={ITEMS_PER_PAGE}
+        itemLabel="ordens de serviço"
         onPageChange={setPage}
       />
     </div>
@@ -170,7 +160,7 @@ function OrdemServicoRow({ ordemServico: os, canEdit, onView, onEdit, onDelete }
           onView(os);
         }
       }}
-      className="group relative grid grid-cols-1 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,1fr)_2.5rem] gap-x-6 gap-y-3 pl-5 pr-3 py-4 cursor-pointer transition-colors hover:bg-primary-50/40 focus-visible:outline-none focus-visible:bg-primary-50/60"
+      className="group relative grid grid-cols-1 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,1fr)_2.5rem] gap-x-6 gap-y-3 pl-5 pr-3 py-4 cursor-pointer transition-colors hover:bg-surface-muted/60 focus-visible:outline-none focus-visible:bg-surface-muted"
     >
       {/* Faixa na cor do contrato: agrupa visualmente OS do mesmo contrato */}
       <span
@@ -182,7 +172,7 @@ function OrdemServicoRow({ ordemServico: os, canEdit, onView, onEdit, onDelete }
       {/* Serviço: o número da OS é só uma etiqueta, o título diz o que está sendo feito */}
       <div className={`min-w-0 pr-8 md:pr-0 ${muted ? "opacity-60" : ""}`}>
         <p
-          className={`text-[15px] leading-snug line-clamp-2 ${
+          className={`text-table leading-snug line-clamp-2 ${
             os.obra ? "font-semibold text-text-primary" : "font-medium text-text-secondary"
           }`}
           title={title}
@@ -193,7 +183,7 @@ function OrdemServicoRow({ ordemServico: os, canEdit, onView, onEdit, onDelete }
           <OrdemServicoNumeroTag numero={os.numero} />
           {/* Ativa é o padrão: o status só aparece quando é outro */}
           {os.status !== "ATIVO" && (
-            <span className="px-1.5 py-px rounded border border-border text-[11px]">{STATUS_LABEL[os.status]}</span>
+            <Badge>{STATUS_LABEL[os.status]}</Badge>
           )}
           <span className="truncate" title={`${contrato.company.name} · ${contrato.identificador}`}>
             {contrato.company.name} <span className="text-text-muted">·</span> {contrato.identificador}
@@ -227,7 +217,7 @@ function OrdemServicoRow({ ordemServico: os, canEdit, onView, onEdit, onDelete }
         ) : (
           <ChevronRight
             size={18}
-            className="hidden md:block text-text-muted group-hover:text-primary-500 transition-colors"
+            className="hidden md:block text-text-muted group-hover:text-text-primary transition-colors"
           />
         )}
       </div>
@@ -235,11 +225,19 @@ function OrdemServicoRow({ ordemServico: os, canEdit, onView, onEdit, onDelete }
   );
 }
 
+// Situação do prazo em texto discreto (sem fundo): a cor fica só no texto e no ícone
+const SCHEDULE_TEXT: Record<ScheduleTone, string> = {
+  neutral: "text-text-muted",
+  success: "text-success-text",
+  warning: "text-warning-text",
+  danger: "text-danger-text",
+};
+
 function ScheduleChip({ schedule }: { schedule: OrdemServicoSchedule }) {
   const Icon = SCHEDULE_ICON[schedule.kind];
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium whitespace-nowrap ${TONE_CHIP[schedule.tone]}`}
+      className={`inline-flex items-center gap-1 text-[11px] font-medium whitespace-nowrap ${SCHEDULE_TEXT[schedule.tone]}`}
       title={
         schedule.kind === "noObra"
           ? "Vincule esta OS a uma obra (no cadastro da OS ou da obra)"
@@ -248,7 +246,7 @@ function ScheduleChip({ schedule }: { schedule: OrdemServicoSchedule }) {
             : undefined
       }
     >
-      <Icon size={12} />
+      <Icon size={12} className="shrink-0" />
       {schedule.label}
     </span>
   );
@@ -308,22 +306,30 @@ function BalanceCell({
 
   return (
     <div className="flex flex-col items-start md:items-end gap-1 md:text-right">
-      <div className={`flex flex-col items-start md:items-end gap-1 w-full ${muted ? "opacity-60" : ""}`}>
+      {/* O detalhe (% liquidado do valor) fica no modal da OS; aqui só como dica ao passar o mouse */}
+      <div
+        className={`flex flex-col items-start md:items-end gap-1 w-full ${muted ? "opacity-60" : ""}`}
+        title={
+          balance.kind === "empty"
+            ? `Nenhuma nota lançada · ${formatCurrency(os.valor)}`
+            : `${balance.percent}% liquidado de ${formatCurrency(os.valor)}`
+        }
+      >
         <span className="text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
           {closed ? "Saldo" : "A liquidar"}
         </span>
         {balance.kind === "paid" ? (
-          <span className="inline-flex items-center gap-1 text-sm font-semibold text-success-text">
+          <span className="inline-flex items-center gap-1 text-table font-semibold text-success-text">
             <CheckCircle2 size={14} />
             {os.status === "ATIVO" ? "Quitada · sem saldo" : "Quitada"}
           </span>
         ) : balance.kind === "over" ? (
-          <span className="inline-flex items-center gap-1 text-sm font-semibold text-danger-text tabular-nums">
+          <span className="inline-flex items-center gap-1 text-table font-semibold text-danger-text tabular-nums">
             <AlertTriangle size={14} />
             {formatCurrency(balance.excesso)} acima do valor
           </span>
         ) : (
-          <span className="text-base font-bold text-text-primary tabular-nums tracking-tight">
+          <span className="text-sm font-bold text-text-primary tabular-nums tracking-tight">
             {formatCurrency(balance.saldo)}
           </span>
         )}
@@ -341,13 +347,6 @@ function BalanceCell({
             />
           </div>
         )}
-        <span className="text-[11px] text-text-muted tabular-nums">
-          {balance.kind === "empty"
-            ? `Nenhuma nota lançada · ${formatCurrency(os.valor)}`
-            : balance.kind === "paid"
-              ? `${formatCurrency(balance.liquidado)} liquidados`
-              : `${balance.percent}% liquidado de ${formatCurrency(os.valor)}`}
-        </span>
       </div>
       {canFinalize && isQuitada(os) && (
         <div className="mt-1">
@@ -395,17 +394,15 @@ function RowActionsMenu({
 
   return (
     <div ref={ref} className="relative" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-      <button
+      <IconButton
+        icon={MoreHorizontal}
+        label="Ações"
+        size="sm"
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        title="Ações"
-        className={`p-1.5 rounded-md cursor-pointer transition-colors text-text-muted hover:text-text-primary hover:bg-surface-muted ${
-          open ? "bg-surface-muted text-text-primary" : ""
-        }`}
-      >
-        <MoreHorizontal size={18} />
-      </button>
+        className={open ? "bg-surface-muted" : undefined}
+      />
       {open && (
         <div
           role="menu"
@@ -434,6 +431,7 @@ function MenuItem({
 }) {
   return (
     <button
+      type="button"
       role="menuitem"
       onClick={onClick}
       className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer transition-colors ${

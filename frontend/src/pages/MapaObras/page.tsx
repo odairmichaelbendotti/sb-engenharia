@@ -48,15 +48,16 @@ function ContratoLayerControl({
   }, [open]);
 
   return (
-    <div ref={containerRef} className="absolute top-3 right-3 z-[1000] flex flex-col items-end gap-2">
+    <div ref={containerRef} className="absolute top-3 right-3 z-1000 flex flex-col items-end gap-2">
       <button
+        type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 bg-surface/95 backdrop-blur-sm border border-border rounded-full pl-2.5 pr-3 py-1.5 text-xs font-medium text-text-primary shadow-sm hover:border-primary-300 transition-colors cursor-pointer"
+        className="flex items-center gap-1.5 h-8 bg-surface/95 backdrop-blur-sm border border-border rounded-lg px-3 text-xs font-semibold text-text-primary shadow-sm hover:border-border-strong transition-colors cursor-pointer"
       >
-        <Layers size={14} className="text-primary-500" />
+        <Layers size={14} className="text-text-primary" />
         Contratos
         {selectedIds.length > 0 && (
-          <span className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-primary-500 text-white text-[10px] font-semibold">
+          <span className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-md bg-primary-500 text-white text-[10px] font-semibold">
             {selectedIds.length}
           </span>
         )}
@@ -77,8 +78,9 @@ function ContratoLayerControl({
                 </span>
                 {selectedIds.length > 0 && (
                   <button
+                    type="button"
                     onClick={onClear}
-                    className="text-[11px] text-primary-500 hover:text-primary-600 cursor-pointer"
+                    className="text-[11px] font-semibold text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
                   >
                     Limpar
                   </button>
@@ -90,14 +92,15 @@ function ContratoLayerControl({
                   return (
                     <li key={c.id}>
                       <button
+                        type="button"
                         onClick={() => onToggle(c.id)}
                         className={`w-full flex items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors cursor-pointer ${
-                          active ? "bg-primary-50 text-primary-700" : "text-text-secondary hover:bg-surface-muted"
+                          active ? "bg-surface-muted text-text-primary font-medium" : "text-text-secondary hover:bg-surface-muted"
                         }`}
                       >
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c.cor }} />
                         <span className="flex-1 truncate">{c.descricaoCurta}</span>
-                        {active && <Check size={12} className="text-primary-500 shrink-0" />}
+                        {active && <Check size={12} className="text-text-primary shrink-0" />}
                       </button>
                     </li>
                   );
@@ -206,7 +209,7 @@ const MapaObras = () => {
           <Marker
             key={obra.id}
             position={[obra.latitude, obra.longitude]}
-            icon={getObraIcon(obra.contrato?.cor ?? "#4478b6", obra.identificacaoPatrimonial)}
+            icon={getObraIcon(obra.contrato?.cor ?? "#27272a", obra.identificacaoPatrimonial)}
             eventHandlers={{ click: () => setSelectedObra(obra) }}
           />
         ))}

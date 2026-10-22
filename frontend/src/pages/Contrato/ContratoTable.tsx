@@ -7,11 +7,11 @@ import {
   Loader2,
   Layers2,
 } from "lucide-react";
+import { Badge, Button, IconButton, Pagination, type BadgeTone } from "../../components/ui";
 import { useMemo, useState } from "react";
 import type { Contrato } from "../../../types/contrato";
 import { formatDate } from "../../utils/format-currency";
 import { usePermission } from "../../hooks/usePermission";
-import { ContratoPagination } from "./ContratoPagination";
 import { SaldoLiquidacao } from "../../components/SaldoLiquidacao";
 
 const ITEMS_PER_PAGE = 10;
@@ -22,10 +22,10 @@ const STATUS_LABEL: Record<Contrato["status"], string> = {
   CANCELADO: "Cancelado",
 };
 
-const STATUS_CLASS: Record<Contrato["status"], string> = {
-  ATIVO: "bg-warning-bg text-warning-text border-warning-border",
-  FINALIZADO: "bg-success-bg text-success-text border-success-border",
-  CANCELADO: "bg-danger-bg text-danger-text border-danger-border",
+const STATUS_TONE: Record<Contrato["status"], BadgeTone> = {
+  ATIVO: "warning",
+  FINALIZADO: "success",
+  CANCELADO: "danger",
 };
 
 interface ContratoTableProps {
@@ -57,29 +57,29 @@ export function ContratoTable({
   return (
     <div>
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full text-table">
           <thead className="bg-surface-muted border-b border-border">
             <tr>
-              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
                 Contrato
               </th>
-              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
                 Empresa
               </th>
-              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase hidden md:table-cell">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide hidden md:table-cell">
                 Vigência
               </th>
-              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase hidden lg:table-cell">
+              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide hidden lg:table-cell">
                 Empenhos
               </th>
-              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-left py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
                 Saldo
               </th>
-              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
+              <th className="text-center py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
                 Status
               </th>
               {canEditAdministrativo && (
-                <th className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase">
+                <th className="text-right py-2.5 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wide">
                   Ações
                 </th>
               )}
@@ -91,7 +91,7 @@ export function ContratoTable({
                 key={contrato.id}
                 className="hover:bg-surface-muted/50 transition-colors"
               >
-                <td className="py-2.5 px-4">
+                <td className="py-3 px-4">
                   <div className="flex items-center gap-3">
                     <div
                       className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
@@ -103,7 +103,7 @@ export function ContratoTable({
                     <div>
                       <div className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: contrato.cor }} />
-                        <p className="font-medium text-text-primary text-sm">
+                        <p className="font-medium text-text-primary text-table">
                           {contrato.identificador}
                         </p>
                       </div>
@@ -113,26 +113,26 @@ export function ContratoTable({
                     </div>
                   </div>
                 </td>
-                <td className="py-2.5 px-4">
+                <td className="py-3 px-4">
                   <div className="flex items-center gap-2">
                     <Building2 size={14} className="text-text-muted" />
-                    <span className="text-sm text-text-primary">
+                    <span className="text-table text-text-primary">
                       {contrato.company.name}
                     </span>
                   </div>
                 </td>
-                <td className="py-2.5 px-4 hidden md:table-cell">
-                  <p className="text-sm text-text-secondary">
+                <td className="py-3 px-4 hidden md:table-cell">
+                  <p className="text-table text-text-secondary">
                     {formatDate(contrato.dataInicio)} — {formatDate(contrato.dataFim)}
                   </p>
                 </td>
-                <td className="py-2.5 px-4 text-center hidden lg:table-cell">
-                  <div className="inline-flex items-center gap-1 text-sm text-text-secondary">
+                <td className="py-3 px-4 text-center hidden lg:table-cell">
+                  <div className="inline-flex items-center gap-1 text-table text-text-secondary">
                     <Layers2 size={14} className="text-text-muted" />
                     {contrato.empenhos.length}
                   </div>
                 </td>
-                <td className="py-2.5 px-4 min-w-44">
+                <td className="py-3 px-4 min-w-44">
                   <SaldoLiquidacao
                     valor={contrato.valor}
                     liquidado={contrato.valorLiquidado}
@@ -140,31 +140,21 @@ export function ContratoTable({
                     liquidadoLabel="Contrato liquidado"
                   />
                 </td>
-                <td className="py-2.5 px-4 text-center">
-                  <span
-                    className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium border ${STATUS_CLASS[contrato.status]}`}
-                  >
-                    {STATUS_LABEL[contrato.status]}
-                  </span>
+                <td className="py-3 px-4 text-center">
+                  <Badge tone={STATUS_TONE[contrato.status]}>{STATUS_LABEL[contrato.status]}</Badge>
                 </td>
 
                 {canEditAdministrativo && (
-                  <td className="py-2.5 px-4">
+                  <td className="py-3 px-4">
                     <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => onEdit(contrato)}
-                        className="p-2 hover:bg-primary-100 cursor-pointer text-text-secondary hover:text-primary-500 rounded-md transition-colors"
-                        title="Gerenciar"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button
+                      <IconButton icon={Edit2} label="Gerenciar" size="sm" onClick={() => onEdit(contrato)} />
+                      <IconButton
+                        icon={Trash2}
+                        label="Excluir"
+                        variant="danger"
+                        size="sm"
                         onClick={() => onDelete(contrato)}
-                        className="p-2 hover:bg-danger-bg cursor-pointer text-text-secondary hover:text-danger-text rounded-md transition-colors"
-                        title="Excluir"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      />
                     </div>
                   </td>
                 )}
@@ -178,10 +168,7 @@ export function ContratoTable({
       {paginatedContratos.length === 0 &&
         (isLoading ? (
           <div className="py-8 text-center">
-            <Loader2
-              size={32}
-              className="mx-auto text-primary-500 animate-spin mb-3"
-            />
+            <Loader2 size={32} className="mx-auto text-text-muted animate-spin mb-3" />
             <p className="text-text-secondary text-sm">
               Carregando contratos...
             </p>
@@ -189,30 +176,27 @@ export function ContratoTable({
         ) : (
           <div className="py-8 text-center">
             <FileSignature size={32} className="mx-auto text-text-muted mb-3" />
-            <p className="text-text-secondary font-medium">
+            <p className="text-sm text-text-secondary font-medium">
               Nenhum contrato encontrado
             </p>
             <p className="text-text-muted text-sm mt-1">
               Tente ajustar os filtros ou cadastre um novo contrato
             </p>
             {onAdd && (
-              <button
-                onClick={onAdd}
-                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-md cursor-pointer transition-colors"
-              >
-                <Plus size={16} />
+              <Button icon={Plus} onClick={onAdd} className="mt-4">
                 Cadastrar contrato
-              </button>
+              </Button>
             )}
           </div>
         ))}
 
-      <ContratoPagination
+      <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
         startIndex={startIndex}
         totalItems={contratos.length}
         itemsPerPage={ITEMS_PER_PAGE}
+        itemLabel="contratos"
         onPageChange={setPage}
       />
     </div>

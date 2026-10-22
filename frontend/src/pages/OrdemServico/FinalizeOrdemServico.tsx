@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import type { OrdemServico } from "../../../types/ordem-servico";
 import { useOrdensServico } from "../../store/ordensServico";
+import { Button } from "../../components/ui";
 
 function useFinalizeOrdemServico(os: OrdemServico) {
   const updateStatus = useOrdensServico((s) => s.updateOrdemServicoStatus);
@@ -32,40 +33,29 @@ export function FinalizeOrdemServicoButton({ ordemServico }: { ordemServico: Ord
 
   if (!confirming) {
     return (
-      <button
-        type="button"
+      <Button
+        variant="success"
+        size="sm"
+        icon={CheckCircle2}
         onClick={(e) => {
           stop(e);
           setConfirming(true);
         }}
         onKeyDown={stop}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-secondary-500 hover:bg-secondary-600 text-white text-xs font-semibold cursor-pointer transition-colors"
       >
-        <CheckCircle2 size={13} />
         Finalizar OS
-      </button>
+      </Button>
     );
   }
 
   return (
     <div className="flex items-center gap-1.5" onClick={stop} onKeyDown={stop}>
-      <button
-        type="button"
-        onClick={() => setConfirming(false)}
-        disabled={loading}
-        className="px-2.5 py-1.5 rounded-md border border-border bg-surface text-text-secondary hover:bg-surface-muted text-xs font-medium cursor-pointer transition-colors disabled:cursor-not-allowed"
-      >
+      <Button variant="ghost" size="sm" onClick={() => setConfirming(false)} disabled={loading}>
         Voltar
-      </button>
-      <button
-        type="button"
-        onClick={finalize}
-        disabled={loading}
-        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-secondary-500 hover:bg-secondary-600 text-white text-xs font-semibold cursor-pointer transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
-      >
-        {loading && <Loader2 size={12} className="animate-spin" />}
+      </Button>
+      <Button variant="success" size="sm" onClick={finalize} loading={loading}>
         Confirmar
-      </button>
+      </Button>
     </div>
   );
 }
@@ -98,14 +88,9 @@ export function FinalizeOrdemServicoCallout({
           </div>
         </div>
         {canFinalize && !confirming && (
-          <button
-            type="button"
-            onClick={() => setConfirming(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-secondary-500 hover:bg-secondary-600 text-white text-sm font-medium cursor-pointer transition-colors"
-          >
-            <CheckCircle2 size={15} />
+          <Button variant="success" icon={CheckCircle2} onClick={() => setConfirming(true)}>
             Finalizar OS
-          </button>
+          </Button>
         )}
       </div>
 
@@ -116,23 +101,12 @@ export function FinalizeOrdemServicoCallout({
             “Finalizadas”. Dá para reabrir pela edição da OS.
           </p>
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setConfirming(false)}
-              disabled={loading}
-              className="px-3.5 py-2 rounded-lg border border-border bg-surface text-text-secondary hover:bg-surface-muted text-sm cursor-pointer transition-colors disabled:cursor-not-allowed"
-            >
+            <Button variant="secondary" onClick={() => setConfirming(false)} disabled={loading}>
               Voltar
-            </button>
-            <button
-              type="button"
-              onClick={finalize}
-              disabled={loading}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-secondary-500 hover:bg-secondary-600 text-white text-sm font-medium cursor-pointer transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {loading && <Loader2 size={14} className="animate-spin" />}
+            </Button>
+            <Button variant="success" icon={CheckCircle2} onClick={finalize} loading={loading}>
               Finalizar OS
-            </button>
+            </Button>
           </div>
         </div>
       )}

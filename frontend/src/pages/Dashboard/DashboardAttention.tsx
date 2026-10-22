@@ -24,11 +24,11 @@ export default function DashboardAttention({ groups }: DashboardAttentionProps) 
   return (
     <div className="bg-surface border border-border rounded-xl overflow-hidden">
       <div className="px-4 py-3 border-b border-border">
-        <h3 className="font-semibold text-text-primary flex items-center gap-2">
-          <AlertCircle size={18} className="text-warning-text" />
+        <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
+          <AlertCircle size={16} className="text-warning-text" />
           Atenção
         </h3>
-        <p className="text-text-secondary text-sm">Pendências que você pode resolver</p>
+        <p className="text-text-secondary text-xs mt-0.5">Pendências que você pode resolver</p>
       </div>
 
       {groups.length === 0 ? (
@@ -68,7 +68,7 @@ export default function DashboardAttention({ groups }: DashboardAttentionProps) 
                   <button
                     type="button"
                     onClick={() => toggle(group.key)}
-                    className="cursor-pointer mx-4 mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-500"
+                    className="cursor-pointer mx-4 mt-1 inline-flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-text-primary"
                   >
                     <ChevronDown size={14} className={`transition-transform ${isOpen ? "rotate-180" : ""}`} />
                     {isOpen ? "Mostrar menos" : `Mostrar mais ${hidden}`}

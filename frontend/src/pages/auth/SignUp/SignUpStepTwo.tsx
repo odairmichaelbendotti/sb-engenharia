@@ -1,5 +1,6 @@
-import { ArrowLeft, Loader, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ShieldCheck } from "lucide-react";
 import TenantSelect from "../TenantSelect";
+import { Button, Field } from "../../../components/ui";
 import type { TenantOption } from "../../../../types/tenant";
 
 type SignUpStepTwoProps = {
@@ -21,12 +22,12 @@ export default function SignUpStepTwo({
 }: SignUpStepTwoProps) {
   return (
     <>
-      {/* Big soft icon */}
+      {/* Ícone grande e discreto */}
       <div className="flex flex-col items-center text-center mb-6">
-        <div className="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center mb-4">
-          <ShieldCheck size={36} className="text-primary-300" strokeWidth={1.5} />
+        <div className="w-20 h-20 rounded-full bg-surface-muted border border-border flex items-center justify-center mb-4">
+          <ShieldCheck size={36} className="text-text-secondary" strokeWidth={1.5} />
         </div>
-        <h1 className="text-2xl font-semibold text-text-primary">Quase lá</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-text-primary">Quase lá</h1>
         <p className="text-text-secondary text-sm mt-2 leading-relaxed">
           Escolha a organização à qual você pertence. Após o cadastro, um
           administrador dessa organização precisará aprovar seu acesso antes
@@ -36,33 +37,17 @@ export default function SignUpStepTwo({
 
       {/* Form */}
       <form onSubmit={onSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-2">
-            Organização
-          </label>
+        <Field label="Organização">
           <TenantSelect tenants={tenants} value={tenantId} onChange={setTenantId} />
-        </div>
+        </Field>
 
         <div className="flex gap-2 mt-6">
-          <button
-            type="button"
-            onClick={onBack}
-            className="cursor-pointer py-2.5 px-4 rounded-lg text-sm font-medium text-text-secondary hover:bg-surface-muted transition-colors flex items-center justify-center gap-2"
-          >
-            <ArrowLeft size={16} />
+          <Button variant="ghost" icon={ArrowLeft} onClick={onBack}>
             Voltar
-          </button>
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="flex-1 cursor-pointer bg-primary-500 hover:bg-primary-600 active:bg-primary-700 disabled:bg-border text-text-inverse font-medium py-2.5 px-4 rounded-lg transition flex items-center justify-center gap-2"
-          >
-            {isLoading ? (
-              <Loader className="animate-spin" size={18} />
-            ) : (
-              "Cadastrar"
-            )}
-          </button>
+          </Button>
+          <Button type="submit" loading={isLoading} className="flex-1">
+            Cadastrar
+          </Button>
         </div>
       </form>
     </>

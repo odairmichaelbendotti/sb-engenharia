@@ -5,10 +5,21 @@ import {
   CheckCircle2,
   AlertCircle,
   TrendingUp,
+  type LucideIcon,
 } from "lucide-react";
 import type { Empenho } from "../../../types/empenho";
 import { formatCurrency, formatDate } from "../../utils/format-currency";
 import { parseCurrencyMask } from "../../utils/masks";
+import { Badge } from "../../components/ui";
+
+type InfoTileKey = "total" | "paid" | "remaining" | "current";
+
+const INFO_TILES: { key: InfoTileKey; label: string; icon: LucideIcon }[] = [
+  { key: "total", label: "Valor Total", icon: Banknote },
+  { key: "paid", label: "Liquidado", icon: CheckCircle2 },
+  { key: "remaining", label: "Saldo", icon: TrendingUp },
+  { key: "current", label: "Esta NF", icon: Banknote },
+];
 
 interface EmpenhoDetailsProps {
   empenho: Empenho | null;
@@ -30,119 +41,80 @@ export function EmpenhoDetails({ empenho, newValue }: EmpenhoDetailsProps) {
     totalValue > 0 ? (totalAfterPayment / totalValue) * 100 : 0;
   const remainingValue = totalValue - totalPaid;
 
-  // Definir cores baseado no status
-  const statusColor =
-    empenho.status === "ativo"
-      ? "bg-emerald-100 text-emerald-700"
-      : "bg-slate-100 text-slate-700";
-  const statusBgDot =
-    empenho.status === "ativo" ? "bg-emerald-500" : "bg-slate-500";
+  // Valores dos quadros de resumo, na ordem de INFO_TILES
+  const tileValues: Record<InfoTileKey, number> = {
+    total: totalValue,
+    paid: totalPaid,
+    remaining: Math.max(0, remainingValue),
+    current: newValueNum,
+  };
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500 ease-out">
       {/* Card Principal */}
-      <div className="bg-linear-to-br from-blue-50 to-cyan-50 rounded-xl border border-blue-100 p-5 shadow-sm">
+      <div className="bg-surface rounded-xl border border-border p-5">
         {/* Header com Numero e Status */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <FileText size={18} className="text-blue-600" />
-              <h3 className="text-lg font-bold text-slate-900">
+              <FileText size={16} className="text-text-muted" />
+              <h3 className="text-base font-semibold text-text-primary">
                 {empenho.numero}
               </h3>
             </div>
-            <p className="text-sm text-slate-600">{empenho.description}</p>
+            <p className="text-sm text-text-secondary">{empenho.description}</p>
           </div>
-          <div
-            className={`flex items-center gap-2 px-3 py-1 rounded-full ${statusColor} whitespace-nowrap`}
-          >
-            <div className={`w-2 h-2 rounded-full ${statusBgDot}`} />
-            <span className="text-xs font-medium">{empenho.status}</span>
-          </div>
+          <Badge tone={empenho.status === "ativo" ? "success" : "neutral"}>
+            {empenho.status}
+          </Badge>
         </div>
 
         {/* Grid de Informações */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-          {/* Valor Total */}
-          <div className="bg-white rounded-lg p-3 border border-blue-100">
-            <div className="flex items-center gap-2 mb-1">
-              <Banknote size={16} className="text-blue-600" />
-              <span className="text-xs text-slate-600 font-medium">
-                Valor Total
-              </span>
+          {INFO_TILES.map(({ key, label, icon: Icon }) => (
+            <div key={key} className="bg-surface-muted rounded-lg p-3 border border-border">
+              <div className="flex items-center gap-2 mb-1">
+                <Icon size={14} className="text-text-muted" />
+                <span className="text-xs text-text-secondary font-medium">
+                  {label}
+                </span>
+              </div>
+              <p className="text-sm font-semibold text-text-primary tabular-nums">
+                {formatCurrency(tileValues[key])}
+              </p>
             </div>
-            <p className="text-sm font-bold text-slate-900">
-              {formatCurrency(totalValue)}
-            </p>
-          </div>
-
-          {/* Já Liquidado */}
-          <div className="bg-white rounded-lg p-3 border border-emerald-100">
-            <div className="flex items-center gap-2 mb-1">
-              <CheckCircle2 size={16} className="text-emerald-600" />
-              <span className="text-xs text-slate-600 font-medium">
-                Liquidado
-              </span>
-            </div>
-            <p className="text-sm font-bold text-slate-900">
-              {formatCurrency(totalPaid)}
-            </p>
-          </div>
-
-          {/* Saldo Restante */}
-          <div className="bg-white rounded-lg p-3 border border-amber-100">
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingUp size={16} className="text-amber-600" />
-              <span className="text-xs text-slate-600 font-medium">Saldo</span>
-            </div>
-            <p className="text-sm font-bold text-slate-900">
-              {formatCurrency(Math.max(0, remainingValue))}
-            </p>
-          </div>
-
-          {/* Esta NF */}
-          <div className="bg-white rounded-lg p-3 border border-violet-100">
-            <div className="flex items-center gap-2 mb-1">
-              <Banknote size={16} className="text-violet-600" />
-              <span className="text-xs text-slate-600 font-medium">
-                Esta NF
-              </span>
-            </div>
-            <p className="text-sm font-bold text-slate-900">
-              {formatCurrency(newValueNum)}
-            </p>
-          </div>
+          ))}
         </div>
 
         {/* Datas */}
         <div className="flex gap-3 mb-4 text-xs">
-          <div className="flex items-center gap-2 text-slate-600">
-            <Calendar size={14} className="text-slate-500" />
+          <div className="flex items-center gap-2 text-text-secondary">
+            <Calendar size={14} className="text-text-muted" />
             <span className="font-medium">Início:</span>
-            <span className="text-slate-700">
+            <span className="text-text-primary">
               {formatDate(empenho.startAt)}
             </span>
           </div>
-          <div className="flex items-center gap-2 text-slate-600">
-            <Calendar size={14} className="text-slate-500" />
+          <div className="flex items-center gap-2 text-text-secondary">
+            <Calendar size={14} className="text-text-muted" />
             <span className="font-medium">Fim:</span>
-            <span className="text-slate-700">{formatDate(empenho.endAt)}</span>
+            <span className="text-text-primary">{formatDate(empenho.endAt)}</span>
           </div>
         </div>
 
         {/* Barra de Progresso - Liquidação Atual */}
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-slate-700">
+            <span className="text-xs font-semibold text-text-secondary">
               Progresso de Liquidação
             </span>
-            <span className="text-xs font-bold text-slate-900">
+            <span className="text-xs font-semibold text-text-primary tabular-nums">
               {Math.min(100, Math.round(paidPercentage))}%
             </span>
           </div>
-          <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+          <div className="w-full bg-surface-muted border border-border rounded-full h-2.5 overflow-hidden">
             <div
-              className="bg-linear-to-r from-emerald-400 to-emerald-500 h-full rounded-full transition-all duration-300"
+              className="bg-secondary-500 h-full rounded-full transition-all duration-300"
               style={{ width: `${Math.min(100, paidPercentage)}%` }}
             />
           </div>
@@ -152,25 +124,23 @@ export function EmpenhoDetails({ empenho, newValue }: EmpenhoDetailsProps) {
         <div>
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-700">
+              <span className="text-xs font-semibold text-text-secondary">
                 Total com Esta NF
               </span>
               {exceedsLimit && (
-                <AlertCircle size={14} className="text-red-500" />
+                <AlertCircle size={14} className="text-danger-text" />
               )}
             </div>
             <span
-              className={`text-xs font-bold ${exceedsLimit ? "text-red-600" : "text-slate-900"}`}
+              className={`text-xs font-semibold tabular-nums ${exceedsLimit ? "text-danger-text" : "text-text-primary"}`}
             >
               {Math.round(Math.min(150, totalPercentage))}%
             </span>
           </div>
-          <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+          <div className="w-full bg-surface-muted border border-border rounded-full h-2.5 overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-300 ${
-                exceedsLimit
-                  ? "bg-linear-to-r from-red-400 to-red-500"
-                  : "bg-linear-to-r from-violet-400 to-violet-500"
+                exceedsLimit ? "bg-danger-text" : "bg-primary-400"
               }`}
               style={{ width: `${Math.min(100, totalPercentage)}%` }}
             />
@@ -180,17 +150,17 @@ export function EmpenhoDetails({ empenho, newValue }: EmpenhoDetailsProps) {
 
       {/* Aviso de Erro - Se Exceder Limite */}
       {exceedsLimit && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3">
-          <AlertCircle size={20} className="text-red-600 shrink-0 mt-0.5" />
+        <div className="bg-danger-bg border border-danger-border rounded-lg p-4 flex gap-3">
+          <AlertCircle size={16} className="text-danger-text shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-semibold text-red-900 mb-1">
+            <p className="text-sm font-semibold text-danger-text mb-1">
               Atenção: Limite do Empenho Será Ultrapassado
             </p>
-            <p className="text-sm text-red-700">
+            <p className="text-sm text-danger-text">
               O valor desta nota fiscal ({formatCurrency(newValueNum)}) somado
               ao já liquidado ({formatCurrency(totalPaid)}) ultrapassa o limite
               do empenho ({formatCurrency(totalValue)}) em{" "}
-              <span className="font-bold">
+              <span className="font-semibold">
                 {formatCurrency(totalAfterPayment - totalValue)}
               </span>
               .

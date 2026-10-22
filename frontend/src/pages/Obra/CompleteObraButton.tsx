@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Obra } from "../../../types/obra";
 import { useObras } from "../../store/obras";
+import { Button } from "../../components/ui";
 
 // Os cliques não podem chegar à linha, que abre o resumo da obra
 const stop = (e: React.SyntheticEvent) => e.stopPropagation();
@@ -26,41 +27,35 @@ export function CompleteObraButton({ obra }: { obra: Obra }) {
 
   if (!confirming) {
     return (
-      <button
-        type="button"
+      <Button
+        variant="success"
+        size="sm"
+        icon={CheckCircle2}
         onClick={(e) => {
           stop(e);
           setConfirming(true);
         }}
         onKeyDown={stop}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary-500 hover:bg-primary-600 text-white text-xs font-semibold cursor-pointer transition-colors"
       >
-        <CheckCircle2 size={13} />
         Concluir obra
-      </button>
+      </Button>
     );
   }
 
   return (
     <div className="flex items-center gap-1.5" onClick={stop} onKeyDown={stop}>
-      <button
-        type="button"
-        onClick={() => setConfirming(false)}
-        disabled={loading}
-        className="px-2.5 py-1.5 rounded-md border border-border bg-surface text-text-secondary hover:bg-surface-muted text-xs font-medium cursor-pointer transition-colors disabled:cursor-not-allowed"
-      >
+      <Button variant="ghost" size="sm" onClick={() => setConfirming(false)} disabled={loading}>
         Voltar
-      </button>
-      <button
-        type="button"
+      </Button>
+      <Button
+        variant="success"
+        size="sm"
         onClick={complete}
-        disabled={loading}
+        loading={loading}
         title="Marca a obra como concluída com a data de hoje"
-        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-primary-500 hover:bg-primary-600 text-white text-xs font-semibold cursor-pointer transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
       >
-        {loading && <Loader2 size={12} className="animate-spin" />}
         Confirmar
-      </button>
+      </Button>
     </div>
   );
 }
