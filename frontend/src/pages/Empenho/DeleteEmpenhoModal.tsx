@@ -47,7 +47,7 @@ export function DeleteEmpenhoModal({
   if (!isOpen || !empenho) return null;
 
   return (
-    <Modal open size="sm">
+    <Modal open size="sm" onClose={handleClose}>
       <ModalHeader
         icon={AlertTriangle}
         title="Excluir Empenho Permanentemente"

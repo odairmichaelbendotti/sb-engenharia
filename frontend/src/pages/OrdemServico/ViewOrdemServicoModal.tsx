@@ -427,7 +427,7 @@ export function ViewOrdemServicoModal({ ordemServico, handleClose }: ViewOrdemSe
   }, [handleClose]);
 
   return (
-    <Modal open size="lg">
+    <Modal open size="lg" onClose={handleClose}>
       <div className="relative shrink-0 flex items-start justify-between gap-3 pl-6 pr-4 py-4 border-b border-border">
         {/* Faixa na cor do contrato, igual à da linha da lista */}
         <span aria-hidden className="absolute left-0 inset-y-0 w-1.5 rounded-tl-xl" style={{ backgroundColor: contrato.cor }} />

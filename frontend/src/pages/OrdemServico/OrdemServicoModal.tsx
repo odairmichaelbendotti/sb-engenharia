@@ -964,7 +964,7 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
   ];
 
   return (
-    <Modal open size="xl">
+    <Modal open size="xl" onClose={handleClose}>
       <ModalHeader
         icon={ClipboardList}
         title={ordemServico ? "Editar Ordem de Serviço" : "Nova Ordem de Serviço"}

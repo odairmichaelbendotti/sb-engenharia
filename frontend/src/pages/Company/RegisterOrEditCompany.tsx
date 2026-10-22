@@ -96,7 +96,7 @@ const RegisterOrEditCompany = ({
   if (!isOpen) return null;
 
   return (
-    <Modal open size="xl">
+    <Modal open size="xl" onClose={handleClose}>
       <ModalHeader
         icon={Building2}
         title={empresaSelecionada ? "Editar Empresa" : "Nova Empresa"}

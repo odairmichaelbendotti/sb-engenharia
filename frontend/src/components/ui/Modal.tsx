@@ -1,4 +1,4 @@
-import { createContext, useContext, useId, type ReactNode } from "react";
+import { createContext, useContext, useId, useRef, type ReactNode } from "react";
 import { X, type LucideIcon } from "lucide-react";
 import { cx } from "../../utils/cx";
 import { IconButton } from "./IconButton";
@@ -21,18 +21,22 @@ interface ModalProps {
   // Acima do mapa (Leaflet vai até z-1000) e de painéis laterais; padrão z-50
   elevated?: boolean;
   size?: ModalSize;
-  // Clicar fora fecha o modal só quando isto é passado (formulários não fecham sem querer)
-  onBackdropClick?: () => void;
+  // Fechar: chamado ao clicar fora do painel (regra de todos os modais do sistema)
+  onClose: () => void;
   className?: string;
   children: ReactNode;
 }
 
 /**
  * Casca padrão de modal: fundo escurecido, painel centralizado em coluna (`flex flex-col`)
- * com altura máxima de 90% da tela. Conteúdo: ModalHeader, ModalBody (ou StepForm) e ModalFooter.
+ * com altura máxima de 90% da tela. Clicar fora fecha (`onClose`).
+ * Conteúdo: ModalHeader, ModalBody (ou StepForm) e ModalFooter.
  */
-export function Modal({ open, size = "md", elevated = false, onBackdropClick, className, children }: ModalProps) {
+export function Modal({ open, size = "md", elevated = false, onClose, className, children }: ModalProps) {
   const titleId = useId();
+  // Só fecha se o clique começou e terminou no fundo: arrastar uma seleção de texto
+  // de dentro do formulário para fora não fecha o modal sem querer
+  const pressedOnBackdrop = useRef(false);
   if (!open) return null;
 
   return (
@@ -41,7 +45,15 @@ export function Modal({ open, size = "md", elevated = false, onBackdropClick, cl
         "fixed inset-0 flex items-center justify-center p-4 bg-black/50 backdrop-blur-[2px]",
         elevated ? "z-1300" : "z-50",
       )}
-      onClick={onBackdropClick}
+      onMouseDown={(e) => {
+        pressedOnBackdrop.current = e.target === e.currentTarget;
+      }}
+      onClick={(e) => {
+        // Modal pode estar dentro de uma linha clicável: o clique não sobe para ela
+        e.stopPropagation();
+        if (pressedOnBackdrop.current && e.target === e.currentTarget) onClose();
+        pressedOnBackdrop.current = false;
+      }}
     >
       <div
         role="dialog"

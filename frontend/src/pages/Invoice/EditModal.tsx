@@ -155,7 +155,7 @@ export default function EditModal({
   if (!editInvoice) return null;
 
   return (
-    <Modal open size="xl">
+    <Modal open size="xl" onClose={() => setEditInvoice(null)}>
       <ModalHeader
         icon={Receipt}
         title="Editar Nota Fiscal"

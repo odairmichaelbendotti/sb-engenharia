@@ -58,7 +58,7 @@ export function DeleteModal({
   }
 
   return (
-    <Modal open size="sm">
+    <Modal open size="sm" onClose={() => setDeleteInvoice(null)}>
       <ModalHeader
         icon={AlertTriangle}
         title="Excluir Nota Fiscal"

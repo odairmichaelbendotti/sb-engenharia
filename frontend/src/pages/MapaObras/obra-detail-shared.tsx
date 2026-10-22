@@ -103,7 +103,7 @@ export function PanelModal({
   }, [onClose]);
 
   return (
-    <Modal open elevated size={size} onBackdropClick={onClose}>
+    <Modal open elevated size={size} onClose={onClose}>
       <ModalHeader icon={icon} title={title} description={subtitle} onClose={onClose} />
       <ModalBody>{children}</ModalBody>
     </Modal>

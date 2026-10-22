@@ -140,7 +140,7 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
   }
 
   return (
-    <Modal open size="xl">
+    <Modal open size="xl" onClose={() => setIsOpen(false)}>
       <ModalHeader
         icon={Receipt}
         title="Nova Nota Fiscal"

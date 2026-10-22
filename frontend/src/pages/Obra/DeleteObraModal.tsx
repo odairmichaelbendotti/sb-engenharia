@@ -28,7 +28,7 @@ export function DeleteObraModal({ obra, handleClose }: DeleteObraModalProps) {
   }
 
   return (
-    <Modal open size="sm">
+    <Modal open size="sm" onClose={handleClose}>
       <ModalHeader
         icon={AlertTriangle}
         title="Excluir Obra"

@@ -68,7 +68,7 @@ const ModalEmpenho = ({
   if (!isOpen) return null;
 
   return (
-    <Modal open size="lg" onBackdropClick={handleClose}>
+    <Modal open size="lg" onClose={handleClose}>
       <ModalHeader
         icon={Building2}
         title={empresaSelecionada.name}

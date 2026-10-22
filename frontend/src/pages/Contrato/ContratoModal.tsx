@@ -605,7 +605,7 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
   ];
 
   return (
-    <Modal open size="lg">
+    <Modal open size="lg" onClose={handleClose}>
       <ModalHeader
         icon={FileSignature}
         title={contrato ? "Editar Contrato" : "Novo Contrato"}

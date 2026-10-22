@@ -33,7 +33,7 @@ const DeleteCompany = ({
   };
 
   return (
-    <Modal open size="sm">
+    <Modal open size="sm" onClose={handleClose}>
       <ModalHeader
         icon={AlertTriangle}
         title="Excluir Empresa Permanentemente"

@@ -46,7 +46,7 @@ export function DeleteContratoModal({
   const hasEmpenhos = contrato.empenhos.length > 0;
 
   return (
-    <Modal open size="sm">
+    <Modal open size="sm" onClose={handleClose}>
       <ModalHeader
         icon={AlertTriangle}
         title="Excluir Contrato Permanentemente"
