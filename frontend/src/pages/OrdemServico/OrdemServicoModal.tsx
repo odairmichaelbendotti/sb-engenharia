@@ -453,7 +453,7 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
             <SectionTitle icon={Hash} label="Identificação" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label required={!ordemServico || !numeroFixo}>Número</Label>
+                <Label required={ordemServico !== null && !numeroFixo}>Número</Label>
                 {!ordemServico ? (
                   <p className="text-sm text-text-secondary rounded-lg border border-dashed border-border bg-surface-muted px-3 py-2.5">
                     Gerado automaticamente ao cadastrar (ex.: OS 010/BAFL/2026-L1)
