@@ -14,7 +14,7 @@ set -euo pipefail
 
 APP_NAME="sb-backend"
 REQUIRED_ENV=(DATABASE_URL JWT_SECRET PORT NODE_ENV ALLOWED_PROD_ORIGIN)
-CHROME_LIBS="libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 libpango-1.0-0 libcairo2"
+CHROME_LIBS="libnspr4 libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 libcairo2"
 
 # Diferenças antigas entre o banco de produção e o schema, conhecidas e inofensivas:
 # OrdemServico.empenho_id aceita nulo no banco e OrdemServicoEmpenho.id tem default no banco
@@ -72,9 +72,12 @@ main() {
     if [ -z "$chrome" ]; then
       echo "    AVISO: o Chrome do puppeteer não foi baixado; o PDF da OS vai falhar"
     elif ldd "$chrome" | grep -q "not found"; then
-      echo "    AVISO: faltam bibliotecas do sistema; o PDF da OS vai falhar. Instale com:"
-      echo "    apt-get install -y $CHROME_LIBS"
-      echo "    (no Ubuntu 24.04, troque libasound2 por libasound2t64)"
+      echo "    AVISO: faltam bibliotecas do sistema; o PDF da OS vai falhar. Faltando:"
+      ldd "$chrome" | grep "not found" | awk '{print "      " $1}'
+      echo "    Instale com:"
+      echo "      apt-get update && apt-get install -y $CHROME_LIBS"
+      echo "      apt-get install -y libasound2t64 || apt-get install -y libasound2"
+      echo "    e depois: pm2 restart $APP_NAME"
     else
       echo "    ok"
     fi
