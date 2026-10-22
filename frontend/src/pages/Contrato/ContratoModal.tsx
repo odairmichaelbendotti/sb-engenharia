@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { StepForm, type FormStep } from "../../components/StepForm";
 import { useCompanies } from "../../store/companies";
 import { useContratos } from "../../store/contratos";
 import { formatCurrency } from "../../utils/format-currency";
@@ -111,6 +112,17 @@ const inputClass =
 const iconInputClass =
   "w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300 transition-all";
 
+function SectionTitle({ icon: Icon, label, hint }: { icon: React.ElementType; label: string; hint?: string }) {
+  return (
+    <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+      <Icon size={16} className="text-primary-500" />
+      <span>{label}</span>
+      {hint && <span className="text-xs font-normal text-text-muted">{hint}</span>}
+      <div className="flex-1 h-px bg-border" />
+    </div>
+  );
+}
+
 export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
   const { companies, listCompanies } = useCompanies();
   const { createContrato, updateContrato, updateContratoStatus, fetchContratos } = useContratos();
@@ -198,60 +210,64 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const valorNum = parseCurrencyMask(form.valor);
+  const bdiNum = parseDecimal(form.bdi);
 
-    if (!form.identificador || !form.descricaoCurta || !form.valor || !form.dataInicio || !form.dataFim || !form.company_id) {
-      toast.error("Preencha todos os campos obrigatórios");
-      return;
-    }
-
+  // Validação de cada etapa: devolve a mensagem do primeiro problema ou null
+  function validateIdentificacao() {
+    if (!form.identificador) return "Informe o identificador do contrato";
+    if (!form.descricaoCurta) return "Informe a descrição curta do contrato";
     if (form.descricaoCurta.length > DESCRICAO_CURTA_MAX_LENGTH) {
-      toast.error(`A descrição curta deve ter no máximo ${DESCRICAO_CURTA_MAX_LENGTH} caracteres`);
-      return;
+      return `A descrição curta deve ter no máximo ${DESCRICAO_CURTA_MAX_LENGTH} caracteres`;
     }
+    if (!form.company_id) return "Selecione a empresa do contrato";
+    return null;
+  }
 
-    const valorNum = parseCurrencyMask(form.valor);
-    if (valorNum <= 0) {
-      toast.error("Valor inválido");
-      return;
-    }
+  function validateValores() {
+    if (!form.valor || valorNum <= 0) return "Informe um valor válido para o contrato";
+    if (!form.dataInicio || !form.dataFim) return "Informe o início e o fim da vigência do contrato";
+    if (new Date(form.dataInicio) >= new Date(form.dataFim)) return "A data de início deve ser anterior à data de fim";
+    return null;
+  }
 
-    if (new Date(form.dataInicio) >= new Date(form.dataFim)) {
-      toast.error("A data de início deve ser anterior à data de fim");
-      return;
-    }
-
+  function validateDadosOS() {
     if (!form.ePag || !form.etp || !form.termoReferencia || !form.dataBaseSinapi || !form.endereco) {
-      toast.error("Preencha os dados da ordem de serviço: e-PAG, ETP, TR, data-base SINAPI e endereço");
-      return;
+      return "Preencha os dados da ordem de serviço: e-PAG, ETP, TR, data-base SINAPI e endereço";
     }
+    if (isNaN(bdiNum) || bdiNum < 0 || bdiNum >= 100) return "BDI inválido (use um valor entre 0 e 100)";
+    return null;
+  }
 
-    const bdiNum = parseDecimal(form.bdi);
-    if (isNaN(bdiNum) || bdiNum < 0 || bdiNum >= 100) {
-      toast.error("BDI inválido (use um valor entre 0 e 100)");
-      return;
-    }
-
-    const lotesPayload: CreateContratoPayload["lotes"] = [];
+  // Lotes já em formato de envio, ou a mensagem do primeiro problema
+  function buildLotes(): { lotes: CreateContratoPayload["lotes"]; error: null } | { lotes: null; error: string } {
+    const result: CreateContratoPayload["lotes"] = [];
     for (const lote of lotes) {
       const numero = parseInt(lote.numero, 10);
       const desconto = parseDecimal(lote.desconto);
       if (!numero || numero < 1 || !lote.nome.trim() || isNaN(desconto) || desconto < 0 || desconto >= 100) {
-        toast.error("Informe número, nome e desconto (de 0 a 100%) de cada lote");
-        return;
+        return { lotes: null, error: "Informe número, nome e desconto (de 0 a 100%) de cada lote" };
       }
-      if (lotesPayload.some((l) => l.numero === numero)) {
-        toast.error(`O lote ${numero} está repetido`);
-        return;
-      }
-      lotesPayload.push({ ...(lote.id ? { id: lote.id } : {}), numero, nome: lote.nome, desconto });
+      if (result.some((l) => l.numero === numero)) return { lotes: null, error: `O lote ${numero} está repetido` };
+      result.push({ ...(lote.id ? { id: lote.id } : {}), numero, nome: lote.nome, desconto });
     }
+    return { lotes: result, error: null };
+  }
 
+  function validateLotes() {
+    return buildLotes().error;
+  }
+
+  function validateFiscais() {
     if (fiscais.some((f) => !f.nome.trim() || !f.ramal.trim() || !f.email.trim())) {
-      toast.error("Informe nome, ramal e e-mail de cada fiscal");
-      return;
+      return "Informe nome, ramal e e-mail de cada fiscal";
     }
+    return null;
+  }
+
+  async function submit() {
+    const built = buildLotes();
+    if (built.lotes === null) return;
 
     const payload: CreateContratoPayload = {
       identificador: form.identificador,
@@ -266,7 +282,7 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
       dataBaseSinapi: form.dataBaseSinapi,
       endereco: form.endereco,
       bdi: bdiNum,
-      lotes: lotesPayload,
+      lotes: built.lotes,
       fiscais: fiscais.map(({ id, tipo, nome, ramal, email }) => ({ ...(id ? { id } : {}), tipo, nome, ramal, email })),
     };
 
@@ -289,37 +305,17 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
     }
   }
 
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl border border-border">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-linear-to-r from-primary-50/50 to-transparent shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
-              <FileSignature size={20} className="text-primary-600" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-text-primary">
-                {contrato ? "Editar Contrato" : "Novo Contrato"}
-              </h2>
-              <p className="text-sm text-text-secondary">
-                {contrato ? `Editando: ${contrato.identificador}` : "Preencha os dados para cadastrar o contrato"}
-              </p>
-            </div>
-          </div>
-          <button onClick={handleClose} className="p-2 cursor-pointer hover:bg-surface-muted rounded-lg transition-colors">
-            <X size={20} className="text-text-secondary" />
-          </button>
-        </div>
-
-        <form onBlur={createBlurNormalizer(setForm, CONTRATO_FIELD_RULES)} className="p-5 overflow-y-auto space-y-5" onSubmit={handleSubmit}>
+  const steps: FormStep[] = [
+    {
+      id: "identificacao",
+      label: "Identificação",
+      icon: Hash,
+      validate: validateIdentificacao,
+      content: (
+        <>
           {/* Identificação */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-              <Hash size={16} className="text-primary-500" />
-              <span>Identificação</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
+            <SectionTitle icon={Hash} label="Identificação" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">
@@ -355,11 +351,7 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
 
           {/* Empresa */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-              <Building2 size={16} className="text-primary-500" />
-              <span>Empresa</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
+            <SectionTitle icon={Building2} label="Empresa" />
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-1.5">
                 Empresa <span className="text-danger-text">*</span>
@@ -374,14 +366,19 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
               </select>
             </div>
           </div>
-
+        </>
+      ),
+    },
+    {
+      id: "valores",
+      label: "Valores e vigência",
+      icon: DollarSign,
+      validate: validateValores,
+      content: (
+        <>
           {/* Financeiro */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-              <DollarSign size={16} className="text-primary-500" />
-              <span>Financeiro</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
+            <SectionTitle icon={DollarSign} label="Financeiro" />
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-1.5">
                 Valor do Contrato (R$) <span className="text-danger-text">*</span>
@@ -422,11 +419,7 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
 
           {/* Vigência */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-              <CalendarDays size={16} className="text-primary-500" />
-              <span>Vigência</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
+            <SectionTitle icon={CalendarDays} label="Vigência" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">
@@ -442,93 +435,99 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
               </div>
             </div>
           </div>
-
-          {/* Dados da Ordem de Serviço */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-              <FileText size={16} className="text-primary-500" />
-              <span>Dados da Ordem de Serviço</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-            <p className="text-xs text-text-muted">Saem no documento de cada ordem de serviço deste contrato.</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  e-PAG <span className="text-danger-text">*</span>
-                </label>
-                <input name="ePag" value={form.ePag} onChange={handleChange} placeholder="67272.002300/2026-41" className={inputClass} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  ETP <span className="text-danger-text">*</span>
-                </label>
-                <input name="etp" value={form.etp} onChange={handleChange} placeholder="79/2025" className={inputClass} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Termo de Referência (TR) <span className="text-danger-text">*</span>
-                </label>
-                <input
-                  name="termoReferencia"
-                  value={form.termoReferencia}
-                  onChange={handleChange}
-                  placeholder="26/2026"
-                  className={inputClass}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Data-base SINAPI <span className="text-danger-text">*</span>
-                </label>
-                <input
-                  name="dataBaseSinapi"
-                  value={form.dataBaseSinapi}
-                  onChange={handleChange}
-                  placeholder="Maio/2026 - Florianópolis (Não Desonerada)"
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  BDI (%) <span className="text-danger-text">*</span>
-                </label>
-                <input
-                  name="bdi"
-                  inputMode="decimal"
-                  value={form.bdi}
-                  onChange={(e) => setForm((prev) => ({ ...prev, bdi: e.target.value.replace(/[^\d,]/g, "") }))}
-                  placeholder="21,19"
-                  className={inputClass}
-                />
-              </div>
+        </>
+      ),
+    },
+    {
+      id: "dados-os",
+      label: "Dados da OS",
+      icon: FileText,
+      validate: validateDadosOS,
+      content: (
+        <div className="space-y-4">
+          <SectionTitle icon={FileText} label="Dados da Ordem de Serviço" />
+          <p className="text-xs text-text-muted">Saem no documento de cada ordem de serviço deste contrato.</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                e-PAG <span className="text-danger-text">*</span>
+              </label>
+              <input name="ePag" value={form.ePag} onChange={handleChange} placeholder="67272.002300/2026-41" className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                Endereço do local dos serviços <span className="text-danger-text">*</span>
+                ETP <span className="text-danger-text">*</span>
               </label>
-              <div className="relative">
-                <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-                <input
-                  name="endereco"
-                  value={form.endereco}
-                  onChange={handleChange}
-                  placeholder="Base Aérea de Florianópolis - Av. Santos Dumont, s/n, CEP 88049-000"
-                  className={iconInputClass}
-                />
-              </div>
+              <input name="etp" value={form.etp} onChange={handleChange} placeholder="79/2025" className={inputClass} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                Termo de Referência (TR) <span className="text-danger-text">*</span>
+              </label>
+              <input
+                name="termoReferencia"
+                value={form.termoReferencia}
+                onChange={handleChange}
+                placeholder="26/2026"
+                className={inputClass}
+              />
             </div>
           </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                Data-base SINAPI <span className="text-danger-text">*</span>
+              </label>
+              <input
+                name="dataBaseSinapi"
+                value={form.dataBaseSinapi}
+                onChange={handleChange}
+                placeholder="Maio/2026 - Florianópolis (Não Desonerada)"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                BDI (%) <span className="text-danger-text">*</span>
+              </label>
+              <input
+                name="bdi"
+                inputMode="decimal"
+                value={form.bdi}
+                onChange={(e) => setForm((prev) => ({ ...prev, bdi: e.target.value.replace(/[^\d,]/g, "") }))}
+                placeholder="21,19"
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">
+              Endereço do local dos serviços <span className="text-danger-text">*</span>
+            </label>
+            <div className="relative">
+              <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+              <input
+                name="endereco"
+                value={form.endereco}
+                onChange={handleChange}
+                placeholder="Base Aérea de Florianópolis - Av. Santos Dumont, s/n, CEP 88049-000"
+                className={iconInputClass}
+              />
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "lotes",
+      label: "Lotes",
+      icon: Layers2,
+      validate: validateLotes,
+      content: (
+        <>
           {/* Lotes */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-              <Layers2 size={16} className="text-primary-500" />
-              <span>Lotes</span>
-              <span className="text-xs font-normal text-text-muted">(opcional)</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
+            <SectionTitle icon={Layers2} label="Lotes" hint="(opcional)" />
             <p className="text-xs text-text-muted">
               Cadastre os lotes se a licitação teve desconto por lote: toda ordem de serviço do contrato escolhe um deles.
             </p>
@@ -580,13 +579,19 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
             </button>
           </div>
 
+        </>
+      ),
+    },
+    {
+      id: "fiscais",
+      label: "Fiscais",
+      icon: ShieldCheck,
+      validate: validateFiscais,
+      content: (
+        <>
           {/* Fiscais */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-              <ShieldCheck size={16} className="text-primary-500" />
-              <span>Fiscais do contrato</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
+            <SectionTitle icon={ShieldCheck} label="Fiscais do contrato" />
             <p className="text-xs text-text-muted">
               Cada ordem de serviço escolhe, entre estes, o fiscal técnico e o administrativo. Cadastre ao menos um de
               cada tipo para poder emitir OS.
@@ -655,64 +660,76 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
               ))}
             </div>
           </div>
-
-          {/* Status (somente edição) */}
-          {contrato && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-                <Activity size={16} className="text-primary-500" />
-                <span>Status do Contrato</span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
-              <div className="bg-surface-muted rounded-lg p-4 border border-border">
-                <div className="flex flex-wrap gap-2">
-                  {STATUS_OPTIONS.map(({ value, label, icon: Icon, activeClass, hoverClass }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => handleStatusChange(value)}
-                      disabled={updatingStatus !== null}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium border transition-colors
-                        ${currentStatus === value ? activeClass : `bg-surface text-text-secondary border-border ${hoverClass}`}
-                        ${updatingStatus !== null ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
-                    >
-                      {updatingStatus === value ? (
-                        <Loader size={14} className="animate-spin" />
-                      ) : (
-                        <Icon size={14} />
-                      )}
-                      {label}
-                    </button>
-                  ))}
+        </>
+      ),
+    },
+    // Situação: só na edição
+    ...(contrato
+      ? [
+          {
+            id: "situacao",
+            label: "Situação",
+            icon: Activity,
+            content: (
+              <div className="space-y-4">
+                <SectionTitle icon={Activity} label="Status do Contrato" />
+                <div className="bg-surface-muted rounded-lg p-4 border border-border">
+                  <div className="flex flex-wrap gap-2">
+                    {STATUS_OPTIONS.map(({ value, label, icon: Icon, activeClass, hoverClass }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => handleStatusChange(value)}
+                        disabled={updatingStatus !== null}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium border transition-colors
+                          ${currentStatus === value ? activeClass : `bg-surface text-text-secondary border-border ${hoverClass}`}
+                          ${updatingStatus !== null ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+                      >
+                        {updatingStatus === value ? <Loader size={14} className="animate-spin" /> : <Icon size={14} />}
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            ),
+          } satisfies FormStep,
+        ]
+      : []),
+  ];
 
-          {/* Footer */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-border">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="px-5 py-2.5 cursor-pointer text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <Loader size={18} className="animate-spin" />
-              ) : contrato ? (
-                "Salvar Alterações"
-              ) : (
-                "Cadastrar Contrato"
-              )}
-            </button>
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-surface rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl border border-border">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-linear-to-r from-primary-50/50 to-transparent shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
+              <FileSignature size={20} className="text-primary-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-text-primary">
+                {contrato ? "Editar Contrato" : "Novo Contrato"}
+              </h2>
+              <p className="text-sm text-text-secondary">
+                {contrato ? `Editando: ${contrato.identificador}` : "Preencha os dados para cadastrar o contrato"}
+              </p>
+            </div>
           </div>
-        </form>
+          <button onClick={handleClose} className="p-2 cursor-pointer hover:bg-surface-muted rounded-lg transition-colors">
+            <X size={20} className="text-text-secondary" />
+          </button>
+        </div>
+
+        <StepForm
+          steps={steps}
+          isEdit={contrato !== null}
+          isSubmitting={isLoading}
+          submitLabel={contrato ? "Salvar Alterações" : "Cadastrar Contrato"}
+          onCancel={handleClose}
+          onSubmit={submit}
+          onBlur={createBlurNormalizer(setForm, CONTRATO_FIELD_RULES)}
+        />
       </div>
     </div>
   );

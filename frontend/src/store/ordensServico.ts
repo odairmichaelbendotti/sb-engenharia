@@ -19,6 +19,8 @@ type OrdensServicoState = {
   deleteOrdemServico: (id: string) => Promise<void>;
   // PDF da OS preenchido com os dados cadastrados
   fetchOrdemServicoDocument: (id: string) => Promise<Blob>;
+  // Número que a OS nova receberia (sem reservá-lo); `loteId` vazio = contrato sem lote
+  fetchProximoNumero: (loteId: string, ano: number) => Promise<string>;
 };
 
 export const useOrdensServico = create<OrdensServicoState>((set) => ({
@@ -108,6 +110,14 @@ export const useOrdensServico = create<OrdensServicoState>((set) => ({
       throw new Error(error?.message || "Erro ao gerar o documento da ordem de serviço");
     }
     return response.blob();
+  },
+
+  fetchProximoNumero: async (loteId, ano) => {
+    const params = new URLSearchParams({ ano: String(ano), ...(loteId ? { lote_id: loteId } : {}) });
+    const response = await defaultFetch(`/ordem-servico/proximo-numero?${params}`, { credentials: "include" });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || "Erro ao obter o número da ordem de serviço");
+    return data.numero;
   },
 
   deleteOrdemServico: async (id) => {

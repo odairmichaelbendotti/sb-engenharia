@@ -2,7 +2,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { estadosBrasil } from "../../utils/estados-brasil";
 import {
-  Loader2,
   X,
   Building2,
   Building,
@@ -14,6 +13,7 @@ import {
   Hash,
   Tag,
 } from "lucide-react";
+import { StepForm } from "../../components/StepForm";
 import { useTenants } from "../../store/tenants";
 import type { CreateTenantType } from "../../../types/create-tenant";
 import { maskCnpj, maskPhone, maskCep, onlyDigits } from "../../utils/masks";
@@ -59,9 +59,13 @@ const RegisterTenant = ({
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Validação de cada etapa: devolve a mensagem do primeiro problema ou null
+  const validateDados = () =>
+    !formData.name.trim() || !formData.apelido.trim() || !onlyDigits(formData.cnpj)
+      ? "Preencha o nome, o apelido e o CNPJ da organização"
+      : null;
 
+  const submit = async () => {
     const payload: CreateTenantType = {
       ...formData,
       cnpj: onlyDigits(formData.cnpj),
@@ -115,7 +119,20 @@ const RegisterTenant = ({
           </button>
         </div>
 
-        <form onBlur={createBlurNormalizer(setFormData, TENANT_FIELD_RULES)} onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-5">
+        <StepForm
+          isSubmitting={isLoading}
+          submitLabel="Cadastrar Organização"
+          onCancel={handleClose}
+          onSubmit={submit}
+          onBlur={createBlurNormalizer(setFormData, TENANT_FIELD_RULES)}
+          steps={[
+            {
+              id: "dados",
+              label: "Dados da organização",
+              icon: Building,
+              validate: validateDados,
+              content: (
+                <>
           {/* Seção: Dados da Organização */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
@@ -235,6 +252,15 @@ const RegisterTenant = ({
             </div>
           </div>
 
+                </>
+              ),
+            },
+            {
+              id: "endereco",
+              label: "Endereço",
+              icon: MapPin,
+              content: (
+                <>
           {/* Seção: Endereço */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
@@ -393,28 +419,11 @@ const RegisterTenant = ({
             </div>
           </div>
 
-          {/* Footer Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-border shrink-0">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="px-5 py-2.5 cursor-pointer text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                "Cadastrar Organização"
-              )}
-            </button>
-          </div>
-        </form>
+                </>
+              ),
+            },
+          ]}
+        />
       </div>
     </div>
   );

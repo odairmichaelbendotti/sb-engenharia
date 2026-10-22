@@ -237,6 +237,32 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
     }
   }
 
+  async getProximoNumero({
+    tenant_id,
+    lote_id,
+    ano,
+  }: {
+    tenant_id: string;
+    lote_id: string | null;
+    ano: number;
+  }): Promise<string> {
+    try {
+      let loteNumero: number | null = null;
+      if (lote_id) {
+        const lote = await prisma.lote.findFirst({
+          where: { id: lote_id, contrato: { tenant_id } },
+          select: { numero: true },
+        });
+        if (!lote) throw new DomainError("Lote not found");
+        loteNumero = lote.numero;
+      }
+      return (await gerarNumero(prisma, tenant_id, { loteNumero, ano })).numero;
+    } catch (error) {
+      if (error instanceof DomainError) throw error;
+      throw new DomainError("Error getting next ordem de serviço number: " + error);
+    }
+  }
+
   async verifyNumero(numero: string, tenant_id: string): Promise<boolean> {
     try {
       const ordemServico = await prisma.ordemServico.findFirst({

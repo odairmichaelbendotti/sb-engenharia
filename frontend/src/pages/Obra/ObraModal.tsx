@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { StepForm, type FormStep } from "../../components/StepForm";
 import { useObras } from "../../store/obras";
 import { useOrdensServico } from "../../store/ordensServico";
 import type { Obra, ObraStatus, CreateObraPayload } from "../../../types/obra";
@@ -203,32 +204,31 @@ export function ObraModal({ obra, handleClose }: ObraModalProps) {
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const latitudeNum = form.latitude.trim() ? parseFloat(form.latitude) : undefined;
+  const longitudeNum = form.longitude.trim() ? parseFloat(form.longitude) : undefined;
+  const areaNum = form.areaConstruida.trim() ? parseFloat(form.areaConstruida.replace(",", ".")) : undefined;
 
+  // Validação de cada etapa: devolve a mensagem do primeiro problema ou null
+  function validateIdentificacao() {
     if (!form.nome || !form.identificacaoPatrimonial || !form.responsavelTecnico) {
-      toast.error("Preencha todos os campos obrigatórios");
-      return;
+      return "Preencha o nome, a identificação patrimonial e o responsável técnico da obra";
     }
+    return null;
+  }
 
-    if (linked.length === 0) {
-      toast.error("Vincule ao menos uma ordem de serviço a esta obra");
-      return;
-    }
+  function validateOrdensServico() {
+    return linked.length === 0 ? "Vincule ao menos uma ordem de serviço a esta obra" : null;
+  }
 
-    const latitudeNum = form.latitude.trim() ? parseFloat(form.latitude) : undefined;
-    const longitudeNum = form.longitude.trim() ? parseFloat(form.longitude) : undefined;
+  function validateEdificacao() {
+    if (areaNum !== undefined && (isNaN(areaNum) || areaNum < 0)) return "Área construída inválida";
     if ((latitudeNum !== undefined && isNaN(latitudeNum)) || (longitudeNum !== undefined && isNaN(longitudeNum))) {
-      toast.error("Latitude/Longitude inválidas");
-      return;
+      return "Latitude/Longitude inválidas";
     }
+    return null;
+  }
 
-    const areaNum = form.areaConstruida.trim() ? parseFloat(form.areaConstruida.replace(",", ".")) : undefined;
-    if (areaNum !== undefined && (isNaN(areaNum) || areaNum < 0)) {
-      toast.error("Área construída inválida");
-      return;
-    }
-
+  async function submit() {
     const payload: CreateObraPayload = {
       nome: form.nome,
       identificacaoPatrimonial: form.identificacaoPatrimonial,
@@ -287,7 +287,21 @@ export function ObraModal({ obra, handleClose }: ObraModalProps) {
           </button>
         </div>
 
-        <form onBlur={createBlurNormalizer(setForm, OBRA_FIELD_RULES)} className="p-5 overflow-y-auto space-y-5" onSubmit={handleSubmit}>
+        <StepForm
+          isEdit={obra !== null}
+          isSubmitting={isLoading}
+          submitLabel={obra ? "Salvar Alterações" : "Cadastrar Obra"}
+          onCancel={handleClose}
+          onSubmit={submit}
+          onBlur={createBlurNormalizer(setForm, OBRA_FIELD_RULES)}
+          steps={[
+            {
+              id: "identificacao",
+              label: "Identificação",
+              icon: Hash,
+              validate: validateIdentificacao,
+              content: (
+                <>
           {/* Identificação */}
           <div className="space-y-4">
             <SectionTitle icon={Hash} label="Identificação" />
@@ -337,6 +351,16 @@ export function ObraModal({ obra, handleClose }: ObraModalProps) {
             </div>
           </div>
 
+                </>
+              ),
+            },
+            {
+              id: "edificacao",
+              label: "Edificação e localização",
+              icon: MapPin,
+              validate: validateEdificacao,
+              content: (
+                <>
           {/* Edificação: dados que saem no documento da ordem de serviço */}
           <div className="space-y-4">
             <SectionTitle icon={FileText} label="Edificação (documento da OS)" />
@@ -383,6 +407,45 @@ export function ObraModal({ obra, handleClose }: ObraModalProps) {
             </div>
           </div>
 
+          {/* Localização (coordenadas do mapa — endereço vem do tenant) */}
+          <div className="space-y-4">
+            <SectionTitle icon={MapPin} label="Localização" />
+            <div className="grid grid-cols-2 gap-4">
+              <InputField label="Latitude">
+                <input
+                  type="number"
+                  step="any"
+                  name="latitude"
+                  value={form.latitude}
+                  onChange={handleChange}
+                  placeholder="-15.7801"
+                  className={inputClass}
+                />
+              </InputField>
+              <InputField label="Longitude">
+                <input
+                  type="number"
+                  step="any"
+                  name="longitude"
+                  value={form.longitude}
+                  onChange={handleChange}
+                  placeholder="-47.9292"
+                  className={inputClass}
+                />
+              </InputField>
+            </div>
+          </div>
+
+                </>
+              ),
+            },
+            {
+              id: "ordens-servico",
+              label: "Ordens de serviço",
+              icon: FileSignature,
+              validate: validateOrdensServico,
+              content: (
+                <>
           {/* Ordens de serviço da obra (uma obra pode ter várias) */}
           <div className="space-y-3">
             <SectionTitle icon={FileSignature} label="Ordens de Serviço" />
@@ -459,35 +522,15 @@ export function ObraModal({ obra, handleClose }: ObraModalProps) {
             </InputField>
           </div>
 
-          {/* Localização (coordenadas do mapa — endereço vem do tenant) */}
-          <div className="space-y-4">
-            <SectionTitle icon={MapPin} label="Localização" />
-            <div className="grid grid-cols-2 gap-4">
-              <InputField label="Latitude">
-                <input
-                  type="number"
-                  step="any"
-                  name="latitude"
-                  value={form.latitude}
-                  onChange={handleChange}
-                  placeholder="-15.7801"
-                  className={inputClass}
-                />
-              </InputField>
-              <InputField label="Longitude">
-                <input
-                  type="number"
-                  step="any"
-                  name="longitude"
-                  value={form.longitude}
-                  onChange={handleChange}
-                  placeholder="-47.9292"
-                  className={inputClass}
-                />
-              </InputField>
-            </div>
-          </div>
-
+                </>
+              ),
+            },
+            {
+              id: "detalhes",
+              label: "Detalhes",
+              icon: AlignLeft,
+              content: (
+                <>
           {/* Descrição e Anotações */}
           <div className="space-y-4">
             <SectionTitle icon={AlignLeft} label="Detalhes Técnicos" />
@@ -513,8 +556,19 @@ export function ObraModal({ obra, handleClose }: ObraModalProps) {
             </InputField>
           </div>
 
+                </>
+              ),
+            },
+            // Situação: só na edição
+            ...(obra
+              ? [
+                  {
+                    id: "situacao",
+                    label: "Situação",
+                    icon: Activity,
+                    content: (
+                      <>
           {/* Status (somente edição) */}
-          {obra && (
             <div className="space-y-4">
               <SectionTitle icon={FileText} label="Status da Obra" />
               <div className="bg-surface-muted rounded-lg p-4 border border-border">
@@ -540,32 +594,13 @@ export function ObraModal({ obra, handleClose }: ObraModalProps) {
                 </div>
               </div>
             </div>
-          )}
-
-          {/* Footer */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-border">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="px-5 py-2.5 cursor-pointer text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 cursor-pointer bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <Loader size={18} className="animate-spin" />
-              ) : obra ? (
-                "Salvar Alterações"
-              ) : (
-                "Cadastrar Obra"
-              )}
-            </button>
-          </div>
-        </form>
+                      </>
+                    ),
+                  } satisfies FormStep,
+                ]
+              : []),
+          ]}
+        />
       </div>
     </div>
   );

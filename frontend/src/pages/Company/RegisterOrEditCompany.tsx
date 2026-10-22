@@ -2,7 +2,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { estadosBrasil } from "../../utils/estados-brasil";
 import {
-  Loader2,
   X,
   Building2,
   Building,
@@ -14,6 +13,7 @@ import {
   Hash,
 } from "lucide-react";
 import type { Empresa } from "../../../types/empresa";
+import { StepForm } from "../../components/StepForm";
 import { useCompanies } from "../../store/companies";
 import type { CreateCompanyType } from "../../../types/create-company";
 import { maskCnpj, maskPhone, maskCep, onlyDigits } from "../../utils/masks";
@@ -61,9 +61,11 @@ const RegisterOrEditCompany = ({
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Validação de cada etapa: devolve a mensagem do primeiro problema ou null
+  const validateDados = () =>
+    !formData.name.trim() || !onlyDigits(formData.cnpj) ? "Preencha o nome e o CNPJ da empresa" : null;
 
+  const submit = async () => {
     const payload: CreateCompanyType = {
       ...formData,
       cnpj: onlyDigits(formData.cnpj),
@@ -121,7 +123,21 @@ const RegisterOrEditCompany = ({
           </button>
         </div>
 
-        <form onBlur={createBlurNormalizer(setFormData, COMPANY_FIELD_RULES)} onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-5">
+        <StepForm
+          isEdit={empresaSelecionada !== null}
+          isSubmitting={isLoading}
+          submitLabel={empresaSelecionada ? "Salvar Alterações" : "Cadastrar Empresa"}
+          onCancel={handleClose}
+          onSubmit={submit}
+          onBlur={createBlurNormalizer(setFormData, COMPANY_FIELD_RULES)}
+          steps={[
+            {
+              id: "dados",
+              label: "Dados da empresa",
+              icon: Building,
+              validate: validateDados,
+              content: (
+                <>
           {/* Seção: Dados da Empresa */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
@@ -217,6 +233,15 @@ const RegisterOrEditCompany = ({
             </div>
           </div>
 
+                </>
+              ),
+            },
+            {
+              id: "endereco",
+              label: "Endereço",
+              icon: MapPin,
+              content: (
+                <>
           {/* Seção: Endereço */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
@@ -327,30 +352,11 @@ const RegisterOrEditCompany = ({
             </div>
           </div>
 
-          {/* Footer Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-border shrink-0">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="px-5 py-2.5 cursor-pointer text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : empresaSelecionada ? (
-                "Salvar Alterações"
-              ) : (
-                "Cadastrar Empresa"
-              )}
-            </button>
-          </div>
-        </form>
+                </>
+              ),
+            },
+          ]}
+        />
       </div>
     </div>
   );

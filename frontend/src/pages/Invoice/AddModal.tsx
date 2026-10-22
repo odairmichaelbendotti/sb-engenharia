@@ -6,11 +6,11 @@ import {
   Building2,
   AlignLeft,
   CalendarDays,
-  Loader,
   Banknote,
   CircleAlert,
 } from "lucide-react";
 import type { InvoiceFormData } from "../../../types/invoice";
+import { StepForm } from "../../components/StepForm";
 import { useObras } from "../../store/obras";
 import type { Empenho } from "../../../types/empenho";
 import { toast } from "sonner";
@@ -92,14 +92,23 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
 
   if (!isOpen) return null;
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!formData.numero || !formData.value || !formData.vencimento) return;
-
+  // Validação de cada etapa: devolve a mensagem do primeiro problema ou null
+  function validateEmpenho() {
+    if (!formData.company_id || !formData.empenho_id) return "Selecione a empresa e o empenho da nota fiscal";
     if (obraOptionsForInvoice.length > 0 && !formData.ordemServico_id) {
-      toast.error("Selecione a obra e a OS desta nota fiscal: o empenho financia obras.");
-      return;
+      return "Selecione a obra e a OS desta nota fiscal: o empenho financia obras.";
     }
+    return null;
+  }
+
+  function validateDados() {
+    if (!formData.numero || !formData.value || !formData.vencimento) {
+      return "Preencha o número, o valor e o vencimento da nota fiscal";
+    }
+    return null;
+  }
+
+  async function submit() {
     const obraDaOS = obraOptionsForInvoice.find((o) => o.ordemServico.id === formData.ordemServico_id);
 
     const nf = {
@@ -156,69 +165,20 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
           </button>
         </div>
 
-        <form onBlur={createBlurNormalizer(setFormData, INVOICE_FIELD_RULES)} onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-5">
-          {/* Empenho Selecionado */}
-          {selectedEmpenho && (
-            <EmpenhoDetails
-              empenho={selectedEmpenho}
-              newValue={formData.value}
-            />
-          )}
-
-          {/* Identificação */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-              <Hash size={16} className="text-primary-500" />
-              <span>Identificação</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Número da NF <span className="text-danger-text">*</span>
-                </label>
-                <div className="relative">
-                  <Hash
-                    size={16}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-                  />
-                  <input
-                    type="text"
-                    required
-                    name="numero"
-                    value={formData.numero}
-                    onChange={(e) =>
-                      setFormData((f) => ({ ...f, numero: e.target.value }))
-                    }
-                    placeholder="NF-2024-001"
-                    className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Valor <span className="text-danger-text">*</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-medium">
-                    R$
-                  </span>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    required
-                    value={formData.value}
-                    onChange={(e) =>
-                      setFormData((f) => ({ ...f, value: maskCurrency(e.target.value) }))
-                    }
-                    placeholder="0,00"
-                    className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
+        <StepForm
+          isSubmitting={isLoading}
+          submitLabel="Criar Nota Fiscal"
+          onCancel={() => setIsOpen(false)}
+          onSubmit={submit}
+          onBlur={createBlurNormalizer(setFormData, INVOICE_FIELD_RULES)}
+          steps={[
+            {
+              id: "empenho",
+              label: "Empresa e empenho",
+              icon: Building2,
+              validate: validateEmpenho,
+              content: (
+                <>
           {/* Cliente e Empenho */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
@@ -335,25 +295,67 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
               </div>
             </div>
           </div>
-
-          {/* Descrição */}
+                </>
+              ),
+            },
+            {
+              id: "dados",
+              label: "Número, valor e datas",
+              icon: Hash,
+              validate: validateDados,
+              content: (
+                <>
+          {/* Identificação */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-              <AlignLeft size={16} className="text-primary-500" />
-              <span>Descrição</span>
+              <Hash size={16} className="text-primary-500" />
+              <span>Identificação</span>
               <div className="flex-1 h-px bg-border" />
             </div>
-            <div>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData((f) => ({ ...f, description: e.target.value }))
-                }
-                placeholder="Descreva os serviços ou produtos..."
-                rows={3}
-                className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 resize-none"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  Número da NF <span className="text-danger-text">*</span>
+                </label>
+                <div className="relative">
+                  <Hash
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+                  />
+                  <input
+                    type="text"
+                    required
+                    name="numero"
+                    value={formData.numero}
+                    onChange={(e) =>
+                      setFormData((f) => ({ ...f, numero: e.target.value }))
+                    }
+                    placeholder="NF-2024-001"
+                    className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  Valor <span className="text-danger-text">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-medium">
+                    R$
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    required
+                    value={formData.value}
+                    onChange={(e) =>
+                      setFormData((f) => ({ ...f, value: maskCurrency(e.target.value) }))
+                    }
+                    placeholder="0,00"
+                    className="w-full pl-10 pr-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -382,27 +384,49 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-border shrink-0">
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="cursor-pointer px-5 py-2.5 text-text-secondary hover:bg-surface-muted rounded-lg transition-colors font-medium"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="cursor-pointer flex justify-center items-center gap-2 px-5 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium shadow-sm"
-            >
-              {isLoading ? (
-                <Loader className="animate-spin" />
-              ) : (
-                "Criar Nota Fiscal"
-              )}
-            </button>
+                </>
+              ),
+            },
+            {
+              id: "descricao",
+              label: "Descrição e resumo",
+              icon: AlignLeft,
+              content: (
+                <>
+          {/* Empenho Selecionado */}
+          {selectedEmpenho && (
+            <EmpenhoDetails
+              empenho={selectedEmpenho}
+              newValue={formData.value}
+            />
+          )}
+
+          {/* Descrição */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+              <AlignLeft size={16} className="text-primary-500" />
+              <span>Descrição</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+            <div>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData((f) => ({ ...f, description: e.target.value }))
+                }
+                placeholder="Descreva os serviços ou produtos..."
+                rows={3}
+                className="w-full px-3 py-2.5 border border-border rounded-lg bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-200 resize-none"
+              />
+            </div>
           </div>
-        </form>
+
+                </>
+              ),
+            },
+          ]}
+        />
       </div>
     </div>
   );

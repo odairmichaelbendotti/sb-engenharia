@@ -179,6 +179,11 @@ export interface IOrdemServicoRepository {
   /** Cria a OS com seus vínculos; valor da OS = soma dos vínculos. */
   create(data: OrdemServicoPersistData): Promise<OrdemServicoListItem>;
   verifyNumero(numero: string, tenant_id: string): Promise<boolean>;
+  /**
+   * Próximo número que a criação geraria para o lote (null = contrato sem lote) e o ano, sem
+   * reservá-lo: se outra OS for criada antes, o número real pode ser o seguinte.
+   */
+  getProximoNumero(data: { tenant_id: string; lote_id: string | null; ano: number }): Promise<string>;
   /** Contrato do empenho, com os ids dos lotes e dos fiscais disponíveis para a OS. */
   findContratoByEmpenho(empenho_id: string): Promise<OrdemServicoContratoDados | null>;
   /** Dados do documento da OS; null se não existir. */
