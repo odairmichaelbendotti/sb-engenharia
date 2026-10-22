@@ -17,6 +17,7 @@ import Organizacoes from "./pages/Tenant/page";
 import TenantSummaryDetail from "./pages/Tenant/TenantSummaryDetail";
 import SignIn from "./pages/auth/SignIn/page";
 import SignUp from "./pages/auth/SignUp/page";
+import DesignSystem from "./pages/DesignSystem/page";
 
 export const router = createBrowserRouter([
   {
@@ -125,4 +126,6 @@ export const router = createBrowserRouter([
     path: "/signup",
     element: <SignUp />,
   },
+  // Vitrine dos componentes base, só no ambiente de desenvolvimento
+  ...(import.meta.env.DEV ? [{ path: "/design-system", element: <DesignSystem /> }] : []),
 ]);

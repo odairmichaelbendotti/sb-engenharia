@@ -26,14 +26,14 @@ const SidebarGroup = ({ label, items, onNavigate }: SidebarGroupProps) => {
       <button
         type="button"
         onClick={() => setManuallyOpen((prev) => !prev)}
-        className="w-full flex items-center justify-between py-2 px-2 rounded-md cursor-pointer hover:bg-surface-muted"
+        className="w-full flex items-center justify-between h-8 px-3 rounded-lg cursor-pointer hover:bg-surface-muted"
         aria-expanded={isOpen}
       >
-        <span className="text-xs text-text-primary font-bold tracking-wide uppercase">
+        <span className="text-[11px] text-text-muted font-semibold tracking-wider uppercase">
           {label}
         </span>
         <ChevronDown
-          size={16}
+          size={14}
           className={`text-text-muted transition-transform duration-200 ${
             isOpen ? "rotate-180" : ""
           }`}
@@ -46,7 +46,7 @@ const SidebarGroup = ({ label, items, onNavigate }: SidebarGroupProps) => {
         }`}
       >
         <div className="overflow-hidden">
-          <div className="flex flex-col gap-1 pt-2 pb-2">
+          <div className="flex flex-col gap-0.5 pt-1 pb-2">
             {items.map((item) => {
               const isActive = location.pathname === item.path;
               return (
@@ -54,28 +54,15 @@ const SidebarGroup = ({ label, items, onNavigate }: SidebarGroupProps) => {
                   key={item.path}
                   to={item.path}
                   onClick={onNavigate}
-                  className={`group relative flex items-center gap-3 py-2 px-2 rounded-md cursor-pointer ${
+                  aria-current={isActive ? "page" : undefined}
+                  className={`relative flex items-center gap-3 h-9 px-3 rounded-lg text-sm cursor-pointer transition-colors ${
                     isActive
-                      ? "bg-primary-100 text-primary-500"
-                      : "hover:bg-surface-muted text-text-secondary"
+                      ? "bg-primary-500 text-white font-semibold"
+                      : "text-text-secondary hover:bg-surface-muted hover:text-text-primary"
                   }`}
                 >
-                  <span
-                    className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full ${
-                      isActive ? "bg-primary-500" : "bg-transparent"
-                    }`}
-                  />
-                  <div
-                    className={`p-2 rounded-md shrink-0 ${
-                      isActive ? "bg-primary-500" : ""
-                    }`}
-                  >
-                    <item.icon
-                      size={18}
-                      className={isActive ? "text-white" : "text-text-secondary"}
-                    />
-                  </div>
-                  <p className="text-sm">{item.label}</p>
+                  <item.icon size={16} className="shrink-0" />
+                  <span className="truncate">{item.label}</span>
                 </Link>
               );
             })}

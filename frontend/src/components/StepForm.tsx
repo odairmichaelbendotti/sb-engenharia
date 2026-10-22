@@ -1,6 +1,7 @@
 import { useRef, useState, type ElementType, type FocusEventHandler, type ReactNode } from "react";
-import { Check, ChevronLeft, ChevronRight, Loader } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "./ui";
 
 export type FormStep = {
   id: string;
@@ -21,9 +22,6 @@ interface StepFormProps {
   onSubmit: () => void | Promise<void>;
   onBlur?: FocusEventHandler<HTMLFormElement>;
 }
-
-const buttonBase =
-  "inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
 
 /**
  * Formulário de cadastro em etapas: indicador de progresso no topo, uma etapa por vez e
@@ -104,7 +102,7 @@ export function StepForm({ steps, isEdit = false, isSubmitting, submitLabel, onC
                       active
                         ? "bg-primary-500 border-primary-500 text-white"
                         : done
-                          ? "bg-primary-100 border-primary-200 text-primary-600"
+                          ? "bg-surface-muted border-border-strong text-text-primary"
                           : "bg-surface border-border text-text-muted"
                     }`}
                   >
@@ -120,7 +118,7 @@ export function StepForm({ steps, isEdit = false, isSubmitting, submitLabel, onC
                     {item.label}
                   </span>
                 </button>
-                {index < last && <span className={`flex-1 h-px mx-3 ${done ? "bg-primary-200" : "bg-border"}`} />}
+                {index < last && <span className={`flex-1 h-px mx-3 ${done ? "bg-border-strong" : "bg-border"}`} />}
               </li>
             );
           })}
@@ -135,47 +133,29 @@ export function StepForm({ steps, isEdit = false, isSubmitting, submitLabel, onC
           {step.content}
         </div>
 
-        <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-t border-border">
-          <button
-            type="button"
-            onClick={onCancel}
-            className={`${buttonBase} text-text-secondary hover:bg-surface-muted`}
-          >
+        <div className="shrink-0 flex flex-wrap items-center justify-between gap-2 px-5 py-4 border-t border-border">
+          <Button variant="ghost" onClick={onCancel}>
             Cancelar
-          </button>
-          <div className="flex flex-wrap items-center justify-end gap-3">
+          </Button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
             {current > 0 && (
-              <button
-                type="button"
-                onClick={() => show(current - 1)}
-                className={`${buttonBase} border border-border text-text-secondary hover:bg-surface-muted`}
-              >
-                <ChevronLeft size={16} />
+              <Button variant="secondary" icon={ChevronLeft} onClick={() => show(current - 1)}>
                 Voltar
-              </button>
+              </Button>
             )}
             {!isLast && (
-              <button
-                type="submit"
-                className={
-                  isEdit
-                    ? `${buttonBase} border border-primary-200 bg-primary-50 text-primary-600 hover:bg-primary-100`
-                    : `${buttonBase} bg-primary-500 text-white hover:bg-primary-600 shadow-sm hover:shadow-md`
-                }
-              >
+              <Button type="submit" variant={isEdit ? "secondary" : "primary"} iconRight={ChevronRight}>
                 Próximo
-                <ChevronRight size={16} />
-              </button>
+              </Button>
             )}
             {(isLast || isEdit) && (
-              <button
+              <Button
                 type={isLast ? "submit" : "button"}
                 onClick={isLast ? undefined : () => void save()}
-                disabled={isSubmitting}
-                className={`${buttonBase} bg-primary-500 text-white hover:bg-primary-600 shadow-sm hover:shadow-md`}
+                loading={isSubmitting}
               >
-                {isSubmitting ? <Loader size={18} className="animate-spin" /> : submitLabel}
-              </button>
+                {submitLabel}
+              </Button>
             )}
           </div>
         </div>
