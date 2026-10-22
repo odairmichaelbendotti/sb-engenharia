@@ -9,6 +9,7 @@ import { TenantRoutes } from "./src/http/routes/TenantRoutes.js";
 import { ObraRoutes } from "./src/http/routes/ObraRoutes.js";
 import { ContratoRoutes } from "./src/http/routes/ContratoRoutes.js";
 import { OrdemServicoRoutes } from "./src/http/routes/OrdemServicoRoutes.js";
+import { HealthRoutes } from "./src/http/routes/HealthRoutes.js";
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use(
 );
 app.use(cookieParser());
 app.use(express.json());
+app.use("/api", HealthRoutes);
 app.use("/api", UserRoutes);
 app.use("/api", CompanyRoutes);
 app.use("/api", EmpenhoRoutes);

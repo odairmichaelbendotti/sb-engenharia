@@ -18,8 +18,9 @@ Não há: testes, ESLint/Prettier configurados, CI/CD, container de injeção de
 
 ```bash
 npm run dev     # tsx --env-file=.env --watch ./server.ts — modo de desenvolvimento real, usado no dia a dia
-npm run build   # prisma generate && tsc — GERA ERRO hoje (ver "Pendências conhecidas")
-npm run start   # node --env-file=./env ./dist/server.js — CUIDADO: aponta para "./env", não "./.env" (bug de digitação, nunca corrigido porque o fluxo real é sempre `dev`)
+npm run build   # prisma generate && tsc — compila sem erros (conferido em 2026-10-22)
+npm run start   # node --env-file=./env ./dist/server.js — CUIDADO: aponta para "./env", não "./.env" (bug de digitação). Em produção quem sobe a API é o pm2 (ecosystem.config.cjs na raiz), não este script
+npm test        # vitest run — testes das funções puras (normalização, documento da OS)
 ```
 
 ## Arquitetura
@@ -117,6 +118,25 @@ Na listagem (e no retorno de create/update) de OS, cada vínculo de `empenhos` v
 Dados que alimentam o documento: **Contrato** (`ePag`, `etp`, `termoReferencia`, `dataBaseSinapi`, `endereco`, `bdi`, mais `Lote` [número, nome, desconto] opcionais e `FiscalContrato` [técnico/administrativo, vários]), **Obra** (`idPatrimonialCompleto`, `apelido`, `areaConstruida`, `estadoConservacao`, todos opcionais) e **OS** (`lote_id`, `setorRequisitante`, `urgencia`, `dataVistoria`, `descricaoProblema`, `dataEmissao`, `prazoMobilizacaoDias` [7], `prazoDias`, `totalComBdi`, `fiscalSetorial`, `fiscalTecnico_id`, `fiscalAdministrativo_id`, `condicoesEspeciais`). Contratos antigos ficam com o texto "A PREENCHER" (e BDI 21,19); OS e obras antigas ficam com nulo e o PDF sai com esses campos em branco.
 
 Regras: o número da OS é **gerado** na criação (`OS 010/BAFL/2026-L4`; sequência por nº de lote e ano começando em 10, sem lote `OS 010/BAFL/2026`; `BAFL` vem de `Tenant.apelido`); o número de OS antiga (sequência nula) ainda pode ser corrigido na edição. O usuário informa `prazoDias` e o término é calculado (`calcularTermino`: o dia de início conta como o primeiro). O usuário informa `totalComBdi`; o PDF mostra total sem BDI = total com BDI ÷ (1 + BDI) e final = total com BDI × (1 − desconto do lote), então pode diferir em alguns reais da planilha SINAPI (arredondamento item a item) — `OrdemServico.valor` continua sendo a soma dos empenhos, ajustável. Lote de OS emitida não muda e lote com OS não é removido; o contrato com lotes exige lote na OS e sem lotes não aceita. Fiscais da OS precisam ser do contrato; fiscal removido do contrato solta a OS (`SetNull`). Na criação todos os campos do documento são obrigatórios (`OrdemServicoDocumentValidator`); na edição podem ficar vazios. SQL: `prisma/manual-migrations/2026-10-21-os-documento.sql` — **só acrescenta; aplicar antes do deploy do código** (validada contra o schema com `prisma migrate diff`, que deu vazio).
+
+## Deploy na VPS (`deploy.sh`, 2026-10-22)
+
+Arquitetura de produção: banco no **Supabase** (projeto `wlznzjzhxukhhcomijpu`), API na **VPS** `74.50.67.174` gerenciada pelo **pm2** (processo `sb-backend`, definido em `ecosystem.config.cjs` na raiz: `cwd` = `backend`, `dist/server.js`, uma instância só por causa do Chrome do PDF; as variáveis vêm do `backend/.env` via `dotenv`), frontend na **Vercel** (publica sozinho a cada push no `main`; o `vercel.json` repassa `/api` para a VPS).
+
+Ordem de um deploy: (1) backup e migration de `prisma/manual-migrations/` no SQL Editor do Supabase, se houver; (2) `git push` do `main` (Vercel); (3) na VPS, na pasta do projeto, `./deploy.sh`.
+
+O `deploy.sh` (raiz do repo, executável, LF garantido pelo `.gitattributes`) para no primeiro erro e, até reiniciar, deixa a versão antiga no ar:
+1. confere git, pm2 e Node ≥ 20.19 (exigência do Prisma 7);
+2. `git pull --ff-only`;
+3. confere o `backend/.env` (`DATABASE_URL`, `JWT_SECRET`, `PORT`, `NODE_ENV=production`, `ALLOWED_PROD_ORIGIN`);
+4. `npm ci --include=dev` (prisma/typescript são devDependencies; sem `--ignore-scripts`, para baixar o Chrome do PDF);
+5. avisa (sem parar) se faltam bibliotecas de sistema do Chrome (`ldd`);
+6. **confere o banco só com leitura** (`prisma migrate diff` banco × `schema.prisma`): se faltar coluna/tabela, mostra o SQL faltante e para, pedindo a migration manual. Ignora os dois desvios antigos e inofensivos da produção (`OrdemServico.empenho_id` nulável no banco; default em `OrdemServicoEmpenho.id`) — testado: passa no banco em dia e barra (52 linhas) o backup da produção de antes da migration 2026-10-21;
+7. `npm run build` e `npm test`;
+8. `pm2 startOrReload ecosystem.config.cjs` + `pm2 save`. Na primeira vez, se a porta já estiver ocupada por uma API fora deste pm2 (outro nome, systemd, Docker), para e pede para desligar a antiga;
+9. espera `GET /api/health` responder (rota `HealthRoutes.ts`, sem autenticação: 200 só se o banco responder `SELECT 1`, senão 503) e mostra como voltar ao commit anterior se não responder.
+
+O script nunca altera o banco. Ao criar uma migration manual nova, aplicá-la no Supabase antes do deploy — o passo 6 barra o deploy se ela faltar.
 
 ## Schema Prisma (resumo)
 
@@ -228,12 +248,12 @@ O que foi implementado:
 
 ## Pendências conhecidas (não "corrigir sozinho" sem alinhar escopo — já causou retrabalho)
 
-1. **`Empenho` não tem `category`/`tenant_id` na camada de aplicação**, embora o schema Prisma já exija os dois campos. Isso quebra `npm run build` hoje com:
+1. ~~**`Empenho` não tem `category`/`tenant_id` na camada de aplicação**~~ — **resolvido**: em 2026-10-22 o `npx tsc --noEmit` e o `npm run build` passam sem erro (itens 1 e 2). Registro antigo: a aplicação não tinha esses campos, embora o schema Prisma já exigisse os dois. Isso quebra `npm run build` hoje com:
    ```
    PrismaEmpenhoRepository.ts(18,9): Type '...' is missing ... properties ... 'category', 'tenant_id'
    ```
    A lacuna é ponta a ponta: `EmpenhoType`/`EmpenhoEntity`, `IEmpenhoRepository`, `CreateEmpenhoUseCase`/`UpdateEmpenhoUseCase`, e `PrismaEmpenhoRepository` precisam todos ser atualizados juntos.
-2. **`SignUpUseCase.ts:42`** também não compila hoje (`npx tsc --noEmit`): o objeto passado pro construtor de `User` está faltando `id`/`role`. Encontrado nesta sessão, não estava documentado antes — **junto com o item 1, são os dois únicos erros de compilação do projeto hoje**; se aparecer um terceiro, é regressão real.
+2. ~~**`SignUpUseCase.ts:42`** também não compila hoje~~ (resolvido, ver item 1) (`npx tsc --noEmit`): o objeto passado pro construtor de `User` está faltando `id`/`role`. Encontrado nesta sessão, não estava documentado antes — **junto com o item 1, são os dois únicos erros de compilação do projeto hoje**; se aparecer um terceiro, é regressão real.
 3. Sem testes, sem CI — qualquer mudança precisa ser validada manualmente (`npx tsc --noEmit` no mínimo) antes de considerar concluída.
 4. `express/index.d.ts` tem uma `JwtPayload` local cujo union de `role` não inclui `"PLATFORM_ADMIN"` (diverge de `AuthenticatedUser`) e parece não ser usada em lugar nenhum — candidato a limpeza, mas confirmar antes de remover.
 5. Script `npm run start` aponta para `./env` em vez de `./.env` — nunca testado/usado (fluxo real é sempre `npm run dev`).
