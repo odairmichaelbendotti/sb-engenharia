@@ -1,3 +1,4 @@
+import type { TramitacaoAutor } from "./IOrdemServicoTramitacaoRepository.js";
 import type {
   OrdemServicoStatusValue,
   OrdemServicoUrgenciaValue,
@@ -51,8 +52,18 @@ export type OrdemServicoDocumentFields = {
   condicoesEspeciais: string[];
 };
 
+// Emissão (ou reemissão) para a empresa: grava o prazo de ciência, o evento no histórico e
+// a notificação, na mesma transação da OS
+export type OrdemServicoEmissao = {
+  tipo: "EMITIDA" | "REEMITIDA";
+  emitidaEm: Date;
+  cienciaPrazoAte: Date;
+  autor: TramitacaoAutor;
+};
+
 // Dados já validados para gravar a OS — valores em centavos
 export type OrdemServicoPersistData = OrdemServicoDocumentFields & {
+  emissao?: OrdemServicoEmissao | undefined;
   // Na criação, com `numeracao` o repository gera o número (sequência por lote e ano)
   numero: string;
   numeracao?: { loteNumero: number | null; ano: number } | undefined;
@@ -145,6 +156,8 @@ export type OrdemServicoListItem = PersistedOrdemServico & {
   obra: OrdemServicoObra | null;
   // Soma das notas fiscais não canceladas lançadas nesta OS
   valorExecutado: number;
+  // Apontamentos da empresa ainda sem decisão da fiscalização
+  contestacoesAbertas: number;
 };
 
 export type OrdemServicoStats = {

@@ -34,7 +34,12 @@ export function DeleteOrdemServicoModal({
       handleClose();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erro ao excluir ordem de serviço";
-      toast.error(message);
+      // Depois que a empresa abriu, deu ciência ou apontou, o histórico é prova: só cancelar
+      toast.error(
+        message.includes("already has a history with the company")
+          ? "A empresa já interagiu com esta OS (abriu, deu ciência ou fez apontamento). Cancele-a em vez de excluir: o histórico precisa ser mantido."
+          : message,
+      );
     } finally {
       setIsLoading(false);
     }

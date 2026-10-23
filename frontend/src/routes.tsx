@@ -11,6 +11,7 @@ import OrdensServico from "./pages/OrdemServico/page";
 import Medicoes from "./pages/Medicoes/page";
 import Obras from "./pages/Obra/page";
 import MapaObras from "./pages/MapaObras/page";
+import PendenciasCiencia from "./pages/Pendencias/page";
 import Aprovacoes from "./pages/Approval/page";
 import Usuarios from "./pages/Users/page";
 import Organizacoes from "./pages/Tenant/page";
@@ -69,6 +70,15 @@ export const router = createBrowserRouter([
           // Empresa consulta só as próprias OS (o backend filtra), sem acesso ao resto do administrativo
           <RequireRole allow={(p) => p.canViewAdministrativo || p.isEmpresaRestricted}>
             <OrdensServico />
+          </RequireRole>
+        ),
+      },
+      {
+        path: "/pendencias",
+        element: (
+          // OS aguardando ciência da empresa (com o prazo vencido, o AppLayout mostra só esta tela)
+          <RequireRole allow={(p) => p.canDarCienciaOrdemServico}>
+            <PendenciasCiencia />
           </RequireRole>
         ),
       },

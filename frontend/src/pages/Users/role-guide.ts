@@ -65,6 +65,7 @@ export const ROLE_GUIDE: RoleGuide[] = [
     title: "Gestor de uma unidade",
     summary: "gerencia usuários da unidade e tem CRUD completo no administrativo e em Obras",
     abilities: [
+      "Responde aos apontamentos das empresas nas OS (acata ou recusa) e comenta no histórico",
       "Aprova e recusa cadastros e muda perfis, só dentro da própria organização",
       "Não pode conceder o perfil Admin da Plataforma",
       "CRUD completo no administrativo",
@@ -85,6 +86,7 @@ export const ROLE_GUIDE: RoleGuide[] = [
     title: "Chefe de uma divisão",
     summary: "mesmos poderes do Master — a diferença é só hierárquica",
     abilities: [
+      "Responde aos apontamentos das empresas nas OS (acata ou recusa) e comenta no histórico",
       "Mesmos poderes do Master; serve só para indicar a hierarquia",
       "Aprova e recusa cadastros e muda perfis, só dentro da própria organização",
       "Não pode conceder o perfil Admin da Plataforma",
@@ -105,6 +107,7 @@ export const ROLE_GUIDE: RoleGuide[] = [
     title: "Setor administrativo",
     summary: "CRUD de Empresas, Contratos, Empenhos, OS e NFs; em Obras só visualiza",
     abilities: [
+      "Responde aos apontamentos das empresas nas OS (acata ou recusa) e comenta no histórico",
       "CRUD de Empresas, Contratos, Empenhos, Ordens de Serviço e Notas Fiscais",
       "Cria o acesso das empresas",
       "Em Obras só visualiza",
@@ -124,6 +127,7 @@ export const ROLE_GUIDE: RoleGuide[] = [
     title: "Setor de engenharia",
     summary: "CRUD de Obras; no administrativo só visualiza e cadastra Ordem de Serviço",
     abilities: [
+      "Responde aos apontamentos das empresas nas OS (acata ou recusa) e comenta no histórico",
       "CRUD de Obras (cadastrar, editar, mudar status e excluir)",
       "Cria o acesso das empresas",
       "No administrativo só visualiza, mas pode cadastrar Ordem de Serviço",
@@ -158,6 +162,8 @@ export const ROLE_GUIDE: RoleGuide[] = [
     title: "Login da empresa contratada",
     summary: "consulta obras e ordens de serviço da própria empresa, sem editar",
     abilities: [
+      "Dá ciência de cada OS emitida em até 48 h; com o prazo vencido, só acessa as pendências até dar ciência",
+      "Registra apontamentos sobre a OS dentro do prazo de ciência e comenta no histórico",
       "Não é atribuído aqui: é criado em Empresas → “Criar acesso”, já aprovado e com senha gerada",
       "Vê Obras, Ordens de Serviço e Mapa só da própria empresa, com filtro por empenho",
       "Não cria, edita nem exclui nada; as demais telas redirecionam para o Mapa",

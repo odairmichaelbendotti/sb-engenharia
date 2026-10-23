@@ -10,6 +10,47 @@ import { OrdemServicoEmpenhosValidator } from "./OrdemServicoEmpenhosValidator.j
 import { normalizeFreeText } from "../../../domain/normalization/text-normalizers.js";
 import { OrdemServicoDocumentValidator } from "./OrdemServicoDocumentValidator.js";
 import { OrdemServicoObraValidator } from "./OrdemServicoObraValidator.js";
+import {
+  calcularPrazoCiencia,
+  houveMudancaNoConteudo,
+  isCienciaDispensada,
+  type OrdemServicoConteudo,
+} from "../../../domain/tramitacao/ciencia.js";
+import { autorDe } from "../ordem-servico-tramitacao/tramitacao-access.js";
+
+// Data sem horário, para comparar o que veio do banco com o que veio do formulário
+const dayOf = (value: string | Date | null) => (value ? new Date(value).toISOString().slice(0, 10) : null);
+
+type DataCampo = string | Date | null;
+
+// Só os campos que a empresa precisa reconhecer de novo quando mudam (ver houveMudancaNoConteudo)
+function conteudoDe(os: Omit<OrdemServicoConteudo, "dataInicio" | "dataPrevisaoTermino" | "dataVistoria" | "dataEmissao"> & {
+  dataInicio: DataCampo;
+  dataPrevisaoTermino: DataCampo;
+  dataVistoria: DataCampo;
+  dataEmissao: DataCampo;
+}): OrdemServicoConteudo {
+  return {
+    numero: os.numero,
+    empenhos: os.empenhos,
+    dataInicio: dayOf(os.dataInicio),
+    dataPrevisaoTermino: dayOf(os.dataPrevisaoTermino),
+    obra_id: os.obra_id,
+    lote_id: os.lote_id,
+    setorRequisitante: os.setorRequisitante,
+    urgencia: os.urgencia,
+    dataVistoria: dayOf(os.dataVistoria),
+    descricaoProblema: os.descricaoProblema,
+    dataEmissao: dayOf(os.dataEmissao),
+    prazoMobilizacaoDias: os.prazoMobilizacaoDias,
+    prazoDias: os.prazoDias,
+    totalComBdiCentavos: os.totalComBdiCentavos,
+    fiscalSetorial: os.fiscalSetorial,
+    fiscalTecnico_id: os.fiscalTecnico_id,
+    fiscalAdministrativo_id: os.fiscalAdministrativo_id,
+    condicoesEspeciais: os.condicoesEspeciais,
+  };
+}
 
 export class UpdateOrdemServicoUseCase {
   private empenhosValidator: OrdemServicoEmpenhosValidator;
@@ -113,7 +154,33 @@ export class UpdateOrdemServicoUseCase {
       loteAnterior: existing.lote_id,
     });
 
+    const totalComBdi =
+      ordemServicoEntity.totalComBdi === null ? null : Math.round(ordemServicoEntity.totalComBdi * 100);
+
+    // OS que já tramita com a empresa: mudou o conteúdo, ela é reemitida e a ciência recomeça
+    const antes = conteudoDe({
+      ...existing,
+      empenhos: atuais.map((v) => ({ empenho_id: v.empenho_id, valor: v.valor })),
+      totalComBdiCentavos: existing.totalComBdi === null ? null : Math.round(existing.totalComBdi * 100),
+    });
+    const depois = conteudoDe({ ...ordemServicoEntity, totalComBdiCentavos: totalComBdi });
+    const reemitir =
+      existing.status === "ATIVO" &&
+      !isCienciaDispensada({ ...existing, contestacoesAbertas: 0 }) &&
+      houveMudancaNoConteudo(antes, depois);
+    const emitidaEm = new Date();
+
     return this.repository.update(ordemServicoId, {
+      ...(reemitir
+        ? {
+            emissao: {
+              tipo: "REEMITIDA" as const,
+              emitidaEm,
+              cienciaPrazoAte: calcularPrazoCiencia(emitidaEm),
+              autor: autorDe(user),
+            },
+          }
+        : {}),
       numero: ordemServicoEntity.numero,
       empenhos: vinculos,
       dataInicio: new Date(ordemServicoEntity.dataInicio),
@@ -127,8 +194,7 @@ export class UpdateOrdemServicoUseCase {
       dataEmissao: ordemServicoEntity.dataEmissao ? new Date(ordemServicoEntity.dataEmissao) : null,
       prazoMobilizacaoDias: ordemServicoEntity.prazoMobilizacaoDias,
       prazoDias: ordemServicoEntity.prazoDias,
-      totalComBdi:
-        ordemServicoEntity.totalComBdi === null ? null : Math.round(ordemServicoEntity.totalComBdi * 100),
+      totalComBdi,
       fiscalSetorial: ordemServicoEntity.fiscalSetorial,
       fiscalTecnico_id: ordemServicoEntity.fiscalTecnico_id,
       fiscalAdministrativo_id: ordemServicoEntity.fiscalAdministrativo_id,

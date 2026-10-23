@@ -39,6 +39,7 @@ model Tenant {
   empenhos      Empenho[]
   ordensServico OrdemServico[]
   companies     TenantCompany[]
+  notificacoes  Notificacao[]
 }
 
 model User {
@@ -56,6 +57,8 @@ model User {
 
   company_id String?
   company    Company? @relation(fields: [company_id], references: [id])
+
+  notificacoesLidas NotificacaoLeitura[]
 }
 
 model Company {
@@ -76,6 +79,7 @@ model Company {
   contratos Contrato[]
   users     User[]
   tenants   TenantCompany[]
+  notificacoes Notificacao[]
 }
 
 // Empresa cadastrada para uma organização. Company é global (CNPJ único) porque a
@@ -319,6 +323,23 @@ model OrdemServico {
   fiscalAdministrativo    FiscalContrato?  @relation("FiscalAdministrativoOS", fields: [fiscalAdministrativo_id], references: [id], onDelete: SetNull)
   condicoesEspeciais  String[]             @default([])
 
+  // Ciência da empresa (horário do servidor). As OS anteriores a esta regra ficam
+  // com a ciência dispensada e nunca travam a empresa
+  emitidaEm          DateTime?
+  cienciaPrazoAte    DateTime?
+  cienciaDispensada  Boolean   @default(false)
+  // Primeira vez que a empresa abriu a OS (a mais recente emissão)
+  visualizadaEm      DateTime?
+  cienteEm           DateTime?
+  cienteUser_id      String?
+  cienteNome         String?
+  // Marca que o vencimento do prazo já virou evento no histórico (uma vez por emissão)
+  prazoVencidoEm     DateTime?
+
+  eventos       OrdemServicoEvento[]
+  contestacoes  OrdemServicoContestacao[]
+  notificacoes  Notificacao[]
+
   @@unique([numero, tenant_id])
   @@index([obra_id])
   @@index([lote_id])
@@ -329,6 +350,122 @@ enum OrdemServicoUrgencia {
   URGENCIA
   PROGRAMADA
   PREVENTIVA
+}
+
+enum OrdemServicoEventoTipo {
+  EMITIDA
+  REEMITIDA
+  VISUALIZADA
+  CIENTE
+  PRAZO_VENCIDO
+  CONTESTACAO
+  CONTESTACAO_ACATADA
+  CONTESTACAO_RECUSADA
+  COMENTARIO
+  STATUS_ALTERADO
+}
+
+// Histórico da tramitação da OS: só recebe inserções (um gatilho no banco barra UPDATE).
+// O autor é copiado (nome, perfil, empresa) para o registro não mudar se o usuário mudar
+model OrdemServicoEvento {
+  id        String                 @id @default(uuid())
+  tipo      OrdemServicoEventoTipo
+  texto     String?
+  createdAt DateTime               @default(now())
+
+  ordemServico_id String
+  ordemServico    OrdemServico @relation(fields: [ordemServico_id], references: [id], onDelete: Cascade)
+
+  // Nulo nos eventos automáticos (vencimento do prazo)
+  autor_id      String?
+  autorNome     String
+  autorPerfil   String
+  autorEmpresa  String?
+
+  contestacao_id String?
+  contestacao    OrdemServicoContestacao? @relation(fields: [contestacao_id], references: [id], onDelete: Cascade)
+
+  @@index([ordemServico_id, createdAt])
+}
+
+enum OrdemServicoContestacaoStatus {
+  ABERTA
+  ACATADA
+  RECUSADA
+}
+
+// Apontamento da empresa sobre a OS; a fiscalização decide uma vez (acatar ou recusar)
+model OrdemServicoContestacao {
+  id        String                        @id @default(uuid())
+  texto     String
+  status    OrdemServicoContestacaoStatus @default(ABERTA)
+  createdAt DateTime                      @default(now())
+
+  ordemServico_id String
+  ordemServico    OrdemServico @relation(fields: [ordemServico_id], references: [id], onDelete: Cascade)
+
+  autor_id   String
+  autorNome  String
+
+  resposta          String?
+  respondidoPor_id  String?
+  respondidoPorNome String?
+  respondidoEm      DateTime?
+
+  eventos OrdemServicoEvento[]
+
+  @@index([ordemServico_id, status])
+}
+
+enum NotificacaoDestino {
+  // Usuários EMPRESA da empresa indicada
+  EMPRESA
+  // Perfis internos da organização
+  FISCALIZACAO
+}
+
+enum NotificacaoTipo {
+  OS_EMITIDA
+  OS_REEMITIDA
+  OS_CIENTE
+  OS_PRAZO_VENCIDO
+  OS_CONTESTACAO
+  OS_CONTESTACAO_RESPONDIDA
+  OS_COMENTARIO
+}
+
+// Aviso dentro do sistema; a leitura é registrada por usuário
+model Notificacao {
+  id        String             @id @default(uuid())
+  destino   NotificacaoDestino
+  tipo      NotificacaoTipo
+  titulo    String
+  mensagem  String
+  createdAt DateTime           @default(now())
+
+  tenant_id  String
+  tenant     Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  company_id String?
+  company    Company? @relation(fields: [company_id], references: [id], onDelete: Cascade)
+
+  ordemServico_id String?
+  ordemServico    OrdemServico? @relation(fields: [ordemServico_id], references: [id], onDelete: Cascade)
+
+  leituras NotificacaoLeitura[]
+
+  @@index([tenant_id, destino, createdAt])
+  @@index([company_id, createdAt])
+}
+
+model NotificacaoLeitura {
+  notificacao_id String
+  notificacao    Notificacao @relation(fields: [notificacao_id], references: [id], onDelete: Cascade)
+  user_id        String
+  user           User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  lidaEm         DateTime    @default(now())
+
+  @@id([notificacao_id, user_id])
+  @@index([user_id])
 }
 
 // Vínculo OS × empenho: quanto de cada empenho vai para a OS. Por padrão o empenho

@@ -5,7 +5,13 @@ type AccessLevel = "none" | "view" | "edit";
 
 // Ações pontuais que não seguem a matriz de domínio (ex.: ENGENHARIA só
 // visualiza o administrativo, mas pode abrir uma Ordem de Serviço).
-export type Capability = "manageUsers" | "createCompanyAccess" | "createOrdemServico" | "viewOrdensServico";
+export type Capability =
+  | "manageUsers"
+  | "createCompanyAccess"
+  | "createOrdemServico"
+  | "viewOrdensServico"
+  | "darCienciaOrdemServico"
+  | "tramitarOrdemServico";
 
 const ROLE_DOMAIN_ACCESS: Record<UserRole, Record<BusinessDomain, AccessLevel>> = {
   USER: { engenharia: "view", administrativo: "view" },
@@ -26,6 +32,10 @@ const CAPABILITY_ROLES: Record<Capability, readonly UserRole[]> = {
   createOrdemServico: ["PLATFORM_ADMIN", "MASTER", "COORDENACAO", "ADMINISTRATIVO", "ENGENHARIA"],
   // Listagem de OS: quem vê o administrativo e a EMPRESA (só as OS dos próprios contratos)
   viewOrdensServico: ["PLATFORM_ADMIN", "MASTER", "COORDENACAO", "ADMINISTRATIVO", "ENGENHARIA", "USER", "EMPRESA"],
+  // Empresa dá ciência da OS, registra apontamentos e comenta (só nas OS dos próprios contratos)
+  darCienciaOrdemServico: ["EMPRESA"],
+  // Fiscalização: comenta e acata/recusa os apontamentos da empresa (só na própria organização)
+  tramitarOrdemServico: ["MASTER", "COORDENACAO", "ADMINISTRATIVO", "ENGENHARIA"],
 };
 
 export class DomainAccessPolicy {

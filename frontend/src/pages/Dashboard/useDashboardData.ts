@@ -7,6 +7,7 @@ import { useOrdensServico } from "../../store/ordensServico";
 import { useObras } from "../../store/obras";
 import { useInvoice } from "../../store/invoices";
 import { getDaysRemaining } from "../../utils/date-urgency";
+import { describePrazoCiencia, getFaseEmissao } from "../OrdemServico/ordem-servico-ciencia";
 
 export type CascadeStep = {
   key: "contratos" | "empenhos" | "os" | "obras";
@@ -47,6 +48,7 @@ export function useDashboardData() {
     canEditAdministrativo,
     canEditEngenharia,
     canManageOrganization,
+    canTramitarOrdemServico,
   } = usePermission();
 
   const { myTenant, fetchMyTenant, tenantsSummary, fetchTenantsSummary } = useTenants();
@@ -204,8 +206,40 @@ export function useDashboardData() {
       });
     }
 
+    if (canTramitarOrdemServico) {
+      // Ciência vencida primeiro, depois as que aguardam (prazo mais curto antes) e as contestadas
+      const now = new Date();
+      const ordem = { CIENCIA_VENCIDA: 0, AGUARDANDO_CIENCIA: 1, EM_CONTESTACAO: 2 } as const;
+      groups.push({
+        key: "os-ciencia",
+        label: "Ordens de serviço aguardando a empresa",
+        items: ordensServico
+          .filter((os) => os.status === "ATIVO")
+          .map((os) => ({ os, fase: getFaseEmissao(os, now) }))
+          .filter(
+            (x): x is { os: typeof x.os; fase: keyof typeof ordem } =>
+              x.fase === "CIENCIA_VENCIDA" || x.fase === "AGUARDANDO_CIENCIA" || x.fase === "EM_CONTESTACAO",
+          )
+          .sort(
+            (a, b) =>
+              ordem[a.fase] - ordem[b.fase] || (a.os.cienciaPrazoAte ?? "").localeCompare(b.os.cienciaPrazoAte ?? ""),
+          )
+          .map(({ os, fase }) => ({
+            id: `os-ciencia-${os.id}`,
+            label: os.numero.startsWith("OS") ? os.numero : `OS ${os.numero}`,
+            meta:
+              fase === "CIENCIA_VENCIDA"
+                ? "ciência vencida"
+                : fase === "AGUARDANDO_CIENCIA"
+                  ? `ciência: ${describePrazoCiencia(os.cienciaPrazoAte!, now)}`
+                  : `${os.contestacoesAbertas} ${os.contestacoesAbertas === 1 ? "apontamento" : "apontamentos"}`,
+            href: `/ordens-servico?os=${os.id}`,
+          })),
+      });
+    }
+
     return groups.filter((g) => g.items.length > 0);
-  }, [canEditAdministrativo, canEditEngenharia, canViewAdministrativo, empenhos, invoice.allInvoices, ordensServico, obras]);
+  }, [canEditAdministrativo, canEditEngenharia, canViewAdministrativo, canTramitarOrdemServico, empenhos, invoice.allInvoices, ordensServico, obras]);
 
   const activity = useMemo(() => {
     const items: ActivityItem[] = [];

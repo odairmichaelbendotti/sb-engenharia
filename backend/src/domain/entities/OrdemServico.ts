@@ -73,6 +73,15 @@ export type PersistedOrdemServico = {
   fiscalTecnico_id: string | null;
   fiscalAdministrativo_id: string | null;
   condicoesEspeciais: string[];
+  // Ciência da empresa (ver domain/tramitacao/ciencia.ts); nulos nas OS anteriores à regra
+  emitidaEm: Date | null;
+  cienciaPrazoAte: Date | null;
+  cienciaDispensada: boolean;
+  visualizadaEm: Date | null;
+  cienteEm: Date | null;
+  cienteUser_id: string | null;
+  cienteNome: string | null;
+  prazoVencidoEm: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };

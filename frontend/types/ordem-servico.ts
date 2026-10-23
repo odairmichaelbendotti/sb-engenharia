@@ -105,6 +105,15 @@ export type OrdemServico = {
   fiscalAdministrativo_id: string | null;
   fiscalAdministrativo: OrdemServicoFiscal | null;
   condicoesEspeciais: string[];
+  // Ciência da empresa (horário do servidor); nulos e dispensada nas OS anteriores à regra
+  emitidaEm: string | null;
+  cienciaPrazoAte: string | null;
+  cienciaDispensada: boolean;
+  visualizadaEm: string | null;
+  cienteEm: string | null;
+  cienteNome: string | null;
+  // Apontamentos da empresa ainda sem decisão da fiscalização
+  contestacoesAbertas: number;
   createdAt: Date;
   updatedAt: Date;
 };

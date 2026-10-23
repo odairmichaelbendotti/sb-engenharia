@@ -17,18 +17,22 @@ import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator
 import { PrismaUserRepository } from "../../infrastructure/database/prisma/PrismaUserRepository.js";
 import { RequireDomainAccess } from "../middleware/RequireDomainAccess.js";
 import { RequireCapability } from "../middleware/RequireCapability.js";
+import { RequireCienciaEmDia } from "../middleware/RequireCienciaEmDia.js";
+import { PrismaOrdemServicoTramitacaoRepository } from "../../infrastructure/database/prisma/PrismaOrdemServicoTramitacaoRepository.js";
+import { VerificarBloqueioCienciaUseCase } from "../../application/usecases/ordem-servico-tramitacao/VerificarBloqueioCienciaUseCase.js";
 
 export const OrdemServicoRoutes = Router();
 
 const repository = new PrismaOrdemServicoRepository();
 const empenhoRepository = new PrismaEmpenhoRepository();
 const obraRepository = new PrismaObraRepository();
+const tramitacaoRepository = new PrismaOrdemServicoTramitacaoRepository();
 const createOrdemServicoUseCase = new CreateOrdemServicoUseCase(repository, empenhoRepository, obraRepository);
 const listOrdensServicoUseCase = new ListOrdensServicoUseCase(repository);
 const listOrdemServicoOptionsForObraUseCase = new ListOrdemServicoOptionsForObraUseCase(repository);
 const updateOrdemServicoUseCase = new UpdateOrdemServicoUseCase(repository, empenhoRepository, obraRepository);
-const updateOrdemServicoStatusUseCase = new UpdateOrdemServicoStatusUseCase(repository);
-const deleteOrdemServicoUseCase = new DeleteOrdemServicoUseCase(repository);
+const updateOrdemServicoStatusUseCase = new UpdateOrdemServicoStatusUseCase(repository, tramitacaoRepository);
+const deleteOrdemServicoUseCase = new DeleteOrdemServicoUseCase(repository, tramitacaoRepository);
 const generateOrdemServicoDocumentUseCase = new GenerateOrdemServicoDocumentUseCase(
   repository,
   new PuppeteerOrdemServicoGenerator(),
@@ -52,6 +56,7 @@ const authMiddleware = new AuthMiddleware(token, userRepository);
 
 const requireDomainAccess = new RequireDomainAccess();
 const requireCapability = new RequireCapability();
+const requireCienciaEmDia = new RequireCienciaEmDia(new VerificarBloqueioCienciaUseCase(tramitacaoRepository));
 
 OrdemServicoRoutes.post(
   "/ordem-servico/create",
@@ -74,6 +79,8 @@ OrdemServicoRoutes.get(
   "/ordem-servico/list",
   authMiddleware.handle,
   requireCapability.handle("viewOrdensServico"),
+  // Empresa com ciência vencida só vê as pendências (GET /ordem-servico/pendencias-ciencia)
+  requireCienciaEmDia.handle,
   (req, res) => ordemServicoController.list(req, res),
 );
 

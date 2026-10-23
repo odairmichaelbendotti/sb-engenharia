@@ -14,6 +14,9 @@ import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
 import { PrismaUserRepository } from "../../infrastructure/database/prisma/PrismaUserRepository.js";
 import { RequireDomainAccess } from "../middleware/RequireDomainAccess.js";
+import { RequireCienciaEmDia } from "../middleware/RequireCienciaEmDia.js";
+import { PrismaOrdemServicoTramitacaoRepository } from "../../infrastructure/database/prisma/PrismaOrdemServicoTramitacaoRepository.js";
+import { VerificarBloqueioCienciaUseCase } from "../../application/usecases/ordem-servico-tramitacao/VerificarBloqueioCienciaUseCase.js";
 
 export const ObraRoutes = Router();
 
@@ -44,6 +47,10 @@ const userRepository = new PrismaUserRepository();
 const authMiddleware = new AuthMiddleware(token, userRepository);
 
 const requireDomainAccess = new RequireDomainAccess();
+// Empresa com ciência de OS vencida fica sem Obras e Mapa até dar ciência
+const requireCienciaEmDia = new RequireCienciaEmDia(
+  new VerificarBloqueioCienciaUseCase(new PrismaOrdemServicoTramitacaoRepository()),
+);
 
 ObraRoutes.post(
   "/obra/create",
@@ -55,6 +62,7 @@ ObraRoutes.get(
   "/obra/list",
   authMiddleware.handle,
   requireDomainAccess.handle("engenharia", "view"),
+  requireCienciaEmDia.handle,
   (req, res) => obraController.list(req, res),
 );
 // Detalhe do painel do Mapa de Obras; o use case aplica o escopo de tenant/empresa
@@ -63,6 +71,7 @@ ObraRoutes.get(
   "/obra/detail/:id",
   authMiddleware.handle,
   requireDomainAccess.handle("engenharia", "view"),
+  requireCienciaEmDia.handle,
   (req, res) => obraController.detail(req, res),
 );
 // Rota estreita: expõe só id/nome/identificacaoPatrimonial das obras vinculadas

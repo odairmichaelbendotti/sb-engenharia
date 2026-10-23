@@ -10,6 +10,7 @@ import { ObraRoutes } from "./src/http/routes/ObraRoutes.js";
 import { ContratoRoutes } from "./src/http/routes/ContratoRoutes.js";
 import { OrdemServicoRoutes } from "./src/http/routes/OrdemServicoRoutes.js";
 import { HealthRoutes } from "./src/http/routes/HealthRoutes.js";
+import { OrdemServicoTramitacaoRoutes } from "./src/http/routes/OrdemServicoTramitacaoRoutes.js";
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use("/api", TenantRoutes);
 app.use("/api", ObraRoutes);
 app.use("/api", ContratoRoutes);
 app.use("/api", OrdemServicoRoutes);
+app.use("/api", OrdemServicoTramitacaoRoutes);
 
 app.listen(process.env.PORT, () => {
   console.log(

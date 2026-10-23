@@ -17,6 +17,7 @@ import type {
   OrdemServicoVinculoFinanceiro,
 } from "../../../domain/repositories/IOrdemServicoRepository.js";
 import { prisma } from "../../prisma/prisma.js";
+import { registrarEmissao } from "./tramitacao-tx.js";
 
 // Primeira sequência da numeração das OS (as anteriores ao padrão ficam fora da contagem)
 const FIRST_SEQUENCIA = 10;
@@ -82,7 +83,14 @@ const LIST_ITEM_INCLUDE = {
   lote: { select: LOTE_INFO_SELECT },
   fiscalTecnico: { select: FISCAL_INFO_SELECT },
   fiscalAdministrativo: { select: FISCAL_INFO_SELECT },
+  // Apontamentos da empresa ainda sem decisão (destaque na lista da fiscalização)
+  _count: { select: { contestacoes: { where: { status: "ABERTA" } } } },
 } as const;
+
+// Tira a contagem do Prisma da resposta e a expõe com nome próprio
+function withContestacoes<T extends { _count: { contestacoes: number } }>({ _count, ...row }: T) {
+  return { ...row, contestacoesAbertas: _count.contestacoes };
+}
 
 // Valores monetários da OS são gravados em centavos; a API responde em reais
 function withReais<T extends { valor: number; totalComBdi: number | null }>(row: T) {
@@ -203,7 +211,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
     try {
       const newOrdemServico = await prisma.$transaction(async (tx) => {
         const numeracao = data.numeracao ? await gerarNumero(tx, data.tenant_id, data.numeracao) : null;
-        return tx.ordemServico.create({
+        const created = await tx.ordemServico.create({
           data: {
             numero: numeracao?.numero ?? data.numero,
             sequencia: numeracao?.sequencia ?? null,
@@ -216,16 +224,21 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
             obra_id: data.obra_id,
             tenant_id: data.tenant_id,
             ...documentColumns(data),
+            ...(data.emissao
+              ? { emitidaEm: data.emissao.emitidaEm, cienciaPrazoAte: data.emissao.cienciaPrazoAte }
+              : { cienciaDispensada: true }),
             empenhos: {
               create: data.empenhos.map((e) => ({ empenho_id: e.empenho_id, valor: e.valor })),
             },
           },
           include: LIST_ITEM_INCLUDE,
         });
+        if (data.emissao) await registrarEmissao(tx, created.id, data.emissao);
+        return created;
       });
 
       return {
-        ...withReais(newOrdemServico),
+        ...withContestacoes(withReais(newOrdemServico)),
         empenhos: await vinculosFinanceiros(newOrdemServico.id, newOrdemServico.empenhos),
         valorExecutado: 0,
       };
@@ -314,7 +327,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
 
       return {
         ordensServico: ordensServico.map((os) => ({
-          ...withReais(os),
+          ...withContestacoes(withReais(os)),
           empenhos: withFinanceiro(os.id, mapVinculos(os.empenhos), totals),
           valorExecutado: (executadoCentavos.get(os.id) ?? 0) / 100,
         })),
@@ -421,7 +434,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
           }
         }
 
-        return tx.ordemServico.update({
+        const saved = await tx.ordemServico.update({
           where: { id },
           data: {
             numero: data.numero,
@@ -431,15 +444,29 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
             dataPrevisaoTermino: data.dataPrevisaoTermino,
             obra_id: data.obra_id,
             ...documentColumns(data),
+            // Reemissão: a ciência da versão anterior deixa de valer e o prazo recomeça
+            ...(data.emissao
+              ? {
+                  emitidaEm: data.emissao.emitidaEm,
+                  cienciaPrazoAte: data.emissao.cienciaPrazoAte,
+                  visualizadaEm: null,
+                  cienteEm: null,
+                  cienteUser_id: null,
+                  cienteNome: null,
+                  prazoVencidoEm: null,
+                }
+              : {}),
             updatedAt: new Date(),
           },
           include: LIST_ITEM_INCLUDE,
         });
+        if (data.emissao) await registrarEmissao(tx, id, data.emissao);
+        return saved;
       });
 
       const executado = await sumExecutadoPorOS([id]);
       return {
-        ...withReais(updated),
+        ...withContestacoes(withReais(updated)),
         empenhos: await vinculosFinanceiros(id, updated.empenhos),
         valorExecutado: (executado.get(id) ?? 0) / 100,
       };
