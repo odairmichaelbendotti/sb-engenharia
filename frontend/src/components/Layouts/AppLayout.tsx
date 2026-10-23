@@ -9,6 +9,7 @@ import { EMPRESA_PATHS } from "../Sidebar/empresa-items";
 import { CIENCIA_PENDENTE_EVENT } from "../../services/api";
 import PendenciasCiencia from "../../pages/Pendencias/page";
 import { describePrazoCiencia } from "../../pages/OrdemServico/ordem-servico-ciencia";
+import { EntityViewer } from "../EntityViewer/EntityViewer";
 
 const EMPRESA_HOME = "/mapa-obras";
 // Recalcula as pendências da empresa: o prazo pode vencer com a tela aberta
@@ -68,6 +69,9 @@ const AppLayout = () => {
         {/* Prazo de ciência vencido: até dar ciência, a empresa só vê as pendências */}
         {bloqueada ? <PendenciasCiencia bloqueada /> : <Outlet />}
       </div>
+
+      {/* Visualização de qualquer registro (NF, empenho, contrato, empresa, OS, obra) */}
+      {!bloqueada && <EntityViewer />}
     </main>
   );
 };

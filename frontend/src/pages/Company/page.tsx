@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import type { Empresa } from "../../../types/empresa";
 import type { CreateCompanyType } from "../../../types/create-company";
 import { useCompanies } from "../../store/companies";
+import { useContratos } from "../../store/contratos";
 import DeleteCompany from "./DeleteCompany";
-import ModalEmpenho from "./ModalEmpenho";
 import RegisterOrEditCompany from "./RegisterOrEditCompany";
 import TableCompanies from "./TableCompanies";
 import { CreateCompanyAccessModal } from "./CreateCompanyAccessModal";
@@ -16,6 +16,8 @@ import { usePermission } from "../../hooks/usePermission";
 import { maskCnpj, maskPhone, maskCep } from "../../utils/masks";
 import { PageHeader } from "../../components/PageHeader";
 import { Building2 } from "lucide-react";
+import { useEntityViewer } from "../../store/entityViewer";
+import { useEntityEditor } from "../../hooks/useEntityEditor";
 
 export default function Empresas() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -31,7 +33,6 @@ export default function Empresas() {
   });
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [isEmpenhosOpen, setIsEmpenhosOpen] = useState(false);
   const [empresaSelecionada, setEmpresaSelecionada] = useState<Empresa | null>(
     null,
   );
@@ -48,9 +49,18 @@ export default function Empresas() {
 
   const { companies, listCompanies, deleteCompany } = useCompanies();
 
-  // Totais das empresas que passam pela busca (empenhos cancelados não entram nos valores)
+  // Totais das empresas que passam pela busca. Empenhado e liquidado vêm dos contratos
+  // (o liquidado é a soma das notas fiscais); cancelados não entram nos valores
+  const contratosData = useContratos((s) => s.data);
+  const fetchContratos = useContratos((s) => s.fetchContratos);
+  useEffect(() => {
+    if (!contratosData) fetchContratos().catch(() => {});
+  }, [contratosData, fetchContratos]);
+
   const summaryCells = useMemo<SummaryCell[]>(() => {
     const visiveis = empresas.filter((e) => matchesCompanySearch(e, searchTerm));
+    const ids = new Set(visiveis.map((e) => e.id));
+    const contratos = (contratosData?.contratos ?? []).filter((c) => ids.has(c.company.id) && c.status !== "CANCELADO");
     const empenhos = visiveis
       .flatMap((e) => e.empenhos)
       .filter((emp) => (emp.status ?? "").toUpperCase() !== "CANCELADO");
@@ -58,8 +68,8 @@ export default function Empresas() {
     const comAtivo = visiveis.filter((e) =>
       e.empenhos.some((emp) => (emp.status ?? "").toUpperCase() === "ATIVO"),
     ).length;
-    const empenhado = empenhos.reduce((acc, emp) => acc + emp.value, 0);
-    const liquidado = empenhos.reduce((acc, emp) => acc + (emp.totalPaid ?? 0), 0);
+    const empenhado = contratos.reduce((acc, c) => acc + c.valorEmpenhado, 0);
+    const liquidado = contratos.reduce((acc, c) => acc + c.valorLiquidado, 0);
     const pct = empenhado > 0 ? Math.round((liquidado / empenhado) * 100) : 0;
 
     return [
@@ -84,7 +94,7 @@ export default function Empresas() {
         tone: "primary",
       },
     ];
-  }, [empresas, searchTerm]);
+  }, [empresas, searchTerm, contratosData]);
 
   useEffect(() => {
     listCompanies().finally(() => setIsListLoading(false));
@@ -138,16 +148,6 @@ export default function Empresas() {
     setEmpresaParaDeletar(null);
   };
 
-  const handleOpenEmpenhos = (empresa: Empresa) => {
-    setEmpresaSelecionada(empresa);
-    setIsEmpenhosOpen(true);
-  };
-
-  const handleCloseEmpenhos = () => {
-    setIsEmpenhosOpen(false);
-    setEmpresaSelecionada(null);
-  };
-
   const handleOpenAccess = (empresa: Empresa) => {
     setEmpresaParaAcesso(empresa);
     setIsAccessOpen(true);
@@ -159,6 +159,17 @@ export default function Empresas() {
   };
 
   const { canEditAdministrativo } = usePermission();
+  const openViewer = useEntityViewer((s) => s.open);
+
+  // "Editar" do modal de visualização da empresa enquanto esta página está aberta
+  useEntityEditor(
+    "empresa",
+    (id) => {
+      const empresa = empresas.find((e) => e.id === id);
+      if (empresa) handleOpen(empresa);
+    },
+    canEditAdministrativo,
+  );
 
   const handleDelete = async (id: string) => {
     try {
@@ -181,6 +192,7 @@ export default function Empresas() {
       <PageHeader
         icon={Building2}
         title="Empresas"
+        description={`Administrativo · ${empresas.length} ${empresas.length === 1 ? "empresa cadastrada" : "empresas cadastradas"}`}
         canAct={canEditAdministrativo}
         actionLabel="Nova Empresa"
         onAction={() => handleOpen()}
@@ -198,7 +210,7 @@ export default function Empresas() {
         <TableCompanies
           empresas={empresas}
           isLoading={isListLoading}
-          handleOpenEmpenhos={handleOpenEmpenhos}
+          onView={(empresa) => openViewer({ kind: "empresa", id: empresa.id })}
           handleOpen={handleOpen}
           handleOpenDelete={handleOpenDelete}
           handleOpenAccess={handleOpenAccess}
@@ -215,15 +227,6 @@ export default function Empresas() {
           empresaSelecionada={empresaSelecionada}
           formData={formData}
           setFormData={setFormData}
-        />
-      )}
-
-      {/* Modal - Empenhos */}
-      {isEmpenhosOpen && empresaSelecionada && (
-        <ModalEmpenho
-          isOpen={isEmpenhosOpen}
-          handleClose={handleCloseEmpenhos}
-          empresaSelecionada={empresaSelecionada}
         />
       )}
 

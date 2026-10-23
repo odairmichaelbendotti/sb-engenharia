@@ -29,6 +29,7 @@ import { useEmpenhos } from "../../store/empenhos";
 import { formatCurrency } from "../../utils/format-currency";
 import { maskCurrency, formatValueToCurrencyMask, parseCurrencyMask } from "../../utils/masks";
 import type { EmpenhoList, EmpenhoCategory } from "../../../types/empenho";
+import { EMPENHO_CATEGORY_OPTIONS } from "./empenho-display";
 import { createBlurNormalizer, EMPENHO_FIELD_RULES } from "../../utils/normalization/form-rules";
 
 interface EmpenhoModalProps {
@@ -48,23 +49,14 @@ interface FormState {
   contrato_id: string;
 }
 
-const CATEGORY_OPTIONS: { value: EmpenhoCategory; label: string }[] = [
-  { value: "MANUTENCAO_PREDIAL", label: "Manutenção Predial" },
-  { value: "ALIMENTACAO", label: "Alimentação" },
-  { value: "HOSPITALAR", label: "Hospitalar" },
-  { value: "COMBUSTIVEL", label: "Combustível" },
-  { value: "TECNOLOGIA", label: "Tecnologia" },
-  { value: "LIMPEZA_CONSERVACAO", label: "Limpeza e Conservação" },
-  { value: "SEGURANCA_VIGILANCIA", label: "Segurança e Vigilância" },
-  { value: "OUTROS", label: "Outros" },
-];
+
 
 type EmpenhoStatus = "ATIVO" | "FINALIZADO" | "CANCELADO";
 
 const STATUS_OPTIONS: SegmentOption<EmpenhoStatus>[] = [
-  { value: "ATIVO", label: "Ativo", icon: Activity, tone: "warning" },
-  { value: "FINALIZADO", label: "Finalizado", icon: CheckCircle2, tone: "success" },
-  { value: "CANCELADO", label: "Cancelado", icon: XCircle, tone: "danger" },
+  { value: "ATIVO", label: "Ativo", icon: Activity, tone: "info" },
+  { value: "FINALIZADO", label: "Finalizado", icon: CheckCircle2, tone: "neutral" },
+  { value: "CANCELADO", label: "Cancelado", icon: XCircle, tone: "neutral" },
 ];
 
 export function EmpenhoModal({
@@ -280,7 +272,7 @@ export function EmpenhoModal({
                 <Field label="Categoria" required>
                   <Select icon={Tag} name="category" value={formState.category} onChange={handleChange}>
                     <option value="">Selecione uma categoria</option>
-                    {CATEGORY_OPTIONS.map((c) => (
+                    {EMPENHO_CATEGORY_OPTIONS.map((c) => (
                       <option key={c.value} value={c.value}>
                         {c.label}
                       </option>

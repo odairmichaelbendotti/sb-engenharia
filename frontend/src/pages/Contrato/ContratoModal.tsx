@@ -48,9 +48,9 @@ interface ContratoModalProps {
 }
 
 const STATUS_OPTIONS: SegmentOption<ContratoStatus>[] = [
-  { value: "ATIVO", label: "Ativo", icon: Activity, tone: "warning" },
-  { value: "FINALIZADO", label: "Finalizado", icon: CheckCircle2, tone: "success" },
-  { value: "CANCELADO", label: "Cancelado", icon: XCircle, tone: "danger" },
+  { value: "ATIVO", label: "Ativo", icon: Activity, tone: "info" },
+  { value: "FINALIZADO", label: "Finalizado", icon: CheckCircle2, tone: "neutral" },
+  { value: "CANCELADO", label: "Cancelado", icon: XCircle, tone: "neutral" },
 ];
 
 const DESCRICAO_CURTA_MAX_LENGTH = 20;

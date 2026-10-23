@@ -34,10 +34,11 @@ export default function ApprovalTable({
     <>
       <Table>
         <TableHead>
-          <Th wrap>Usuário</Th>
-          <Th>E-mail</Th>
-          <Th>Organização</Th>
-          <Th>Ações</Th>
+          <Th>Usuário</Th>
+          <Th width="w-60" className="hidden lg:table-cell">
+            Organização
+          </Th>
+          <Th width="w-52">Decisão</Th>
         </TableHead>
         <TableBody>
           {paginatedPending.map((user) => (

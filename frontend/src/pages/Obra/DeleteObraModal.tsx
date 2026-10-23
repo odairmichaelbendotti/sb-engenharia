@@ -1,9 +1,8 @@
-import { Trash2, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useObras } from "../../store/obras";
 import type { Obra } from "../../../types/obra";
-import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from "../../components/ui";
+import { ConfirmDialog } from "../../components/ui";
 
 interface DeleteObraModalProps {
   obra: Obra;
@@ -13,6 +12,7 @@ interface DeleteObraModalProps {
 export function DeleteObraModal({ obra, handleClose }: DeleteObraModalProps) {
   const { deleteObra } = useObras();
   const [isLoading, setIsLoading] = useState(false);
+  const ordens = obra.ordensServico.length;
 
   async function handleConfirm() {
     try {
@@ -28,35 +28,21 @@ export function DeleteObraModal({ obra, handleClose }: DeleteObraModalProps) {
   }
 
   return (
-    <Modal open size="sm" onClose={handleClose}>
-      <ModalHeader
-        icon={AlertTriangle}
-        title="Excluir Obra"
-        description="Esta ação não pode ser desfeita"
-        onClose={handleClose}
-      />
-
-      <ModalBody className="space-y-4">
-        <div className="bg-danger-bg border border-danger-border rounded-lg p-4">
-          <p className="text-sm text-danger-text font-medium">Você está prestes a excluir permanentemente a obra:</p>
-          <p className="text-sm text-text-primary font-semibold mt-1">"{obra.nome}"</p>
-          <p className="text-xs text-text-muted mt-1">
-            {obra.identificacaoPatrimonial} · OS {obra.ordensServico.map((os) => os.numero).join(", ")}
-          </p>
-        </div>
-        <p className="text-sm text-text-secondary">
-          As ordens de serviço da obra não são excluídas: voltam a ficar sem obra. Confirme somente se tiver certeza.
-        </p>
-      </ModalBody>
-
-      <ModalFooter>
-        <Button variant="ghost" onClick={handleClose} disabled={isLoading}>
-          Cancelar
-        </Button>
-        <Button variant="danger" icon={Trash2} loading={isLoading} onClick={handleConfirm}>
-          {isLoading ? "Excluindo..." : "Excluir Obra"}
-        </Button>
-      </ModalFooter>
-    </Modal>
+    <ConfirmDialog
+      open
+      title={`Excluir a obra ${obra.identificacaoPatrimonial}?`}
+      confirmLabel="Excluir obra"
+      loading={isLoading}
+      onConfirm={handleConfirm}
+      onCancel={handleClose}
+    >
+      <p>
+        <span className="font-semibold text-text-primary">{obra.nome}.</span>{" "}
+        {ordens > 0
+          ? `${ordens === 1 ? "A ordem de serviço da obra não é excluída: volta" : `As ${ordens} ordens de serviço da obra não são excluídas: voltam`} a ficar sem obra.`
+          : "A obra não tem ordens de serviço."}{" "}
+        Esta ação não pode ser desfeita.
+      </p>
+    </ConfirmDialog>
   );
 }

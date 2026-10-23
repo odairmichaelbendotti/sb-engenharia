@@ -4,8 +4,7 @@ import { toast } from "sonner";
 import { useUnapprovedUsers } from "../../store/unapprovedUsers";
 import type { UnapprovedUser } from "../../../types/user";
 import type { RowStatus } from "./ApprovalRow";
-import { ConfirmModal } from "../../components/ConfirmModal";
-import { Button } from "../../components/ui";
+import { Button, ConfirmDialog } from "../../components/ui";
 import ApprovalHeader from "./ApprovalHeader";
 import ApprovalFilters from "./ApprovalFilters";
 import ApprovalTable from "./ApprovalTable";
@@ -186,18 +185,27 @@ const Aprovacoes = () => {
         </div>
       )}
 
-      <ConfirmModal
+      <ConfirmDialog
         open={!!confirmation}
-        variant={confirmation?.type === "approve" ? "success" : "danger"}
-        message={
+        tone={confirmation?.type === "approve" ? "success" : "danger"}
+        title={
           confirmation?.type === "approve"
-            ? "Deseja realmente aprovar o usuário?"
-            : "Deseja realmente negar o usuário?"
+            ? `Aprovar o acesso de ${confirmation.user.name}?`
+            : `Recusar o cadastro de ${confirmation?.user.name ?? ""}?`
         }
-        confirmLabel={confirmation?.type === "approve" ? "Aprovar" : "Negar"}
+        confirmLabel={confirmation?.type === "approve" ? "Aprovar acesso" : "Recusar cadastro"}
         onConfirm={handleConfirm}
         onCancel={() => setConfirmation(null)}
-      />
+      >
+        {confirmation && (
+          <p>
+            {confirmation.user.email} · {confirmation.user.tenant.name}.{" "}
+            {confirmation.type === "approve"
+              ? "A pessoa passa a entrar no sistema com o perfil padrão; o perfil pode ser mudado em Usuários."
+              : "O cadastro é removido e a pessoa precisa se cadastrar de novo."}
+          </p>
+        )}
+      </ConfirmDialog>
     </div>
   );
 };

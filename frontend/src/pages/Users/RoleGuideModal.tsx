@@ -60,9 +60,9 @@ export function RoleGuideModal({ open, assignableRoles, onClose }: RoleGuideModa
               </span>
             ))}
           </div>
-          {/* Moldura com borda; a rolagem horizontal fica com o Table */}
+          {/* Moldura com borda; sem rolagem horizontal: as células quebram linha */}
           <div className="border border-border rounded-lg overflow-hidden">
-            <Table compact className="min-w-[760px]">
+            <Table compact>
               <TableHead>
                 <Th>Perfil</Th>
                 {GUIDE_COLUMNS.map((column) => (

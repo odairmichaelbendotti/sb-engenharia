@@ -1,85 +1,80 @@
 import { useMemo, useState } from "react";
-import {
-  AlertCircle,
-  ArrowDown,
-  ArrowUp,
-  CheckCircle2,
-  Clock,
-  Edit2,
-  FileText,
-  HardHat,
-  Trash2,
-  XCircle,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowDown, ArrowUp, CheckCircle2, Edit2, Eye, FileText, Trash2 } from "lucide-react";
 import type { Invoice } from "../../../types/invoice";
 import { usePermission } from "../../hooks/usePermission";
+import { useContratos } from "../../store/contratos";
 import { formatCurrency, formatDateOnly } from "../../utils/format-currency";
-import { cx } from "../../utils/cx";
+import { getDeadlineHint, invoiceStatusDisplay, invoiceLabel } from "../../utils/status-display";
 import {
-  Badge,
-  IconButton,
+  ActionMenu,
+  CodeTag,
+  DateHint,
   Pagination,
+  StatusPill,
   Table,
   TableBody,
   TableHead,
   Td,
   Th,
   Tr,
-  type BadgeTone,
 } from "../../components/ui";
 
 const ITEMS_PER_PAGE = 10;
-
-const STATUS_DISPLAY: Record<string, { label: string; tone: BadgeTone; icon: LucideIcon }> = {
-  PAGO: { label: "Pago", tone: "success", icon: CheckCircle2 },
-  VENCIDO: { label: "Vencido", tone: "danger", icon: AlertCircle },
-  CANCELADO: { label: "Cancelado", tone: "neutral", icon: XCircle },
-  PENDENTE: { label: "Pendente", tone: "warning", icon: Clock },
-};
 
 type SortKey = "vencimento" | "value";
 type SortDir = "asc" | "desc";
 
 type InvoiceTableProps = {
   allInvoices: Invoice[];
-  setDeleteInvoice: React.Dispatch<React.SetStateAction<Invoice | null>>;
-  setEditInvoice: React.Dispatch<React.SetStateAction<Invoice | null>>;
+  onView: (invoice: Invoice) => void;
+  onEdit: (invoice: Invoice) => void;
+  onDelete: (invoice: Invoice) => void;
+  // Abre a confirmação de "Marcar como paga" (no modal da nota)
+  onMarkPaid: (invoice: Invoice) => void;
 };
 
-function SortHeader({
+function SortButton({
   label,
   k,
   sortKey,
   sortDir,
   onSort,
-  className,
 }: {
   label: string;
   k: SortKey;
   sortKey: SortKey;
   sortDir: SortDir;
   onSort: (k: SortKey) => void;
-  className?: string;
 }) {
   const active = sortKey === k;
-  const Icon = active && sortDir === "asc" ? ArrowUp : ArrowDown;
+  const Icon = sortDir === "asc" ? ArrowUp : ArrowDown;
   return (
-    <Th className={className}>
-      <button
-        type="button"
-        onClick={() => onSort(k)}
-        className="inline-flex items-center gap-1 cursor-pointer hover:text-text-primary transition-colors"
-      >
-        {label}
-        <Icon size={12} className={active ? "text-text-primary" : "text-text-muted"} />
-      </button>
-    </Th>
+    <button
+      type="button"
+      onClick={() => onSort(k)}
+      className={`inline-flex items-center gap-1 cursor-pointer uppercase hover:text-text-primary transition-colors ${active ? "text-text-primary" : ""}`}
+    >
+      {label}
+      {active && <Icon size={11} />}
+    </button>
   );
 }
 
-const InvoiceTable = ({ allInvoices, setDeleteInvoice, setEditInvoice }: InvoiceTableProps) => {
+const isOpenStatus = (status: string) => ["PENDENTE", "VENCIDO"].includes(status.toUpperCase());
+
+// Dica do vencimento: corre só enquanto a nota está em aberto; paga mostra só a data
+function vencimentoHint(invoice: Invoice) {
+  const hint = getDeadlineHint(invoice.vencimento, { active: isOpenStatus(invoice.status), dueSoonDays: 10 });
+  if (!hint) return null;
+  // Nota em aberto com prazo longo: a data basta
+  return hint.tone === "muted" ? null : hint;
+}
+
+const InvoiceTable = ({ allInvoices, onView, onEdit, onDelete, onMarkPaid }: InvoiceTableProps) => {
   const { canEditAdministrativo } = usePermission();
+  // Cor do contrato da nota (faixa à esquerda da linha); a lista de contratos vem da página
+  const contratos = useContratos((s) => s.data?.contratos);
+  const corPorContrato = useMemo(() => new Map((contratos ?? []).map((c) => [c.id, c.cor])), [contratos]);
   const [page, setPage] = useState(1);
   const [sortKey, setSortKey] = useState<SortKey>("vencimento");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -111,110 +106,104 @@ const InvoiceTable = ({ allInvoices, setDeleteInvoice, setEditInvoice }: Invoice
     <div>
       <Table>
         <TableHead>
-          <Th wrap>Nota fiscal</Th>
-          <Th className="hidden md:table-cell">Origem</Th>
-          <Th className="hidden lg:table-cell">Empresa</Th>
-          <SortHeader
-            label="Vencimento"
-            k="vencimento"
-            sortKey={sortKey}
-            sortDir={sortDir}
-            onSort={handleSort}
-            className="hidden sm:table-cell"
-          />
-          <SortHeader label="Valor" k="value" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-          <Th>Status</Th>
-          {canEditAdministrativo && (
-            <Th>
-              <span className="sr-only">Ações</span>
-            </Th>
-          )}
+          <Th>Nota fiscal</Th>
+          <Th width="w-32" className="hidden lg:table-cell">
+            Status
+          </Th>
+          <Th width="w-36" className="hidden lg:table-cell">
+            <SortButton label="Vencimento" k="vencimento" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+          </Th>
+          <Th width="w-64" className="hidden xl:table-cell">
+            Origem
+          </Th>
+          <Th width="w-36">
+            <SortButton label="Valor" k="value" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+          </Th>
+          <Th actions />
         </TableHead>
         <TableBody>
           {paginatedInvoices.map((invoice) => {
-            const status = STATUS_DISPLAY[invoice.status?.toUpperCase()] ?? STATUS_DISPLAY.PENDENTE!;
-            const isVencido = invoice.status?.toUpperCase() === "VENCIDO";
-            const isCancelado = invoice.status?.toUpperCase() === "CANCELADO";
-
+            const status = invoiceStatusDisplay(invoice.status);
+            const cancelada = invoice.status?.toUpperCase() === "CANCELADO";
+            const contratoId = invoice.empenho?.contrato?.id;
             return (
-              <Tr
-                key={invoice.id}
-                className={cx("group", isVencido && "border-l-2 border-l-danger-text", isCancelado && "opacity-60")}
-              >
-                {/* Descrição quebra em até duas linhas; texto completo ao passar o mouse */}
-                <Td wrap>
-                  <p className="font-medium text-text-primary">{invoice.numero}</p>
-                  <p className="text-xs text-text-muted line-clamp-2" title={invoice.description}>
-                    {invoice.description}
+              <Tr key={invoice.id} onOpen={() => onView(invoice)} muted={cancelada}>
+                <Td accent={contratoId ? corPorContrato.get(contratoId) : null}>
+                  <p className="font-semibold text-text-primary">{invoiceLabel(invoice.numero)}</p>
+                  <p className="text-[11px] text-text-muted truncate" title={invoice.description}>
+                    {invoice.description || "Sem descrição"}
                   </p>
-                </Td>
-                <Td className="hidden md:table-cell">
-                  {invoice.empenho && <p className="text-text-primary font-medium">{invoice.empenho.numero}</p>}
-                  {(invoice.ordemServico || invoice.obra) && (
-                    // Uma linha só: nome longo da obra termina em reticências
-                    <p
-                      className="inline-flex max-w-72 items-center gap-1 text-xs text-text-muted"
-                      title={[invoice.ordemServico && `OS ${invoice.ordemServico.numero}`, invoice.obra?.nome]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    >
-                      <HardHat size={12} className="shrink-0" />
-                      <span className="truncate">
-                        {invoice.ordemServico && <>OS {invoice.ordemServico.numero}</>}
-                        {invoice.ordemServico && invoice.obra && " · "}
-                        {invoice.obra?.nome}
-                      </span>
-                    </p>
-                  )}
+                  {/* Sem as colunas de status e origem (telas menores), o essencial vem aqui */}
+                  <div className="xl:hidden mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-text-muted">
+                    <span className="lg:hidden">
+                      <StatusPill tone={status.tone} size="sm">
+                        {status.label}
+                      </StatusPill>
+                    </span>
+                    <span className="lg:hidden">vence {formatDateOnly(invoice.vencimento)} ·</span>
+                    <span className="truncate">{invoice.company?.name}</span>
+                  </div>
                 </Td>
                 <Td className="hidden lg:table-cell">
-                  <p className="max-w-56 truncate text-text-secondary" title={invoice.company?.name}>
+                  <StatusPill tone={status.tone}>{status.label}</StatusPill>
+                </Td>
+                <Td className="hidden lg:table-cell">
+                  <DateHint date={formatDateOnly(invoice.vencimento)} hint={vencimentoHint(invoice)} />
+                </Td>
+                <Td className="hidden xl:table-cell">
+                  <p className="truncate text-text-primary" title={invoice.company?.name}>
                     {invoice.company?.name ?? "—"}
                   </p>
-                </Td>
-                <Td className="hidden sm:table-cell">
-                  <span className="text-text-secondary">{formatDateOnly(invoice.vencimento)}</span>
+                  <div
+                    className="flex items-center justify-center gap-1.5 mt-0.5 text-[11px] text-text-muted min-w-0"
+                    title={[invoice.empenho?.numero, invoice.ordemServico?.numero, invoice.obra?.nome].filter(Boolean).join(" · ")}
+                  >
+                    {invoice.empenho && <span className="font-medium text-text-secondary shrink-0">{invoice.empenho.numero}</span>}
+                    {invoice.ordemServico && (
+                      <CodeTag className="truncate">
+                        {/^OS\b/i.test(invoice.ordemServico.numero) ? invoice.ordemServico.numero : `OS ${invoice.ordemServico.numero}`}
+                      </CodeTag>
+                    )}
+                  </div>
                 </Td>
                 <Td>
-                  <span className="font-semibold text-text-primary">{formatCurrency(invoice.value)}</span>
+                  <span className={`font-semibold tabular-nums ${cancelada ? "text-text-muted line-through" : "text-text-primary"}`}>
+                    {formatCurrency(invoice.value)}
+                  </span>
                 </Td>
-                <Td>
-                  <Badge tone={status.tone} icon={status.icon}>
-                    {status.label}
-                  </Badge>
+                <Td actions>
+                  <ActionMenu
+                    label={`Ações da nota ${invoice.numero}`}
+                    items={[
+                      { label: "Visualizar", icon: Eye, onClick: () => onView(invoice) },
+                      { label: "Editar", icon: Edit2, onClick: () => onEdit(invoice), hidden: !canEditAdministrativo },
+                      {
+                        label: "Marcar como paga",
+                        icon: CheckCircle2,
+                        onClick: () => onMarkPaid(invoice),
+                        hidden: !canEditAdministrativo || !isOpenStatus(invoice.status),
+                      },
+                      {
+                        label: "Excluir",
+                        icon: Trash2,
+                        onClick: () => onDelete(invoice),
+                        danger: true,
+                        hidden: !canEditAdministrativo,
+                      },
+                    ]}
+                  />
                 </Td>
-                {canEditAdministrativo && (
-                  <Td>
-                    {/* Ações discretas: aparecem ao passar o mouse */}
-                    <div className="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
-                      <IconButton
-                        icon={Edit2}
-                        label="Editar nota fiscal"
-                        size="sm"
-                        onClick={() => setEditInvoice(invoice)}
-                      />
-                      <IconButton
-                        icon={Trash2}
-                        label="Excluir nota fiscal"
-                        size="sm"
-                        variant="danger"
-                        onClick={() => setDeleteInvoice(invoice)}
-                      />
-                    </div>
-                  </Td>
-                )}
               </Tr>
             );
           })}
         </TableBody>
       </Table>
 
-      {/* Empty State */}
       {paginatedInvoices.length === 0 && (
-        <div className="py-8 text-center">
-          <FileText size={32} className="mx-auto text-text-muted mb-3" />
+        <div className="py-10 text-center">
+          <FileText size={28} className="mx-auto text-text-muted mb-2" />
           <p className="text-sm text-text-secondary font-medium">Nenhuma nota fiscal encontrada</p>
-          <p className="text-text-muted text-sm mt-1">Tente ajustar os filtros ou cadastre uma nova nota fiscal</p>
+          <p className="text-text-muted text-xs mt-1">Tente ajustar os filtros ou cadastre uma nova nota fiscal</p>
         </div>
       )}
 

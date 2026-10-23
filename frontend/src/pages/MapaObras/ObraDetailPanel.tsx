@@ -49,10 +49,10 @@ import { Badge, Button, IconButton, Table, TableBody, TableHead, Td, Th, Tr, typ
 type Tab = "geral" | "notas-fiscais" | "cronograma";
 
 const STATUS_BADGE: Record<ObraStatus, { label: string; icon: typeof Wrench; tone: BadgeTone }> = {
-  EM_ANDAMENTO: { label: "Em Andamento", icon: Wrench, tone: "warning" },
+  EM_ANDAMENTO: { label: "Em Andamento", icon: Wrench, tone: "info" },
   CONCLUIDA: { label: "Concluída", icon: CheckCircle2, tone: "success" },
-  PARALISADA: { label: "Paralisada", icon: PauseCircle, tone: "neutral" },
-  CANCELADA: { label: "Cancelada", icon: XCircle, tone: "danger" },
+  PARALISADA: { label: "Paralisada", icon: PauseCircle, tone: "danger" },
+  CANCELADA: { label: "Cancelada", icon: XCircle, tone: "neutral" },
 };
 
 type Deadline = { label: string; className: string; elapsed: number };
@@ -384,7 +384,7 @@ function InvoicesTab({ financial }: { financial: ObraDetailFinancial }) {
         </p>
       ) : (
         // Painel de 480px: a descrição da nota fica numa linha cortada (com `wrap` a coluna não caberia)
-        <Table compact className="min-w-[340px]">
+        <Table compact>
           <TableHead>
             <Th>Nota</Th>
             <Th>Vencimento</Th>

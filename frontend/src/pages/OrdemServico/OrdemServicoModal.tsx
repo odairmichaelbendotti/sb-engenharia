@@ -59,12 +59,14 @@ import {
 interface OrdemServicoModalProps {
   ordemServico: OrdemServico | null;
   handleClose: () => void;
+  // OS nova já no contrato escolhido (ação "Nova OS neste contrato" da lista de contratos)
+  initialContratoId?: string | null;
 }
 
 const STATUS_OPTIONS: SegmentOption<OrdemServicoStatus>[] = [
-  { value: "ATIVO", label: "Ativa", icon: Activity, tone: "warning" },
-  { value: "FINALIZADO", label: "Finalizada", icon: CheckCircle2, tone: "success" },
-  { value: "CANCELADO", label: "Cancelada", icon: XCircle, tone: "danger" },
+  { value: "ATIVO", label: "Ativa", icon: Activity, tone: "info" },
+  { value: "FINALIZADO", label: "Finalizada", icon: CheckCircle2, tone: "neutral" },
+  { value: "CANCELADO", label: "Cancelada", icon: XCircle, tone: "neutral" },
 ];
 
 const URGENCIA_OPTIONS: { value: OrdemServicoUrgencia; label: string; hint: string }[] = [
@@ -117,7 +119,7 @@ type VinculoForm = {
 
 type CondicaoForm = { key: number; texto: string };
 
-export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoModalProps) {
+export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId = null }: OrdemServicoModalProps) {
   const {
     createOrdemServico,
     updateOrdemServico,
@@ -150,7 +152,7 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
     fiscalTecnico_id: ordemServico?.fiscalTecnico_id ?? "",
     fiscalAdministrativo_id: ordemServico?.fiscalAdministrativo_id ?? "",
   });
-  const [selectedContratoId, setSelectedContratoId] = useState(ordemServico?.empenho.contrato.id ?? "");
+  const [selectedContratoId, setSelectedContratoId] = useState(ordemServico?.empenho.contrato.id ?? initialContratoId ?? "");
   const nextKey = useRef(0);
   const [vinculos, setVinculos] = useState<VinculoForm[]>(() =>
     ordemServico

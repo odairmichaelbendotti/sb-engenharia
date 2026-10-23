@@ -61,14 +61,14 @@ export function ContratoEmpenhosModal({ contrato, financial, currentEmpenhoIds, 
         />
       </div>
 
-      <Table compact className="min-w-[620px]">
+      <Table compact>
         <TableHead>
-          <Th wrap>Empenho</Th>
+          <Th>Empenho</Th>
           <Th>Vigência</Th>
           <Th>Valor</Th>
           <Th>Liquidado</Th>
-          <Th>% liquidado</Th>
-          <Th>OS</Th>
+          <Th className="hidden md:table-cell">% liquidado</Th>
+          <Th className="hidden sm:table-cell">OS</Th>
           <Th>Situação</Th>
         </TableHead>
         <TableBody>
@@ -80,7 +80,7 @@ export function ContratoEmpenhosModal({ contrato, financial, currentEmpenhoIds, 
                 key={empenho.id}
                 className={cx(isCurrent && "bg-surface-muted/60", empenho.status === "CANCELADO" && "opacity-60")}
               >
-                <Td wrap>
+                <Td>
                   <p className="font-semibold text-text-primary flex items-center gap-1.5">
                     {empenho.numero}
                     {isCurrent && <Badge>desta obra</Badge>}
@@ -100,14 +100,14 @@ export function ContratoEmpenhosModal({ contrato, financial, currentEmpenhoIds, 
                 <Td>
                   <span className="text-success-text">{formatCurrency(empenho.liquidado)}</span>
                 </Td>
-                <Td>
+                <Td className="hidden md:table-cell">
                   {/* A barra não tem largura própria: o bloco fixa a largura dela dentro da célula */}
                   <div className="w-24">
                     <ProgressBar percent={liquidadoPercent} colorClassName="bg-secondary-500" />
                     <p className="text-[10px] text-text-muted mt-0.5">{formatPercent(liquidadoPercent)}</p>
                   </div>
                 </Td>
-                <Td>
+                <Td className="hidden sm:table-cell">
                   <span className="text-text-secondary">{empenho.ordensServicoCount}</span>
                 </Td>
                 <Td>
@@ -120,7 +120,7 @@ export function ContratoEmpenhosModal({ contrato, financial, currentEmpenhoIds, 
         {/* Rodapé sem colSpan (o Td não aceita): cada total fica sob a sua coluna */}
         <TableFoot>
           <Tr className="font-semibold text-text-primary">
-            <Td wrap>
+            <Td>
               Total empenhado
               <span className="block text-[10.5px] font-normal text-text-muted">sem empenhos cancelados</span>
             </Td>
@@ -129,12 +129,12 @@ export function ContratoEmpenhosModal({ contrato, financial, currentEmpenhoIds, 
             <Td>
               <span className="text-success-text">{formatCurrency(financial.totalLiquidado)}</span>
             </Td>
-            <Td>
+            <Td className="hidden md:table-cell">
               <span className="text-xs font-medium text-text-secondary">
                 {formatPercent(percentOf(financial.totalLiquidado, financial.totalEmpenhado))} do empenhado
               </span>
             </Td>
-            <Td />
+            <Td className="hidden sm:table-cell" />
             <Td />
           </Tr>
         </TableFoot>

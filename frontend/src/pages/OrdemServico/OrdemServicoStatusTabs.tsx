@@ -13,9 +13,9 @@ interface OrdemServicoStatusTabsProps {
 
 const TABS: { id: OrdemServicoTab; label: string; dotClass?: string }[] = [
   { id: "ALL", label: "Todas" },
-  { id: "ATIVO", label: "Ativas", dotClass: "bg-warning-text" },
-  { id: "FINALIZADO", label: "Finalizadas", dotClass: "bg-success-text" },
-  { id: "CANCELADO", label: "Canceladas", dotClass: "bg-danger-text" },
+  { id: "ATIVO", label: "Ativas", dotClass: "bg-info-text" },
+  { id: "FINALIZADO", label: "Finalizadas", dotClass: "bg-primary-300" },
+  { id: "CANCELADO", label: "Canceladas", dotClass: "bg-primary-300" },
 ];
 
 // Aparência comum das abas: neutras, a ativa em grafite; a cor fica só no ponto/ícone de cada situação

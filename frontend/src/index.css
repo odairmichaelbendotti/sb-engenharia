@@ -19,7 +19,7 @@
   /* Texto */
   --color-text-primary: #18181b;
   --color-text-secondary: #52525b;
-  --color-text-muted: #8b8b94;
+  --color-text-muted: #6e6e78;
   --color-text-inverse: #fafafa;
 
   /* Primária: escala grafite (cor de ação). O sistema é monocromático; cor só para significado */
@@ -156,41 +156,55 @@
 
 /*
  * Tabela padrão do sistema (componentes Table/Th/Td de components/ui).
- * Alinhamento por posição, igual em todas as telas: primeira coluna à esquerda,
- * última à direita e as do meio centralizadas. Cada coluna ocupa o que o conteúdo
- * pede e a sobra da largura se divide entre todas (nenhuma coluna "engole" a tabela).
- * Texto longo (ex.: descrição) usa `wrap`: quebra linha com largura máxima.
+ * Nunca rola na horizontal (pedido do usuário, 2026-10-23): layout fixo, a largura das
+ * colunas de dado vem do `width` do Th e a primeira coluna (identidade) fica com a sobra,
+ * terminando em reticências. Em telas menores, colunas secundárias somem por breakpoint.
+ * Alinhamento por posição: primeira coluna à esquerda, as do meio centralizadas e a última
+ * coluna de dado à direita (a de antes do menu de ações, quando ele existe).
  */
 @layer components {
   .data-table {
     width: 100%;
+    table-layout: fixed;
     font-size: var(--text-table);
     line-height: var(--text-table--line-height);
     font-variant-numeric: tabular-nums;
   }
 
   .data-table :is(th, td) {
-    padding: 0.75rem 1rem;
+    padding: 0.6875rem 0.875rem;
     text-align: center;
     vertical-align: middle;
     white-space: nowrap;
   }
 
   .data-table :is(th, td):first-child {
+    position: relative;
+    padding-left: 1.125rem;
     text-align: left;
+    white-space: normal;
   }
 
-  .data-table :is(th, td):last-child {
+  .data-table :is(th, td):last-child,
+  .data-table :is(th, td):has(+ .cell-actions) {
     text-align: right;
   }
 
+  .data-table .cell-actions {
+    padding-inline: 0.5rem;
+  }
+
+  .data-table td:first-child > .cell-inner {
+    display: block;
+  }
+
   .data-table th {
-    padding-block: 0.625rem;
-    font-size: var(--text-xs);
-    line-height: var(--text-xs--line-height);
+    padding-block: 0.5625rem;
+    font-size: 0.6875rem;
+    line-height: 1rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.025em;
+    letter-spacing: 0.04em;
     color: var(--color-text-secondary);
     background-color: var(--color-surface-muted);
     border-bottom: 1px solid var(--color-border);
@@ -205,7 +219,7 @@
   }
 
   .data-table tbody tr:hover {
-    background-color: color-mix(in srgb, var(--color-surface-muted) 50%, transparent);
+    background-color: color-mix(in srgb, var(--color-surface-muted) 70%, transparent);
   }
 
   /* Rodapé de totais */
@@ -215,14 +229,19 @@
     color: var(--color-text-primary);
   }
 
-  /* Coluna de texto longo: pode quebrar linha, mas não toma o espaço das outras.
-     O conteúdo vai até 22rem (wrapper do Td); a sobra se divide entre todas as colunas */
+  /* Coluna de texto longo: quebra linha em vez de empurrar a tabela */
   .data-table .cell-wrap {
     white-space: normal;
   }
 
-  /* Tabelas dentro de painéis e modais estreitos */
+  /* Tabelas dentro de painéis e modais estreitos: largura pelo conteúdo, quebrando linha
+     quando falta espaço (também sem rolagem horizontal) */
+  .data-table-compact {
+    table-layout: auto;
+  }
+
   .data-table-compact :is(th, td) {
-    padding: 0.5rem;
+    padding: 0.5rem 0.625rem;
+    white-space: normal;
   }
 }

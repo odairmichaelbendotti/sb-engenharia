@@ -28,6 +28,8 @@ type findCepType = {
 type CompaniesStore = {
   companies: Empresa[];
   stats: StatsCompany | null;
+  // Já buscou a lista ao menos uma vez
+  loaded: boolean;
   listCompanies: () => Promise<void>;
   createCompany: (empresa: CreateCompanyType) => Promise<Empresa>;
   deleteCompany: (id: string) => Promise<void>;
@@ -42,6 +44,7 @@ type CompaniesStore = {
 export const useCompanies = create<CompaniesStore>((set) => ({
   companies: [],
   stats: null,
+  loaded: false,
 
   listCompanies: async () => {
     const response = await defaultFetch("/company/list", {
@@ -54,13 +57,13 @@ export const useCompanies = create<CompaniesStore>((set) => ({
 
     // 204 = nenhuma empresa cadastrada; o corpo vem vazio e response.json() quebraria
     if (response.status === 204) {
-      set({ companies: [], stats: null });
+      set({ companies: [], stats: null, loaded: true });
       return;
     }
 
     const data = (await response.json()) as ListCompanies;
     set({ stats: data.stats });
-    set({ companies: data.companies.length > 0 ? data.companies : [] });
+    set({ companies: data.companies.length > 0 ? data.companies : [], loaded: true });
   },
   findCep: async (cep: string): Promise<findCepType> => {
     if (!cep || cep.length < 8) throw new Error("CEP inválido");

@@ -10,6 +10,9 @@ import { SummaryStrip, type SummaryCell } from "../../components/SummaryStrip";
 import { matchesScope, resolveScope, scopeChips, type ScopeRef } from "../../components/filters/scope-options";
 import { FilterSummary } from "../../components/filters/FilterSummary";
 import { FileSignature } from "lucide-react";
+import { useNavigate } from "react-router";
+import { useEntityViewer } from "../../store/entityViewer";
+import { useEntityEditor } from "../../hooks/useEntityEditor";
 
 // Contrato filtra por empresa e por ele mesmo (o nível de empenho não se aplica)
 function contratoScopeRefs(contrato: Contrato): ScopeRef[] {
@@ -108,12 +111,25 @@ export default function Contratos() {
   };
 
   const { canEditAdministrativo } = usePermission();
+  const navigate = useNavigate();
+  const openViewer = useEntityViewer((s) => s.open);
+
+  // "Editar" do modal de visualização do contrato enquanto esta página está aberta
+  useEntityEditor(
+    "contrato",
+    (id) => {
+      const contrato = contratos.find((c) => c.id === id);
+      if (contrato) handleOpen(contrato);
+    },
+    canEditAdministrativo,
+  );
 
   return (
     <div className="p-4 md:p-5 max-w-7xl mx-auto">
       <PageHeader
         icon={FileSignature}
         title="Contratos"
+        description={`Administrativo · ${contratos.filter((c) => c.status === "ATIVO").length} ativos`}
         canAct={canEditAdministrativo}
         actionLabel="Novo Contrato"
         onAction={() => handleOpen()}
@@ -145,8 +161,10 @@ export default function Contratos() {
             key={`${searchTerm}|${scopeKey}`}
             contratos={filteredContratos}
             isLoading={isListLoading}
+            onView={(contrato) => openViewer({ kind: "contrato", id: contrato.id })}
             onEdit={handleOpen}
             onDelete={handleOpenDelete}
+            onNewOrdemServico={(contrato) => navigate(`/ordens-servico?nova=${contrato.id}`)}
             onAdd={() => handleOpen()}
           />
         </div>

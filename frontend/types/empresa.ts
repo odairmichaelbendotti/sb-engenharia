@@ -11,6 +11,8 @@ export interface Empresa {
   phone: string;
   email: string;
   empenhos: Empenho[];
+  // Contratos da empresa na organização (a listagem traz; só o status é usado na tela)
+  contratos?: { id: string; status: string }[];
 }
 
 export type CreateCompanyAccessPayload = {

@@ -27,6 +27,8 @@ async function apiErrorMessage(response: Response, fallback: string): Promise<st
 }
 
 type InvoiceStore = InvoiceDashboard & {
+  // Já buscou a lista ao menos uma vez (lista vazia não significa "ainda não carregou")
+  loaded: boolean;
   create: (createInvoice: CreateInvoiceProps) => Promise<void>;
   list: () => Promise<void>;
   delete: (id: string) => Promise<void>;
@@ -46,6 +48,7 @@ export const useInvoice = create<InvoiceStore>((set, get) => ({
   pendingInvoices: 0,
   pendingValue: 0,
   allInvoices: [],
+  loaded: false,
   companyOptions: [],
 
   async fetchCompanyOptions() {
@@ -91,6 +94,7 @@ export const useInvoice = create<InvoiceStore>((set, get) => ({
       pendingInvoices: data.pendingInvoices,
       pendingValue: data.pendingValue,
       allInvoices: data.allInvoices,
+      loaded: true,
     });
   },
   async delete(id: string) {

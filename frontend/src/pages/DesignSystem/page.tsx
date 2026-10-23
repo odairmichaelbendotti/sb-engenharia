@@ -1,7 +1,23 @@
 import { useState, type ReactNode } from "react";
-import { Activity, CheckCircle2, FileSignature, Hash, Pencil, Plus, Save, Search, Trash2, XCircle } from "lucide-react";
+import { Activity, Building2, CheckCircle2, Edit2, Eye, FileSignature, Hash, Layers2, Pencil, Plus, Save, Search, Trash2, XCircle } from "lucide-react";
+import { BalanceCell } from "../../components/BalanceCell";
 import {
+  ActionMenu,
   Button,
+  CodeTag,
+  ConfirmDialog,
+  DateHint,
+  RelationCard,
+  RelationGrid,
+  StatTile,
+  StatTiles,
+  StatusPill,
+  Table,
+  TableBody,
+  TableHead,
+  Td,
+  Th,
+  Tr,
   Field,
   FormSection,
   IconButton,
@@ -19,9 +35,9 @@ import {
 type Status = "ATIVO" | "FINALIZADO" | "CANCELADO";
 
 const STATUS_OPTIONS: SegmentOption<Status>[] = [
-  { value: "ATIVO", label: "Ativo", icon: Activity, tone: "warning" },
-  { value: "FINALIZADO", label: "Finalizado", icon: CheckCircle2, tone: "success" },
-  { value: "CANCELADO", label: "Cancelado", icon: XCircle, tone: "danger" },
+  { value: "ATIVO", label: "Ativo", icon: Activity, tone: "info" },
+  { value: "FINALIZADO", label: "Finalizado", icon: CheckCircle2, tone: "neutral" },
+  { value: "CANCELADO", label: "Cancelado", icon: XCircle, tone: "neutral" },
 ];
 
 function Block({ title, children }: { title: string; children: ReactNode }) {
@@ -37,6 +53,7 @@ function Block({ title, children }: { title: string; children: ReactNode }) {
 export default function DesignSystem() {
   const [status, setStatus] = useState<Status>("ATIVO");
   const [modalOpen, setModalOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background p-6 md:p-10">
@@ -51,12 +68,14 @@ export default function DesignSystem() {
 
         <Block title="Tipografia">
           <div className="space-y-2">
-            <p className="text-2xl font-semibold tracking-tight">Título de página — 24 semibold</p>
-            <p className="text-lg font-semibold tracking-tight">Título de seção — 18 semibold</p>
-            <p className="text-base font-semibold">Título de modal — 16 semibold</p>
-            <p className="text-sm">Texto padrão — 14 regular. R$ 1.234.567,89</p>
-            <p className="text-xs font-semibold text-text-secondary">Rótulo de campo — 12 semibold</p>
-            <p className="text-xs text-text-muted">Texto de apoio — 12 regular</p>
+            <p className="text-lg font-semibold tracking-tight">Título de página — 18 semibold</p>
+            <p className="text-[15px] font-semibold">Título de modal — 15 semibold</p>
+            <p className="text-[17px] font-bold tracking-tight tabular-nums">Valor de destaque — 17 bold · R$ 182.450,00</p>
+            <p className="text-table font-semibold">Título de linha — 13 semibold</p>
+            <p className="text-table text-text-secondary">Corpo de tabela — 13 regular</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">Cabeçalho de seção — 11 caixa alta</p>
+            <p className="text-[11px] text-text-muted">Rótulo e dica — 11 regular</p>
+            <CodeTag>OS 010/BAFL/2026-L1</CodeTag>
           </div>
         </Block>
 
@@ -150,12 +169,109 @@ export default function DesignSystem() {
           </FormSection>
         </Block>
 
+        <Block title="Selos de status (StatusPill)">
+          <div className="flex flex-wrap gap-2">
+            <StatusPill tone="info">Ativa</StatusPill>
+            <StatusPill tone="warning">Aguardando ciência</StatusPill>
+            <StatusPill tone="danger">Vencida</StatusPill>
+            <StatusPill tone="success">Paga</StatusPill>
+            <StatusPill tone="neutral">Cancelada</StatusPill>
+            <StatusPill tone="info" size="sm">
+              sm
+            </StatusPill>
+          </div>
+          <p className="text-xs text-text-muted">
+            Tons por entidade em <code>utils/status-display.ts</code>: azul = em curso, âmbar = vence/aguarda, vermelho =
+            passou, verde = pago/concluído, cinza = encerrado.
+          </p>
+        </Block>
+
+        <Block title="Tabela padrão: identidade · status · prazo · saldo · ⋯">
+          <div className="border border-border rounded-xl">
+            <Table>
+              <TableHead>
+                <Th>Obra</Th>
+                <Th width="w-36" className="hidden lg:table-cell">
+                  Status
+                </Th>
+                <Th width="w-36" className="hidden md:table-cell">
+                  Prazo
+                </Th>
+                <Th width="w-48" className="hidden sm:table-cell">
+                  Saldo
+                </Th>
+                <Th actions />
+              </TableHead>
+              <TableBody>
+                <Tr onOpen={() => setModalOpen(true)}>
+                  <Td accent="#1f5f7a">
+                    <p className="font-semibold text-text-primary truncate">Reforma da cobertura do hangar 3</p>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] text-text-muted">
+                      <CodeTag>BAFL-0412</CodeTag>
+                      <CodeTag>OS 010/BAFL/2026-L1</CodeTag>
+                      <span>2026NE000318</span>
+                    </div>
+                  </Td>
+                  <Td className="hidden lg:table-cell">
+                    <StatusPill tone="danger">Em andamento</StatusPill>
+                  </Td>
+                  <Td className="hidden md:table-cell">
+                    <DateHint date="30/09/2026" hint={{ label: "atrasada há 23 dias", tone: "danger" }} />
+                  </Td>
+                  <Td className="hidden sm:table-cell">
+                    <BalanceCell valor={230000} liquidado={133700} />
+                  </Td>
+                  <Td actions>
+                    <ActionMenu
+                      items={[
+                        { label: "Visualizar", icon: Eye, onClick: () => setModalOpen(true) },
+                        { label: "Editar", icon: Edit2, onClick: () => {} },
+                        { label: "Excluir", icon: Trash2, onClick: () => setConfirmOpen(true), danger: true },
+                      ]}
+                    />
+                  </Td>
+                </Tr>
+              </TableBody>
+            </Table>
+          </div>
+          <p className="text-xs text-text-muted">
+            Sem rolagem horizontal: colunas de dado com <code>width</code>, a primeira fica com a sobra; colunas
+            secundárias somem por breakpoint.
+          </p>
+        </Block>
+
+        <Block title="Peças do modal de visualização">
+          <StatTiles>
+            <StatTile label="Valor da nota" value="R$ 42.300,00" hint="18% do empenho" />
+            <StatTile label="Vencimento" value="10/10/2026" hint="venceu há 13 dias" hintTone="danger" />
+            <StatTile label="Lançada em" value="10/09/2026" />
+            <StatTile label="Empenho a liquidar" value="R$ 96.300,00" hint="de R$ 230.000,00" />
+          </StatTiles>
+          <RelationGrid>
+            <RelationCard icon={Building2} label="Empresa" title="Construtora Horizonte" hint="12.345.678/0001-90" onClick={() => {}} />
+            <RelationCard icon={Layers2} label="Empenho" title="2026NE000318" color="#1f5f7a" hint="a liquidar R$ 96.300,00" onClick={() => {}} />
+          </RelationGrid>
+          <Button variant="danger" icon={Trash2} onClick={() => setConfirmOpen(true)}>
+            Abrir diálogo de confirmação
+          </Button>
+        </Block>
+
         <Block title="Modal">
           <Button variant="secondary" onClick={() => setModalOpen(true)}>
             Abrir modal
           </Button>
         </Block>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Excluir a obra BAFL-0412?"
+        confirmLabel="Excluir obra"
+        onConfirm={() => setConfirmOpen(false)}
+        onCancel={() => setConfirmOpen(false)}
+      >
+        <p>As ordens de serviço da obra voltam a ficar sem obra. Esta ação não pode ser desfeita.</p>
+      </ConfirmDialog>
 
       <Modal open={modalOpen} size="md" onClose={() => setModalOpen(false)}>
         <ModalHeader

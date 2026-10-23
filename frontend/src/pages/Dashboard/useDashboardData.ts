@@ -8,6 +8,7 @@ import { useObras } from "../../store/obras";
 import { useInvoice } from "../../store/invoices";
 import { getDaysRemaining } from "../../utils/date-urgency";
 import { describePrazoCiencia, getFaseEmissao } from "../OrdemServico/ordem-servico-ciencia";
+import type { EntityRef } from "../../store/entityViewer";
 
 export type CascadeStep = {
   key: "contratos" | "empenhos" | "os" | "obras";
@@ -20,7 +21,11 @@ export type AttentionItem = {
   id: string;
   label: string;
   meta: string;
+  // Cor da dica, igual às tabelas: vermelho = passou do prazo, âmbar = vence em breve/aguarda
+  tone: "danger" | "warning" | "info";
   href: string;
+  // Registro que abre no modal de visualização (sem sair do Dashboard)
+  entity?: EntityRef;
 };
 
 export type AttentionGroup = {
@@ -36,6 +41,7 @@ export type ActivityItem = {
   label: string;
   createdAt: Date | string;
   href: string;
+  entity?: EntityRef;
 };
 
 const ACTIVITY_LIMIT = 8;
@@ -154,7 +160,9 @@ export function useDashboardData() {
           id: `empenho-${e.id}`,
           label: `Empenho ${e.numero}`,
           meta: days < 0 ? `vencido há ${Math.abs(days)}d` : days === 0 ? "vence hoje" : `vence em ${days}d`,
+          tone: days < 0 ? ("danger" as const) : ("warning" as const),
           href: "/empenhos",
+          entity: { kind: "empenho" as const, id: e.id },
         }));
       groups.push({ key: "empenhos-vencendo", label: "Empenhos vencidos ou vencendo em 30 dias", items: empenhosVencendo });
 
@@ -163,7 +171,14 @@ export function useDashboardData() {
         label: "Notas fiscais vencidas",
         items: invoice.allInvoices
           .filter((inv) => inv.status === "VENCIDO")
-          .map((inv) => ({ id: `invoice-${inv.id}`, label: `Nota fiscal ${inv.numero}`, meta: "vencida", href: "/notasfiscais" })),
+          .map((inv) => ({
+            id: `invoice-${inv.id}`,
+            label: `Nota fiscal ${inv.numero.replace(/^NF[-\s]*/i, "")}`,
+            meta: "vencida",
+            tone: "danger" as const,
+            href: "/notasfiscais",
+            entity: { kind: "invoice" as const, id: inv.id },
+          })),
       });
 
       // Uma OS pode ter vários empenhos: todos eles contam como "com OS"
@@ -173,7 +188,14 @@ export function useDashboardData() {
         label: "Empenhos ativos sem ordem de serviço",
         items: empenhos
           .filter((e) => e.status === "ATIVO" && !osEmpenhoIds.has(e.id))
-          .map((e) => ({ id: `empenho-sem-os-${e.id}`, label: `Empenho ${e.numero}`, meta: "sem OS", href: "/empenhos" })),
+          .map((e) => ({
+            id: `empenho-sem-os-${e.id}`,
+            label: `Empenho ${e.numero}`,
+            meta: "sem OS",
+            tone: "warning" as const,
+            href: "/empenhos",
+            entity: { kind: "empenho" as const, id: e.id },
+          })),
       });
     }
 
@@ -184,7 +206,14 @@ export function useDashboardData() {
           label: "Ordens de serviço ativas sem obra",
           items: ordensServico
             .filter((os) => os.status === "ATIVO" && !os.obra)
-            .map((os) => ({ id: `os-sem-obra-${os.id}`, label: `OS ${os.numero}`, meta: "sem obra", href: "/ordens-servico" })),
+            .map((os) => ({
+              id: `os-sem-obra-${os.id}`,
+              label: os.numero.startsWith("OS") ? os.numero : `OS ${os.numero}`,
+              meta: "sem obra",
+              tone: "warning" as const,
+              href: "/ordens-servico",
+              entity: { kind: "ordemServico" as const, id: os.id },
+            })),
         });
       }
 
@@ -201,7 +230,9 @@ export function useDashboardData() {
             id: `obra-${o.id}`,
             label: `Obra ${o.identificacaoPatrimonial}`,
             meta: `atrasada ${Math.abs(days)}d`,
+            tone: "danger" as const,
             href: "/obras",
+            entity: { kind: "obra" as const, id: o.id },
           })),
       });
     }
@@ -233,7 +264,9 @@ export function useDashboardData() {
                 : fase === "AGUARDANDO_CIENCIA"
                   ? `ciência: ${describePrazoCiencia(os.cienciaPrazoAte!, now)}`
                   : `${os.contestacoesAbertas} ${os.contestacoesAbertas === 1 ? "apontamento" : "apontamentos"}`,
+            tone: fase === "CIENCIA_VENCIDA" ? ("danger" as const) : fase === "AGUARDANDO_CIENCIA" ? ("warning" as const) : ("info" as const),
             href: `/ordens-servico?os=${os.id}`,
+            entity: { kind: "ordemServico" as const, id: os.id },
           })),
       });
     }
@@ -246,22 +279,22 @@ export function useDashboardData() {
 
     if (canViewAdministrativo) {
       for (const c of contratos) {
-        items.push({ id: `contrato-${c.id}`, type: "contrato", typeLabel: "Contrato", label: c.identificador, createdAt: c.createdAt, href: "/contratos" });
+        items.push({ id: `contrato-${c.id}`, type: "contrato", typeLabel: "Contrato", label: c.identificador, createdAt: c.createdAt, href: "/contratos", entity: { kind: "contrato", id: c.id } });
       }
       for (const e of empenhos) {
-        items.push({ id: `empenho-${e.id}`, type: "empenho", typeLabel: "Empenho", label: e.numero, createdAt: e.createdAt, href: "/empenhos" });
+        items.push({ id: `empenho-${e.id}`, type: "empenho", typeLabel: "Empenho", label: e.numero, createdAt: e.createdAt, href: "/empenhos", entity: { kind: "empenho", id: e.id } });
       }
       for (const os of ordensServico) {
-        items.push({ id: `os-${os.id}`, type: "os", typeLabel: "Ordem de Serviço", label: os.numero, createdAt: os.createdAt, href: "/ordens-servico" });
+        items.push({ id: `os-${os.id}`, type: "os", typeLabel: "Ordem de Serviço", label: os.numero, createdAt: os.createdAt, href: "/ordens-servico", entity: { kind: "ordemServico", id: os.id } });
       }
       for (const inv of invoice.allInvoices) {
-        items.push({ id: `invoice-${inv.id}`, type: "invoice", typeLabel: "Nota Fiscal", label: inv.numero, createdAt: inv.createdAt, href: "/notasfiscais" });
+        items.push({ id: `invoice-${inv.id}`, type: "invoice", typeLabel: "Nota Fiscal", label: inv.numero, createdAt: inv.createdAt, href: "/notasfiscais", entity: { kind: "invoice", id: inv.id } });
       }
     }
 
     if (canViewEngenharia) {
       for (const o of obras) {
-        items.push({ id: `obra-${o.id}`, type: "obra", typeLabel: "Obra", label: o.nome, createdAt: o.createdAt, href: "/obras" });
+        items.push({ id: `obra-${o.id}`, type: "obra", typeLabel: "Obra", label: o.nome, createdAt: o.createdAt, href: "/obras", entity: { kind: "obra", id: o.id } });
       }
     }
 
