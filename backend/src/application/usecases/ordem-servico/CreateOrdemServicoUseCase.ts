@@ -10,6 +10,8 @@ import { OrdemServicoEmpenhosValidator } from "./OrdemServicoEmpenhosValidator.j
 import { normalizeFreeText } from "../../../domain/normalization/text-normalizers.js";
 import { OrdemServicoDocumentValidator } from "./OrdemServicoDocumentValidator.js";
 import { OrdemServicoObraValidator } from "./OrdemServicoObraValidator.js";
+import { calcularPrazoCiencia } from "../../../domain/tramitacao/ciencia.js";
+import { autorDe } from "../ordem-servico-tramitacao/tramitacao-access.js";
 
 export class CreateOrdemServicoUseCase {
   private empenhosValidator: OrdemServicoEmpenhosValidator;
@@ -54,7 +56,10 @@ export class CreateOrdemServicoUseCase {
     const contrato = await this.documentValidator.validate({ user, ordemServico: ordemServicoEntity, isCreate: true });
 
     const lote = contrato.lotes.find((l) => l.id === ordemServicoEntity.lote_id);
+    // Emissão no horário do servidor: a partir dela a empresa tem o prazo para dar ciência
+    const emitidaEm = new Date();
     return this.repository.create({
+      emissao: { tipo: "EMITIDA", emitidaEm, cienciaPrazoAte: calcularPrazoCiencia(emitidaEm), autor: autorDe(user) },
       numero: "",
       numeracao: { loteNumero: lote?.numero ?? null, ano: Number(dataEmissao.slice(0, 4)) },
       tenant_id: user.tenant_id,

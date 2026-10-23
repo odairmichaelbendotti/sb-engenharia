@@ -2,9 +2,13 @@ import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import type { IOrdemServicoRepository } from "../../../domain/repositories/IOrdemServicoRepository.js";
+import type { IOrdemServicoTramitacaoRepository } from "../../../domain/repositories/IOrdemServicoTramitacaoRepository.js";
 
 export class DeleteOrdemServicoUseCase {
-  constructor(private repository: IOrdemServicoRepository) {}
+  constructor(
+    private repository: IOrdemServicoRepository,
+    private tramitacaoRepository: IOrdemServicoTramitacaoRepository,
+  ) {}
 
   async execute({ ordemServicoId, user }: { ordemServicoId: string; user: AuthenticatedUser }) {
     const canEdit = new DomainAccessPolicy().can(user.role, "administrativo", "edit");
@@ -15,6 +19,14 @@ export class DeleteOrdemServicoUseCase {
     const existing = await this.repository.findById(ordemServicoId);
     if (!existing || existing.tenant_id !== user.tenant_id) {
       throw new DomainError("OrdemServico not found");
+    }
+
+    // Depois que a empresa abriu, deu ciência, apontou ou comentou, o histórico é prova: a OS
+    // só pode ser cancelada, não excluída
+    if (await this.tramitacaoRepository.hasInteracaoEmpresa(ordemServicoId)) {
+      throw new DomainError(
+        "This ordem de serviço already has a history with the company: cancel it instead of deleting it",
+      );
     }
 
     await this.repository.delete(ordemServicoId);
