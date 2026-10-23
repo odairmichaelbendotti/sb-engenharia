@@ -8,8 +8,9 @@ import {
   OrdemServicoList,
   OrdemServicoModal,
   DeleteOrdemServicoModal,
-  ViewOrdemServicoModal,
 } from "./index";
+import { useEntityViewer } from "../../store/entityViewer";
+import { useEntityEditor } from "../../hooks/useEntityEditor";
 import type { OrdemServicoTab } from "./OrdemServicoStatusTabs";
 import type { OrdemServicoSort } from "./OrdemServicoFilters";
 import { matchesScope, resolveScope, scopeChips, type ScopeRef } from "../../components/filters/scope-options";
@@ -22,7 +23,6 @@ import { formatCurrency } from "../../utils/format-currency";
 import { usePermission } from "../../hooks/usePermission";
 import { PageHeader } from "../../components/PageHeader";
 import { CheckCircle2, ClipboardList } from "lucide-react";
-import { useTramitacao } from "../../store/tramitacao";
 
 // Uma OS pode ter vários empenhos (do mesmo contrato): uma origem por empenho
 function osScopeRefs(os: OrdemServico): ScopeRef[] {
@@ -65,21 +65,23 @@ function sortOrdensServico(list: OrdemServico[], sort: OrdemServicoSort) {
 }
 
 export default function OrdensServico() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // ?nova=<contrato_id> (vindo de "Nova OS neste contrato") abre o cadastro já no contrato
+  const novaParam = searchParams.get("nova");
+  const [isOpen, setIsOpen] = useState(Boolean(novaParam));
+  const [initialContratoId, setInitialContratoId] = useState<string | null>(novaParam);
   const [editingOrdemServico, setEditingOrdemServico] = useState<OrdemServico | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [ordemServicoToDelete, setOrdemServicoToDelete] = useState<OrdemServico | null>(null);
-  const [viewingOrdemServicoId, setViewingOrdemServicoId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [tab, setTab] = useState<OrdemServicoTab>("ALL");
   const [sort, setSort] = useState<OrdemServicoSort>("URGENCY");
   const [scope, setScope] = useScopeFilter();
   const [isListLoading, setIsListLoading] = useState(true);
-  const { canCreateOrdemServico, isEmpresaRestricted } = usePermission();
+  const { canCreateOrdemServico, canEditAdministrativo, isEmpresaRestricted } = usePermission();
 
   const { fetchOrdensServico, data } = useOrdensServico();
-  const { fetchPendencias } = useTramitacao();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const openViewer = useEntityViewer((s) => s.open);
   const osParam = searchParams.get("os");
 
   const ordensServico = useMemo(() => data?.ordensServico || [], [data]);
@@ -88,26 +90,18 @@ export default function OrdensServico() {
     fetchOrdensServico().finally(() => setIsListLoading(false));
   }, [fetchOrdensServico]);
 
-  // ?os=<id> (vindo de uma notificação) abre o modal da OS; fechar tira o parâmetro da URL
-  const openOrdemServicoId = viewingOrdemServicoId ?? osParam;
-  const handleCloseView = () => {
-    setViewingOrdemServicoId(null);
-    if (osParam) {
-      setSearchParams(
-        (params) => {
-          params.delete("os");
-          return params;
-        },
-        { replace: true },
-      );
-    }
-  };
-
-  // Ciência, apontamento ou decisão: atualiza a lista (fase da OS) e as pendências da empresa
-  const handleTramitacaoChanged = () => {
-    fetchOrdensServico().catch(() => {});
-    if (isEmpresaRestricted) fetchPendencias().catch(() => {});
-  };
+  // ?os=<id> (vindo de uma notificação) abre o modal da OS; o parâmetro sai da URL em seguida
+  useEffect(() => {
+    if (!osParam) return;
+    openViewer({ kind: "ordemServico", id: osParam });
+    setSearchParams(
+      (params) => {
+        params.delete("os");
+        return params;
+      },
+      { replace: true },
+    );
+  }, [osParam, openViewer, setSearchParams]);
 
   // Opções de empresa/contrato/empenho em cascata, montadas das próprias OS; valor escolhido
   // em outra tela que não existe aqui (ou deixou de ter OS) é ignorado
@@ -208,12 +202,6 @@ export default function OrdensServico() {
     [searchedOrdensServico, activeTab, sort],
   );
 
-  // Busca pelo id na lista atual para o modal refletir atualizações feitas com ele aberto
-  const viewingOrdemServico = useMemo(
-    () => ordensServico.find((os) => os.id === openOrdemServicoId) ?? null,
-    [ordensServico, openOrdemServicoId],
-  );
-
   const handleOpen = (ordemServico?: OrdemServico) => {
     setEditingOrdemServico(ordemServico || null);
     setIsOpen(true);
@@ -222,7 +210,30 @@ export default function OrdensServico() {
   const handleClose = () => {
     setIsOpen(false);
     setEditingOrdemServico(null);
+    setInitialContratoId(null);
   };
+
+  // "Nova OS neste contrato": o cadastro já abriu com o contrato; o parâmetro sai da URL
+  useEffect(() => {
+    if (!novaParam) return;
+    setSearchParams(
+      (params) => {
+        params.delete("nova");
+        return params;
+      },
+      { replace: true },
+    );
+  }, [novaParam, setSearchParams]);
+
+  // "Editar" do modal de visualização da OS enquanto esta página está aberta
+  useEntityEditor(
+    "ordemServico",
+    (id) => {
+      const os = ordensServico.find((o) => o.id === id);
+      if (os) handleOpen(os);
+    },
+    canEditAdministrativo,
+  );
 
   const handleOpenDelete = (ordemServico: OrdemServico) => {
     setOrdemServicoToDelete(ordemServico);
@@ -239,6 +250,7 @@ export default function OrdensServico() {
       <PageHeader
         icon={ClipboardList}
         title="Ordens de Serviço"
+        description={`${isEmpresaRestricted ? "Acompanhamento" : "Administrativo"} · ${tabCounts.ATIVO} ativas${tabCounts.QUITADA > 0 ? ` · ${tabCounts.QUITADA} prontas para finalizar` : ""}`}
         canAct={canCreateOrdemServico}
         actionLabel="Nova Ordem de Serviço"
         onAction={() => handleOpen()}
@@ -272,23 +284,20 @@ export default function OrdensServico() {
           key={`${activeTab}|${sort}|${searchTerm}|${scopeKey}`}
           ordensServico={visibleOrdensServico}
           isLoading={isListLoading}
-          onView={(os) => setViewingOrdemServicoId(os.id)}
+          onView={(os) => openViewer({ kind: "ordemServico", id: os.id })}
           onEdit={handleOpen}
           onDelete={handleOpenDelete}
           onAdd={() => handleOpen()}
         />
       </div>
 
-      {viewingOrdemServico && (
-        <ViewOrdemServicoModal
-          ordemServico={viewingOrdemServico}
-          handleClose={handleCloseView}
-          onTramitacaoChanged={handleTramitacaoChanged}
+      {isOpen && canCreateOrdemServico && (
+        <OrdemServicoModal
+          key={editingOrdemServico?.id ?? `nova-${initialContratoId ?? ""}`}
+          ordemServico={editingOrdemServico}
+          initialContratoId={initialContratoId}
+          handleClose={handleClose}
         />
-      )}
-
-      {isOpen && (
-        <OrdemServicoModal key={editingOrdemServico?.id ?? "nova"} ordemServico={editingOrdemServico} handleClose={handleClose} />
       )}
 
       {isDeleteOpen && ordemServicoToDelete && (

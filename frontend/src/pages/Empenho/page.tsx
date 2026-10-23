@@ -10,6 +10,10 @@ import { SummaryStrip, type SummaryCell } from "../../components/SummaryStrip";
 import { matchesScope, resolveScope, scopeChips, type ScopeRef } from "../../components/filters/scope-options";
 import { FilterSummary } from "../../components/filters/FilterSummary";
 import { Layers2 } from "lucide-react";
+import { useNavigate } from "react-router";
+import { useContratos } from "../../store/contratos";
+import { useEntityViewer } from "../../store/entityViewer";
+import { useEntityEditor } from "../../hooks/useEntityEditor";
 
 function empenhoScopeRefs(empenho: EmpenhoList): ScopeRef[] {
   if (!empenho.contrato) return [];
@@ -117,12 +121,32 @@ export default function Empenhos() {
   };
 
   const { canEditAdministrativo } = usePermission();
+  const navigate = useNavigate();
+  const openViewer = useEntityViewer((s) => s.open);
+  const contratosLoaded = useContratos((s) => s.data !== null);
+  const fetchContratos = useContratos((s) => s.fetchContratos);
+
+  // Cor do contrato na faixa de cada linha
+  useEffect(() => {
+    if (!contratosLoaded) fetchContratos().catch(() => {});
+  }, [contratosLoaded, fetchContratos]);
+
+  // "Editar" do modal de visualização do empenho enquanto esta página está aberta
+  useEntityEditor(
+    "empenho",
+    (id) => {
+      const empenho = empenhos.find((e) => e.id === id);
+      if (empenho) handleOpen(empenho);
+    },
+    canEditAdministrativo,
+  );
 
   return (
     <div className="p-4 md:p-5 max-w-7xl mx-auto">
       <PageHeader
         icon={Layers2}
         title="Empenhos"
+        description={`Administrativo · ${empenhos.filter((e) => e.status.toUpperCase() === "ATIVO").length} ativos`}
         canAct={canEditAdministrativo}
         actionLabel="Novo Empenho"
         onAction={() => handleOpen()}
@@ -154,8 +178,12 @@ export default function Empenhos() {
             key={`${searchTerm}|${scopeKey}`}
             empenhos={filteredEmpenhos}
             isLoading={isListLoading}
+            onView={(empenho) => openViewer({ kind: "empenho", id: empenho.id })}
             onEdit={handleOpen}
             onDelete={handleOpenDelete}
+            onNewInvoice={(empenho) =>
+              navigate(`/notasfiscais?nova=${empenho.id}&novaEmpresa=${empenho.contrato.company.id}`)
+            }
             onAdd={() => handleOpen()}
           />
         </div>

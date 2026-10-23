@@ -1,7 +1,7 @@
-import { Building2, Check, Loader2, X } from "lucide-react";
+import { Building2, Check, X } from "lucide-react";
 import { getInitials } from "../../utils/get-initial";
 import type { UnapprovedUser } from "../../../types/user";
-import { Badge, Td, Tr } from "../../components/ui";
+import { Button, Td, Tr } from "../../components/ui";
 
 export type RowStatus = "approving" | "approved" | "rejected";
 
@@ -34,56 +34,50 @@ export function ApprovalRow({
         isResolved ? "opacity-0" : "opacity-100"
       }`}
     >
-      {/* Nome quebra linha: até duas linhas, completo ao passar o mouse */}
-      <Td wrap>
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-surface-muted border border-border rounded-full flex items-center justify-center text-text-primary font-semibold text-xs shrink-0">
+      <Td>
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-8 h-8 bg-surface-muted border border-border rounded-full flex items-center justify-center text-text-primary font-semibold text-[11px] shrink-0">
             {getInitials(user.name)}
           </div>
-          <p className="font-medium text-text-primary line-clamp-2" title={user.name}>
-            {user.name}
-          </p>
+          <div className="min-w-0">
+            <p className="font-semibold text-text-primary truncate" title={user.name}>
+              {user.name}
+            </p>
+            <p className="text-[11px] text-text-muted truncate">
+              {user.email}
+              <span className="lg:hidden"> · {user.tenant.name}</span>
+            </p>
+          </div>
         </div>
       </Td>
-      <Td>
-        <span className="text-text-secondary">{user.email}</span>
+      <Td className="hidden lg:table-cell">
+        <span className="inline-flex items-center gap-1.5 text-text-primary max-w-full">
+          <Building2 size={13} className="text-text-muted shrink-0" />
+          <span className="truncate">{user.tenant.name}</span>
+        </span>
       </Td>
       <Td>
-        <Badge icon={Building2}>{user.tenant.name}</Badge>
-      </Td>
-      <Td>
-        {/* Botões nativos: precisam do spinner e da animação "pop" no ícone, que o IconButton não oferece */}
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => onRequestApprove(user)}
-            disabled={!!status}
-            className="inline-flex items-center justify-center w-8 h-8 cursor-pointer hover:bg-success-bg text-text-secondary hover:text-success-text rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-200"
-            title="Aprovar"
-            aria-label="Aprovar"
-          >
-            {isBusy ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <Check
-                size={16}
-                className={status === "approved" ? "text-success-text animate-pop" : ""}
-              />
-            )}
-          </button>
-          <button
-            type="button"
+        {/* Decisão direta (é o trabalho desta tela): recusar discreto, aprovar em destaque */}
+        <div className="inline-flex items-center gap-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={X}
             onClick={() => onRequestReject(user)}
             disabled={!!status}
-            className="inline-flex items-center justify-center w-8 h-8 cursor-pointer hover:bg-danger-bg text-text-secondary hover:text-danger-text rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-200"
-            title="Recusar"
-            aria-label="Recusar"
           >
-            <X
-              size={16}
-              className={status === "rejected" ? "text-danger-text animate-pop" : ""}
-            />
-          </button>
+            Recusar
+          </Button>
+          <Button
+            variant="success"
+            size="sm"
+            icon={Check}
+            loading={isBusy}
+            onClick={() => onRequestApprove(user)}
+            disabled={!!status}
+          >
+            Aprovar
+          </Button>
         </div>
       </Td>
     </Tr>

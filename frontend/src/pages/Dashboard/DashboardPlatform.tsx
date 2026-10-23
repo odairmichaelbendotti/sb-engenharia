@@ -9,14 +9,15 @@ import type { TenantSummaryEntry } from "../../../types/tenant";
 type SortKey = "name" | "empenhos" | "execucao" | "notas";
 
 // O alinhamento vem da posição da coluna (tabela padrão); só a organização quebra linha
-const COLUMNS: { key: SortKey | null; label: string; wrap?: boolean }[] = [
-  { key: "name", label: "Organização", wrap: true },
-  { key: null, label: "Contratos" },
-  { key: "empenhos", label: "Empenhos ativos" },
-  { key: null, label: "OS ativas" },
-  { key: null, label: "Obras em andamento" },
-  { key: "execucao", label: "Execução de obras" },
-  { key: "notas", label: "Notas pendentes/vencidas" },
+// `width` das colunas de dado; "Organização" fica com a sobra. `hide` some em telas menores
+const COLUMNS: { key: SortKey | null; label: string; width?: string; hide?: string }[] = [
+  { key: "name", label: "Organização" },
+  { key: null, label: "Contratos", width: "w-24", hide: "hidden xl:table-cell" },
+  { key: "empenhos", label: "Empenhos ativos", width: "w-36", hide: "hidden md:table-cell" },
+  { key: null, label: "OS ativas", width: "w-24", hide: "hidden xl:table-cell" },
+  { key: null, label: "Obras em andamento", width: "w-28", hide: "hidden lg:table-cell" },
+  { key: "execucao", label: "Execução de obras", width: "w-40", hide: "hidden sm:table-cell" },
+  { key: "notas", label: "Notas pendentes/vencidas", width: "w-36" },
 ];
 
 function execPercent(e: TenantSummaryEntry) {
@@ -131,7 +132,7 @@ export default function DashboardPlatform({ entries }: { entries: TenantSummaryE
               const active = col.key !== null && sort.key === col.key;
               const SortIcon = sort.dir === "asc" ? ArrowUp : ArrowDown;
               return (
-                <Th key={col.label} wrap={col.wrap}>
+                <Th key={col.label} width={col.width} className={col.hide}>
                   {col.key ? (
                     <button
                       type="button"
@@ -153,9 +154,9 @@ export default function DashboardPlatform({ entries }: { entries: TenantSummaryE
               const pct = execPercent(entry);
               const hasNotas = entry.stats.notasPendentesVencidasCount > 0;
               return (
-                <Tr key={entry.tenant.id} onClick={() => navigate(`/organizacoes/${entry.tenant.id}`)}>
+                <Tr key={entry.tenant.id} onOpen={() => navigate(`/organizacoes/${entry.tenant.id}`)}>
                   {/* Nome da organização quebra linha: até duas linhas, completo ao passar o mouse */}
-                  <Td wrap>
+                  <Td>
                     <p className="line-clamp-2 font-medium text-text-primary" title={entry.tenant.name}>
                       <Link
                         to={`/organizacoes/${entry.tenant.id}`}
@@ -166,20 +167,20 @@ export default function DashboardPlatform({ entries }: { entries: TenantSummaryE
                       </Link>
                     </p>
                   </Td>
-                  <Td>
+                  <Td className="hidden xl:table-cell">
                     <span className="text-text-primary">{entry.stats.contratosAtivos}</span>
                   </Td>
-                  <Td>
+                  <Td className="hidden md:table-cell">
                     <p className="text-text-primary">{formatCurrency(entry.stats.empenhosAtivosValor)}</p>
                     <p className="text-xs text-text-muted">{entry.stats.empenhosAtivos} ativos</p>
                   </Td>
-                  <Td>
+                  <Td className="hidden xl:table-cell">
                     <span className="text-text-primary">{entry.stats.osAtivas}</span>
                   </Td>
-                  <Td>
+                  <Td className="hidden lg:table-cell">
                     <span className="text-text-primary">{entry.stats.obrasEmAndamento}</span>
                   </Td>
-                  <Td>
+                  <Td className="hidden sm:table-cell">
                     <p className="text-text-primary">{formatCurrency(entry.stats.valorExecutadoTotal)}</p>
                     {/* inline-flex: a barra segue o alinhamento da coluna */}
                     <div className="inline-flex items-center gap-2 mt-1">

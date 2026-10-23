@@ -1,4 +1,5 @@
 import type { ObraDetail } from "../../../types/obra";
+import { invoiceLabel } from "../../utils/status-display";
 import { formatCurrency, formatDateOnly } from "../../utils/format-currency";
 import { dateOnlyUtc, todayUtc } from "./obra-detail-utils";
 
@@ -117,7 +118,7 @@ export function ObraTimeline({ detail }: { detail: ObraDetail }) {
                     key={invoice.id}
                     className="absolute top-1/2 w-2.5 h-2.5 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-secondary-500 border border-surface"
                     style={{ left: `${pos(invoice.at)}%` }}
-                    title={`NF ${invoice.numero} · ${formatDateOnly(invoice.vencimento)} · ${formatCurrency(invoice.value)}`}
+                    title={`${invoiceLabel(invoice.numero)} · ${formatDateOnly(invoice.vencimento)} · ${formatCurrency(invoice.value)}`}
                   />
                 ))}
                 {invoiceDates.length === 0 && (

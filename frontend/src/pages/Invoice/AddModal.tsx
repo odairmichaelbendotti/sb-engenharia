@@ -22,6 +22,8 @@ import { createBlurNormalizer, INVOICE_FIELD_RULES } from "../../utils/normaliza
 interface AddModalProps {
   isOpen: boolean;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  // Nota nova já no empenho escolhido (ação "Nova nota fiscal" da lista de empenhos)
+  initialEmpenho?: { companyId: string; empenhoId: string } | null;
 }
 
 type CreateInvoiceFormData = Omit<InvoiceFormData, "status">;
@@ -36,7 +38,7 @@ const initialFormData: CreateInvoiceFormData = {
   ordemServico_id: "",
 };
 
-export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
+export function AddModal({ isOpen, setIsOpen, initialEmpenho = null }: AddModalProps) {
   const [formData, setFormData] = useState(initialFormData);
   const [empenhosByCompany, setEmpenhosByCompany] = useState<Empenho[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -50,11 +52,22 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
   // usuário, e os empenhos de cada uma mudam com frequência
   useEffect(() => {
     fetchCompanyOptions()
+      .then(() => {
+        if (!initialEmpenho) return;
+        // Preenche empresa e empenho com as opções que acabaram de chegar
+        const company = useInvoice.getState().companyOptions.find((c) => c.id === initialEmpenho.companyId);
+        if (!company) return;
+        setFormData((f) => ({ ...f, company_id: company.id }));
+        setEmpenhosByCompany(company.empenhos);
+        selectEmpenho(initialEmpenho.empenhoId, company.empenhos);
+      })
       .catch((error) => {
         console.error(error);
         toast.error("Não foi possível carregar as empresas");
       })
       .finally(() => setLoadingCompanies(false));
+    // Só ao abrir: o empenho inicial não muda com o modal aberto
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchCompanyOptions]);
 
   function handleChangeCompany(companyId: string) {
@@ -70,10 +83,13 @@ export function AddModal({ isOpen, setIsOpen }: AddModalProps) {
   function handleChangeEmpenho(
     e: React.ChangeEvent<HTMLSelectElement, HTMLSelectElement>,
   ) {
-    const empenhoId = e.target.value;
+    selectEmpenho(e.target.value, empenhosByCompany);
+  }
+
+  function selectEmpenho(empenhoId: string, options: Empenho[]) {
     setFormData((f) => ({ ...f, empenho_id: empenhoId, ordemServico_id: "" }));
 
-    const empenho = empenhosByCompany.find(
+    const empenho = options.find(
       (f) => f.id.toString() === empenhoId,
     );
 

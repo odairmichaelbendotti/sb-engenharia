@@ -1,6 +1,5 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import {
-  X,
   ClipboardList,
   Building2,
   HardHat,
@@ -12,26 +11,52 @@ import {
   UserCog,
   MapPinOff,
   FileDown,
+  FileSignature,
+  FileText,
+  Layers2,
+  Link2,
   Tag,
   Wrench,
   ShieldCheck,
   CalendarSearch,
   Timer,
   Banknote,
+  MessagesSquare,
+  MapPinned,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { OrdemServico, OrdemServicoObra, OrdemServicoUrgencia } from "../../../types/ordem-servico";
 import { formatCurrency, formatDate, formatDateOnly } from "../../utils/format-currency";
 import { downloadBlob, toFilename } from "../../utils/download-file";
 import { cx } from "../../utils/cx";
+import { invoiceStatusDisplay, invoiceLabel } from "../../utils/status-display";
 import { useOrdensServico } from "../../store/ordensServico";
+import { useInvoice } from "../../store/invoices";
+import { useTramitacao } from "../../store/tramitacao";
 import { usePermission } from "../../hooks/usePermission";
-import { OrdemServicoNumeroTag } from "../../components/OrdemServicoNumeroTag";
 import { getBalance, getOrdemServicoBalance } from "./ordem-servico-balance";
 import { FinalizeOrdemServicoCallout } from "./FinalizeOrdemServico";
 import { CienciaPendenteAviso, TramitacaoSection } from "./TramitacaoSection";
 import { getFaseEmissao } from "./ordem-servico-ciencia";
-import { Badge, Button, IconButton, Modal, ModalBody, Table, TableBody, TableHead, Td, Th, Tr, type BadgeTone, TableFoot } from "../../components/ui";
+import { ordemServicoStatusDisplay } from "./ordem-servico-display";
+import {
+  Button,
+  CodeTag,
+  FormSection,
+  RelationCard,
+  RelationGrid,
+  StatusPill,
+  Table,
+  TableBody,
+  TableFoot,
+  TableHead,
+  Td,
+  Th,
+  Tr,
+} from "../../components/ui";
+import { EmptyNote, ViewFrame, type ViewProps } from "../../components/EntityViewer/ViewFrame";
+import { useViewerNav } from "../../components/EntityViewer/useViewerNav";
+import { useEnsureData } from "../../components/EntityViewer/useEnsureData";
 
 // Leaflet só é baixado quando o modal de uma OS com obra georreferenciada abre
 const ObraMiniMap = lazy(() => import("./ObraMiniMap"));
@@ -49,25 +74,6 @@ function hasValidCoordinates(obra: OrdemServicoObra): obra is OrdemServicoObra &
     Math.abs(obra.longitude) <= 180
   );
 }
-
-interface ViewOrdemServicoModalProps {
-  ordemServico: OrdemServico;
-  handleClose: () => void;
-  // Ciência, apontamento ou comentário gravado: a tela de fora recarrega o que mostra
-  onTramitacaoChanged?: () => void;
-}
-
-const STATUS_LABEL: Record<OrdemServico["status"], string> = {
-  ATIVO: "Ativa",
-  FINALIZADO: "Finalizada",
-  CANCELADO: "Cancelada",
-};
-
-const STATUS_TONE: Record<OrdemServico["status"], BadgeTone> = {
-  ATIVO: "warning",
-  FINALIZADO: "success",
-  CANCELADO: "danger",
-};
 
 const URGENCIA_LABEL: Record<OrdemServicoUrgencia, string> = {
   EMERGENCIA: "Emergência (imediato – 24-48h)",
@@ -328,6 +334,7 @@ function BalanceSection({ ordemServico, canFinalize }: { ordemServico: OrdemServ
 
 // Quanto cada empenho destinou à OS, quanto já foi liquidado nele e o saldo livre do empenho
 function EmpenhosTable({ ordemServico }: { ordemServico: OrdemServico }) {
+  const { linkTo } = useViewerNav();
   const totals = ordemServico.empenhos.reduce(
     (acc, v) => ({ valor: acc.valor + v.valor, liquidado: acc.liquidado + v.liquidado }),
     { valor: 0, liquidado: 0 },
@@ -338,10 +345,10 @@ function EmpenhosTable({ ordemServico }: { ordemServico: OrdemServico }) {
 
   return (
     <div className="space-y-2">
-      {/* Valores em nowrap nunca são cortados; a descrição do empenho quebra em até duas linhas */}
-      <Table compact className="min-w-136">
+      <div className="rounded-lg border border-border overflow-hidden">
+      <Table compact>
         <TableHead>
-          <Th wrap>Empenho</Th>
+          <Th>Empenho</Th>
           <Th>Destinado à OS</Th>
           <Th>Liquidado</Th>
           <Th>A liquidar</Th>
@@ -351,8 +358,8 @@ function EmpenhosTable({ ordemServico }: { ordemServico: OrdemServico }) {
             const saldo = getBalance(v.valor, v.liquidado);
             const livreEmpenho = Math.max(0, v.empenhoValue - v.empenhoComprometido);
             return (
-              <Tr key={v.empenho_id}>
-                <Td wrap>
+              <Tr key={v.empenho_id} onOpen={linkTo("empenho", v.empenho_id)}>
+                <Td>
                   <div
                     title={`${v.numero} · ${v.description}\nEmpenho de ${formatCurrency(v.empenhoValue)} · ${formatCurrency(livreEmpenho)} livres para novas OS`}
                   >
@@ -379,7 +386,7 @@ function EmpenhosTable({ ordemServico }: { ordemServico: OrdemServico }) {
         {ordemServico.empenhos.length > 1 && (
           <TableFoot>
             <Tr>
-              <Td wrap>Total</Td>
+              <Td>Total</Td>
               <Td>{formatCurrency(totals.valor)}</Td>
               <Td>{formatCurrency(totals.liquidado)}</Td>
               <Td>{formatCurrency(Math.max(0, totals.valor - totals.liquidado))}</Td>
@@ -387,6 +394,7 @@ function EmpenhosTable({ ordemServico }: { ordemServico: OrdemServico }) {
           </TableFoot>
         )}
       </Table>
+      </div>
       <p className="text-xs text-text-muted tabular-nums">
         {livre > 0
           ? `${formatCurrency(livre)} livres ${ordemServico.empenhos.length > 1 ? "nestes empenhos" : "neste empenho"} para novas OS`
@@ -396,19 +404,102 @@ function EmpenhosTable({ ordemServico }: { ordemServico: OrdemServico }) {
   );
 }
 
-export function ViewOrdemServicoModal({ ordemServico, handleClose, onTramitacaoChanged }: ViewOrdemServicoModalProps) {
+// Notas fiscais lançadas nesta OS (só para quem vê o administrativo)
+function NotasSection({ ordemServico }: { ordemServico: OrdemServico }) {
+  const { linkTo } = useViewerNav();
+  const loading = useEnsureData("invoices");
+  const allInvoices = useInvoice((s) => s.allInvoices);
+  const notas = allInvoices
+    .filter((nf) => nf.ordemServico_id === ordemServico.id || nf.ordemServico?.id === ordemServico.id)
+    .sort((a, b) => new Date(b.vencimento).getTime() - new Date(a.vencimento).getTime());
+
+  return (
+    <FormSection title="Notas fiscais da OS" icon={FileText} count={notas.length}>
+      {loading ? (
+        <EmptyNote>Carregando notas...</EmptyNote>
+      ) : notas.length === 0 ? (
+        <EmptyNote>Nenhuma nota fiscal lançada nesta OS.</EmptyNote>
+      ) : (
+        <div className="rounded-lg border border-border overflow-hidden">
+          <Table compact>
+            <TableHead>
+              <Th>Nota</Th>
+              <Th>Status</Th>
+              <Th>Vencimento</Th>
+              <Th>Valor</Th>
+            </TableHead>
+            <TableBody>
+              {notas.map((nf) => {
+                const st = invoiceStatusDisplay(nf.status);
+                return (
+                  <Tr key={nf.id} onOpen={linkTo("invoice", nf.id)} muted={nf.status.toUpperCase() === "CANCELADO"}>
+                    <Td>
+                      <span className="font-semibold text-text-primary">{invoiceLabel(nf.numero)}</span>
+                      <span className="block text-[11px] text-text-muted line-clamp-1">{nf.description}</span>
+                    </Td>
+                    <Td>
+                      <StatusPill tone={st.tone} size="sm">
+                        {st.label}
+                      </StatusPill>
+                    </Td>
+                    <Td>{formatDateOnly(nf.vencimento)}</Td>
+                    <Td>{formatCurrency(nf.value)}</Td>
+                  </Tr>
+                );
+              })}
+            </TableBody>
+            <TableFoot>
+              <Tr>
+                <Td>Liquidado na OS</Td>
+                <Td />
+                <Td />
+                <Td>{formatCurrency(ordemServico.valorExecutado)}</Td>
+              </Tr>
+            </TableFoot>
+          </Table>
+        </div>
+      )}
+    </FormSection>
+  );
+}
+
+// `ordemServico` direto (sem buscar a lista): tela de pendências da empresa, que pode estar bloqueada
+export function OrdemServicoView({
+  id,
+  ordemServico: given,
+  onTramitacaoChanged,
+  ...frame
+}: ViewProps & { ordemServico?: OrdemServico; onTramitacaoChanged?: () => void }) {
+  const loading = useEnsureData("ordensServico", !given);
+  const fromStore = useOrdensServico((s) => s.data?.ordensServico.find((os) => os.id === id));
+  const ordemServico = given ?? fromStore;
+  const fetchOrdensServico = useOrdensServico((s) => s.fetchOrdensServico);
+  const fetchOrdemServicoDocument = useOrdensServico((s) => s.fetchOrdemServicoDocument);
+  const fetchPendencias = useTramitacao((s) => s.fetchPendencias);
+  const { canEditAdministrativo, canViewAdministrativo, canDarCienciaOrdemServico, isEmpresaRestricted } = usePermission();
+  const { linkTo } = useViewerNav();
+  const [generating, setGenerating] = useState(false);
+
+  if (!ordemServico) return <ViewFrame {...frame} size="xl" loading={loading} notFound={!loading} />;
+
   const { obra, empenho } = ordemServico;
   const { contrato } = empenho;
-  const { canEditAdministrativo, canDarCienciaOrdemServico } = usePermission();
+  const status = ordemServicoStatusDisplay(ordemServico);
   const fase = getFaseEmissao(ordemServico);
   const aguardandoCiencia =
     canDarCienciaOrdemServico &&
     ordemServico.status === "ATIVO" &&
     (fase === "AGUARDANDO_CIENCIA" || fase === "CIENCIA_VENCIDA");
-  const { fetchOrdemServicoDocument } = useOrdensServico();
-  const [generating, setGenerating] = useState(false);
+
+  // Ciência, apontamento ou decisão: atualiza a lista (fase da OS) e as pendências da empresa
+  const handleTramitacaoChanged = () => {
+    fetchOrdensServico().catch(() => {});
+    if (isEmpresaRestricted) fetchPendencias().catch(() => {});
+    onTramitacaoChanged?.();
+  };
 
   async function handleGenerateDocument() {
+    if (!ordemServico) return;
     setGenerating(true);
     try {
       const blob = await fetchOrdemServicoDocument(ordemServico.id);
@@ -420,131 +511,143 @@ export function ViewOrdemServicoModal({ ordemServico, handleClose, onTramitacaoC
     }
   }
 
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") handleClose();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handleClose]);
-
   return (
-    <Modal open size="lg" onClose={handleClose}>
-      <div className="relative shrink-0 flex items-start justify-between gap-3 pl-6 pr-4 py-4 border-b border-border">
-        {/* Faixa na cor do contrato, igual à da linha da lista */}
-        <span aria-hidden className="absolute left-0 inset-y-0 w-1.5 rounded-tl-xl" style={{ backgroundColor: contrato.cor }} />
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-secondary">
-            <OrdemServicoNumeroTag numero={ordemServico.numero} />
-            <Badge tone={STATUS_TONE[ordemServico.status]}>{STATUS_LABEL[ordemServico.status]}</Badge>
-            <span>
-              {contrato.company.name} <span className="text-text-muted">·</span> {contrato.identificador}
-            </span>
-          </div>
-          <h2 className={`text-base font-semibold mt-1.5 leading-snug ${obra ? "text-text-primary" : "text-text-secondary"}`}>
-            {obra?.nome ?? empenho.description}
-          </h2>
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={FileDown}
-            loading={generating}
-            onClick={handleGenerateDocument}
-            title="Baixar a ordem de serviço preenchida em PDF"
-          >
-            <span className="hidden sm:inline">Baixar OS (PDF)</span>
-          </Button>
-          <IconButton icon={X} label="Fechar" size="sm" onClick={handleClose} />
-        </div>
-      </div>
+    <ViewFrame
+      {...frame}
+      size="xl"
+      accent={contrato.cor}
+      eyebrow={
+        <>
+          <CodeTag>{/^OS\b/i.test(ordemServico.numero) ? ordemServico.numero : `OS ${ordemServico.numero}`}</CodeTag>
+          <StatusPill tone={status.tone} title={status.title}>
+            {status.label}
+          </StatusPill>
+          <span className="truncate">
+            {contrato.company.name} <span className="text-text-muted">·</span> {contrato.identificador}
+          </span>
+        </>
+      }
+      title={obra?.nome ?? empenho.description}
+      editLabel="Editar OS"
+      headerActions={
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={FileDown}
+          loading={generating}
+          onClick={handleGenerateDocument}
+          title="Baixar a ordem de serviço preenchida em PDF"
+        >
+          <span className="hidden sm:inline">Baixar PDF</span>
+        </Button>
+      }
+    >
+      {aguardandoCiencia && ordemServico.cienciaPrazoAte && (
+        <CienciaPendenteAviso prazoAte={ordemServico.cienciaPrazoAte} vencida={fase === "CIENCIA_VENCIDA"} />
+      )}
 
-      <ModalBody className="space-y-5">
-        {aguardandoCiencia && ordemServico.cienciaPrazoAte && (
-          <CienciaPendenteAviso prazoAte={ordemServico.cienciaPrazoAte} vencida={fase === "CIENCIA_VENCIDA"} />
-        )}
+      <section>
+        <BalanceSection ordemServico={ordemServico} canFinalize={canEditAdministrativo} />
+      </section>
 
-        <section>
-          <BalanceSection ordemServico={ordemServico} canFinalize={canEditAdministrativo} />
-        </section>
-
-        <section>
-          <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">
-            {ordemServico.empenhos.length > 1 ? "Empenhos" : "Empenho"}
-          </h3>
-          <EmpenhosTable ordemServico={ordemServico} />
-        </section>
-
-        <section>
-          <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-1">Cronograma</h3>
-          <p className="text-xs text-text-muted mb-2.5">
-            {ordemServico.dataInicio
-              ? "Prazos de execução desta ordem de serviço."
-              : "Esta ordem de serviço ainda não tem prazo: edite-a e informe o início e a previsão de término."}
-          </p>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-            <DateStep
-              icon={CalendarPlus}
-              label="Emissão da OS"
-              value={ordemServico.dataEmissao ? formatDateOnly(ordemServico.dataEmissao) : formatDate(ordemServico.createdAt)}
-              done
-            />
-            <DateStep
-              icon={CalendarClock}
-              label="Início"
-              value={ordemServico.dataInicio ? formatDateOnly(ordemServico.dataInicio) : null}
-              done={!!ordemServico.dataInicio}
-            />
-            <DateStep
-              icon={Flag}
-              label="Previsão de término"
-              value={ordemServico.dataPrevisaoTermino ? formatDateOnly(ordemServico.dataPrevisaoTermino) : null}
-              done={!!ordemServico.dataPrevisaoTermino}
-            />
-            <DateStep
-              icon={CalendarCheck}
-              label="Conclusão da obra"
-              value={obra?.dataConclusao ? formatDate(obra.dataConclusao) : null}
-              hint={obra && !obra.dataConclusao ? "Ainda não concluída" : undefined}
-              done={!!obra?.dataConclusao}
-            />
-          </div>
-        </section>
-
-        <section>
-          <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2.5">Documento da OS</h3>
-          <DocumentSection ordemServico={ordemServico} />
-        </section>
-
-        <section>
-          <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2.5">
-            Ciência e tramitação com a empresa
-          </h3>
-          <TramitacaoSection
-            ordemServicoId={ordemServico.id}
-            numero={ordemServico.numero}
-            onChanged={onTramitacaoChanged}
+      <FormSection title="Vínculos" icon={Link2}>
+        <RelationGrid>
+          <RelationCard
+            icon={FileSignature}
+            label="Contrato"
+            title={contrato.identificador}
+            color={contrato.cor}
+            hint={contrato.descricaoCurta}
+            onClick={linkTo("contrato", contrato.id)}
           />
-        </section>
-
-        <section>
-          <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2.5">
-            Obra vinculada
-          </h3>
+          <RelationCard
+            icon={Building2}
+            label="Empresa"
+            title={contrato.company.name}
+            onClick={linkTo("empresa", contrato.company.id)}
+          />
           {obra ? (
-            <ObraSection ordemServico={ordemServico} obra={obra} />
+            <RelationCard
+              icon={HardHat}
+              label="Obra"
+              title={`${obra.identificacaoPatrimonial} · ${obra.nome}`}
+              hint={`${OBRA_TIPO_LABEL[obra.tipo] ?? obra.tipo} · ${OBRA_STATUS_LABEL[obra.status] ?? obra.status}`}
+              onClick={linkTo("obra", obra.id)}
+            />
           ) : (
-            <div className="flex items-start gap-2.5 rounded-lg border border-warning-border bg-warning-bg px-3.5 py-3">
-              <AlertTriangle size={16} className="text-warning-text shrink-0 mt-0.5" />
-              <p className="text-sm text-warning-text">
-                Nenhuma obra vinculada. Edite esta ordem de serviço e escolha a obra, ou vincule-a pelo
-                cadastro da obra em Engenharia &gt; Obras.
-              </p>
-            </div>
+            <RelationCard
+              icon={HardHat}
+              label="Obra"
+              title="Sem obra vinculada"
+              hint="vincule pela edição da OS ou da obra"
+              hintTone="warning"
+            />
           )}
-        </section>
-      </ModalBody>
-    </Modal>
+        </RelationGrid>
+      </FormSection>
+
+      <FormSection
+        title={ordemServico.empenhos.length > 1 ? "Empenhos" : "Empenho"}
+        icon={Layers2}
+        count={ordemServico.empenhos.length}
+      >
+        <EmpenhosTable ordemServico={ordemServico} />
+      </FormSection>
+
+      {canViewAdministrativo && <NotasSection ordemServico={ordemServico} />}
+
+      <FormSection title="Cronograma" icon={CalendarClock}>
+        <p className="-mt-2 text-xs text-text-muted">
+          {ordemServico.dataInicio
+            ? "Prazos de execução desta ordem de serviço."
+            : "Esta ordem de serviço ainda não tem prazo: edite-a e informe o início e a previsão de término."}
+        </p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+          <DateStep
+            icon={CalendarPlus}
+            label="Emissão da OS"
+            value={ordemServico.dataEmissao ? formatDateOnly(ordemServico.dataEmissao) : formatDate(ordemServico.createdAt)}
+            done
+          />
+          <DateStep
+            icon={CalendarClock}
+            label="Início"
+            value={ordemServico.dataInicio ? formatDateOnly(ordemServico.dataInicio) : null}
+            done={!!ordemServico.dataInicio}
+          />
+          <DateStep
+            icon={Flag}
+            label="Previsão de término"
+            value={ordemServico.dataPrevisaoTermino ? formatDateOnly(ordemServico.dataPrevisaoTermino) : null}
+            done={!!ordemServico.dataPrevisaoTermino}
+          />
+          <DateStep
+            icon={CalendarCheck}
+            label="Conclusão da obra"
+            value={obra?.dataConclusao ? formatDate(obra.dataConclusao) : null}
+            hint={obra && !obra.dataConclusao ? "Ainda não concluída" : undefined}
+            done={!!obra?.dataConclusao}
+          />
+        </div>
+      </FormSection>
+
+      <FormSection title="Documento da OS" icon={FileText}>
+        <DocumentSection ordemServico={ordemServico} />
+      </FormSection>
+
+      <FormSection title="Ciência e tramitação com a empresa" icon={MessagesSquare}>
+        <TramitacaoSection
+          ordemServicoId={ordemServico.id}
+          numero={ordemServico.numero}
+          onChanged={handleTramitacaoChanged}
+        />
+      </FormSection>
+
+      {obra && (
+        <FormSection title="Local da obra" icon={MapPinned}>
+          <ObraSection ordemServico={ordemServico} obra={obra} />
+        </FormSection>
+      )}
+    </ViewFrame>
   );
 }

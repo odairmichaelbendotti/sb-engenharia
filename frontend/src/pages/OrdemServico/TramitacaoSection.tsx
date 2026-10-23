@@ -28,8 +28,7 @@ import type {
 import { useTramitacao } from "../../store/tramitacao";
 import { formatDateTimeFull } from "../../utils/format-currency";
 import { cx } from "../../utils/cx";
-import { ConfirmModal } from "../../components/ConfirmModal";
-import { Badge, Button, Field, Textarea, type BadgeTone } from "../../components/ui";
+import { Badge, Button, ConfirmDialog, Field, Textarea, type BadgeTone } from "../../components/ui";
 import { ROLE_LABELS } from "../Users/role-labels";
 import { describePrazoCiencia, FASE_LABEL, FASE_TONE } from "./ordem-servico-ciencia";
 
@@ -205,15 +204,17 @@ export function TramitacaoSection({ ordemServicoId, numero, onChanged }: Tramita
 
       {permissoes.comentar && <ComentarioForm ordemServicoId={ordemServicoId} onChanged={afterAction} />}
 
-      <ConfirmModal
+      <ConfirmDialog
         open={confirmingCiencia}
-        variant="success"
-        message={`Confirmar ciência da ${numero.startsWith("OS") ? numero : `OS ${numero}`}? A data, a hora e o seu nome ficam registrados no histórico e não podem ser desfeitos.`}
+        tone="success"
+        title={`Confirmar ciência da ${numero.startsWith("OS") ? numero : `OS ${numero}`}?`}
         confirmLabel="Estou ciente"
-        isLoading={savingCiencia}
+        loading={savingCiencia}
         onConfirm={handleCiencia}
         onCancel={() => setConfirmingCiencia(false)}
-      />
+      >
+        <p>A data, a hora e o seu nome ficam registrados no histórico e não podem ser desfeitos.</p>
+      </ConfirmDialog>
     </div>
   );
 }

@@ -9,9 +9,9 @@ const DUE_SOON_DAYS = 30;
 export const OBRA_STATUS: Record<ObraStatus, { label: string; dot: string; text: string; badge: string }> = {
   EM_ANDAMENTO: {
     label: "Em andamento",
-    dot: "bg-warning-text",
-    text: "text-warning-text",
-    badge: "bg-warning-bg text-warning-text border-warning-border",
+    dot: "bg-info-text",
+    text: "text-info-text",
+    badge: "bg-info-bg text-info-text border-info-border",
   },
   CONCLUIDA: {
     label: "Concluída",
@@ -90,11 +90,16 @@ export function getObraDeadlineHint(obra: Pick<Obra, "status" | "dataPrevisaoTer
   if (obra.status !== "EM_ANDAMENTO" || !obra.dataPrevisaoTermino) return null;
   const days = daysUntil(obra.dataPrevisaoTermino);
   if (days < 0) {
-    return { label: `Atrasada há ${-days} ${days === -1 ? "dia" : "dias"}`, className: "text-danger-text font-medium" };
+    return {
+      label: `Atrasada há ${-days} ${days === -1 ? "dia" : "dias"}`,
+      tone: "danger" as const,
+      className: "text-danger-text font-medium",
+    };
   }
   if (days <= DUE_SOON_DAYS) {
     return {
       label: days === 0 ? "Vence hoje" : `Faltam ${days} ${days === 1 ? "dia" : "dias"}`,
+      tone: "warning" as const,
       className: "text-warning-text font-medium",
     };
   }

@@ -1,163 +1,166 @@
+import { ClipboardPlus, Edit2, Eye, FileSignature, Loader2, Plus, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import type { Contrato } from "../../../types/contrato";
+import { usePermission } from "../../hooks/usePermission";
+import { formatCurrency, formatDateOnly } from "../../utils/format-currency";
+import { contratoStatusDisplay, getDeadlineHint } from "../../utils/status-display";
+import { BalanceCell } from "../../components/BalanceCell";
 import {
-  FileSignature,
-  Building2,
-  Trash2,
-  Edit2,
-  Plus,
-  Loader2,
-  Layers2,
-} from "lucide-react";
-import {
-  Badge,
+  ActionMenu,
   Button,
-  IconButton,
+  CodeTag,
+  DateHint,
   Pagination,
+  StatusPill,
   Table,
   TableBody,
   TableHead,
   Td,
   Th,
   Tr,
-  type BadgeTone,
 } from "../../components/ui";
-import { useMemo, useState } from "react";
-import type { Contrato } from "../../../types/contrato";
-import { usePermission } from "../../hooks/usePermission";
-import { SaldoLiquidacao } from "../../components/SaldoLiquidacao";
 
 const ITEMS_PER_PAGE = 10;
-
-const STATUS_LABEL: Record<Contrato["status"], string> = {
-  ATIVO: "Ativo",
-  FINALIZADO: "Finalizado",
-  CANCELADO: "Cancelado",
-};
-
-const STATUS_TONE: Record<Contrato["status"], BadgeTone> = {
-  ATIVO: "warning",
-  FINALIZADO: "success",
-  CANCELADO: "danger",
-};
 
 interface ContratoTableProps {
   contratos: Contrato[];
   isLoading?: boolean;
+  onView: (contrato: Contrato) => void;
   onEdit: (contrato: Contrato) => void;
   onDelete: (contrato: Contrato) => void;
+  // Nova OS já neste contrato (abre na tela de ordens de serviço)
+  onNewOrdemServico?: (contrato: Contrato) => void;
   onAdd?: () => void;
 }
+
+const pct = (part: number, total: number) => (total > 0 ? Math.round((part / total) * 100) : 0);
 
 export function ContratoTable({
   contratos,
   isLoading = false,
+  onView,
   onEdit,
   onDelete,
+  onNewOrdemServico,
   onAdd,
 }: ContratoTableProps) {
-  const { canEditAdministrativo } = usePermission();
+  const { canEditAdministrativo, canCreateOrdemServico } = usePermission();
   const [page, setPage] = useState(1);
 
   const totalPages = Math.max(1, Math.ceil(contratos.length / ITEMS_PER_PAGE));
   const currentPage = Math.min(page, totalPages);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedContratos = useMemo(
-    () => contratos.slice(startIndex, startIndex + ITEMS_PER_PAGE),
-    [contratos, startIndex],
-  );
+  const paginatedContratos = useMemo(() => contratos.slice(startIndex, startIndex + ITEMS_PER_PAGE), [contratos, startIndex]);
 
   return (
     <div>
       <Table>
         <TableHead>
           <Th>Contrato</Th>
-          <Th>Empresa</Th>
-          <Th className="hidden lg:table-cell">Empenhos</Th>
-          <Th>Saldo</Th>
-          <Th>Status</Th>
-          {canEditAdministrativo && <Th>Ações</Th>}
+          <Th width="w-36" className="hidden xl:table-cell">
+            Status
+          </Th>
+          <Th width="w-36" className="hidden lg:table-cell">
+            Vigência
+          </Th>
+          <Th width="w-44" className="hidden 2xl:table-cell">
+            Empenhado
+          </Th>
+          <Th width="w-48" className="hidden sm:table-cell">
+            Saldo
+          </Th>
+          <Th actions />
         </TableHead>
         <TableBody>
-          {paginatedContratos.map((contrato) => (
-            <Tr key={contrato.id}>
-              <Td>
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: `${contrato.cor}1a` }}
-                    title="Cor deste contrato no mapa de obras"
-                  >
-                    <FileSignature size={18} style={{ color: contrato.cor }} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: contrato.cor }} />
-                      <p className="font-medium text-text-primary">{contrato.identificador}</p>
-                    </div>
-                    <p className="text-xs text-text-secondary">{contrato.descricaoCurta}</p>
-                  </div>
-                </div>
-              </Td>
-              <Td>
-                <div className="flex items-center gap-2">
-                  <Building2 size={14} className="text-text-muted" />
-                  <span className="text-text-primary">{contrato.company.name}</span>
-                </div>
-              </Td>
-              <Td className="hidden lg:table-cell">
-                <div className="flex items-center gap-1 text-text-secondary">
-                  <Layers2 size={14} className="text-text-muted" />
-                  {contrato.empenhos.length}
-                </div>
-              </Td>
-              <Td>
-                <SaldoLiquidacao
-                  valor={contrato.valor}
-                  liquidado={contrato.valorLiquidado}
-                  saldo={contrato.saldoALiquidar}
-                  liquidadoLabel="Contrato liquidado"
-                />
-              </Td>
-              <Td>
-                <Badge tone={STATUS_TONE[contrato.status]}>{STATUS_LABEL[contrato.status]}</Badge>
-              </Td>
-              {canEditAdministrativo && (
-                <Td>
-                  <div className="flex items-center gap-1">
-                    <IconButton icon={Edit2} label="Gerenciar" size="sm" onClick={() => onEdit(contrato)} />
-                    <IconButton
-                      icon={Trash2}
-                      label="Excluir"
-                      variant="danger"
-                      size="sm"
-                      onClick={() => onDelete(contrato)}
-                    />
+          {paginatedContratos.map((contrato) => {
+            const status = contratoStatusDisplay(contrato.status, String(contrato.dataFim));
+            const vigencia = getDeadlineHint(String(contrato.dataFim), {
+              active: contrato.status === "ATIVO",
+              dueSoonDays: 60,
+            });
+            return (
+              <Tr key={contrato.id} onOpen={() => onView(contrato)} muted={contrato.status === "CANCELADO"}>
+                <Td accent={contrato.cor}>
+                  <p className="font-semibold text-text-primary truncate" title={contrato.descricaoCurta}>
+                    {contrato.descricaoCurta}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 mt-1 text-[11px] text-text-muted min-w-0">
+                    <CodeTag>{contrato.identificador}</CodeTag>
+                    <span className="truncate">{contrato.company.name}</span>
+                    <span>
+                      · {contrato.empenhos.length} {contrato.empenhos.length === 1 ? "empenho" : "empenhos"}
+                    </span>
+                    <span className="xl:hidden">
+                      <StatusPill tone={status.tone} size="sm">
+                        {status.label}
+                      </StatusPill>
+                    </span>
                   </div>
                 </Td>
-              )}
-            </Tr>
-          ))}
+                <Td className="hidden xl:table-cell">
+                  <StatusPill tone={status.tone} title={status.title}>
+                    {status.label}
+                  </StatusPill>
+                </Td>
+                <Td className="hidden lg:table-cell">
+                  <DateHint date={formatDateOnly(contrato.dataFim)} hint={vigencia} />
+                </Td>
+                <Td className="hidden 2xl:table-cell">
+                  <span className="inline-flex flex-col">
+                    <span className="text-text-primary tabular-nums">{formatCurrency(contrato.valorEmpenhado)}</span>
+                    <span className="text-[11px] text-text-muted">
+                      {pct(contrato.valorEmpenhado, contrato.valor)}% de {formatCurrency(contrato.valor)}
+                    </span>
+                  </span>
+                </Td>
+                <Td className="hidden sm:table-cell">
+                  <BalanceCell
+                    valor={contrato.valor}
+                    liquidado={contrato.valorLiquidado}
+                    paidLabel="Liquidado"
+                    inactive={contrato.status === "CANCELADO"}
+                  />
+                </Td>
+                <Td actions>
+                  <ActionMenu
+                    label={`Ações do contrato ${contrato.identificador}`}
+                    items={[
+                      { label: "Visualizar", icon: Eye, onClick: () => onView(contrato) },
+                      { label: "Editar", icon: Edit2, onClick: () => onEdit(contrato), hidden: !canEditAdministrativo },
+                      {
+                        label: "Nova OS neste contrato",
+                        icon: ClipboardPlus,
+                        onClick: () => onNewOrdemServico?.(contrato),
+                        hidden: !canCreateOrdemServico || !onNewOrdemServico || contrato.status !== "ATIVO",
+                      },
+                      {
+                        label: "Excluir",
+                        icon: Trash2,
+                        onClick: () => onDelete(contrato),
+                        danger: true,
+                        hidden: !canEditAdministrativo,
+                      },
+                    ]}
+                  />
+                </Td>
+              </Tr>
+            );
+          })}
         </TableBody>
       </Table>
 
-      {/* Empty State */}
       {paginatedContratos.length === 0 &&
         (isLoading ? (
-          <div className="py-8 text-center">
-            <Loader2 size={32} className="mx-auto text-text-muted animate-spin mb-3" />
-            <p className="text-text-secondary text-sm">
-              Carregando contratos...
-            </p>
+          <div className="py-10 text-center">
+            <Loader2 size={28} className="mx-auto text-text-muted animate-spin mb-2" />
+            <p className="text-text-secondary text-sm">Carregando contratos...</p>
           </div>
         ) : (
-          <div className="py-8 text-center">
-            <FileSignature size={32} className="mx-auto text-text-muted mb-3" />
-            <p className="text-sm text-text-secondary font-medium">
-              Nenhum contrato encontrado
-            </p>
-            <p className="text-text-muted text-sm mt-1">
-              Tente ajustar os filtros ou cadastre um novo contrato
-            </p>
-            {onAdd && (
+          <div className="py-10 text-center">
+            <FileSignature size={28} className="mx-auto text-text-muted mb-2" />
+            <p className="text-sm text-text-secondary font-medium">Nenhum contrato encontrado</p>
+            <p className="text-text-muted text-xs mt-1">Tente ajustar os filtros ou cadastre um novo contrato</p>
+            {onAdd && canEditAdministrativo && (
               <Button icon={Plus} onClick={onAdd} className="mt-4">
                 Cadastrar contrato
               </Button>

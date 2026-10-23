@@ -3,12 +3,11 @@ import { CheckCheck, ClipboardCheck, Eye, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useTramitacao } from "../../store/tramitacao";
 import { PageHeader } from "../../components/PageHeader";
-import { ConfirmModal } from "../../components/ConfirmModal";
 import { OrdemServicoNumeroTag } from "../../components/OrdemServicoNumeroTag";
-import { Button } from "../../components/ui";
+import { Button, ConfirmDialog } from "../../components/ui";
 import { formatCurrency, formatDateTimeFull } from "../../utils/format-currency";
 import { cx } from "../../utils/cx";
-import { ViewOrdemServicoModal } from "../OrdemServico";
+import { OrdemServicoView } from "../OrdemServico/OrdemServicoView";
 import { describePrazoCiencia } from "../OrdemServico/ordem-servico-ciencia";
 import type { PendenciaCiencia } from "../../../types/tramitacao";
 
@@ -121,22 +120,26 @@ export default function PendenciasCiencia({ bloqueada = false }: PendenciasCienc
       </div>
 
       {viewing && (
-        <ViewOrdemServicoModal
+        <OrdemServicoView
+          id={viewing.id}
           ordemServico={viewing}
-          handleClose={() => setViewingId(null)}
+          back={null}
+          onClose={() => setViewingId(null)}
           onTramitacaoChanged={() => fetchPendencias().catch(() => {})}
         />
       )}
 
-      <ConfirmModal
+      <ConfirmDialog
         open={confirming !== null}
-        variant="success"
-        message={`Confirmar ciência da ${confirming?.ordemServico.numero ?? "OS"}? A data, a hora e o seu nome ficam registrados no histórico e não podem ser desfeitos.`}
+        tone="success"
+        title={`Confirmar ciência da ${confirming?.ordemServico.numero ?? "OS"}?`}
         confirmLabel="Estou ciente"
-        isLoading={saving}
+        loading={saving}
         onConfirm={handleCiencia}
         onCancel={() => setConfirming(null)}
-      />
+      >
+        <p>A data, a hora e o seu nome ficam registrados no histórico e não podem ser desfeitos.</p>
+      </ConfirmDialog>
     </div>
   );
 }

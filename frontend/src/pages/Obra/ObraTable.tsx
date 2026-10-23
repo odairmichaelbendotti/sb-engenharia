@@ -1,13 +1,26 @@
-import { Trash2, Edit2, ArrowUp, ArrowDown, CheckCircle2 } from "lucide-react";
-import { IconButton, Pagination, Table, TableBody, TableHead, Td, Th, Tr } from "../../components/ui";
+import { ArrowDown, ArrowUp, CheckCircle2, Edit2, Eye, FolderOpen, Map as MapIcon, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 import type { Obra } from "../../../types/obra";
-import { formatCurrency, formatDate, formatDateOnly } from "../../utils/format-currency";
-import { cx } from "../../utils/cx";
+import { formatDate, formatDateOnly } from "../../utils/format-currency";
+import { obraStatusDisplay } from "../../utils/status-display";
 import { usePermission } from "../../hooks/usePermission";
-import { OrdemServicoNumeroTag } from "../../components/OrdemServicoNumeroTag";
-import { OBRA_TIPO_LABEL, getObraBalance, getObraDeadlineHint } from "./obra-display";
-import { CompleteObraButton } from "./CompleteObraButton";
+import { BalanceCell } from "../../components/BalanceCell";
+import {
+  ActionMenu,
+  CodeTag,
+  DateHint,
+  Pagination,
+  StatusPill,
+  Table,
+  TableBody,
+  TableHead,
+  Td,
+  Th,
+  Tr,
+} from "../../components/ui";
+import { OBRA_TIPO_LABEL, getObraBalance, getObraDeadlineHint, isObraOverdue } from "./obra-display";
+import { CompleteObraDialog } from "./CompleteObraDialog";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -21,16 +34,7 @@ interface ObraTableProps {
 type SortKey = "nome" | "dataPrevisaoTermino" | "valor";
 type SortDir = "asc" | "desc";
 
-function SortIcon({ k, sortKey, sortDir }: { k: SortKey; sortKey: SortKey; sortDir: SortDir }) {
-  if (sortKey !== k) return <ArrowUp size={12} className="text-text-muted" />;
-  return sortDir === "asc" ? (
-    <ArrowUp size={12} className="text-text-primary" />
-  ) : (
-    <ArrowDown size={12} className="text-text-primary" />
-  );
-}
-
-// Botão de ordenação dentro do cabeçalho da coluna
+// Botão de ordenação dentro do cabeçalho da coluna (a seta só aparece na coluna ordenada)
 function SortButton({
   label,
   k,
@@ -44,114 +48,40 @@ function SortButton({
   sortDir: SortDir;
   onSort: (k: SortKey) => void;
 }) {
+  const active = sortKey === k;
+  const Icon = sortDir === "asc" ? ArrowUp : ArrowDown;
   return (
     <button
       type="button"
       onClick={() => onSort(k)}
-      className="inline-flex items-center gap-1 cursor-pointer hover:text-text-primary transition-colors"
+      className={`inline-flex items-center gap-1 cursor-pointer uppercase hover:text-text-primary transition-colors ${active ? "text-text-primary" : ""}`}
     >
-      {label} <SortIcon k={k} sortKey={sortKey} sortDir={sortDir} />
+      {label}
+      {active && <Icon size={11} />}
     </button>
   );
 }
 
-// "+N" quando a lista não cabe na linha; o title mostra todos
-function compactList(items: string[], max: number) {
-  if (items.length <= max) return items.join(", ");
-  return `${items.slice(0, max).join(", ")} +${items.length - max}`;
-}
-
 const MAX_OS_TAGS = 2;
 
-function getOrigem(obra: Obra) {
-  const empenhos = [...new Set(obra.ordensServico.flatMap((os) => os.empenhos.map((v) => v.numero)))];
-  const os = obra.ordensServico.map((o) => o.numero);
+// Empresas e contratos das OS da obra (normalmente um só)
+function getContexto(obra: Obra) {
+  const contratos = new Map(obra.ordensServico.map((os) => [os.contrato.id, os.contrato]));
+  if (contratos.size === 0 && obra.contrato) contratos.set(obra.contrato.id, obra.contrato);
+  const lista = [...contratos.values()];
   return {
-    empenhos: compactList(empenhos, 2),
-    os,
-    title: `Empenhos: ${empenhos.join(", ") || "—"}\nOS: ${os.join(", ") || "—"}`,
+    empresa: [...new Set(lista.map((c) => c.company.name))].join(", "),
+    contrato: lista.map((c) => c.identificador).join(", "),
   };
-}
-
-// Empresas das OS da obra (normalmente uma só; mais de uma quando há OS de contratos diferentes)
-function getEmpresas(obra: Obra) {
-  const nomes = obra.ordensServico.map((os) => os.contrato.company.name);
-  if (nomes.length === 0 && obra.contrato) nomes.push(obra.contrato.company.name);
-  return [...new Set(nomes)].join(", ");
-}
-
-// Saldo a liquidar da obra; quando tudo foi pago, oferece concluir a obra.
-// O alinhamento vem da coluna da tabela (centro ou direita, conforme a posição)
-function SaldoCell({ obra, canComplete }: { obra: Obra; canComplete: boolean }) {
-  const balance = getObraBalance(obra);
-
-  if (balance.kind === "concluded") {
-    return (
-      <div className="min-w-40">
-        <p className="inline-flex items-center gap-1 text-sm font-semibold text-success-text">
-          <CheckCircle2 size={14} />
-          Concluída
-        </p>
-        <p className="mt-0.5 text-[11px] text-text-muted tabular-nums">
-          {obra.dataConclusao ? `em ${formatDate(obra.dataConclusao)} · ` : ""}
-          {formatCurrency(obra.valorExecutado)} liquidados
-        </p>
-      </div>
-    );
-  }
-
-  if (balance.kind === "paid") {
-    return (
-      <div className="min-w-40 space-y-1">
-        <p className="inline-flex items-center gap-1 text-sm font-semibold text-success-text">
-          <CheckCircle2 size={14} />
-          Obra paga
-        </p>
-        <p className="text-[11px] text-text-muted tabular-nums">
-          {balance.osQuitadas} OS sem saldo ·{" "}
-          {formatCurrency(obra.valorExecutado)}
-        </p>
-        {canComplete && (
-          // Bloco em linha: o botão (e a confirmação) segue o alinhamento da coluna
-          <div>
-            <div className="inline-block">
-              <CompleteObraButton obra={obra} />
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="min-w-40"
-      title={`${formatCurrency(obra.valorExecutado)} liquidados de ${formatCurrency(obra.valor)}`}
-    >
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-text-secondary">A liquidar</p>
-      <p className="text-sm font-semibold text-text-primary tabular-nums">{formatCurrency(balance.saldo)}</p>
-      {balance.kind !== "empty" && (
-        <div className="mt-1 h-1.5 rounded-full bg-surface-muted overflow-hidden">
-          <div
-            className={`h-full rounded-full ${balance.percent > 100 ? "bg-danger-text" : "bg-primary-500"}`}
-            style={{ width: `${Math.min(100, balance.percent)}%` }}
-          />
-        </div>
-      )}
-      <p className="mt-1 text-[11px] text-text-muted tabular-nums">
-        {balance.kind === "empty"
-          ? `Nenhuma nota lançada · ${formatCurrency(obra.valor)}`
-          : `${balance.percent}% de ${formatCurrency(obra.valor)}`}
-      </p>
-    </div>
-  );
 }
 
 export function ObraTable({ obras, onView, onEdit, onDelete }: ObraTableProps) {
   const { canEditEngenharia } = usePermission();
+  const navigate = useNavigate();
   const [sortKey, setSortKey] = useState<SortKey>("dataPrevisaoTermino");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [page, setPage] = useState(1);
+  const [completing, setCompleting] = useState<Obra | null>(null);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -189,117 +119,123 @@ export function ObraTable({ obras, onView, onEdit, onDelete }: ObraTableProps) {
     <div>
       <Table>
         <TableHead>
-          <Th wrap>
+          <Th>
             <SortButton label="Obra" k="nome" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
           </Th>
-          <Th className="hidden lg:table-cell">
-            <SortButton
-              label="Prazo"
-              k="dataPrevisaoTermino"
-              sortKey={sortKey}
-              sortDir={sortDir}
-              onSort={handleSort}
-            />
+          <Th width="w-36" className="hidden xl:table-cell">
+            Status
           </Th>
-          <Th className="hidden md:table-cell">Empresa</Th>
-          <Th>
+          <Th width="w-36" className="hidden lg:table-cell">
+            <SortButton label="Prazo" k="dataPrevisaoTermino" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+          </Th>
+          <Th width="w-52" className="hidden xl:table-cell">
+            Empresa · contrato
+          </Th>
+          <Th width="w-48" className="hidden sm:table-cell">
             <SortButton label="Saldo" k="valor" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
           </Th>
-          {canEditEngenharia && (
-            <Th>
-              <span className="sr-only">Ações</span>
-            </Th>
-          )}
+          <Th actions />
         </TableHead>
         <TableBody>
           {paginated.map((obra) => {
             const hint = getObraDeadlineHint(obra);
-            const origem = getOrigem(obra);
-            const empresas = getEmpresas(obra);
+            const status = obraStatusDisplay(obra.status, isObraOverdue(obra));
+            const empenhos = [...new Set(obra.ordensServico.flatMap((os) => os.empenhos.map((v) => v.numero)))];
+            const contexto = getContexto(obra);
+            const balance = getObraBalance(obra);
+            const concluded = balance.kind === "concluded";
             return (
-              <Tr
-                key={obra.id}
-                tabIndex={0}
-                onClick={() => onView(obra)}
-                onKeyDown={(e) => {
-                  if (e.target !== e.currentTarget) return;
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onView(obra);
-                  }
-                }}
-                className={cx(
-                  "group focus-visible:outline-none focus-visible:bg-surface-muted",
-                  obra.status === "CANCELADA" && "opacity-60",
-                )}
-              >
-                {/* Nome longo quebra em até duas linhas; nome completo ao passar o mouse */}
-                <Td wrap>
-                  <div className="flex items-center gap-2">
-                    <span className="px-1.5 py-0.5 rounded-md bg-surface-muted border border-border text-text-primary text-xs font-semibold shrink-0">
-                      {obra.identificacaoPatrimonial}
-                    </span>
-                    <p className="font-medium text-text-primary line-clamp-2" title={obra.nome}>
-                      {obra.nome}
-                    </p>
-                  </div>
-                  {/* De onde vem a obra: empenho(s) e OS (número da OS como etiqueta discreta) */}
+              <Tr key={obra.id} onOpen={() => onView(obra)} muted={obra.status === "CANCELADA"}>
+                {/* Identidade: título e, abaixo, patrimônio, OS e empenho de origem */}
+                <Td accent={obra.contrato?.cor}>
+                  <p className="font-semibold text-text-primary truncate" title={obra.nome}>
+                    {obra.nome}
+                  </p>
                   <div
-                    className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-text-muted mt-1"
-                    title={origem.title}
+                    className="flex flex-wrap items-center gap-x-1.5 gap-y-1 mt-1 text-[11px] text-text-muted"
+                    title={`Empenhos: ${empenhos.join(", ") || "—"}\nOS: ${obra.ordensServico.map((os) => os.numero).join(", ") || "—"}`}
                   >
-                    {origem.empenhos && (
-                      <span className="font-medium text-text-secondary">{origem.empenhos}</span>
-                    )}
-                    {origem.os.slice(0, MAX_OS_TAGS).map((numero) => (
-                      <OrdemServicoNumeroTag key={numero} numero={numero} />
+                    <CodeTag>{obra.identificacaoPatrimonial}</CodeTag>
+                    {obra.ordensServico.slice(0, MAX_OS_TAGS).map((os) => (
+                      <CodeTag key={os.id}>{/^OS\b/i.test(os.numero) ? os.numero : `OS ${os.numero}`}</CodeTag>
                     ))}
-                    {origem.os.length > MAX_OS_TAGS && <span>+{origem.os.length - MAX_OS_TAGS}</span>}
-                    <span className="hidden sm:inline">· {OBRA_TIPO_LABEL[obra.tipo] ?? obra.tipo}</span>
+                    {obra.ordensServico.length > MAX_OS_TAGS && <span>+{obra.ordensServico.length - MAX_OS_TAGS}</span>}
+                    {empenhos[0] && <span className="font-medium text-text-secondary">{empenhos[0]}</span>}
+                    <span className="hidden md:inline">· {OBRA_TIPO_LABEL[obra.tipo] ?? obra.tipo}</span>
+                    {/* Em telas sem a coluna de status, o selo aparece aqui */}
+                    <span className="xl:hidden">
+                      <StatusPill tone={status.tone} size="sm">
+                        {status.label}
+                      </StatusPill>
+                    </span>
                   </div>
+                </Td>
+                <Td className="hidden xl:table-cell">
+                  <StatusPill tone={status.tone} title={status.title}>
+                    {status.label}
+                  </StatusPill>
                 </Td>
                 <Td className="hidden lg:table-cell">
-                  {obra.dataPrevisaoTermino ? (
-                    <>
-                      <p className="text-text-primary">{formatDateOnly(obra.dataPrevisaoTermino)}</p>
-                      {hint && <p className={`text-xs mt-0.5 ${hint.className}`}>{hint.label}</p>}
-                    </>
-                  ) : (
-                    <span className="text-xs text-text-muted">Sem prazo</span>
-                  )}
+                  <DateHint
+                    date={obra.dataPrevisaoTermino ? formatDateOnly(obra.dataPrevisaoTermino) : null}
+                    hint={
+                      concluded && obra.dataConclusao
+                        ? { label: `concluída em ${formatDate(obra.dataConclusao)}`, tone: "success" }
+                        : hint
+                          ? { label: hint.label.toLowerCase(), tone: hint.tone }
+                          : null
+                    }
+                  />
                 </Td>
-                {/* Uma linha só: nome longo termina em reticências e aparece inteiro ao passar o mouse */}
-                <Td className="hidden md:table-cell">
-                  <p className="max-w-56 truncate text-text-secondary" title={empresas}>
-                    {empresas || "—"}
+                <Td className="hidden xl:table-cell">
+                  <p className="truncate text-text-primary" title={contexto.empresa}>
+                    {contexto.empresa || "—"}
                   </p>
+                  <p className="truncate text-[11px] text-text-muted">{contexto.contrato}</p>
                 </Td>
-                <Td>
-                  <SaldoCell obra={obra} canComplete={canEditEngenharia} />
+                <Td className="hidden sm:table-cell">
+                  <BalanceCell
+                    valor={obra.valor}
+                    liquidado={obra.valorExecutado}
+                    paidLabel={concluded ? "Concluída" : "Obra paga"}
+                    inactive={obra.status === "CANCELADA"}
+                  />
                 </Td>
-                {canEditEngenharia && (
-                  <Td>
-                    {/* Ações discretas: aparecem ao passar o mouse; o clique na linha abre o resumo */}
-                    <div
-                      className="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <IconButton icon={Edit2} label="Editar obra" size="sm" onClick={() => onEdit(obra)} />
-                      <IconButton
-                        icon={Trash2}
-                        label="Excluir obra"
-                        variant="danger"
-                        size="sm"
-                        onClick={() => onDelete(obra)}
-                      />
-                    </div>
-                  </Td>
-                )}
+                <Td actions>
+                  <ActionMenu
+                    label={`Ações da obra ${obra.identificacaoPatrimonial}`}
+                    items={[
+                      { label: "Visualizar", icon: Eye, onClick: () => onView(obra) },
+                      { label: "Editar", icon: Edit2, onClick: () => onEdit(obra), hidden: !canEditEngenharia },
+                      {
+                        label: "Concluir obra",
+                        icon: CheckCircle2,
+                        onClick: () => setCompleting(obra),
+                        hidden: !canEditEngenharia || balance.kind !== "paid",
+                      },
+                      {
+                        label: "Ver no mapa",
+                        icon: MapIcon,
+                        onClick: () => navigate(`/mapa-obras?obra=${obra.id}`),
+                        hidden: obra.latitude == null || obra.longitude == null,
+                      },
+                      { label: "Excluir", icon: Trash2, onClick: () => onDelete(obra), danger: true, hidden: !canEditEngenharia },
+                    ]}
+                  />
+                </Td>
               </Tr>
             );
           })}
         </TableBody>
       </Table>
+
+      {paginated.length === 0 && (
+        <div className="py-10 text-center">
+          <FolderOpen size={28} className="mx-auto text-text-muted mb-2" />
+          <p className="text-sm text-text-secondary">Nenhuma obra encontrada</p>
+        </div>
+      )}
+
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
@@ -309,6 +245,8 @@ export function ObraTable({ obras, onView, onEdit, onDelete }: ObraTableProps) {
         itemLabel="obras"
         onPageChange={setPage}
       />
+
+      {completing && <CompleteObraDialog obra={completing} open onClose={() => setCompleting(null)} />}
     </div>
   );
 }

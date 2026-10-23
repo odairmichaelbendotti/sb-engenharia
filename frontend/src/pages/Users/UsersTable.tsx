@@ -1,6 +1,6 @@
-import { ChevronLeft, ChevronRight, UserRound, Users as UsersIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Users as UsersIcon } from "lucide-react";
 import type { User } from "../../../types/user";
-import { Badge, IconButton, Select, Table, TableBody, TableHead, Td, Th, Tr } from "../../components/ui";
+import { ActionMenu, IconButton, Select, StatusPill, Table, TableBody, TableHead, Td, Th, Tr } from "../../components/ui";
 import { getInitials } from "../../utils/get-initial";
 import { ROLE_LABELS } from "./role-labels";
 
@@ -10,6 +10,7 @@ type UsersTableProps = {
   hasNextPage: boolean;
   currentUserId: string;
   assignableRoles: User["role"][];
+  onView: (user: User) => void;
   onRequestRoleChange: (user: User, role: User["role"]) => void;
   onPageChange: (updater: (page: number) => number) => void;
 };
@@ -20,6 +21,7 @@ export default function UsersTable({
   hasNextPage,
   currentUserId,
   assignableRoles,
+  onView,
   onRequestRoleChange,
   onPageChange,
 }: UsersTableProps) {
@@ -27,10 +29,14 @@ export default function UsersTable({
     <>
       <Table>
         <TableHead>
-          <Th wrap>Usuário</Th>
-          <Th>E-mail</Th>
-          <Th>Papel</Th>
-          <Th>Status</Th>
+          <Th>Usuário</Th>
+          <Th width="w-56" className="hidden sm:table-cell">
+            Papel
+          </Th>
+          <Th width="w-32" className="hidden lg:table-cell">
+            Status
+          </Th>
+          <Th actions />
         </TableHead>
         <TableBody>
           {users.map((user) => {
@@ -42,31 +48,29 @@ export default function UsersTable({
               (user.role !== "PLATFORM_ADMIN" || assignableRoles.includes("PLATFORM_ADMIN"));
 
             return (
-              <Tr key={user.id}>
-                {/* Nome quebra linha: até duas linhas, completo ao passar o mouse */}
-                <Td wrap>
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-surface-muted border border-border rounded-full flex items-center justify-center text-text-primary font-semibold text-xs shrink-0">
+              <Tr key={user.id} onOpen={() => onView(user)}>
+                <Td>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 bg-surface-muted border border-border rounded-full flex items-center justify-center text-text-primary font-semibold text-[11px] shrink-0">
                       {getInitials(user.name)}
                     </div>
-                    <p className="font-medium text-text-primary line-clamp-2" title={user.name}>
-                      {user.name}
-                    </p>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-text-primary truncate" title={user.name}>
+                        {user.name}
+                      </p>
+                      <p className="text-[11px] text-text-muted truncate">{user.email}</p>
+                    </div>
                   </div>
                 </Td>
-                <Td>
-                  <span className="text-text-secondary">{user.email}</span>
-                </Td>
-                <Td>
+                {/* Mudar o papel no seletor não abre a linha */}
+                <Td className="hidden sm:table-cell" actions={canEditRole}>
                   {canEditRole ? (
                     <Select
                       size="sm"
                       aria-label={`Papel de ${user.name}`}
-                      className="w-44 text-left"
+                      className="w-48 text-left"
                       value={user.role}
-                      onChange={(e) =>
-                        onRequestRoleChange(user, e.target.value as User["role"])
-                      }
+                      onChange={(e) => onRequestRoleChange(user, e.target.value as User["role"])}
                     >
                       {/* Garante que o papel atual sempre aparece, mesmo que quem edita não possa atribuí-lo (ex.: MASTER vendo um PLATFORM_ADMIN) */}
                       {!assignableRoles.includes(user.role) && (
@@ -81,13 +85,19 @@ export default function UsersTable({
                       ))}
                     </Select>
                   ) : (
-                    <Badge icon={UserRound}>{ROLE_LABELS[user.role]}</Badge>
+                    <span className="text-text-secondary">{ROLE_LABELS[user.role]}</span>
                   )}
                 </Td>
-                <Td>
-                  <Badge tone={user.approved ? "success" : "warning"}>
+                <Td className="hidden lg:table-cell">
+                  <StatusPill tone={user.approved ? "success" : "warning"}>
                     {user.approved ? "Aprovado" : "Pendente"}
-                  </Badge>
+                  </StatusPill>
+                </Td>
+                <Td actions>
+                  <ActionMenu
+                    label={`Ações do usuário ${user.name}`}
+                    items={[{ label: "Visualizar", icon: Eye, onClick: () => onView(user) }]}
+                  />
                 </Td>
               </Tr>
             );
@@ -96,8 +106,8 @@ export default function UsersTable({
       </Table>
 
       {users.length === 0 && (
-        <div className="py-8 text-center">
-          <UsersIcon size={32} className="mx-auto text-text-muted mb-3" />
+        <div className="py-10 text-center">
+          <UsersIcon size={28} className="mx-auto text-text-muted mb-2" />
           <p className="text-sm text-text-secondary font-medium">Nenhum usuário encontrado</p>
         </div>
       )}

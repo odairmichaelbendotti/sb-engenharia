@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "react-router";
 import { useInvoice } from "../../store/invoices";
 import type { Invoice, InvoiceStatus } from "../../../types/invoice";
 import { AddModal, InvoiceTable, DeleteModal, EditModal, InvoiceFilters } from "./index";
@@ -10,6 +11,10 @@ import { usePermission } from "../../hooks/usePermission";
 import { EMPTY_SCOPE, useScopeFilter } from "../../hooks/useScopeFilter";
 import { formatCurrency } from "../../utils/format-currency";
 import { FileText } from "lucide-react";
+import { useContratos } from "../../store/contratos";
+import { useEntityViewer } from "../../store/entityViewer";
+import { useEntityEditor } from "../../hooks/useEntityEditor";
+import { MarkPaidDialog } from "./MarkPaidDialog";
 
 // "" = todas as notas
 type InvoiceStatusFilter = Exclude<InvoiceStatus, "CANCELADO"> | "";
@@ -35,19 +40,60 @@ function invoiceScopeRefs(inv: Invoice): ScopeRef[] {
 const plural = (n: number) => `${n} ${n === 1 ? "nota" : "notas"}`;
 
 export default function Invoices() {
-  const [isOpen, setIsOpen] = useState(false);
+  // ?nova=<empenho_id>&empresa=<company_id> (vindo de "Nova nota fiscal" em Empenhos) abre o cadastro já no empenho
+  const [searchParams, setSearchParams] = useSearchParams();
+  const novaEmpenho = searchParams.get("nova");
+  const novaEmpresa = searchParams.get("novaEmpresa");
+  const [isOpen, setIsOpenState] = useState(Boolean(novaEmpenho && novaEmpresa));
+  const [initialEmpenho, setInitialEmpenho] = useState(
+    novaEmpenho && novaEmpresa ? { companyId: novaEmpresa, empenhoId: novaEmpenho } : null,
+  );
+  // Fechar o cadastro tira os parâmetros da URL
+  const setIsOpen: React.Dispatch<React.SetStateAction<boolean>> = (value) => {
+    setIsOpenState(value);
+    if (value === false) setInitialEmpenho(null);
+    if (novaEmpenho) {
+      setSearchParams(
+        (params) => {
+          params.delete("nova");
+          params.delete("novaEmpresa");
+          return params;
+        },
+        { replace: true },
+      );
+    }
+  };
   const [deleteInvoice, setDeleteInvoice] = useState<Invoice | null>(null);
   const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
+  const [payingInvoice, setPayingInvoice] = useState<Invoice | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<InvoiceStatusFilter>("");
   const [scope, setScope] = useScopeFilter();
 
   const { list, allInvoices } = useInvoice();
   const { canEditAdministrativo } = usePermission();
+  const openViewer = useEntityViewer((s) => s.open);
+  const contratosLoaded = useContratos((s) => s.data !== null);
+  const fetchContratos = useContratos((s) => s.fetchContratos);
 
   useEffect(() => {
     list();
   }, [list]);
+
+  // Cor do contrato na faixa de cada linha
+  useEffect(() => {
+    if (!contratosLoaded) fetchContratos().catch(() => {});
+  }, [contratosLoaded, fetchContratos]);
+
+  // "Editar" do modal de visualização da nota enquanto esta página está aberta
+  useEntityEditor(
+    "invoice",
+    (id) => {
+      const invoice = allInvoices.find((i) => i.id === id);
+      if (invoice) setEditInvoice(invoice);
+    },
+    canEditAdministrativo,
+  );
 
   // Valor escolhido em outra tela que não existe aqui é ignorado
   const { options: scopeOptions, active: activeScope } = useMemo(
@@ -117,6 +163,7 @@ export default function Invoices() {
       <PageHeader
         icon={FileText}
         title="Notas Fiscais"
+        description={`Administrativo · ${allInvoices.filter((i) => i.status?.toUpperCase() === "VENCIDO").length} vencidas · ${allInvoices.filter((i) => i.status?.toUpperCase() === "PENDENTE").length} pendentes`}
         canAct={canEditAdministrativo}
         actionLabel="Nova Nota Fiscal"
         onAction={() => setIsOpen(true)}
@@ -150,13 +197,17 @@ export default function Invoices() {
           <InvoiceTable
             key={`${searchTerm}|${scopeKey}|${statusFilter}`}
             allInvoices={filteredInvoices}
-            setDeleteInvoice={setDeleteInvoice}
-            setEditInvoice={setEditInvoice}
+            onView={(invoice) => openViewer({ kind: "invoice", id: invoice.id })}
+            onEdit={setEditInvoice}
+            onDelete={setDeleteInvoice}
+            onMarkPaid={setPayingInvoice}
           />
         </div>
       </div>
 
-      {isOpen && <AddModal isOpen={isOpen} setIsOpen={setIsOpen} />}
+      {isOpen && <AddModal isOpen={isOpen} setIsOpen={setIsOpen} initialEmpenho={initialEmpenho} />}
+
+      {payingInvoice && <MarkPaidDialog invoice={payingInvoice} open onClose={() => setPayingInvoice(null)} />}
 
       {deleteInvoice && <DeleteModal deleteInvoice={deleteInvoice} setDeleteInvoice={setDeleteInvoice} />}
     </div>

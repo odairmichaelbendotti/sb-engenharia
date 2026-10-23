@@ -4,7 +4,9 @@ import { useObras } from "../../store/obras";
 import { usePermission } from "../../hooks/usePermission";
 import { EMPTY_SCOPE, useScopeFilter } from "../../hooks/useScopeFilter";
 import type { Obra, ObraOrdemServico } from "../../../types/obra";
-import { ObraTable, ObraModal, DeleteObraModal, ObraFilters, ViewObraModal } from "./index";
+import { ObraTable, ObraModal, DeleteObraModal, ObraFilters } from "./index";
+import { useEntityViewer } from "../../store/entityViewer";
+import { useEntityEditor } from "../../hooks/useEntityEditor";
 import { OBRA_TIPO_LABEL, isObraOverdue } from "./obra-display";
 import { getBalance } from "../OrdemServico/ordem-servico-balance";
 import { PageHeader } from "../../components/PageHeader";
@@ -44,7 +46,6 @@ export default function Obras() {
   const [editingObra, setEditingObra] = useState<Obra | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [obraToDelete, setObraToDelete] = useState<Obra | null>(null);
-  const [viewingObraId, setViewingObraId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [onlyOverdue, setOnlyOverdue] = useState(false);
   const [scope, setScope] = useScopeFilter();
@@ -141,8 +142,7 @@ export default function Obras() {
     ];
   }, [filteredObras, activeScope, atrasadas, activeOnlyOverdue]);
 
-  // Busca pelo id na lista atual para o resumo refletir edições feitas com ele aberto
-  const viewingObra = useMemo(() => obras.find((o) => o.id === viewingObraId) ?? null, [obras, viewingObraId]);
+  const openViewer = useEntityViewer((s) => s.open);
 
   function handleOpenCreate() {
     setEditingObra(null);
@@ -150,10 +150,19 @@ export default function Obras() {
   }
 
   function handleOpenEdit(obra: Obra) {
-    setViewingObraId(null);
     setEditingObra(obra);
     setIsModalOpen(true);
   }
+
+  // "Editar" do modal de visualização da obra enquanto esta página está aberta
+  useEntityEditor(
+    "obra",
+    (id) => {
+      const obra = obras.find((o) => o.id === id);
+      if (obra) handleOpenEdit(obra);
+    },
+    canCreateAndEditContent,
+  );
 
   function handleCloseModal() {
     setIsModalOpen(false);
@@ -181,6 +190,11 @@ export default function Obras() {
       <PageHeader
         icon={HardHat}
         title="Obras"
+        description={
+          data
+            ? `Engenharia · ${data.obras.filter((o) => o.status === "EM_ANDAMENTO").length} em andamento${atrasadas > 0 ? ` · ${atrasadas} com prazo vencido` : ""}`
+            : "Engenharia"
+        }
         canAct={canCreateAndEditContent}
         actionLabel="Nova Obra"
         onAction={handleOpenCreate}
@@ -244,7 +258,7 @@ export default function Obras() {
                 <ObraTable
                   key={`${search}|${scopeKey}|${activeOnlyOverdue}`}
                   obras={filteredObras}
-                  onView={(obra) => setViewingObraId(obra.id)}
+                  onView={(obra) => openViewer({ kind: "obra", id: obra.id })}
                   onEdit={handleOpenEdit}
                   onDelete={handleOpenDelete}
                 />
@@ -252,10 +266,6 @@ export default function Obras() {
             )}
           </div>
         </>
-      )}
-
-      {viewingObra && (
-        <ViewObraModal obra={viewingObra} onEdit={handleOpenEdit} handleClose={() => setViewingObraId(null)} />
       )}
 
       {isModalOpen && <ObraModal obra={editingObra} handleClose={handleCloseModal} />}

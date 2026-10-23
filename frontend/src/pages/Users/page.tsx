@@ -4,8 +4,8 @@ import { toast } from "sonner";
 import { useUsers } from "../../store/users";
 import { useUser } from "../../store/user";
 import type { User } from "../../../types/user";
-import { ConfirmModal } from "../../components/ConfirmModal";
-import { Button } from "../../components/ui";
+import { UserViewModal } from "./UserViewModal";
+import { Button, ConfirmDialog } from "../../components/ui";
 import UsersHeader from "./UsersHeader";
 import UsersTable from "./UsersTable";
 import { ROLE_LABELS } from "./role-labels";
@@ -19,6 +19,7 @@ const Usuarios = () => {
   const { user: currentUser } = useUser();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewingUser, setViewingUser] = useState<User | null>(null);
   const [pendingChange, setPendingChange] = useState<PendingRoleChange | null>(
     null,
   );
@@ -103,25 +104,31 @@ const Usuarios = () => {
             hasNextPage={hasNextPage}
             currentUserId={currentUser?.id ?? ""}
             assignableRoles={assignableRoles}
+            onView={setViewingUser}
             onRequestRoleChange={(user, role) => setPendingChange({ user, role })}
             onPageChange={(updater) => loadUsers(updater(page))}
           />
         </div>
       )}
 
-      <ConfirmModal
+      <ConfirmDialog
         open={!!pendingChange}
-        variant="success"
-        isLoading={isSaving}
-        message={
-          pendingChange
-            ? `Alterar o papel de ${pendingChange.user.name} para ${ROLE_LABELS[pendingChange.role]}? Com esse perfil, ${ROLE_GUIDE_BY_ROLE[pendingChange.role].summary}.`
-            : ""
-        }
-        confirmLabel="Confirmar"
+        tone="neutral"
+        loading={isSaving}
+        title={pendingChange ? `Alterar o papel de ${pendingChange.user.name}?` : ""}
+        confirmLabel="Alterar papel"
         onConfirm={handleConfirmRoleChange}
         onCancel={() => setPendingChange(null)}
-      />
+      >
+        {pendingChange && (
+          <p>
+            Novo papel: <span className="font-semibold text-text-primary">{ROLE_LABELS[pendingChange.role]}</span>. Com
+            esse perfil, {ROLE_GUIDE_BY_ROLE[pendingChange.role].summary}.
+          </p>
+        )}
+      </ConfirmDialog>
+
+      {viewingUser && <UserViewModal user={viewingUser} onClose={() => setViewingUser(null)} />}
 
       <RoleGuideModal
         open={isGuideOpen}

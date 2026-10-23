@@ -1,6 +1,7 @@
 import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router";
 import { Layers, ChevronDown, Check } from "lucide-react";
 import { useObras } from "../../store/obras";
 import { useTenants } from "../../store/tenants";
@@ -147,6 +148,9 @@ const MapaObras = () => {
   const [loading, setLoading] = useState(!data);
   const [selectedContratoIds, setSelectedContratoIds] = useState<string[]>([]);
   const [selectedObra, setSelectedObra] = useState<Obra | null>(null);
+  // ?obra=<id> (vindo de "Ver no mapa" na lista de obras) abre o painel daquela obra
+  const [searchParams, setSearchParams] = useSearchParams();
+  const obraParam = searchParams.get("obra");
 
   useEffect(() => {
     if (!data) fetchObras().finally(() => setLoading(false));
@@ -178,6 +182,20 @@ const MapaObras = () => {
     selectedContratoIds.length > 0
       ? obrasComCoordenadas.filter((obra) => obra.contrato && selectedContratoIds.includes(obra.contrato.id))
       : obrasComCoordenadas;
+
+  const panelObra = selectedObra ?? (obraParam ? (obrasComCoordenadas.find((o) => o.id === obraParam) ?? null) : null);
+  function closePanel() {
+    setSelectedObra(null);
+    if (obraParam) {
+      setSearchParams(
+        (params) => {
+          params.delete("obra");
+          return params;
+        },
+        { replace: true },
+      );
+    }
+  }
 
   const tenantLatitude = myTenant?.latitude;
   const tenantLongitude = myTenant?.longitude;
@@ -219,7 +237,7 @@ const MapaObras = () => {
           <p className="text-text-secondary text-sm">Carregando obras...</p>
         </div>
       )}
-      <ObraDetailPanel key={selectedObra?.id ?? "none"} obra={selectedObra} onClose={() => setSelectedObra(null)} />
+      <ObraDetailPanel key={panelObra?.id ?? "none"} obra={panelObra} onClose={closePanel} />
     </div>
   );
 };
