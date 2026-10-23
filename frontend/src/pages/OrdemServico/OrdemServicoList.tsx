@@ -27,6 +27,7 @@ import {
   type ScheduleKind,
   type ScheduleTone,
 } from "./ordem-servico-schedule";
+import { describePrazoCiencia, getFaseEmissao } from "./ordem-servico-ciencia";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -132,6 +133,30 @@ export function OrdemServicoList({
   );
 }
 
+// Situação da ciência da empresa, só quando pede atenção: texto colorido pequeno, sem fundo
+function CienciaHint({ ordemServico: os }: { ordemServico: OrdemServico }) {
+  if (os.status !== "ATIVO") return null;
+  const fase = getFaseEmissao(os);
+  if (fase === "CIENCIA_VENCIDA") {
+    return <span className="font-medium text-danger-text">· ciência vencida</span>;
+  }
+  if (fase === "AGUARDANDO_CIENCIA" && os.cienciaPrazoAte) {
+    return (
+      <span className="text-warning-text" title="Prazo para a empresa dar ciência da OS">
+        · aguardando ciência ({describePrazoCiencia(os.cienciaPrazoAte)})
+      </span>
+    );
+  }
+  if (os.contestacoesAbertas > 0) {
+    return (
+      <span className="text-info-text">
+        · {os.contestacoesAbertas} {os.contestacoesAbertas === 1 ? "apontamento aberto" : "apontamentos abertos"}
+      </span>
+    );
+  }
+  return null;
+}
+
 interface OrdemServicoRowProps {
   ordemServico: OrdemServico;
   canEdit: boolean;
@@ -189,6 +214,7 @@ function OrdemServicoRow({ ordemServico: os, canEdit, onView, onEdit, onDelete }
             {contrato.company.name} <span className="text-text-muted">·</span> {contrato.identificador}
           </span>
           {!os.obra && <span className="text-text-muted">· sem obra vinculada</span>}
+          <CienciaHint ordemServico={os} />
         </div>
       </div>
 

@@ -19,6 +19,7 @@ import {
 import { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { StepForm, type FormStep } from "../../components/StepForm";
+import { getFaseEmissao } from "./ordem-servico-ciencia";
 import {
   Button,
   Field,
@@ -422,11 +423,17 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
     try {
       setIsLoading(true);
       if (ordemServico) {
-        await updateOrdemServico(ordemServico.id, payload);
-        toast.success(`Ordem de serviço "${ordemServico.numero}" atualizada com sucesso!`);
+        const updated = await updateOrdemServico(ordemServico.id, payload);
+        // Emissão nova = o backend reemitiu a OS (o conteúdo mudou) e a ciência recomeçou
+        const reemitida = updated.emitidaEm !== null && updated.emitidaEm !== ordemServico.emitidaEm;
+        toast.success(
+          reemitida
+            ? `Ordem de serviço "${ordemServico.numero}" atualizada e reemitida: a empresa precisa dar ciência de novo.`
+            : `Ordem de serviço "${ordemServico.numero}" atualizada com sucesso!`,
+        );
       } else {
         const created = await createOrdemServico(payload);
-        toast.success(`Ordem de serviço "${created.numero}" criada com sucesso!`);
+        toast.success(`Ordem de serviço "${created.numero}" criada e enviada à empresa, que tem 48 h para dar ciência.`);
       }
       await fetchOrdensServico();
       handleClose();
@@ -968,7 +975,15 @@ export function OrdemServicoModal({ ordemServico, handleClose }: OrdemServicoMod
       <ModalHeader
         icon={ClipboardList}
         title={ordemServico ? "Editar Ordem de Serviço" : "Nova Ordem de Serviço"}
-        description={ordemServico ? `Editando: ${ordemServico.numero}` : "Preencha os dados para cadastrar a ordem de serviço"}
+        description={
+          ordemServico
+            ? `Editando: ${ordemServico.numero}${
+                ordemServico.status === "ATIVO" && getFaseEmissao(ordemServico) !== "DISPENSADA"
+                  ? " · alterar o conteúdo reemite a OS e a empresa precisa dar ciência de novo"
+                  : ""
+              }`
+            : "Preencha os dados para cadastrar a ordem de serviço"
+        }
         onClose={handleClose}
       />
 

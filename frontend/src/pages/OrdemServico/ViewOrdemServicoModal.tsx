@@ -29,6 +29,8 @@ import { usePermission } from "../../hooks/usePermission";
 import { OrdemServicoNumeroTag } from "../../components/OrdemServicoNumeroTag";
 import { getBalance, getOrdemServicoBalance } from "./ordem-servico-balance";
 import { FinalizeOrdemServicoCallout } from "./FinalizeOrdemServico";
+import { CienciaPendenteAviso, TramitacaoSection } from "./TramitacaoSection";
+import { getFaseEmissao } from "./ordem-servico-ciencia";
 import { Badge, Button, IconButton, Modal, ModalBody, Table, TableBody, TableHead, Td, Th, Tr, type BadgeTone, TableFoot } from "../../components/ui";
 
 // Leaflet só é baixado quando o modal de uma OS com obra georreferenciada abre
@@ -51,6 +53,8 @@ function hasValidCoordinates(obra: OrdemServicoObra): obra is OrdemServicoObra &
 interface ViewOrdemServicoModalProps {
   ordemServico: OrdemServico;
   handleClose: () => void;
+  // Ciência, apontamento ou comentário gravado: a tela de fora recarrega o que mostra
+  onTramitacaoChanged?: () => void;
 }
 
 const STATUS_LABEL: Record<OrdemServico["status"], string> = {
@@ -392,10 +396,15 @@ function EmpenhosTable({ ordemServico }: { ordemServico: OrdemServico }) {
   );
 }
 
-export function ViewOrdemServicoModal({ ordemServico, handleClose }: ViewOrdemServicoModalProps) {
+export function ViewOrdemServicoModal({ ordemServico, handleClose, onTramitacaoChanged }: ViewOrdemServicoModalProps) {
   const { obra, empenho } = ordemServico;
   const { contrato } = empenho;
-  const { canEditAdministrativo } = usePermission();
+  const { canEditAdministrativo, canDarCienciaOrdemServico } = usePermission();
+  const fase = getFaseEmissao(ordemServico);
+  const aguardandoCiencia =
+    canDarCienciaOrdemServico &&
+    ordemServico.status === "ATIVO" &&
+    (fase === "AGUARDANDO_CIENCIA" || fase === "CIENCIA_VENCIDA");
   const { fetchOrdemServicoDocument } = useOrdensServico();
   const [generating, setGenerating] = useState(false);
 
@@ -452,6 +461,10 @@ export function ViewOrdemServicoModal({ ordemServico, handleClose }: ViewOrdemSe
       </div>
 
       <ModalBody className="space-y-5">
+        {aguardandoCiencia && ordemServico.cienciaPrazoAte && (
+          <CienciaPendenteAviso prazoAte={ordemServico.cienciaPrazoAte} vencida={fase === "CIENCIA_VENCIDA"} />
+        )}
+
         <section>
           <BalanceSection ordemServico={ordemServico} canFinalize={canEditAdministrativo} />
         </section>
@@ -502,6 +515,17 @@ export function ViewOrdemServicoModal({ ordemServico, handleClose }: ViewOrdemSe
         <section>
           <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2.5">Documento da OS</h3>
           <DocumentSection ordemServico={ordemServico} />
+        </section>
+
+        <section>
+          <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2.5">
+            Ciência e tramitação com a empresa
+          </h3>
+          <TramitacaoSection
+            ordemServicoId={ordemServico.id}
+            numero={ordemServico.numero}
+            onChanged={onTramitacaoChanged}
+          />
         </section>
 
         <section>

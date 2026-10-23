@@ -12,6 +12,7 @@ import { getInitials } from "../../utils/get-initial";
 import SidebarGroup from "./SidebarGroup";
 import { usePermission } from "../../hooks/usePermission";
 import { IconButton } from "../ui";
+import { NotificationBell } from "../Notifications/NotificationBell";
 
 const MobileSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -54,11 +55,14 @@ const MobileSidebar = () => {
         <div className="flex items-center gap-3">
           <span className="font-bold tracking-tight text-text-primary text-base">SB Engenharia</span>
         </div>
-        <IconButton
-          icon={isOpen ? X : Menu}
-          label={isOpen ? "Fechar menu" : "Abrir menu"}
-          onClick={() => setIsOpen(!isOpen)}
-        />
+        <div className="flex items-center gap-1">
+          <NotificationBell align="right" />
+          <IconButton
+            icon={isOpen ? X : Menu}
+            label={isOpen ? "Fechar menu" : "Abrir menu"}
+            onClick={() => setIsOpen(!isOpen)}
+          />
+        </div>
       </div>
 
       {/* Mobile Sidebar Overlay */}

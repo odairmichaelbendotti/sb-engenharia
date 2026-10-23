@@ -12,6 +12,7 @@ import { getInitials } from "../../utils/get-initial";
 import SidebarGroup from "./SidebarGroup";
 import { usePermission } from "../../hooks/usePermission";
 import { IconButton } from "../ui";
+import { NotificationBell } from "../Notifications/NotificationBell";
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -52,6 +53,9 @@ const Sidebar = () => {
             className="text-text-primary shrink-0"
           />
           <p className="font-bold tracking-tight text-text-primary text-base">SB Engenharia</p>
+          <div className="ml-auto">
+            <NotificationBell />
+          </div>
         </div>
 
         {tenantName && (

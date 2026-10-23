@@ -41,6 +41,11 @@ export function usePermission() {
     // ENGENHARIA só visualiza o administrativo, mas pode abrir OS e criar acesso de empresa
     canCreateOrdemServico: access.administrativo === "edit" || role === "ENGENHARIA",
     canCreateCompanyAccess: access.administrativo === "edit" || role === "ENGENHARIA",
+    // Tramitação da OS (capabilities darCienciaOrdemServico e tramitarOrdemServico do backend):
+    // a empresa dá ciência e aponta; a fiscalização comenta e acata/recusa os apontamentos
+    canDarCienciaOrdemServico: role === "EMPRESA",
+    canTramitarOrdemServico:
+      role === "MASTER" || role === "COORDENACAO" || role === "ADMINISTRATIVO" || role === "ENGENHARIA",
     // Login da empresa contratada — só leitura de Obras, Ordens de Serviço e Mapa
     // de Obras, filtrados pela própria empresa no backend. Ver AppLayout.tsx
     // (redireciona qualquer outra rota) e Sidebar/empresa-items.ts.

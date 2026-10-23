@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router";
 import { useOrdensServico } from "../../store/ordensServico";
 import type { OrdemServico } from "../../../types/ordem-servico";
 import {
@@ -21,6 +22,7 @@ import { formatCurrency } from "../../utils/format-currency";
 import { usePermission } from "../../hooks/usePermission";
 import { PageHeader } from "../../components/PageHeader";
 import { CheckCircle2, ClipboardList } from "lucide-react";
+import { useTramitacao } from "../../store/tramitacao";
 
 // Uma OS pode ter vários empenhos (do mesmo contrato): uma origem por empenho
 function osScopeRefs(os: OrdemServico): ScopeRef[] {
@@ -76,12 +78,36 @@ export default function OrdensServico() {
   const { canCreateOrdemServico, isEmpresaRestricted } = usePermission();
 
   const { fetchOrdensServico, data } = useOrdensServico();
+  const { fetchPendencias } = useTramitacao();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const osParam = searchParams.get("os");
 
   const ordensServico = useMemo(() => data?.ordensServico || [], [data]);
 
   useEffect(() => {
     fetchOrdensServico().finally(() => setIsListLoading(false));
   }, [fetchOrdensServico]);
+
+  // ?os=<id> (vindo de uma notificação) abre o modal da OS; fechar tira o parâmetro da URL
+  const openOrdemServicoId = viewingOrdemServicoId ?? osParam;
+  const handleCloseView = () => {
+    setViewingOrdemServicoId(null);
+    if (osParam) {
+      setSearchParams(
+        (params) => {
+          params.delete("os");
+          return params;
+        },
+        { replace: true },
+      );
+    }
+  };
+
+  // Ciência, apontamento ou decisão: atualiza a lista (fase da OS) e as pendências da empresa
+  const handleTramitacaoChanged = () => {
+    fetchOrdensServico().catch(() => {});
+    if (isEmpresaRestricted) fetchPendencias().catch(() => {});
+  };
 
   // Opções de empresa/contrato/empenho em cascata, montadas das próprias OS; valor escolhido
   // em outra tela que não existe aqui (ou deixou de ter OS) é ignorado
@@ -184,8 +210,8 @@ export default function OrdensServico() {
 
   // Busca pelo id na lista atual para o modal refletir atualizações feitas com ele aberto
   const viewingOrdemServico = useMemo(
-    () => ordensServico.find((os) => os.id === viewingOrdemServicoId) ?? null,
-    [ordensServico, viewingOrdemServicoId],
+    () => ordensServico.find((os) => os.id === openOrdemServicoId) ?? null,
+    [ordensServico, openOrdemServicoId],
   );
 
   const handleOpen = (ordemServico?: OrdemServico) => {
@@ -256,7 +282,8 @@ export default function OrdensServico() {
       {viewingOrdemServico && (
         <ViewOrdemServicoModal
           ordemServico={viewingOrdemServico}
-          handleClose={() => setViewingOrdemServicoId(null)}
+          handleClose={handleCloseView}
+          onTramitacaoChanged={handleTramitacaoChanged}
         />
       )}
 
