@@ -8,6 +8,7 @@ import {
   normalizeMultilineText,
   normalizeProperName,
   normalizeUf,
+  normalizeUnidade,
   normalizeUpperName,
 } from "./text-normalizers.js";
 
@@ -105,4 +106,15 @@ export const OBRA_RULES: InputRules = {
   idPatrimonialCompleto: normalizeCode,
   apelido: normalizeCode,
   estadoConservacao: normalizeFreeText,
+};
+
+// Itens da planilha orçamentária e medições da OS
+export const ORDEM_SERVICO_ITEM_RULES: InputRules = {
+  codigo: normalizeCode,
+  descricao: normalizeFreeText,
+  unidade: normalizeUnidade,
+};
+
+export const MEDICAO_RULES: InputRules = {
+  observacao: normalizeMultilineText,
 };

@@ -3,11 +3,13 @@ import { DomainError } from "../../../domain/errors/DomainError.js";
 import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import type { IOrdemServicoRepository } from "../../../domain/repositories/IOrdemServicoRepository.js";
 import type { IOrdemServicoTramitacaoRepository } from "../../../domain/repositories/IOrdemServicoTramitacaoRepository.js";
+import type { IMedicaoRepository } from "../../../domain/repositories/IMedicaoRepository.js";
 
 export class DeleteOrdemServicoUseCase {
   constructor(
     private repository: IOrdemServicoRepository,
     private tramitacaoRepository: IOrdemServicoTramitacaoRepository,
+    private medicaoRepository: IMedicaoRepository,
   ) {}
 
   async execute({ ordemServicoId, user }: { ordemServicoId: string; user: AuthenticatedUser }) {
@@ -27,6 +29,11 @@ export class DeleteOrdemServicoUseCase {
       throw new DomainError(
         "This ordem de serviço already has a history with the company: cancel it instead of deleting it",
       );
+    }
+
+    // Medição fechada é documento assinado: também só se cancela a OS
+    if (await this.medicaoRepository.hasMedicaoFechada(ordemServicoId)) {
+      throw new DomainError("This ordem de serviço already has closed medições: cancel it instead of deleting it");
     }
 
     await this.repository.delete(ordemServicoId);

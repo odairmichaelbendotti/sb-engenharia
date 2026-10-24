@@ -9,6 +9,7 @@ import {
   normalizeMultilineText,
   normalizeProperName,
   normalizeUf,
+  normalizeUnidade,
   normalizeUpperName,
 } from "./text-normalizers.js";
 import { EMPENHO_RULES, normalizeInput } from "./input-rules.js";
@@ -83,6 +84,18 @@ describe("contato e documentos", () => {
 
   it("UF fica em maiúsculas", () => {
     expect(normalizeUf(" sc ")).toBe("SC");
+  });
+});
+
+describe("unidade de medida", () => {
+  it("usa a grafia da planilha", () => {
+    expect(normalizeUnidade(" M2 ")).toBe("m²");
+    expect(normalizeUnidade("m 3")).toBe("m³");
+    expect(normalizeUnidade("UND")).toBe("un");
+    expect(normalizeUnidade("Unid.")).toBe("un");
+    expect(normalizeUnidade("VB")).toBe("vb");
+    expect(normalizeUnidade("Kg")).toBe("kg");
+    expect(normalizeUnidade("m²")).toBe("m²");
   });
 });
 

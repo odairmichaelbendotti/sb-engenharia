@@ -49,6 +49,7 @@ export const ROLE_GUIDE: RoleGuide[] = [
       "Pode dar qualquer perfil, inclusive Admin da Plataforma",
       "CRUD completo no administrativo",
       "Em Obras só visualiza",
+      "Vê o orçamento e as medições das OS (sem lançar)",
     ],
     cells: {
       usuarios: { level: "edit", text: "Todas as unidades" },
@@ -70,6 +71,7 @@ export const ROLE_GUIDE: RoleGuide[] = [
       "Não pode conceder o perfil Admin da Plataforma",
       "CRUD completo no administrativo",
       "CRUD completo em Obras",
+      "Lança o orçamento das OS e as medições (rascunho, fechamento, reabertura e boletim em PDF)",
     ],
     cells: {
       usuarios: { level: "partial", text: "Própria unidade" },
@@ -91,6 +93,7 @@ export const ROLE_GUIDE: RoleGuide[] = [
       "Aprova e recusa cadastros e muda perfis, só dentro da própria organização",
       "Não pode conceder o perfil Admin da Plataforma",
       "CRUD completo no administrativo e em Obras",
+      "Lança o orçamento das OS e as medições (rascunho, fechamento, reabertura e boletim em PDF)",
     ],
     cells: {
       usuarios: { level: "partial", text: "Própria unidade" },
@@ -111,6 +114,7 @@ export const ROLE_GUIDE: RoleGuide[] = [
       "CRUD de Empresas, Contratos, Empenhos, Ordens de Serviço e Notas Fiscais",
       "Cria o acesso das empresas",
       "Em Obras só visualiza",
+      "Vê o orçamento e as medições das OS (sem lançar)",
     ],
     cells: {
       usuarios: NONE,
@@ -131,6 +135,7 @@ export const ROLE_GUIDE: RoleGuide[] = [
       "CRUD de Obras (cadastrar, editar, mudar status e excluir)",
       "Cria o acesso das empresas",
       "No administrativo só visualiza, mas pode cadastrar Ordem de Serviço",
+      "Lança o orçamento das OS e as medições (rascunho, fechamento, reabertura e boletim em PDF)",
     ],
     cells: {
       usuarios: NONE,
@@ -168,6 +173,7 @@ export const ROLE_GUIDE: RoleGuide[] = [
       "Vê Obras, Ordens de Serviço e Mapa só da própria empresa, com filtro por empenho",
       "Não cria, edita nem exclui nada; as demais telas redirecionam para o Mapa",
       "O painel do Mapa não mostra saldos nem notas fiscais",
+      "Vê o orçamento e as medições fechadas das próprias OS e baixa o boletim em PDF",
     ],
     cells: {
       usuarios: NONE,

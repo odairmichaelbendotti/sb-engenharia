@@ -340,6 +340,10 @@ model OrdemServico {
   contestacoes  OrdemServicoContestacao[]
   notificacoes  Notificacao[]
 
+  // Planilha orçamentária (opcional) e as medições feitas sobre ela
+  itens    OrdemServicoItem[]
+  medicoes Medicao[]
+
   @@unique([numero, tenant_id])
   @@index([obra_id])
   @@index([lote_id])
@@ -483,6 +487,88 @@ model OrdemServicoEmpenho {
 
   @@unique([ordemServico_id, empenho_id])
   @@index([empenho_id])
+}
+
+// Item da planilha orçamentária da OS. O preço unitário já inclui BDI e o desconto do lote
+model OrdemServicoItem {
+  id            String   @id @default(uuid())
+  // Posição na planilha (1, 2, 3...)
+  ordem         Int
+  // Referência da composição (ex.: código SINAPI), opcional
+  codigo        String?
+  descricao     String
+  unidade       String
+  // Quantidade orçada em milésimos da unidade (3,5 m² = 3500)
+  quantidade    Int
+  // Centavos
+  precoUnitario Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now())
+
+  ordemServico_id String
+  ordemServico    OrdemServico @relation(fields: [ordemServico_id], references: [id], onDelete: Cascade)
+
+  // Excluir o item leva junto as linhas de rascunho; item com quantidade em medição fechada é
+  // barrado por gatilho no banco (a exclusão da OS ainda apaga tudo em cascata)
+  medicoes MedicaoItem[]
+
+  @@index([ordemServico_id, ordem])
+}
+
+enum MedicaoStatus {
+  RASCUNHO
+  FECHADA
+}
+
+// Medição da OS: quanto de cada item foi executado no período. O rascunho não conta no
+// acumulado; a fechada fica travada (gatilho no banco) e só a última pode ser reaberta
+model Medicao {
+  id            String        @id @default(uuid())
+  // Sequência por OS; também garante um rascunho só por vez (o rascunho leva o próximo número)
+  numero        Int
+  status        MedicaoStatus @default(RASCUNHO)
+  // Datas sem horário (meia-noite UTC)
+  periodoInicio DateTime
+  periodoFim    DateTime
+  observacao    String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @default(now())
+
+  // Autores copiados, como no histórico da OS
+  criadoPor_id    String?
+  criadoPorNome   String
+  fechadaEm       DateTime?
+  fechadaPor_id   String?
+  fechadaPorNome  String?
+  reabertaEm      DateTime?
+  reabertaPorNome String?
+
+  // Planilha congelada no fechamento: a reimpressão sai igual à assinada mesmo que o
+  // orçamento mude depois. Nula no rascunho
+  planilhaFechamento Json?
+
+  ordemServico_id String
+  ordemServico    OrdemServico @relation(fields: [ordemServico_id], references: [id], onDelete: Cascade)
+
+  itens MedicaoItem[]
+
+  @@unique([ordemServico_id, numero])
+}
+
+// Quantidade medida de um item; só existem linhas com quantidade maior que zero
+model MedicaoItem {
+  id         String @id @default(uuid())
+  // Milésimos da unidade
+  quantidade Int
+
+  medicao_id String
+  medicao    Medicao @relation(fields: [medicao_id], references: [id], onDelete: Cascade)
+
+  item_id String
+  item    OrdemServicoItem @relation(fields: [item_id], references: [id], onDelete: Cascade)
+
+  @@unique([medicao_id, item_id])
+  @@index([item_id])
 }
 
 enum InvoiceStatus {

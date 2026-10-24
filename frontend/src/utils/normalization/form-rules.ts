@@ -7,6 +7,7 @@ import {
   normalizeFreeText,
   normalizeMultilineText,
   normalizeProperName,
+  normalizeUnidade,
   normalizeUpperName,
 } from "./text-normalizers";
 
@@ -67,6 +68,13 @@ export const OBRA_FIELD_RULES: FieldRules = {
   idPatrimonialCompleto: normalizeCode,
   apelido: normalizeCode,
   estadoConservacao: normalizeFreeText,
+};
+
+// Item da planilha orçamentária da OS (espelha ORDEM_SERVICO_ITEM_RULES)
+export const ORDEM_SERVICO_ITEM_FIELD_RULES: FieldRules = {
+  codigo: normalizeCode,
+  descricao: normalizeFreeText,
+  unidade: normalizeUnidade,
 };
 
 export const USER_FIELD_RULES: FieldRules = {
