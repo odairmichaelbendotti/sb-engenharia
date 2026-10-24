@@ -108,3 +108,27 @@ export function normalizeEmail(value: string): string {
 export function normalizeUf(value: string): string {
   return cleanText(value).toLocaleUpperCase(LOCALE);
 }
+
+// Grafias comuns de unidades de medida → forma da planilha orçamentária
+const UNIDADES: Record<string, string> = {
+  m2: "m²",
+  "m^2": "m²",
+  m3: "m³",
+  "m^3": "m³",
+  und: "un",
+  unid: "un",
+  unidade: "un",
+  pç: "pç",
+  pc: "pç",
+  peca: "pç",
+  peça: "pç",
+  verba: "vb",
+  conj: "cj",
+  conjunto: "cj",
+};
+
+/** Unidade de medida: minúscula, sem espaços e com a grafia usual (M2 → m², UND → un). */
+export function normalizeUnidade(value: string): string {
+  const unidade = cleanText(value).replace(/\s/g, "").replace(/\.$/, "").toLocaleLowerCase(LOCALE);
+  return UNIDADES[unidade] ?? unidade;
+}

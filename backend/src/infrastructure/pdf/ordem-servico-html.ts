@@ -1,5 +1,5 @@
 import type { DocumentOption, OrdemServicoDocumentModel } from "../../domain/documents/ordem-servico-document.js";
-import { BRASAO_BASE64 } from "./brasao.js";
+import { escapeHtml, renderLetterhead } from "./document-base-html.js";
 import { embeddedFontFaces, embeddedFooterFontFace } from "./fonts.js";
 
 const ANEXOS = [
@@ -11,15 +11,6 @@ const ANEXOS = [
   "Observações Técnicas para Execução",
 ];
 const ROMANOS = ["I", "II", "III", "IV", "V", "VI"];
-
-export function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
 
 // Valor vazio (OS antiga) vira uma linha pontilhada, para preencher à mão se preciso
 function v(text: string): string {
@@ -45,17 +36,6 @@ function options(items: DocumentOption[], grid = false): string {
 
 function heading(numero: number, titulo: string): string {
   return `<h2><span class="n">${numero}</span>${titulo}</h2>`;
-}
-
-function renderLetterhead(): string {
-  return `
-<header class="letterhead">
-  <img class="brasao" src="data:image/jpeg;base64,${BRASAO_BASE64}" alt="" />
-  <p class="org">Ministério da Defesa</p>
-  <p class="org">Comando da Aeronáutica</p>
-  <p class="org-main">Base Aérea de Florianópolis</p>
-  <p class="org-contact">Av. Santos Dumont, s/n – Tapera &nbsp;·&nbsp; Tel. (48) 3229-5000 &nbsp;·&nbsp; Fax (48) 3236-1344 &nbsp;·&nbsp; protocolo.bafl@bafl.aer.mil.br</p>
-</header>`;
 }
 
 function renderTitle(m: OrdemServicoDocumentModel): string {

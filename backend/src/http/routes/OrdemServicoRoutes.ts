@@ -19,6 +19,7 @@ import { RequireDomainAccess } from "../middleware/RequireDomainAccess.js";
 import { RequireCapability } from "../middleware/RequireCapability.js";
 import { RequireCienciaEmDia } from "../middleware/RequireCienciaEmDia.js";
 import { PrismaOrdemServicoTramitacaoRepository } from "../../infrastructure/database/prisma/PrismaOrdemServicoTramitacaoRepository.js";
+import { PrismaMedicaoRepository } from "../../infrastructure/database/prisma/PrismaMedicaoRepository.js";
 import { VerificarBloqueioCienciaUseCase } from "../../application/usecases/ordem-servico-tramitacao/VerificarBloqueioCienciaUseCase.js";
 
 export const OrdemServicoRoutes = Router();
@@ -32,7 +33,11 @@ const listOrdensServicoUseCase = new ListOrdensServicoUseCase(repository);
 const listOrdemServicoOptionsForObraUseCase = new ListOrdemServicoOptionsForObraUseCase(repository);
 const updateOrdemServicoUseCase = new UpdateOrdemServicoUseCase(repository, empenhoRepository, obraRepository);
 const updateOrdemServicoStatusUseCase = new UpdateOrdemServicoStatusUseCase(repository, tramitacaoRepository);
-const deleteOrdemServicoUseCase = new DeleteOrdemServicoUseCase(repository, tramitacaoRepository);
+const deleteOrdemServicoUseCase = new DeleteOrdemServicoUseCase(
+  repository,
+  tramitacaoRepository,
+  new PrismaMedicaoRepository(),
+);
 const generateOrdemServicoDocumentUseCase = new GenerateOrdemServicoDocumentUseCase(
   repository,
   new PuppeteerOrdemServicoGenerator(),

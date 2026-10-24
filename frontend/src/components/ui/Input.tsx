@@ -41,7 +41,12 @@ export function Input({
         />
       )}
       {!Icon && prefix && (
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted font-medium pointer-events-none">
+        <span
+          className={cx(
+            "absolute top-1/2 -translate-y-1/2 text-text-muted font-medium pointer-events-none",
+            size === "sm" ? "left-2.5 text-xs" : "left-3",
+          )}
+        >
           {prefix}
         </span>
       )}

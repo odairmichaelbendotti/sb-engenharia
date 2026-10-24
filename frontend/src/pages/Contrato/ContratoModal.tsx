@@ -33,6 +33,7 @@ import { useCompanies } from "../../store/companies";
 import { useContratos } from "../../store/contratos";
 import { formatCurrency } from "../../utils/format-currency";
 import { maskCnpj, maskCurrency, formatValueToCurrencyMask, parseCurrencyMask } from "../../utils/masks";
+import { parseDecimal, toDecimalInput } from "../../utils/decimal";
 import {
   PLACEHOLDER_A_PREENCHER,
   type Contrato,
@@ -100,15 +101,6 @@ const FISCAL_TIPO_LABEL: Record<FiscalTipo, string> = {
 // Contrato antigo traz "A PREENCHER": o campo abre vazio para ser preenchido de verdade
 function fromStored(value: string) {
   return value === PLACEHOLDER_A_PREENCHER ? "" : value;
-}
-
-// Número digitado com vírgula ("24,8") → número
-function parseDecimal(value: string) {
-  return parseFloat(value.replace(",", "."));
-}
-
-function toDecimalInput(value: number) {
-  return String(value).replace(".", ",");
 }
 
 function toDateInput(d: Date | string | undefined) {

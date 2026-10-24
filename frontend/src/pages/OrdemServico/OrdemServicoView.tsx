@@ -37,6 +37,7 @@ import { usePermission } from "../../hooks/usePermission";
 import { getBalance, getOrdemServicoBalance } from "./ordem-servico-balance";
 import { FinalizeOrdemServicoCallout } from "./FinalizeOrdemServico";
 import { CienciaPendenteAviso, TramitacaoSection } from "./TramitacaoSection";
+import { OrcamentoMedicoesSection } from "./OrcamentoMedicoesSection";
 import { getFaseEmissao } from "./ordem-servico-ciencia";
 import { ordemServicoStatusDisplay } from "./ordem-servico-display";
 import {
@@ -593,6 +594,9 @@ export function OrdemServicoView({
       >
         <EmpenhosTable ordemServico={ordemServico} />
       </FormSection>
+
+      {/* Fora da tela de pendências da empresa (OS passada direto): lá ela pode estar travada */}
+      {!given && <OrcamentoMedicoesSection ordemServicoId={ordemServico.id} numero={ordemServico.numero} />}
 
       {canViewAdministrativo && <NotasSection ordemServico={ordemServico} />}
 

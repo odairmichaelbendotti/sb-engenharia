@@ -168,7 +168,9 @@ function arredondar(value: number): number {
 }
 
 /** "SCOAM-FL / SC.027-67272-E-050"; sem os dados novos da obra, cai na identificação patrimonial. */
-function formatEdificacao(obra: OrdemServicoDocumentData["obra"]): string {
+export function formatEdificacao(
+  obra: Pick<NonNullable<OrdemServicoDocumentData["obra"]>, "apelido" | "idPatrimonialCompleto" | "identificacaoPatrimonial"> | null,
+): string {
   if (!obra) return "";
   const partes = [obra.apelido, obra.idPatrimonialCompleto].filter((p): p is string => Boolean(p));
   return partes.length > 0 ? partes.join(" / ") : obra.identificacaoPatrimonial;
