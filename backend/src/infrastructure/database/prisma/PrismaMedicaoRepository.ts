@@ -204,10 +204,20 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
     }
   }
 
-  async listOsDoPainel(tenant_id: string | undefined): Promise<PainelOsRow[]> {
+  async listOsDoPainel({
+    tenant_id,
+    company_id,
+  }: {
+    tenant_id: string | undefined;
+    company_id: string | undefined;
+  }): Promise<PainelOsRow[]> {
     try {
       const rows = await prisma.ordemServico.findMany({
-        where: tenant_id ? { tenant_id } : {},
+        // Empresa: pelo empenho principal, o mesmo critério da lista de OS e do acesso à planilha
+        where: {
+          ...(tenant_id ? { tenant_id } : {}),
+          ...(company_id ? { empenho: { contrato: { company_id } } } : {}),
+        },
         orderBy: { createdAt: "desc" },
         select: {
           id: true,

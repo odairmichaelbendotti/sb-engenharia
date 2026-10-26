@@ -46,11 +46,13 @@ const requireCienciaEmDia = new RequireCienciaEmDia(
   new VerificarBloqueioCienciaUseCase(new PrismaOrdemServicoTramitacaoRepository()),
 );
 
-// Tela de medições: as OS com a situação do orçamento e das medições (antes de /medicao/:id)
+// Tela de medições: as OS com a situação do orçamento e das medições (antes de /medicao/:id).
+// A EMPRESA também consulta, só as próprias OS
 MedicaoRoutes.get(
   "/medicao/painel",
   authMiddleware.handle,
   requireDomainAccess.handle("engenharia", "view"),
+  requireCienciaEmDia.handle,
   (req, res) => controller.painel(req, res),
 );
 

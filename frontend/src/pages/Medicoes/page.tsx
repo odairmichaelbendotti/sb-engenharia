@@ -3,6 +3,7 @@ import { FilePen, ListX, Ruler } from "lucide-react";
 import { toast } from "sonner";
 import type { PainelMedicaoItem } from "../../../types/medicao";
 import { useMedicoes } from "../../store/medicoes";
+import { usePermission } from "../../hooks/usePermission";
 import { formatCurrency } from "../../utils/format-currency";
 import { PageHeader } from "../../components/PageHeader";
 import { SummaryStrip, type SummaryCell } from "../../components/SummaryStrip";
@@ -40,6 +41,9 @@ export default function Medicoes() {
   const [searchTerm, setSearchTerm] = useState("");
   const [tab, setTab] = useState<PainelTab>("ATIVAS");
   const [scope, setScope] = useScopeFilter();
+  // Empresa só consulta: não vê rascunhos (o backend já os omite) nem os textos de quem lança
+  const { isEmpresaRestricted } = usePermission();
+  const tabs = isEmpresaRestricted ? PAINEL_TABS.filter((t) => t.id !== "RASCUNHO") : PAINEL_TABS;
 
   useEffect(() => {
     fetchPainel()
@@ -77,7 +81,7 @@ export default function Medicoes() {
     const rascunho = ativas.reduce((acc, item) => acc + (item.rascunho?.valor ?? 0), 0);
     const toggle = (alvo: PainelTab) => () => setTab(tab === alvo ? "ATIVAS" : alvo);
 
-    return [
+    const cells: SummaryCell[] = [
       {
         key: "orcado",
         label: "Orçado",
@@ -112,7 +116,12 @@ export default function Medicoes() {
         key: "sem-orcamento",
         label: "Sem orçamento",
         value: `${tabCounts.SEM_ORCAMENTO} OS`,
-        hint: tabCounts.SEM_ORCAMENTO > 0 ? "lance o orçamento para medir" : "todas orçadas",
+        hint:
+          tabCounts.SEM_ORCAMENTO > 0
+            ? isEmpresaRestricted
+              ? "aguardando a fiscalização"
+              : "lance o orçamento para medir"
+            : "todas orçadas",
         tone: tabCounts.SEM_ORCAMENTO > 0 ? "default" : "muted",
         icon: tabCounts.SEM_ORCAMENTO > 0 ? ListX : undefined,
         onClick: toggle("SEM_ORCAMENTO"),
@@ -120,21 +129,22 @@ export default function Medicoes() {
         disabled: tabCounts.SEM_ORCAMENTO === 0,
       },
     ];
-  }, [searched, tabCounts, tab]);
+    return isEmpresaRestricted ? cells.filter((cell) => cell.key !== "rascunho") : cells;
+  }, [searched, tabCounts, tab, isEmpresaRestricted]);
 
   return (
     <div className="p-4 md:p-5 max-w-7xl mx-auto">
       <PageHeader
         icon={Ruler}
         title="Medições"
-        description={`Engenharia · ${tabCounts.ATIVAS} OS ativas${tabCounts.RASCUNHO > 0 ? ` · ${tabCounts.RASCUNHO} com rascunho aberto` : ""}`}
+        description={`${isEmpresaRestricted ? "Acompanhamento" : "Engenharia"} · ${tabCounts.ATIVAS} OS ativas${tabCounts.RASCUNHO > 0 ? ` · ${tabCounts.RASCUNHO} com rascunho aberto` : ""}`}
       />
 
       <div className="bg-surface border border-border rounded-xl">
         <SummaryStrip cells={summaryCells} />
         <div className="px-4 pt-4 pb-3 border-b border-border space-y-3">
           <div role="tablist" aria-label="Filtrar por situação" className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
-            {PAINEL_TABS.map((t) => {
+            {tabs.map((t) => {
               const active = tab === t.id;
               return (
                 <button

@@ -107,7 +107,8 @@ export interface IMedicaoRepository {
   /** Planilhas de várias OS de uma vez (OS sem item nem medição volta vazia). */
   getPlanilhas(ordemServico_ids: string[]): Promise<Map<string, PlanilhaOs>>;
   /** OS do tenant (todas, se undefined) para a tela de medições. */
-  listOsDoPainel(tenant_id: string | undefined): Promise<PainelOsRow[]>;
+  /** OS da tela de medições; sem tenant = todas (PLATFORM_ADMIN), com empresa = só as dos contratos dela. */
+  listOsDoPainel(params: { tenant_id: string | undefined; company_id: string | undefined }): Promise<PainelOsRow[]>;
   hasMedicaoFechada(ordemServico_id: string): Promise<boolean>;
 
   /** Grava a planilha inteira: mantém os itens com id, cria os novos e exclui os que faltam. */

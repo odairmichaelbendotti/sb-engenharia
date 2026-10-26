@@ -84,10 +84,10 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        // Orçamento e medições em tela cheia: trabalho da fiscalização, a empresa vê só pelo modal da OS
+        // Orçamento e medições em tela cheia; a empresa só consulta as próprias OS (o backend filtra)
         path: "/medicoes",
         element: (
-          <RequireRole allow={(p) => p.canViewEngenharia && !p.isEmpresaRestricted}>
+          <RequireRole allow={(p) => p.canViewEngenharia}>
             <Medicoes />
           </RequireRole>
         ),
@@ -95,7 +95,7 @@ export const router = createBrowserRouter([
       {
         path: "/medicoes/:osId/orcamento",
         element: (
-          <RequireRole allow={(p) => p.canViewEngenharia && !p.isEmpresaRestricted}>
+          <RequireRole allow={(p) => p.canViewEngenharia}>
             <OrcamentoPage />
           </RequireRole>
         ),
@@ -103,7 +103,7 @@ export const router = createBrowserRouter([
       {
         path: "/medicoes/:osId/medicoes/:medicaoId?",
         element: (
-          <RequireRole allow={(p) => p.canViewEngenharia && !p.isEmpresaRestricted}>
+          <RequireRole allow={(p) => p.canViewEngenharia}>
             <MedicaoPage />
           </RequireRole>
         ),

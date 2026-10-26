@@ -24,13 +24,14 @@ interface OrcamentoMedicoesSectionProps {
  */
 export function OrcamentoMedicoesSection({ ordemServicoId, numero }: OrcamentoMedicoesSectionProps) {
   const { fetchPlanilha, fetchMedicaoDocument } = useMedicoes();
-  const { canViewEngenharia, isEmpresaRestricted } = usePermission();
+  const { canViewEngenharia } = usePermission();
   const navigate = useNavigate();
   const [planilha, setPlanilha] = useState<PlanilhaOrcamento | null>(null);
   const [error, setError] = useState(false);
   // Medição aberta em leitura (para quem não tem a tela Medições)
   const [lendo, setLendo] = useState<string | null>(null);
-  const temTela = canViewEngenharia && !isEmpresaRestricted;
+  // A empresa também tem a tela (só consulta)
+  const temTela = canViewEngenharia;
 
   // Pedido de nova tentativa depois de um erro
   const [tentativa, setTentativa] = useState(0);
