@@ -32,6 +32,7 @@ const ITEM_SELECT = {
   unidade: true,
   quantidade: true,
   precoUnitario: true,
+  valorTotal: true,
 } as const;
 
 const MEDICAO_SELECT = {
@@ -267,6 +268,7 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
             unidade: item.unidade,
             quantidade: item.quantidade,
             precoUnitario: item.precoUnitario,
+            valorTotal: item.valorTotal,
           };
           if (item.id) {
             await tx.ordemServicoItem.update({ where: { id: item.id }, data: { ...data, updatedAt: now } });

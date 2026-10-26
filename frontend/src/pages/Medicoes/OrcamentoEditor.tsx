@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, ClipboardPaste, Lock, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ClipboardPaste, Lock, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { OrcamentoItem, OrcamentoItemPayload, PlanilhaOrcamento } from "../../../types/medicao";
 import { useMedicoes } from "../../store/medicoes";
 import { useUnsavedChangesGuard } from "../../hooks/useUnsavedChangesGuard";
 import { formatCurrency } from "../../utils/format-currency";
 import { formatValueToCurrencyMask, maskCurrency, parseCurrencyMask } from "../../utils/masks";
-import { formatQuantidade, parseQuantidade, sanitizeDecimalInput, toDecimalInput, valorItem } from "../../utils/decimal";
+import {
+  folgaValorTotal,
+  formatQuantidade,
+  parseQuantidade,
+  sanitizeDecimalInput,
+  toDecimalInput,
+  valorItem,
+} from "../../utils/decimal";
 import { ORDEM_SERVICO_ITEM_FIELD_RULES } from "../../utils/normalization/form-rules";
 import { cx } from "../../utils/cx";
 import { SearchInput } from "../../components/filters/SearchInput";
@@ -24,11 +31,13 @@ type ItemForm = {
   unidade: string;
   quantidade: string;
   preco: string;
+  // Total ajustado (máscara de moeda) para bater com a planilha de referência; null = qtd × preço
+  total: string | null;
   // Soma das medições fechadas: trava preço e unidade e é o mínimo da quantidade
   medido: number;
 };
 
-type Campo = "codigo" | "descricao" | "unidade" | "quantidade" | "preco";
+type Campo = "codigo" | "descricao" | "unidade" | "quantidade" | "preco" | "total";
 type Erro = { key: number | null; campo: Campo | null; texto: string };
 
 // Até lg a linha vira cartão; a coluna "Medido" só cabe a partir de xl
@@ -44,13 +53,19 @@ function toForm(item: OrcamentoItem, key: number): ItemForm {
     unidade: item.unidade,
     quantidade: toDecimalInput(item.quantidade),
     preco: formatValueToCurrencyMask(item.precoUnitario),
+    total: item.totalAjustado ? formatValueToCurrencyMask(item.valorTotal) : null,
     medido: item.medido,
   };
 }
 
-function totalLinha(item: ItemForm) {
+// Quantidade × preço, sem o ajuste
+function totalCalculado(item: ItemForm) {
   const quantidade = parseQuantidade(item.quantidade);
   return quantidade === null ? 0 : valorItem(quantidade, parseCurrencyMask(item.preco));
+}
+
+function totalLinha(item: ItemForm) {
+  return item.total === null ? totalCalculado(item) : parseCurrencyMask(item.total);
 }
 
 const preenchida = (l: ItemForm) => Boolean(l.id || l.descricao || l.unidade || l.quantidade || l.preco);
@@ -58,8 +73,15 @@ const preenchida = (l: ItemForm) => Boolean(l.id || l.descricao || l.unidade || 
 // O que vai para a API: comparar com o carregado diz se há alteração não salva
 function serialize(linhas: ItemForm[]) {
   return JSON.stringify(
-    linhas.filter(preenchida).map((l) => [l.id ?? null, l.codigo, l.descricao, l.unidade, l.quantidade, l.preco]),
+    linhas
+      .filter(preenchida)
+      .map((l) => [l.id ?? null, l.codigo, l.descricao, l.unidade, l.quantidade, l.preco, l.total]),
   );
+}
+
+// Diferença em reais, com sinal ("+R$ 0,01")
+function formatDiferenca(valor: number) {
+  return `${valor > 0 ? "+" : "−"}${formatCurrency(Math.abs(valor))}`;
 }
 
 function isEditableTarget(target: EventTarget | null) {
@@ -74,6 +96,8 @@ interface OrcamentoEditorProps {
 /**
  * Planilha orçamentária da OS em tela cheia: descrição, unidade, quantidade e preço unitário
  * (com BDI e desconto do lote). Item medido trava preço e unidade, não sai e tem quantidade mínima.
+ * O total pode ser ajustado à planilha de referência (truncamento, preço com mais casas), dentro
+ * da folga do backend; item medido por inteiro trava o total.
  */
 export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
   const { itens, valorOs, ordemServico } = planilha;
@@ -86,6 +110,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
     unidade: "",
     quantidade: "",
     preco: "",
+    total: null,
     medido: 0,
     ...patch,
   });
@@ -163,6 +188,17 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
         };
       }
       if (!l.preco) return { key: l.key, campo: "preco", texto: `${pos}: informe o preço unitário.` };
+      if (l.total !== null) {
+        if (!l.total) return { key: l.key, campo: "total", texto: `${pos}: informe o total ou use o calculado.` };
+        const folga = folgaValorTotal(quantidade);
+        if (Math.abs(parseCurrencyMask(l.total) - totalCalculado(l)) > folga + 1e-9) {
+          return {
+            key: l.key,
+            campo: "total",
+            texto: `${pos}: o total ajustado pode diferir de quantidade × preço (${formatCurrency(totalCalculado(l))}) em até ${formatCurrency(folga)}. Confira os valores.`,
+          };
+        }
+      }
     }
     return null;
   }
@@ -191,6 +227,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
       unidade: l.unidade,
       quantidade: parseQuantidade(l.quantidade) ?? 0,
       precoUnitario: parseCurrencyMask(l.preco),
+      valorTotal: l.total === null ? null : parseCurrencyMask(l.total),
     }));
     setSaving(true);
     try {
@@ -213,6 +250,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
         unidade: item.unidade,
         quantidade: toDecimalInput(item.quantidade),
         preco: formatValueToCurrencyMask(item.precoUnitario),
+        total: item.valorTotal === null ? null : formatValueToCurrencyMask(item.valorTotal),
       }),
     );
     setLinhas((prev) => {
@@ -224,6 +262,16 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
     setBusca("");
     setColando(null);
     toast.success(`${novos.length} ${novos.length === 1 ? "item incluído" : "itens incluídos"} na planilha. Confira e salve.`);
+  }
+
+  // Abre o total da linha para digitar, a partir do calculado
+  function ajustarTotal(l: ItemForm) {
+    update(l.key, { total: formatValueToCurrencyMask(totalCalculado(l)) });
+    requestAnimationFrame(() => {
+      const campo = document.querySelector<HTMLInputElement>(`[data-total="${l.key}"]`);
+      campo?.focus();
+      campo?.select();
+    });
   }
 
   const invalido = (l: ItemForm, campo: Campo) => erro?.key === l.key && erro.campo === campo;
@@ -258,6 +306,9 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
         <div className="space-y-3 lg:space-y-2">
           {visiveis.map(({ l, index }) => {
             const medido = l.medido > 0;
+            // Medido por inteiro: a última medição já usou o total, que não muda mais
+            const totalTravado = medido && l.medido >= (parseQuantidade(l.quantidade) ?? 0);
+            const diferencaTotal = l.total === null ? 0 : Math.round((totalLinha(l) - totalCalculado(l)) * 100) / 100;
             return (
               <div key={l.key} className="rounded-lg border border-border p-2.5 lg:border-0 lg:p-0">
                 <div className={cx("grid grid-cols-2 sm:grid-cols-4 gap-2 items-center", COLS)}>
@@ -314,9 +365,38 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
                     invalid={invalido(l, "preco")}
                     onChange={(e) => update(l.key, { preco: maskCurrency(e.target.value) })}
                   />
-                  <span className="text-sm font-semibold text-text-primary tabular-nums text-right truncate">
-                    {formatCurrency(totalLinha(l))}
-                  </span>
+                  {l.total !== null && !totalTravado ? (
+                    <Input
+                      size="sm"
+                      data-total={l.key}
+                      aria-label={`Total ajustado do item ${index + 1}`}
+                      inputMode="numeric"
+                      placeholder="0,00"
+                      value={l.total}
+                      invalid={invalido(l, "total")}
+                      onChange={(e) => update(l.key, { total: maskCurrency(e.target.value) })}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={totalTravado}
+                      title={
+                        totalTravado
+                          ? "Item medido por inteiro: o total não muda mais"
+                          : "Ajustar o total para bater com a planilha de referência"
+                      }
+                      className="group flex items-center justify-end gap-1 min-w-0 rounded-md px-1 -mx-1 text-sm font-semibold text-text-primary tabular-nums cursor-pointer hover:bg-surface-muted disabled:cursor-default disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary-200"
+                      onClick={() => ajustarTotal(l)}
+                    >
+                      {!totalTravado && (
+                        <Pencil
+                          size={12}
+                          className="shrink-0 text-text-muted opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
+                        />
+                      )}
+                      <span className="truncate">{formatCurrency(totalLinha(l))}</span>
+                    </button>
+                  )}
                   <span
                     className={cx(
                       "hidden xl:block text-xs tabular-nums text-right truncate",
@@ -341,6 +421,24 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
                     <Lock size={11} />
                     Medido {formatQuantidade(l.medido)} {l.unidade}: preço e unidade travados, quantidade mínima{" "}
                     {formatQuantidade(l.medido)}
+                  </p>
+                )}
+                {l.total !== null && (
+                  <p className="mt-1 lg:pl-8 flex flex-wrap items-center gap-x-1 text-[11px] text-text-muted tabular-nums">
+                    Total ajustado à planilha: calculado {formatCurrency(totalCalculado(l))}
+                    {diferencaTotal !== 0 && ` (${formatDiferenca(diferencaTotal)})`}
+                    {!totalTravado && (
+                      <>
+                        {" · "}
+                        <button
+                          type="button"
+                          className="font-semibold text-text-secondary underline-offset-2 hover:underline cursor-pointer"
+                          onClick={() => update(l.key, { total: null })}
+                        >
+                          Usar o calculado
+                        </button>
+                      </>
+                    )}
                   </p>
                 )}
               </div>

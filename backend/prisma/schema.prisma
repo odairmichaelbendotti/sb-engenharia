@@ -502,6 +502,9 @@ model OrdemServicoItem {
   quantidade    Int
   // Centavos
   precoUnitario Int
+  // Total em centavos digitado para bater com a planilha de referência (truncamento, preço com
+  // mais casas); nulo = quantidade × preço. Nas medições, o item medido por inteiro vale este total
+  valorTotal    Int?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @default(now())
 

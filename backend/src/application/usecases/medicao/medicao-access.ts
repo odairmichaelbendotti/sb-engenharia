@@ -3,6 +3,7 @@ import { DomainError } from "../../../domain/errors/DomainError.js";
 import {
   INT_MAX,
   toMilesimos,
+  valorItem,
   type LinhaMedicaoInput,
   type OrcamentoItemInput,
 } from "../../../domain/medicao/medicao-calc.js";
@@ -82,7 +83,10 @@ function numero(value: unknown): number {
   return NaN;
 }
 
-/** Planilha enviada pela API: quantidade decimal e preço unitário em reais. */
+/**
+ * Planilha enviada pela API: quantidade decimal, preço unitário e total ajustado (opcional) em reais.
+ * Total igual a quantidade × preço é gravado como nulo (sem ajuste).
+ */
 export function parseOrcamentoItens(raw: unknown): OrcamentoItemInput[] {
   if (!Array.isArray(raw)) throw new DomainError("Itens must be a list");
   return raw.map((value, index) => {
@@ -92,17 +96,25 @@ export function parseOrcamentoItens(raw: unknown): OrcamentoItemInput[] {
     if (!Number.isFinite(quantidade) || !Number.isFinite(preco)) {
       throw new DomainError(`Item ${index + 1}: quantidade and preço unitário must be numbers`);
     }
+    const total = item.valorTotal === null || item.valorTotal === undefined ? null : numero(item.valorTotal);
+    if (total !== null && !Number.isFinite(total)) {
+      throw new DomainError(`Item ${index + 1}: valor total must be a number`);
+    }
     const normalized = normalizeInput(
       { codigo: texto(item.codigo), descricao: texto(item.descricao), unidade: texto(item.unidade) },
       ORDEM_SERVICO_ITEM_RULES,
     );
+    const quantidadeMil = toMilesimos(quantidade);
+    const precoCent = Math.round(preco * 100);
+    const totalCent = total === null ? null : Math.round(total * 100);
     return {
       id: typeof item.id === "string" && item.id ? item.id : undefined,
       codigo: normalized.codigo || null,
       descricao: normalized.descricao,
       unidade: normalized.unidade,
-      quantidade: toMilesimos(quantidade),
-      precoUnitario: Math.round(preco * 100),
+      quantidade: quantidadeMil,
+      precoUnitario: precoCent,
+      valorTotal: totalCent === valorItem(quantidadeMil, precoCent) ? null : totalCent,
     };
   });
 }

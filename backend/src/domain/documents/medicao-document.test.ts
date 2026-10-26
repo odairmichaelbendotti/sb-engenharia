@@ -6,8 +6,8 @@ import type { MedicaoDocumentData, MedicaoResumo } from "../repositories/IMedica
 const dia = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
 const itens = [
-  { id: "i-1", ordem: 1, codigo: "87529", descricao: "Reboco", unidade: "m²", quantidade: 10_000, precoUnitario: 5000 },
-  { id: "i-2", ordem: 2, codigo: null, descricao: "Pintura", unidade: "m²", quantidade: 20_000, precoUnitario: 1500 },
+  { id: "i-1", ordem: 1, codigo: "87529", descricao: "Reboco", unidade: "m²", quantidade: 10_000, precoUnitario: 5000, valorTotal: null },
+  { id: "i-2", ordem: 2, codigo: null, descricao: "Pintura", unidade: "m²", quantidade: 20_000, precoUnitario: 1500, valorTotal: null },
 ];
 
 function sampleData(medicao: Partial<MedicaoResumo> = {}): MedicaoDocumentData {

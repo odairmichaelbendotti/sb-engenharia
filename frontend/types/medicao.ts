@@ -14,7 +14,10 @@ export interface OrcamentoItem {
   unidade: string;
   quantidade: number;
   precoUnitario: number;
+  // Total ajustado (quando `totalAjustado`) ou quantidade × preço
   valorTotal: number;
+  // Total digitado para bater com a planilha de referência
+  totalAjustado: boolean;
   // Soma das medições fechadas
   medido: number;
   valorMedido: number;
@@ -112,6 +115,8 @@ export interface OrcamentoItemPayload {
   unidade: string;
   quantidade: number;
   precoUnitario: number;
+  // Total ajustado; null = quantidade × preço
+  valorTotal: number | null;
 }
 
 export interface MedicaoPayload {

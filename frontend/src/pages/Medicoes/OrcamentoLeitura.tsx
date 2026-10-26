@@ -45,7 +45,13 @@ export function OrcamentoLeitura({ planilha }: { planilha: PlanilhaOrcamento }) 
                   <span className="block">
                     {formatQuantidade(item.quantidade)} {item.unidade}
                   </span>
-                  <span className="block text-[11px] text-text-muted">{formatCurrency(item.valorTotal)}</span>
+                  <span
+                    className="block text-[11px] text-text-muted"
+                    title={item.totalAjustado ? "Total ajustado para bater com a planilha de referência" : undefined}
+                  >
+                    {formatCurrency(item.valorTotal)}
+                    {item.totalAjustado && " (ajustado)"}
+                  </span>
                 </Td>
                 <Td className="hidden sm:table-cell">
                   <span className="block">{formatQuantidade(item.medido)}</span>

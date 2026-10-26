@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { AlertTriangle, ClipboardPaste } from "lucide-react";
 import { formatCurrency } from "../../utils/format-currency";
-import { formatQuantidade } from "../../utils/decimal";
+import { formatQuantidade, valorItem } from "../../utils/decimal";
 import {
   Button,
   Field,
@@ -41,20 +41,22 @@ export function PasteOrcamentoDialog({ initialText, limite, temMedidos, onClose,
   const validas = linhas.flatMap((l) => (l.item ? [l.item] : []));
   const comErro = linhas.length - validas.length;
   const excedente = Math.max(0, validas.length - limite[mode]);
-  const total = validas.reduce((acc, i) => acc + Math.round(i.quantidade * i.precoUnitario * 100) / 100, 0);
+  const totalItem = (i: PastedItem) => i.valorTotal ?? valorItem(i.quantidade, i.precoUnitario);
+  const total = validas.reduce((acc, i) => acc + totalItem(i), 0);
+  const ajustados = validas.filter((i) => i.valorTotal !== null).length;
 
   return (
     <Modal open size="xl" onClose={onClose}>
       <ModalHeader
         icon={ClipboardPaste}
         title="Colar itens do Excel"
-        description="Colunas: código, descrição, unidade, quantidade e preço unitário (com BDI e desconto)"
+        description="Colunas: código, descrição, unidade, quantidade, preço unitário (com BDI e desconto) e total (opcional)"
         onClose={onClose}
       />
       <ModalBody className="space-y-3">
         <Field
           label="Linhas copiadas da planilha"
-          hint="Selecione as linhas no Excel, copie (Ctrl+C) e cole aqui. Sem a coluna de código, use quatro colunas."
+          hint="Selecione as linhas no Excel, copie (Ctrl+C) e cole aqui. Sem a coluna de código, use quatro colunas. Com a coluna do total, vale o total da planilha quando ele difere de quantidade × preço por centavos."
         >
           <Textarea
             rows={linhas.length > 0 ? 3 : 8}
@@ -70,6 +72,12 @@ export function PasteOrcamentoDialog({ initialText, limite, temMedidos, onClose,
               <p className="text-xs text-text-secondary">
                 <span className="font-semibold text-text-primary">{validas.length}</span>{" "}
                 {validas.length === 1 ? "item reconhecido" : "itens reconhecidos"} · {formatCurrency(total)}
+                {ajustados > 0 && (
+                  <span className="text-text-muted">
+                    {" "}
+                    · {ajustados} {ajustados === 1 ? "total ajustado" : "totais ajustados"} à planilha
+                  </span>
+                )}
                 {comErro > 0 && (
                   <span className="text-warning-text">
                     {" "}
@@ -95,6 +103,7 @@ export function PasteOrcamentoDialog({ initialText, limite, temMedidos, onClose,
                   <Th>Item</Th>
                   <Th>Quantidade</Th>
                   <Th>Preço unit.</Th>
+                  <Th>Total</Th>
                 </TableHead>
                 <TableBody>
                   {linhas.map((l) => (
@@ -122,6 +131,18 @@ export function PasteOrcamentoDialog({ initialText, limite, temMedidos, onClose,
                       </Td>
                       <Td>{l.item ? `${formatQuantidade(l.item.quantidade)} ${l.item.unidade}` : "—"}</Td>
                       <Td>{l.item ? formatCurrency(l.item.precoUnitario) : "—"}</Td>
+                      <Td>
+                        {l.item ? (
+                          <>
+                            <span className="block">{formatCurrency(totalItem(l.item))}</span>
+                            {l.item.valorTotal !== null && (
+                              <span className="block text-[11px] text-text-muted">ajustado</span>
+                            )}
+                          </>
+                        ) : (
+                          "—"
+                        )}
+                      </Td>
                     </Tr>
                   ))}
                 </TableBody>

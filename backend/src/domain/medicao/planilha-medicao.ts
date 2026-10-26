@@ -24,6 +24,8 @@ export type PlanilhaMedicao = {
     unidade: string;
     orcado: number;
     precoUnitario: number;
+    // Total ajustado; ausente nas planilhas gravadas antes dele existir (= quantidade × preço)
+    valorTotal?: number | null;
     anterior: number;
     esta: number;
   }[];
@@ -54,6 +56,7 @@ export function buildPlanilhaMedicao({
         unidade: item.unidade,
         orcado: item.quantidade,
         precoUnitario: item.precoUnitario,
+        valorTotal: item.valorTotal,
         anterior: anterior.get(item.id) ?? 0,
         esta: esta.get(item.id) ?? 0,
       })),
@@ -88,6 +91,7 @@ export function calcularPlanilhaMedicao(planilha: PlanilhaMedicao): {
     unidade: i.unidade,
     quantidade: i.orcado,
     precoUnitario: i.precoUnitario,
+    valorTotal: i.valorTotal ?? null,
   }));
   const { linhas, totais } = computeLinhasMedicao({
     itens,

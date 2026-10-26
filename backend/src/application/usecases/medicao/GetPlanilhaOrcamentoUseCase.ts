@@ -79,6 +79,7 @@ export class GetPlanilhaOrcamentoUseCase {
           quantidade: qtd(item.quantidade),
           precoUnitario: reais(item.precoUnitario),
           valorTotal: reais(p.valorOrcado),
+          totalAjustado: item.valorTotal !== null,
           medido: qtd(p.medido),
           valorMedido: reais(p.valorMedido),
           saldo: qtd(p.saldo),

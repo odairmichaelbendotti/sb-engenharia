@@ -5,7 +5,13 @@ import type { MedicaoDetalhe, PlanilhaOrcamento } from "../../../types/medicao";
 import { useMedicoes } from "../../store/medicoes";
 import { useUnsavedChangesGuard } from "../../hooks/useUnsavedChangesGuard";
 import { formatCurrency } from "../../utils/format-currency";
-import { formatQuantidade, parseQuantidade, sanitizeDecimalInput, toDecimalInput, valorItem } from "../../utils/decimal";
+import {
+  formatQuantidade,
+  parseQuantidade,
+  sanitizeDecimalInput,
+  toDecimalInput,
+  valorAcumuladoItem,
+} from "../../utils/decimal";
 import { cx } from "../../utils/cx";
 import { SearchInput } from "../../components/filters/SearchInput";
 import {
@@ -38,6 +44,8 @@ type Linha = {
   unidade: string;
   precoUnitario: number;
   orcado: number;
+  // Total do item (o ajustado, quando há): o item medido por inteiro vale isso
+  valorOrcado: number;
   anterior: number;
   maximo: number;
 };
@@ -97,6 +105,7 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
         unidade: l.unidade,
         precoUnitario: l.precoUnitario,
         orcado: l.orcado,
+        valorOrcado: l.valorOrcado,
         anterior: l.anterior,
         maximo: Math.max(0, Math.round((l.orcado - l.anterior) * 1000) / 1000),
       }));
@@ -108,6 +117,7 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
       unidade: i.unidade,
       precoUnitario: i.precoUnitario,
       orcado: i.quantidade,
+      valorOrcado: i.valorTotal,
       anterior: i.medido,
       maximo: Math.max(0, i.saldo),
     }));
@@ -116,7 +126,7 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
   const numero = detalhe?.numero ?? (planilha.medicoes.at(-1)?.numero ?? 0) + 1;
   const qtd = (item_id: string) => parseQuantidade(quantidades[item_id] ?? "") ?? 0;
   const valorEsta = (l: Linha) =>
-    valorItem(l.anterior + qtd(l.item_id), l.precoUnitario) - valorItem(l.anterior, l.precoUnitario);
+    Math.round((valorAcumuladoItem(l, l.anterior + qtd(l.item_id)) - valorAcumuladoItem(l, l.anterior)) * 100) / 100;
   const total = linhas.reduce((acc, l) => acc + valorEsta(l), 0);
   const acima = linhas.filter((l) => qtd(l.item_id) > l.maximo);
   const comQuantidade = linhas.filter((l) => qtd(l.item_id) > 0).length;

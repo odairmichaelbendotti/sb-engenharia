@@ -3,8 +3,8 @@ import type { ItemPlanilha } from "./medicao-calc.js";
 import { resumirPlanilha, somarQuantidades } from "./medicao-resumo.js";
 
 // Reboco: 10 m² a R$ 50,00; pintura: 4 m² a R$ 12,50
-const reboco: ItemPlanilha = { id: "i-1", descricao: "Reboco", unidade: "m²", quantidade: 10_000, precoUnitario: 5000 };
-const pintura: ItemPlanilha = { id: "i-2", descricao: "Pintura", unidade: "m²", quantidade: 4000, precoUnitario: 1250 };
+const reboco: ItemPlanilha = { id: "i-1", descricao: "Reboco", unidade: "m²", quantidade: 10_000, precoUnitario: 5000, valorTotal: null };
+const pintura: ItemPlanilha = { id: "i-2", descricao: "Pintura", unidade: "m²", quantidade: 4000, precoUnitario: 1250, valorTotal: null };
 
 const fim = new Date("2026-09-30T00:00:00Z");
 
