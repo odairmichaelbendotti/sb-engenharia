@@ -135,7 +135,7 @@ frontend/
                            colunas, foi abandonado por destoar visualmente do resto do app. Organização é
                            renderizada como badge neutro (`bg-surface-muted`, `border-border`), no mesmo
                            estilo do badge de Status do `InvoiceTable` mas sem cor semântica.
-      Medicoes.tsx       — stub vazio, sem funcionalidade
+      Medicoes/          — tela Medições (lista das OS + telas cheias de orçamento e medição, ver seção própria)
       auth/              — SignIn.tsx, SignUp.tsx, PendingApproval.tsx
       Company/           — componentes da página Empresas (SEM index.ts/barrel)
       Empenho/           — componentes da página Empenhos (COM index.ts/barrel)
@@ -163,7 +163,7 @@ Cada página principal (Empresas/Empenhos/Invoices/Obras) tem uma pasta companio
   ├─ /empresas → RequireRole(canViewAdministrativo) → Empresas
   ├─ /notasfiscais → RequireRole(canViewAdministrativo) → Invoices   {/* rota NÃO foi renomeada junto com o componente */}
   ├─ /empenhos → RequireRole(canViewAdministrativo) → Empenhos
-  ├─ /medicoes → Medicoes                                        {/* sem guard — ver "RBAC por domínio" abaixo */}
+  ├─ /medicoes → RequireRole(canViewEngenharia && !isEmpresaRestricted) → Medicoes   {/* + /medicoes/:osId/orcamento e /medicoes/:osId/medicoes/:medicaoId? */}
   └─ /obras → Obras                                              {/* sem guard — ver "RBAC por domínio" abaixo */}
 
 /signin → SignIn      (fora do RequireAuth)
@@ -282,14 +282,19 @@ Regras no backend (`backend/CLAUDE.md`, seção de mesmo nome); `pages/OrdemServ
 - **Fiscalização**: na lista de OS, texto colorido pequeno ("aguardando ciência (faltam 5 h)", "ciência vencida", "N apontamentos abertos"); no Dashboard, grupo "Ordens de serviço aguardando a empresa" em Atenção (`canTramitarOrdemServico`). Editar uma OS com tramitação avisa que mudar o conteúdo a reemite; o toast diz quando reemitiu.
 - `usePermission`: `canDarCienciaOrdemServico`, `canTramitarOrdemServico`. Datas do histórico com `formatDateTimeFull` (com ano).
 
-## Orçamento e medições da OS (2026-10-24)
+## Orçamento e medições da OS (2026-10-24; tela própria em 2026-10-26)
 
-Regras no backend (`backend/CLAUDE.md`, seção de mesmo nome). Tudo fica no modal da OS; a rota `/medicoes` continua stub e fora do menu (decisão: a medição sempre pertence a uma OS).
-- **Seção** `pages/OrdemServico/OrcamentoMedicoesSection.tsx` em `OrdemServicoView` (depois de Empenhos; não aparece quando a view recebe a OS direto, na tela de pendências da empresa). Busca `GET /ordem-servico/:id/orcamento` ao abrir e recarrega depois de cada ação. Mostra saldo a medir com barra (medido em verde, rascunho mais claro), aviso discreto quando a soma dos itens difere do valor da OS (só para quem edita), tabela panorama (orçado / medido / saldo, "Concluído") e a lista de medições com menu ⋯ (editar/visualizar, baixar PDF, fechar, reabrir só a última, excluir rascunho). Botões "Lançar/Editar orçamento" e "Nova medição" (ou "Continuar medição NN" com rascunho aberto) vêm de `permissoes` da API; o motivo do bloqueio é traduzido em `medicao-display.ts`.
-- **`OrcamentoModal.tsx`**: grade no padrão dos lotes do ContratoModal (código, descrição, unidade, quantidade com até 3 casas, preço com `maskCurrency`, total ao vivo). Item medido trava preço e unidade, não sai e tem quantidade mínima. Rodapé compara a soma com o valor da OS.
-- **`MedicaoModal.tsx`**: nova medição, rascunho (editável) ou leitura (fechada/empresa, planilha congelada). Período sugerido (dia seguinte ao fim da última fechada), "medir saldo" por item, "Medir todo o saldo", filtro Todos/Com saldo/Nesta medição, valor ao vivo, "Salvar rascunho" e "Salvar e fechar" (com `ConfirmDialog`).
-- `utils/decimal.ts`: `parseDecimal`/`toDecimalInput` (saíram do ContratoModal), `sanitizeDecimalInput`, `parseQuantidade`, `formatQuantidade` e `valorItem` (espelha o backend — mudou lá, mudar aqui). Store `store/medicoes.ts` (sem estado), tipos em `types/medicao.ts`. `normalizeUnidade` (m2 → m², UND → un) copiada em `utils/normalization/`.
-- `Input` `size="sm"` com `prefix` passou a usar prefixo menor (antes encostava no valor).
+Regras no backend (`backend/CLAUDE.md`, seção de mesmo nome). A medição continua pertencendo a uma OS, mas lançar orçamento e medir saiu do modal da OS (deixava o modal carregado) para a tela **Engenharia › Medições** (pedido do usuário, 2026-10-26). A empresa não acessa a tela (`RequireRole canViewEngenharia && !isEmpresaRestricted`, e o backend recusa o painel para EMPRESA).
+- **Lista `/medicoes`** (`pages/Medicoes/page.tsx` + `MedicoesTable.tsx`): uma linha por OS de `GET /medicao/painel` (`fetchPainel`), com a anatomia de linha padrão: obra · OS (faixa na cor do contrato), orçamento (com "difere do valor da OS"), medido (`MedidoCell`: %, barra com o rascunho mais claro, ritmo frente ao prazo), última medição e os atalhos **Orçamento** e **Medição** (com texto a partir de xl, só ícone antes; "Continuar NN" com rascunho; "Ver ..." para quem só consulta). Abas Ativas / Sem orçamento / Rascunho aberto / Medição concluída / Encerradas (`painel-display.ts`), busca, filtro empresa → contrato → empenho e `SummaryStrip` (orçado, medido, saldo, rascunhos e sem orçamento clicáveis). Clicar na linha abre a OS no `EntityViewer`.
+- **Telas cheias** (`Workspace.tsx`: `WorkspacePage`, `WorkspaceHeader` com voltar, obra · OS · empresa · contrato, tiles e abas Orçamento/Medições; `StickyFooter` fixo embaixo com totais e ações). `usePlanilha(osId)` carrega `GET /ordem-servico/:id/orcamento` (que agora traz obra, contrato, empresa e prazo da OS) e expõe `version` para os editores remontarem depois de salvar.
+  - `/medicoes/:osId/orcamento` → `OrcamentoEditor` (grade em linhas de `Input`; item medido trava preço/unidade, não sai e tem quantidade mínima; coluna Medido a partir de xl) ou `OrcamentoLeitura` (orçado/medido/saldo, para quem só consulta).
+  - `/medicoes/:osId/medicoes/:medicaoId?` → `MedicaoPage`: faixa com todas as medições + "Nova medição"; sem id abre o rascunho, senão a última, senão `nova`. Rascunho/nova em `MedicaoEditor` (período, observações, filtro Todos/Com saldo/Nesta medição, "medir saldo", "Medir todo o saldo", Salvar rascunho, Salvar e fechar, Excluir rascunho); fechada em `MedicaoLeitura` com Baixar PDF e Reabrir (só a última).
+- **Colar do Excel** (`PasteOrcamentoDialog` + `parse-pasted-budget.ts`): linhas separadas por tabulação (código, descrição, unidade, quantidade, preço; com 4 colunas não há código), números em pt-BR ou com ponto decimal, cabeçalho ignorado, prévia com o erro de cada linha, "Adicionar ao final" ou "Substituir os não medidos", limite de 500 itens. Abre pelo botão ou com Ctrl+V fora de um campo.
+- **Alterações não salvas**: `hooks/useUnsavedChangesGuard.tsx` (`useBlocker` + `beforeunload`, `ConfirmDialog` "Sair sem salvar?"); `allowNextNavigation()` libera a troca de rota logo depois de salvar.
+- **Busca de itens** nas duas grades (`matchesItemSearch`, sem acento nem maiúsculas).
+- **Modal da OS** (`OrcamentoMedicoesSection`): só o saldo a medir (barra), a lista de medições (Visualizar / Baixar PDF) e "Abrir em Medições". Para a empresa, "Visualizar" abre `MedicaoLeituraModal`. `OrcamentoModal`/`MedicaoModal` foram removidos.
+- **Execução física**: `medicao-progress.ts` (`fracaoMedida`, `fracaoPrazo`, `ritmoMedicao`: âmbar com o medido 10 p.p. atrás do prazo, vermelho com 25 p.p.). No painel da obra do Mapa (`IndicatorFields`), "% Exec. Física" (de `execucaoFisica` do `GET /obra/detail/:id`) e "Var. Físico/Financ." (medido − liquidado, em p.p.) deixaram de ser "Em breve"; Aditivo e E-PAG continuam.
+- `utils/decimal.ts`: `parseDecimal`/`toDecimalInput`, `sanitizeDecimalInput`, `parseQuantidade`, `formatQuantidade` e `valorItem` (espelha o backend — mudou lá, mudar aqui). Store `store/medicoes.ts` (sem estado), tipos em `types/medicao.ts`. O item ativo do menu também vale nas subrotas (`SidebarGroup`, prefixo).
 
 ## Saldo a liquidar em OS e Obras (2026-10-08)
 

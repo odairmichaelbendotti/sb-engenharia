@@ -15,9 +15,14 @@ type SidebarGroupProps = {
   onNavigate?: () => void;
 };
 
+// Item ativo também nas subtelas (ex.: /medicoes/:osId/orcamento continua em "Medições")
+function isItemActive(path: string, pathname: string) {
+  return pathname === path || pathname.startsWith(`${path}/`);
+}
+
 const SidebarGroup = ({ label, items, onNavigate }: SidebarGroupProps) => {
   const location = useLocation();
-  const hasActiveItem = items.some((item) => item.path === location.pathname);
+  const hasActiveItem = items.some((item) => isItemActive(item.path, location.pathname));
   const [manuallyOpen, setManuallyOpen] = useState(hasActiveItem);
   const isOpen = manuallyOpen;
 
@@ -48,7 +53,7 @@ const SidebarGroup = ({ label, items, onNavigate }: SidebarGroupProps) => {
         <div className="overflow-hidden">
           <div className="flex flex-col gap-0.5 pt-1 pb-2">
             {items.map((item) => {
-              const isActive = location.pathname === item.path;
+              const isActive = isItemActive(item.path, location.pathname);
               return (
                 <Link
                   key={item.path}

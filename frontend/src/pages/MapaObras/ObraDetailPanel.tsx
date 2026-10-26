@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   X,
   Wrench,
@@ -33,6 +33,7 @@ import {
 import { ContratoEmpenhosModal } from "./ContratoEmpenhosModal";
 import { ObraInfoModal } from "./ObraInfoModal";
 import { ObraTimeline } from "./ObraTimeline";
+import { fracaoMedida, fracaoPrazo, percent, ritmoMedicao } from "../Medicoes/medicao-progress";
 import { maskCnpj } from "../../utils/masks";
 import { cx } from "../../utils/cx";
 import { Badge, Button, IconButton, Table, TableBody, TableHead, Td, Th, Tr, type BadgeTone, TableFoot } from "../../components/ui";
@@ -482,15 +483,49 @@ function ScheduleTab({ detail }: { detail: ObraDetail }) {
   );
 }
 
-function PendingFields() {
+const RITMO_TEXT = {
+  neutral: "text-text-primary",
+  warning: "text-warning-text",
+  danger: "text-danger-text",
+} as const;
+
+// Indicadores da obra: execução física (medido ÷ orçado, comparado com o prazo decorrido) e a
+// variação físico × financeiro (medido − liquidado). Aditivo e E-PAG ainda não têm dado no sistema
+function IndicatorFields({ detail }: { detail: ObraDetail }) {
+  const { execucaoFisica, financial } = detail;
+  const fisico = execucaoFisica ? fracaoMedida(execucaoFisica.valorMedido, execucaoFisica.valorOrcado) : null;
+  const prazo = fracaoPrazo(detail.obra.dataInicio, detail.obra.dataPrevisaoTermino);
+  const ritmo = fisico !== null && prazo !== null && detail.obra.status === "EM_ANDAMENTO" ? ritmoMedicao(fisico, prazo) : null;
+  const financeiro = financial && financial.obra.valor > 0 ? financial.obra.liquidado / financial.obra.valor : null;
+  const variacao = fisico !== null && financeiro !== null ? percent(fisico) - percent(financeiro) : null;
+
+  const field = (label: string, value: ReactNode, title?: string) => (
+    <div key={label} className="flex items-center justify-between gap-1 min-w-0" title={title}>
+      <span className="text-[11px] text-text-secondary truncate">{label}</span>
+      {value}
+    </div>
+  );
+  const valor = (text: string, tone = "text-text-primary") => (
+    <span className={cx("text-[12px] font-semibold tabular-nums whitespace-nowrap", tone)}>{text}</span>
+  );
+
   return (
     <div className="rounded-xl border border-dashed border-border px-4 py-3 grid grid-cols-2 gap-x-3 gap-y-2">
-      {["Aditivo Total", "E-PAG", "% Exec. Física", "Var. Físico/Financ."].map((label) => (
-        <div key={label} className="flex items-center justify-between gap-1">
-          <span className="text-[11px] text-text-secondary truncate">{label}</span>
-          <PendingBadge />
-        </div>
-      ))}
+      {financial && field("Aditivo Total", <PendingBadge />)}
+      {financial && field("E-PAG", <PendingBadge />)}
+      {field(
+        "% Exec. Física",
+        fisico === null ? valor("—", "text-text-muted") : valor(`${percent(fisico)}%`, RITMO_TEXT[ritmo?.tone ?? "neutral"]),
+        fisico === null ? "Sem orçamento lançado nas OS desta obra" : (ritmo?.title ?? "Medido ÷ orçado (medições fechadas)"),
+      )}
+      {financial &&
+        field(
+          "Var. Físico/Financ.",
+          variacao === null ? valor("—", "text-text-muted") : valor(`${variacao > 0 ? "+" : ""}${variacao} p.p.`),
+          variacao === null
+            ? "Precisa de orçamento lançado e de valor nas OS"
+            : `${percent(fisico!)}% medido × ${percent(financeiro!)}% liquidado`,
+        )}
     </div>
   );
 }
@@ -636,7 +671,7 @@ export default function ObraDetailPanel({ obra, onClose }: { obra: Obra | null; 
                     />
                   ))}
                   <ContratoCard detail={detail} onOpenEmpenhos={() => setIsEmpenhosOpen(true)} />
-                  {financial && <PendingFields />}
+                  <IndicatorFields detail={detail} />
                 </>
               )}
               {tab === "notas-fiscais" && financial && <InvoicesTab financial={financial} />}

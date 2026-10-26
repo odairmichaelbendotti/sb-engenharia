@@ -8,6 +8,7 @@ import type { DeleteMedicaoUseCase } from "../../application/usecases/medicao/De
 import type { FecharMedicaoUseCase } from "../../application/usecases/medicao/FecharMedicaoUseCase.js";
 import type { ReabrirMedicaoUseCase } from "../../application/usecases/medicao/ReabrirMedicaoUseCase.js";
 import type { GenerateMedicaoDocumentUseCase } from "../../application/usecases/medicao/GenerateMedicaoDocumentUseCase.js";
+import type { ListPainelMedicoesUseCase } from "../../application/usecases/medicao/ListPainelMedicoesUseCase.js";
 import { DomainError } from "../../domain/errors/DomainError.js";
 
 function paramId(req: Request) {
@@ -37,7 +38,18 @@ export class MedicaoController {
     private fecharMedicao: FecharMedicaoUseCase,
     private reabrirMedicao: ReabrirMedicaoUseCase,
     private generateMedicaoDocument: GenerateMedicaoDocumentUseCase,
+    private listPainelMedicoes: ListPainelMedicoesUseCase,
   ) {}
+
+  async painel(req: Request, res: Response) {
+    try {
+      const data = await this.listPainelMedicoes.execute(req.user);
+      res.set("Cache-Control", "no-store");
+      res.status(200).json(data);
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
 
   async orcamento(req: Request, res: Response) {
     try {

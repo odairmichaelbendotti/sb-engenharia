@@ -11,6 +11,7 @@ import { DeleteMedicaoUseCase } from "../../application/usecases/medicao/DeleteM
 import { FecharMedicaoUseCase } from "../../application/usecases/medicao/FecharMedicaoUseCase.js";
 import { ReabrirMedicaoUseCase } from "../../application/usecases/medicao/ReabrirMedicaoUseCase.js";
 import { GenerateMedicaoDocumentUseCase } from "../../application/usecases/medicao/GenerateMedicaoDocumentUseCase.js";
+import { ListPainelMedicoesUseCase } from "../../application/usecases/medicao/ListPainelMedicoesUseCase.js";
 import { VerificarBloqueioCienciaUseCase } from "../../application/usecases/ordem-servico-tramitacao/VerificarBloqueioCienciaUseCase.js";
 import { MedicaoController } from "../controllers/MedicaoController.js";
 import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
@@ -34,6 +35,7 @@ const controller = new MedicaoController(
   new FecharMedicaoUseCase(repository),
   new ReabrirMedicaoUseCase(repository),
   new GenerateMedicaoDocumentUseCase(repository, new PuppeteerMedicaoGenerator()),
+  new ListPainelMedicoesUseCase(repository),
 );
 
 const token = new TokenGenerator();
@@ -42,6 +44,14 @@ const authMiddleware = new AuthMiddleware(token, userRepository);
 const requireDomainAccess = new RequireDomainAccess();
 const requireCienciaEmDia = new RequireCienciaEmDia(
   new VerificarBloqueioCienciaUseCase(new PrismaOrdemServicoTramitacaoRepository()),
+);
+
+// Tela de medições: as OS com a situação do orçamento e das medições (antes de /medicao/:id)
+MedicaoRoutes.get(
+  "/medicao/painel",
+  authMiddleware.handle,
+  requireDomainAccess.handle("engenharia", "view"),
+  (req, res) => controller.painel(req, res),
 );
 
 // Planilha, panorama e lista de medições da OS

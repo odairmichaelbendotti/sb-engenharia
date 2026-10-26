@@ -173,4 +173,6 @@ export type ObraDetail = {
   };
   // null para quem não vê o domínio administrativo (ex.: login de empresa)
   financial: ObraDetailFinancial | null;
+  // Avanço físico pelas medições fechadas das OS com orçamento (reais); null sem orçamento
+  execucaoFisica: { valorOrcado: number; valorMedido: number } | null;
 };

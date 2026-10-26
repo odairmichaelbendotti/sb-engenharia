@@ -4,6 +4,7 @@ import {
   validateOrcamentoChange,
   type OrcamentoItemInput,
 } from "../../../domain/medicao/medicao-calc.js";
+import { somarQuantidades } from "../../../domain/medicao/medicao-resumo.js";
 import {
   buildPlanilhaMedicao,
   parsePlanilhaMedicao,
@@ -16,6 +17,7 @@ import type {
   MedicaoDocumentData,
   MedicaoOsContext,
   MedicaoResumo,
+  PainelOsRow,
   PlanilhaOs,
 } from "../../../domain/repositories/IMedicaoRepository.js";
 import { Prisma } from "../../../generated/prisma/client.js";
@@ -75,12 +77,7 @@ async function loadPlanilha(tx: TransactionClient | typeof prisma, ordemServico_
 
 /** Soma por item das medições fechadas, opcionalmente só as de número menor que `antesDe`. */
 function somaFechadas(medicoes: MedicaoResumo[], antesDe = Infinity): Map<string, number> {
-  const soma = new Map<string, number>();
-  for (const medicao of medicoes) {
-    if (medicao.status !== "FECHADA" || medicao.numero >= antesDe) continue;
-    for (const linha of medicao.itens) soma.set(linha.item_id, (soma.get(linha.item_id) ?? 0) + linha.quantidade);
-  }
-  return soma;
+  return somarQuantidades(medicoes.filter((m) => m.status === "FECHADA" && m.numero < antesDe));
 }
 
 async function loadMedicaoNaTransacao(tx: TransactionClient, medicao_id: string) {
@@ -122,13 +119,36 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
           totalComBdi: true,
           valor: true,
           dataInicio: true,
+          dataPrevisaoTermino: true,
           lote: { select: { desconto: true } },
-          empenho: { select: { contrato: { select: { company_id: true } } } },
+          obra: { select: { id: true, nome: true } },
+          empenho: {
+            select: {
+              description: true,
+              contrato: {
+                select: {
+                  id: true,
+                  identificador: true,
+                  cor: true,
+                  company_id: true,
+                  company: { select: { id: true, name: true } },
+                },
+              },
+            },
+          },
         },
       });
       if (!row) return null;
       const { lote, empenho, ...os } = row;
-      return { ...os, company_id: empenho.contrato.company_id, descontoLote: lote?.desconto ?? 0 };
+      const { company, company_id, ...contrato } = empenho.contrato;
+      return {
+        ...os,
+        company_id,
+        descontoLote: lote?.desconto ?? 0,
+        descricaoEmpenho: empenho.description,
+        contrato,
+        empresa: company,
+      };
     } catch (error) {
       rethrow(error, "Error finding ordem de serviço");
     }
@@ -148,6 +168,71 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
       return await loadPlanilha(prisma, ordemServico_id);
     } catch (error) {
       rethrow(error, "Error loading the budget");
+    }
+  }
+
+  async getPlanilhas(ordemServico_ids: string[]): Promise<Map<string, PlanilhaOs>> {
+    try {
+      const planilhas = new Map<string, PlanilhaOs>(ordemServico_ids.map((id) => [id, { itens: [], medicoes: [] }]));
+      if (ordemServico_ids.length === 0) return planilhas;
+      const where = { ordemServico_id: { in: ordemServico_ids } };
+      const [itens, medicoes] = await Promise.all([
+        prisma.ordemServicoItem.findMany({
+          where,
+          orderBy: { ordem: "asc" },
+          select: { ...ITEM_SELECT, ordemServico_id: true },
+        }),
+        prisma.medicao.findMany({ where, orderBy: { numero: "asc" }, select: MEDICAO_SELECT }),
+      ]);
+      for (const { ordemServico_id, ...item } of itens) planilhas.get(ordemServico_id)?.itens.push(item);
+      for (const medicao of medicoes) planilhas.get(medicao.ordemServico_id)?.medicoes.push(medicao);
+      return planilhas;
+    } catch (error) {
+      rethrow(error, "Error loading the budgets");
+    }
+  }
+
+  async listOsDoPainel(tenant_id: string | undefined): Promise<PainelOsRow[]> {
+    try {
+      const rows = await prisma.ordemServico.findMany({
+        where: tenant_id ? { tenant_id } : {},
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          numero: true,
+          tenant_id: true,
+          status: true,
+          dataInicio: true,
+          dataPrevisaoTermino: true,
+          totalComBdi: true,
+          valor: true,
+          lote: { select: { desconto: true } },
+          obra: { select: { id: true, nome: true } },
+          empenhos: { orderBy: { createdAt: "asc" }, select: { empenho: { select: { id: true, numero: true } } } },
+          empenho: {
+            select: {
+              description: true,
+              contrato: {
+                select: { id: true, identificador: true, cor: true, company: { select: { id: true, name: true } } },
+              },
+            },
+          },
+        },
+      });
+      return rows.map(({ lote, empenho, empenhos, ...os }) => ({
+        ...os,
+        descontoLote: lote?.desconto ?? 0,
+        descricaoEmpenho: empenho.description,
+        contrato: {
+          id: empenho.contrato.id,
+          identificador: empenho.contrato.identificador,
+          cor: empenho.contrato.cor,
+        },
+        empresa: empenho.contrato.company,
+        empenhos: empenhos.map((v) => v.empenho),
+      }));
+    } catch (error) {
+      rethrow(error, "Error listing ordens de serviço for medições");
     }
   }
 

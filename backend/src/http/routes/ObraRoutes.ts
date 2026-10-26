@@ -7,6 +7,7 @@ import { ListObraOptionsForInvoiceUseCase } from "../../application/usecases/obr
 import { UpdateObraUseCase } from "../../application/usecases/obra/UpdateObraUseCase.js";
 import { UpdateObraStatusUseCase } from "../../application/usecases/obra/UpdateObraStatusUseCase.js";
 import { DeleteObraUseCase } from "../../application/usecases/obra/DeleteObraUseCase.js";
+import { PrismaMedicaoRepository } from "../../infrastructure/database/prisma/PrismaMedicaoRepository.js";
 import { GetObraDetailUseCase } from "../../application/usecases/obra/GetObraDetailUseCase.js";
 import { ListObraOptionsUseCase } from "../../application/usecases/obra/ListObraOptionsUseCase.js";
 import { ObraController } from "../controllers/ObraController.js";
@@ -28,7 +29,7 @@ const listObraOptionsForInvoiceUseCase = new ListObraOptionsForInvoiceUseCase(re
 const updateObraUseCase = new UpdateObraUseCase(repository, ordemServicoRepository);
 const updateObraStatusUseCase = new UpdateObraStatusUseCase(repository);
 const deleteObraUseCase = new DeleteObraUseCase(repository);
-const getObraDetailUseCase = new GetObraDetailUseCase(repository);
+const getObraDetailUseCase = new GetObraDetailUseCase(repository, new PrismaMedicaoRepository());
 const listObraOptionsUseCase = new ListObraOptionsUseCase(repository);
 
 const obraController = new ObraController(

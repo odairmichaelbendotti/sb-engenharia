@@ -44,8 +44,22 @@ export interface MedicaoResumo {
 }
 
 // GET /ordem-servico/:id/orcamento
+// Identificação da OS nas telas de orçamento e medição
+export interface MedicaoOsInfo {
+  id: string;
+  numero: string;
+  status: OrdemServicoStatus;
+  dataInicio: string | null;
+  dataPrevisaoTermino: string | null;
+  // Título da OS sem obra
+  descricaoEmpenho: string;
+  obra: { id: string; nome: string } | null;
+  contrato: { id: string; identificador: string; cor: string };
+  empresa: { id: string; name: string };
+}
+
 export interface PlanilhaOrcamento {
-  ordemServico: { id: string; numero: string; status: OrdemServicoStatus };
+  ordemServico: MedicaoOsInfo;
   itens: OrcamentoItem[];
   totais: { valorOrcado: number; valorMedido: number; valorSaldo: number; valorRascunho: number };
   // Valor final da OS (com BDI e desconto do lote) e a diferença da soma dos itens; nulos para quem não edita
@@ -105,4 +119,23 @@ export interface MedicaoPayload {
   periodoFim: string;
   observacao: string;
   itens: { item_id: string; quantidade: number }[];
+}
+
+// GET /medicao/painel — uma linha por OS na tela de medições (valores em reais)
+export interface PainelMedicaoItem extends MedicaoOsInfo {
+  empenhos: { id: string; numero: string }[];
+  // Valor final da OS (com BDI e desconto do lote)
+  valorOs: number;
+  itens: number;
+  valorOrcado: number;
+  // Só medições fechadas
+  valorMedido: number;
+  // Todos os itens medidos até o fim
+  completo: boolean;
+  rascunho: { id: string; numero: number; valor: number } | null;
+  ultimaFechada: { id: string; numero: number; periodoFim: string } | null;
+  // Só para quem edita
+  divergencia: { diferenca: number } | null;
+  // Edita orçamento e medições (perfil de engenharia, OS ativa da própria organização)
+  podeEditar: boolean;
 }
