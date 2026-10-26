@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FileDown, ListChecks, Plus, RotateCcw } from "lucide-react";
+import { FileDown, ListChecks, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { Link, NavLink, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 import type { MedicaoDetalhe, PlanilhaOrcamento } from "../../../types/medicao";
@@ -18,7 +18,8 @@ import { WorkspaceState } from "./WorkspaceState";
 
 const NOVA = "nova";
 
-type Acao = "reabrir" | "excluir";
+// "excluir" = rascunho; "excluirFechada" = a última medição fechada
+type Acao = "reabrir" | "excluir" | "excluirFechada";
 
 /**
  * /medicoes/:osId/medicoes/:medicaoId? — medições da OS. Sem id, abre o rascunho, senão a última
@@ -94,7 +95,7 @@ export default function MedicaoPage() {
         toast.success(`${medicaoTitulo(detalhe.numero)} reaberta`);
       } else {
         await deleteMedicao(detalhe.id);
-        toast.success("Rascunho excluído");
+        toast.success(acao === "excluir" ? "Rascunho excluído" : `${medicaoTitulo(detalhe.numero)} excluída`);
         navigate(`/medicoes/${osId}/medicoes`, { replace: true });
       }
       setAcao(null);
@@ -157,9 +158,14 @@ export default function MedicaoPage() {
             }
           >
             {resumo?.podeReabrir && (
-              <Button variant="secondary" icon={RotateCcw} onClick={() => setAcao("reabrir")}>
-                Reabrir
-              </Button>
+              <>
+                <Button variant="danger" icon={Trash2} onClick={() => setAcao("excluirFechada")}>
+                  Excluir
+                </Button>
+                <Button variant="secondary" icon={RotateCcw} onClick={() => setAcao("reabrir")}>
+                  Reabrir
+                </Button>
+              </>
             )}
             <Button icon={FileDown} loading={baixando} onClick={() => baixarPdf(detalhe)}>
               Baixar PDF
@@ -170,23 +176,27 @@ export default function MedicaoPage() {
 
       <ConfirmDialog
         open={acao !== null}
-        tone={acao === "excluir" ? "danger" : "neutral"}
+        tone={acao === "reabrir" ? "neutral" : "danger"}
         icon={acao === "reabrir" ? RotateCcw : undefined}
         title={
           detalhe
             ? acao === "reabrir"
               ? `Reabrir a ${medicaoTitulo(detalhe.numero)}?`
-              : `Excluir o rascunho da ${medicaoTitulo(detalhe.numero).toLowerCase()}?`
+              : acao === "excluirFechada"
+                ? `Excluir a ${medicaoTitulo(detalhe.numero)}?`
+                : `Excluir o rascunho da ${medicaoTitulo(detalhe.numero).toLowerCase()}?`
             : ""
         }
-        confirmLabel={acao === "reabrir" ? "Reabrir medição" : "Excluir rascunho"}
+        confirmLabel={acao === "reabrir" ? "Reabrir medição" : acao === "excluirFechada" ? "Excluir medição" : "Excluir rascunho"}
         loading={executando}
         onConfirm={executarAcao}
         onCancel={() => setAcao(null)}
       >
         {acao === "reabrir"
           ? "Ela volta a ser rascunho e sai do acumulado até ser fechada de novo. O boletim impresso antes deixa de valer."
-          : "As quantidades lançadas neste rascunho serão descartadas."}
+          : acao === "excluirFechada"
+            ? "As quantidades medidas voltam ao saldo do orçamento e o boletim impresso desta medição deixa de valer. Esta ação não pode ser desfeita."
+            : "As quantidades lançadas neste rascunho serão descartadas."}
       </ConfirmDialog>
     </WorkspacePage>
   );

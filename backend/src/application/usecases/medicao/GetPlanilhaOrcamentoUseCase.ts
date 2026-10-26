@@ -48,6 +48,7 @@ export class GetPlanilhaOrcamentoUseCase {
     const ultimaFechada = fechadas.at(-1);
     const medicoes = (daEmpresa ? fechadas : planilha.medicoes).map((m) => ({
       ...presentMedicaoResumo(m, valores.get(m.id) ?? 0),
+      // Vale para reabrir e para excluir: só a última fechada, sem rascunho aberto
       podeReabrir: editor && os.status === "ATIVO" && !rascunho && m.id === ultimaFechada?.id,
     }));
 
