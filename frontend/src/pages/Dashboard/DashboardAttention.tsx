@@ -12,7 +12,7 @@ const COLLAPSED_LIMIT = 3;
 const META_TEXT: Record<AttentionItem["tone"], string> = {
   danger: "text-danger-text font-semibold",
   warning: "text-warning-text font-semibold",
-  info: "text-info-text font-semibold",
+  active: "text-text-secondary font-semibold",
 };
 
 type DashboardAttentionProps = {
@@ -61,7 +61,7 @@ export default function DashboardAttention({ groups }: DashboardAttentionProps) 
               ? "danger"
               : group.items.some((i) => i.tone === "warning")
                 ? "warning"
-                : "info";
+                : "active";
 
             return (
               <section key={group.key} className="py-2">

@@ -289,7 +289,7 @@ function BalanceSection({ ordemServico, canFinalize }: { ordemServico: OrdemServ
   }
 
   const fill =
-    balance.kind === "over" ? "bg-danger-text" : balance.kind === "paid" ? "bg-secondary-500" : "bg-primary-500";
+    balance.kind === "over" ? "bg-danger-dot" : balance.kind === "paid" ? "bg-success-dot" : "bg-progress";
 
   return (
     <div>
@@ -316,7 +316,7 @@ function BalanceSection({ ordemServico, canFinalize }: { ordemServico: OrdemServ
           de {formatCurrency(balance.valor)}
         </p>
       </div>
-      <div className="h-2.5 mt-2.5 rounded-full bg-surface-muted overflow-hidden">
+      <div className="h-2.5 mt-2.5 rounded-full bg-progress-track overflow-hidden">
         <div className={`h-full rounded-full ${fill}`} style={{ width: `${Math.min(100, balance.percent)}%` }} />
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-text-secondary tabular-nums">

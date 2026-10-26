@@ -21,7 +21,7 @@ export const OBRA_TIPO_LABEL: Record<ObraTipo, string> = {
 
 // Status de OS, empenho e contrato usam os mesmos valores
 export const RECORD_STATUS: Record<string, { label: string; className: string }> = {
-  ATIVO: { label: "Ativo", className: "bg-info-bg text-info-text border-info-border" },
+  ATIVO: { label: "Ativo", className: "bg-neutral-100 text-text-primary border-transparent" },
   FINALIZADO: { label: "Finalizado", className: "bg-surface-muted text-text-secondary border-border" },
   CANCELADO: { label: "Cancelado", className: "bg-surface-muted text-text-muted border-border" },
 };

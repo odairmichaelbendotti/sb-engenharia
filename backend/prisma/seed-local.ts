@@ -91,7 +91,7 @@ const contrato1 = await prisma.contrato.create({
     valor: c(5441118.97),
     dataInicio: dia("2026-08-04"),
     dataFim: dia("2027-08-03"),
-    cor: "#4478b6",
+    cor: "#4f759c",
     tenant_id: tenant.id,
     company_id: aej.id,
     ePag: "67272.002300/2026-41",

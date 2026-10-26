@@ -8,66 +8,78 @@
   --text-table: 0.8125rem;
   --text-table--line-height: 1.25rem;
 
-  /* Base (neutros, sem matiz) */
+  /*
+   * Paleta "Grafite e sinal" (2026-10-26). Rampa grafite levemente fria, gerada em OKLCH
+   * (matiz 265, croma quase nulo) com passos de mesma distância visual. Estrutura e ação
+   * usam só esta rampa; cor fica para os três sinais de estado.
+   */
   --color-white: #ffffff;
-  --color-background: #f6f6f7;
+  --color-neutral-0: #fcfdff;
+  --color-neutral-25: #f8f9fb;
+  --color-neutral-50: #f5f6f8;
+  --color-neutral-100: #edeef0;
+  --color-neutral-150: #e5e6e8;
+  --color-neutral-200: #d7d9dd;
+  --color-neutral-300: #b5b7bb;
+  --color-neutral-400: #84868a;
+  --color-neutral-500: #67696c;
+  --color-neutral-600: #515256;
+  --color-neutral-700: #3e4043;
+  --color-neutral-800: #2a2b2e;
+  --color-neutral-900: #1a1c1f;
+  --color-neutral-950: #101214;
+
+  /* Base */
+  --color-background: var(--color-neutral-50);
   --color-surface: #ffffff;
-  --color-surface-muted: #f3f3f4;
-  --color-border: #e4e4e7;
-  --color-border-strong: #d1d1d6;
+  --color-surface-muted: var(--color-neutral-50);
+  --color-border: var(--color-neutral-150);
+  --color-border-strong: var(--color-neutral-200);
 
   /* Texto */
-  --color-text-primary: #18181b;
-  --color-text-secondary: #52525b;
-  --color-text-muted: #6e6e78;
-  --color-text-inverse: #fafafa;
+  --color-text-primary: var(--color-neutral-900);
+  --color-text-secondary: var(--color-neutral-600);
+  --color-text-muted: var(--color-neutral-500);
+  --color-text-inverse: var(--color-neutral-0);
 
-  /* Primária: escala grafite (cor de ação). O sistema é monocromático; cor só para significado */
-  --color-primary-50: #f4f4f5;
-  --color-primary-100: #e9e9eb;
-  --color-primary-200: #d4d4d8;
-  --color-primary-300: #a1a1aa;
-  --color-primary-400: #63636b;
-  --color-primary-500: #27272a;
-  --color-primary-600: #18181b;
-  --color-primary-700: #09090b;
+  /* Primária: apelido da rampa grafite (cor de ação: botão principal, item ativo, foco) */
+  --color-primary-50: var(--color-neutral-50);
+  --color-primary-100: var(--color-neutral-100);
+  --color-primary-200: var(--color-neutral-200);
+  --color-primary-300: var(--color-neutral-300);
+  --color-primary-400: var(--color-neutral-500);
+  --color-primary-500: var(--color-neutral-800);
+  --color-primary-600: var(--color-neutral-900);
+  --color-primary-700: var(--color-neutral-950);
 
-  /* Secundária (verde): só para significado — concluído, pago, liquidado */
-  --color-secondary-50: #edf5f1;
-  --color-secondary-100: #d2e8dd;
-  --color-secondary-200: #acd2c1;
-  --color-secondary-300: #80b79f;
-  --color-secondary-400: #599e82;
-  --color-secondary-500: #3c8567;
-  --color-secondary-600: #2c6b51;
-  --color-secondary-700: #1e503b;
+  /* Barra de progresso (liquidado, medido, prazo corrido): grafite; verde só ao quitar */
+  --color-progress: var(--color-neutral-700);
+  --color-progress-track: var(--color-neutral-150);
 
-  /* Acento (âmbar): só para significado — em andamento, atenção */
-  --color-accent-50: #fff8eb;
-  --color-accent-100: #feedc4;
-  --color-accent-200: #fcd98c;
-  --color-accent-300: #f8bf4c;
-  --color-accent-400: #eea420;
-  --color-accent-500: #d48a12;
-  --color-accent-600: #ac6c0a;
-  --color-accent-700: #824e06;
+  /*
+   * Sinais: mesma luminosidade e croma em OKLCH, muda só o matiz, para nenhum estado pesar
+   * mais que outro. Texto passa de 5:1 sobre o próprio fundo. `-dot` é o ponto do selo e
+   * barras cheias. Azul (info) não é status: fica para avisos do sistema e links.
+   */
+  --color-success-bg: #edfaf1;
+  --color-success-text: #0b7643;
+  --color-success-border: #bee2c9;
+  --color-success-dot: #0fa05c;
 
-  /* Semânticas */
-  --color-success-bg: #ecf8f3;
-  --color-success-text: #226e50;
-  --color-success-border: #aae1c7;
+  --color-warning-bg: #fef4e9;
+  --color-warning-text: #945a00;
+  --color-warning-border: #edd2b5;
+  --color-warning-dot: #be7200;
 
-  --color-warning-bg: #fff8e6;
-  --color-warning-text: #926010;
-  --color-warning-border: #f8d582;
+  --color-danger-bg: #fff2ef;
+  --color-danger-text: #9c443c;
+  --color-danger-border: #f7ccc6;
+  --color-danger-dot: #d15c53;
 
-  --color-danger-bg: #feeeec;
-  --color-danger-text: #b43228;
-  --color-danger-border: #f3b4af;
-
-  --color-info-bg: #ebf3fd;
-  --color-info-text: #2e60ac;
-  --color-info-border: #b4d2f8;
+  --color-info-bg: #edf7ff;
+  --color-info-text: #2266a4;
+  --color-info-border: #bfdbf8;
+  --color-info-dot: #2f8adc;
 
   --animate-ping-slow: ping-slow 2.6s cubic-bezier(0, 0, 0.2, 1) infinite;
   --animate-ping-slower: ping-slow 2.6s cubic-bezier(0, 0, 0.2, 1) infinite 0.9s;

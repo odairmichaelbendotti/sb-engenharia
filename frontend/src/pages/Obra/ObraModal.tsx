@@ -49,7 +49,7 @@ const TIPOS = [
 ];
 
 const STATUS_OPTIONS: SegmentOption<ObraStatus>[] = [
-  { value: "EM_ANDAMENTO", label: "Em Andamento", icon: Activity, tone: "info" },
+  { value: "EM_ANDAMENTO", label: "Em Andamento", icon: Activity, tone: "neutral" },
   { value: "CONCLUIDA", label: "Concluída", icon: CheckCircle2, tone: "success" },
   { value: "PARALISADA", label: "Paralisada", icon: PauseCircle, tone: "danger" },
   { value: "CANCELADA", label: "Cancelada", icon: XCircle, tone: "neutral" },

@@ -64,7 +64,7 @@ const EVENTO_LABEL: Record<OrdemServicoEventoTipo, string> = {
 const EVENTO_TONE: Partial<Record<OrdemServicoEventoTipo, string>> = {
   CIENTE: "text-success-text",
   PRAZO_VENCIDO: "text-danger-text",
-  CONTESTACAO: "text-info-text",
+  CONTESTACAO: "text-warning-text",
   CONTESTACAO_ACATADA: "text-success-text",
   CONTESTACAO_RECUSADA: "text-danger-text",
 };
@@ -76,7 +76,7 @@ const CONTESTACAO_LABEL: Record<ContestacaoStatus, string> = {
 };
 
 const CONTESTACAO_TONE: Record<ContestacaoStatus, BadgeTone> = {
-  ABERTA: "info",
+  ABERTA: "warning",
   ACATADA: "success",
   RECUSADA: "danger",
 };

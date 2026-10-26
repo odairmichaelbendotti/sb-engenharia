@@ -148,20 +148,20 @@ function MedicaoResumoBar({ planilha }: { planilha: PlanilhaOrcamento }) {
           de {formatCurrency(totais.valorOrcado)} orçados
         </p>
       </div>
-      <div className="h-2 rounded-full bg-surface-muted overflow-hidden flex">
-        <div className="h-full bg-secondary-500" style={{ width: `${Math.min(100, medido)}%` }} />
+      <div className="h-2 rounded-full bg-progress-track overflow-hidden flex">
+        <div className="h-full bg-progress" style={{ width: `${Math.min(100, medido)}%` }} />
         {rascunho > 0 && (
-          <div className="h-full bg-secondary-500/35" style={{ width: `${Math.min(100 - medido, rascunho)}%` }} />
+          <div className="h-full bg-progress/35" style={{ width: `${Math.min(100 - medido, rascunho)}%` }} />
         )}
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-secondary tabular-nums">
         <span className="inline-flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-sm bg-secondary-500" />
+          <span className="w-2 h-2 rounded-sm bg-progress" />
           Medido {formatCurrency(totais.valorMedido)}
         </span>
         {totais.valorRascunho > 0 && (
           <span className="inline-flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-sm bg-secondary-500/35" />
+            <span className="w-2 h-2 rounded-sm bg-progress/35" />
             Em rascunho {formatCurrency(totais.valorRascunho)}
           </span>
         )}

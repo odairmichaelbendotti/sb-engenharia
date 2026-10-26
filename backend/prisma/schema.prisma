@@ -174,7 +174,7 @@ model Contrato {
   dataInicio     DateTime
   dataFim        DateTime
   status         ContratoStatus @default(ATIVO)
-  cor            String         @default("#4478b6")
+  cor            String         @default("#4f759c")
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @default(now())
 

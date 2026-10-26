@@ -184,8 +184,8 @@ export default function DashboardPlatform({ entries }: { entries: TenantSummaryE
                     <p className="text-text-primary">{formatCurrency(entry.stats.valorExecutadoTotal)}</p>
                     {/* inline-flex: a barra segue o alinhamento da coluna */}
                     <div className="inline-flex items-center gap-2 mt-1">
-                      <div className="w-16 h-1.5 rounded-full bg-border overflow-hidden">
-                        <div className="h-full bg-accent-500" style={{ width: `${pct}%` }} />
+                      <div className="w-16 h-1.5 rounded-full bg-progress-track overflow-hidden">
+                        <div className="h-full bg-progress" style={{ width: `${pct}%` }} />
                       </div>
                       <span className="text-xs text-text-muted w-9 text-right">{pct.toFixed(0)}%</span>
                     </div>

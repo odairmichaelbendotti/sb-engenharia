@@ -34,7 +34,7 @@ export function BalanceCell({ valor, liquidado, paidLabel = "Quitada", paidHint,
 
   const label = balance.kind === "paid" || balance.kind === "over" ? "Saldo" : "A liquidar";
   const fill =
-    balance.kind === "over" ? "bg-danger-text" : balance.kind === "paid" ? "bg-success-text" : "bg-primary-500";
+    balance.kind === "over" ? "bg-danger-dot" : balance.kind === "paid" ? "bg-success-dot" : "bg-progress";
   const hint =
     balance.kind === "empty"
       ? "nenhuma nota lançada"
@@ -61,7 +61,7 @@ export function BalanceCell({ valor, liquidado, paidLabel = "Quitada", paidHint,
       ) : (
         <span className="font-semibold text-text-primary tabular-nums">{formatCurrency(balance.kind === "empty" ? valor : balance.saldo)}</span>
       )}
-      <span className="w-full h-1.25 rounded-full bg-surface-muted overflow-hidden" aria-hidden>
+      <span className="w-full h-1.25 rounded-full bg-progress-track overflow-hidden" aria-hidden>
         <span className={cx("block h-full rounded-full", fill)} style={{ width: `${Math.min(100, balance.percent)}%` }} />
       </span>
       <span className="text-[11px] text-text-muted tabular-nums truncate max-w-full">{hint}</span>

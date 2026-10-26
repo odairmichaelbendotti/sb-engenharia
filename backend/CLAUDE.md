@@ -165,6 +165,10 @@ O `deploy.sh` (raiz do repo, executável, LF garantido pelo `.gitattributes`) pa
 
 O script nunca altera o banco. Ao criar uma migration manual nova, aplicá-la no Supabase antes do deploy — o passo 6 barra o deploy se ela faltar.
 
+## Cor do contrato (paleta de 2026-10-26)
+
+`Contrato.cor` é atribuída na criação por rodízio (`CONTRATO_COLOR_PALETTE` em `PrismaContratoRepository`, posição = quantidade de contratos do tenant): oito tons discretos de mesma luminosidade da paleta "Grafite e sinal" do frontend (default da coluna `#4f759c`). Não é editável. SQL: `prisma/manual-migrations/2026-10-26-paleta-contratos.sql` — **altera** a cor de todos os contratos (só aparência) e o default; aplicar com backup da coluna, antes ou depois do deploy (aplicada e conferida só no `sb_eng_local`, diff vazio). Mudou a paleta, mudar os dois lugares.
+
 ## Schema Prisma (resumo)
 
 Models: `Tenant`, `User`, `Company`, `Empenho`, `Invoice`. Enums: `UserRole` (`PLATFORM_ADMIN`, `MASTER`, `COORDENACAO`, `ENGENHARIA`, `ADMINISTRATIVO`, `USER` — ver seção "RBAC por domínio" abaixo), `EmpenhoStatus`, `EmpenhoCategory`, `InvoiceStatus`.

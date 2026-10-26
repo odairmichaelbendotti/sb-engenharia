@@ -53,7 +53,7 @@ export function WorkspaceHeader({ planilha }: { planilha: PlanilhaOrcamento }) {
               {os.empresa.name} · {os.contrato.identificador}
             </span>
             {os.status !== "ATIVO" && (
-              <StatusPill tone="neutral" size="sm" title="Orçamento e medições ficam só para consulta">
+              <StatusPill tone="closed" size="sm" title="Orçamento e medições ficam só para consulta">
                 OS {OS_STATUS_LABEL[os.status].toLowerCase()}
               </StatusPill>
             )}

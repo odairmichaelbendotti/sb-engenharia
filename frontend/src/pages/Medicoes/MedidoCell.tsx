@@ -41,9 +41,9 @@ export function MedidoCell({ valorOrcado, valorMedido, valorRascunho, ritmo }: M
         {completo && <CheckCircle2 size={13} />}
         {completo ? "Medido" : `${percent(medido)}% medido`}
       </span>
-      <span className="mt-1 h-1.5 w-full rounded-full bg-surface-muted overflow-hidden flex" aria-hidden>
-        <span className="h-full bg-secondary-500" style={{ width: `${medido * 100}%` }} />
-        {rascunho > 0 && <span className="h-full bg-secondary-500/35" style={{ width: `${rascunho * 100}%` }} />}
+      <span className="mt-1 h-1.5 w-full rounded-full bg-progress-track overflow-hidden flex" aria-hidden>
+        <span className="h-full bg-progress" style={{ width: `${medido * 100}%` }} />
+        {rascunho > 0 && <span className="h-full bg-progress/35" style={{ width: `${rascunho * 100}%` }} />}
       </span>
       <span className="mt-0.5 text-[11px] text-text-muted tabular-nums truncate max-w-full">
         {formatCurrency(valorMedido)} de {formatCurrency(valorOrcado)}

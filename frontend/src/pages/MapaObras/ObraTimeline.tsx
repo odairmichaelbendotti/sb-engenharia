@@ -36,7 +36,7 @@ export function ObraTimeline({ detail }: { detail: ObraDetail }) {
         label: `OS ${os.numero}`,
         start: dateOnlyUtc(os.dataInicio),
         end,
-        barClassName: obra.dataConclusao || os.status === "FINALIZADO" ? "bg-secondary-500" : "bg-accent-500",
+        barClassName: obra.dataConclusao || os.status === "FINALIZADO" ? "bg-success-dot" : "bg-progress",
         ...(overdue ? { overdueUntil: today } : {}),
       },
     ];
@@ -116,7 +116,7 @@ export function ObraTimeline({ detail }: { detail: ObraDetail }) {
                 {invoiceDates.map((invoice) => (
                   <span
                     key={invoice.id}
-                    className="absolute top-1/2 w-2.5 h-2.5 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-secondary-500 border border-surface"
+                    className="absolute top-1/2 w-2.5 h-2.5 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-progress border border-surface"
                     style={{ left: `${pos(invoice.at)}%` }}
                     title={`${invoiceLabel(invoice.numero)} · ${formatDateOnly(invoice.vencimento)} · ${formatCurrency(invoice.value)}`}
                   />
