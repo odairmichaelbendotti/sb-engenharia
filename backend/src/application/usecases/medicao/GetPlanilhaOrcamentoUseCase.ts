@@ -1,5 +1,6 @@
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
 import { computePanorama, divergenciaTotal, valorFinalOs } from "../../../domain/medicao/medicao-calc.js";
+import { somarQuantidades } from "../../../domain/medicao/medicao-resumo.js";
 import type { IMedicaoRepository } from "../../../domain/repositories/IMedicaoRepository.js";
 import { loadOsComAcesso, podeEditar } from "./medicao-access.js";
 import { presentMedicaoResumo, qtd, reais, valoresDasMedicoes } from "./medicao-presenter.js";
@@ -20,16 +21,11 @@ export class GetPlanilhaOrcamentoUseCase {
 
     const fechadas = planilha.medicoes.filter((m) => m.status === "FECHADA");
     const rascunho = planilha.medicoes.find((m) => m.status === "RASCUNHO") ?? null;
-    const somar = (medicoes: typeof planilha.medicoes) => {
-      const soma = new Map<string, number>();
-      for (const m of medicoes) for (const l of m.itens) soma.set(l.item_id, (soma.get(l.item_id) ?? 0) + l.quantidade);
-      return soma;
-    };
     // A empresa não vê o rascunho: é trabalho interno da fiscalização
     const panorama = computePanorama({
       itens: planilha.itens,
-      medidoFechado: somar(fechadas),
-      rascunho: rascunho && !daEmpresa ? somar([rascunho]) : new Map(),
+      medidoFechado: somarQuantidades(fechadas),
+      rascunho: rascunho && !daEmpresa ? somarQuantidades([rascunho]) : new Map(),
     });
 
     const editor = podeEditar(user) && os.tenant_id === user.tenant_id;
@@ -61,7 +57,17 @@ export class GetPlanilhaOrcamentoUseCase {
       : os.dataInicio;
 
     return {
-      ordemServico: { id: os.id, numero: os.numero, status: os.status },
+      ordemServico: {
+        id: os.id,
+        numero: os.numero,
+        status: os.status,
+        dataInicio: os.dataInicio,
+        dataPrevisaoTermino: os.dataPrevisaoTermino,
+        descricaoEmpenho: os.descricaoEmpenho,
+        obra: os.obra,
+        contrato: os.contrato,
+        empresa: os.empresa,
+      },
       itens: planilha.itens.map((item, index) => {
         const p = panorama.itens[index]!;
         return {

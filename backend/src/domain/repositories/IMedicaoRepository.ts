@@ -19,6 +19,12 @@ export type MedicaoOsContext = {
   valor: number;
   descontoLote: number;
   dataInicio: Date | null;
+  dataPrevisaoTermino: Date | null;
+  // Identificação para as telas: obra, descrição do empenho principal, contrato e empresa
+  descricaoEmpenho: string;
+  obra: { id: string; nome: string } | null;
+  contrato: { id: string; identificador: string; cor: string };
+  empresa: { id: string; name: string };
 };
 
 export type MedicaoResumo = {
@@ -45,6 +51,25 @@ export type PlanilhaOs = {
 };
 
 export type MedicaoAutor = { id: string; nome: string };
+
+// OS da tela de medições, com o necessário para identificar a linha e filtrar por empresa → contrato → empenho
+export type PainelOsRow = {
+  id: string;
+  numero: string;
+  tenant_id: string;
+  status: OrdemServicoStatusValue;
+  dataInicio: Date | null;
+  dataPrevisaoTermino: Date | null;
+  totalComBdi: number | null;
+  valor: number;
+  descontoLote: number;
+  // Descrição do empenho principal: título da linha quando a OS ainda não tem obra
+  descricaoEmpenho: string;
+  obra: { id: string; nome: string } | null;
+  contrato: { id: string; identificador: string; cor: string };
+  empresa: { id: string; name: string };
+  empenhos: { id: string; numero: string }[];
+};
 
 export type MedicaoDadosInput = {
   periodoInicio: Date;
@@ -79,6 +104,10 @@ export interface IMedicaoRepository {
   findOsContext(ordemServico_id: string): Promise<MedicaoOsContext | null>;
   findOrdemServicoIdDaMedicao(medicao_id: string): Promise<string | null>;
   getPlanilha(ordemServico_id: string): Promise<PlanilhaOs>;
+  /** Planilhas de várias OS de uma vez (OS sem item nem medição volta vazia). */
+  getPlanilhas(ordemServico_ids: string[]): Promise<Map<string, PlanilhaOs>>;
+  /** OS do tenant (todas, se undefined) para a tela de medições. */
+  listOsDoPainel(tenant_id: string | undefined): Promise<PainelOsRow[]>;
   hasMedicaoFechada(ordemServico_id: string): Promise<boolean>;
 
   /** Grava a planilha inteira: mantém os itens com id, cria os novos e exclui os que faltam. */

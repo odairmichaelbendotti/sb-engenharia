@@ -9,6 +9,7 @@ import Empenhos from "./pages/Empenho/page";
 import Contratos from "./pages/Contrato/page";
 import OrdensServico from "./pages/OrdemServico/page";
 import Medicoes from "./pages/Medicoes/page";
+import { MedicaoPage, OrcamentoPage } from "./pages/Medicoes";
 import Obras from "./pages/Obra/page";
 import MapaObras from "./pages/MapaObras/page";
 import PendenciasCiencia from "./pages/Pendencias/page";
@@ -83,8 +84,29 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        // Orçamento e medições em tela cheia: trabalho da fiscalização, a empresa vê só pelo modal da OS
         path: "/medicoes",
-        element: <Medicoes />,
+        element: (
+          <RequireRole allow={(p) => p.canViewEngenharia && !p.isEmpresaRestricted}>
+            <Medicoes />
+          </RequireRole>
+        ),
+      },
+      {
+        path: "/medicoes/:osId/orcamento",
+        element: (
+          <RequireRole allow={(p) => p.canViewEngenharia && !p.isEmpresaRestricted}>
+            <OrcamentoPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: "/medicoes/:osId/medicoes/:medicaoId?",
+        element: (
+          <RequireRole allow={(p) => p.canViewEngenharia && !p.isEmpresaRestricted}>
+            <MedicaoPage />
+          </RequireRole>
+        ),
       },
       {
         path: "/obras",

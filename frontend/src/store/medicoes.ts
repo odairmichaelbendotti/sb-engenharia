@@ -3,13 +3,15 @@ import type {
   MedicaoDetalhe,
   MedicaoPayload,
   OrcamentoItemPayload,
+  PainelMedicaoItem,
   PlanilhaOrcamento,
 } from "../../types/medicao";
 import { defaultFetch } from "../services/api";
 
-// Orçamento e medições da OS. Sem estado: cada tela guarda o que buscou (a seção da OS recarrega
-// depois de cada ação)
+// Orçamento e medições da OS. Sem estado: cada tela guarda o que buscou e recarrega depois de
+// cada ação
 type MedicoesState = {
+  fetchPainel: () => Promise<PainelMedicaoItem[]>;
   fetchPlanilha: (ordemServicoId: string) => Promise<PlanilhaOrcamento>;
   saveOrcamento: (ordemServicoId: string, itens: OrcamentoItemPayload[]) => Promise<void>;
   fetchMedicao: (medicaoId: string) => Promise<MedicaoDetalhe>;
@@ -38,6 +40,8 @@ async function send<T>(
 }
 
 export const useMedicoes = create<MedicoesState>(() => ({
+  fetchPainel: () => send("/medicao/painel", "GET", undefined, "Erro ao carregar as medições"),
+
   fetchPlanilha: (ordemServicoId) =>
     send(`/ordem-servico/${ordemServicoId}/orcamento`, "GET", undefined, "Erro ao carregar o orçamento da OS"),
 
