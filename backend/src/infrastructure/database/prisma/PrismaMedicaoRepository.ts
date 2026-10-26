@@ -270,7 +270,12 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
           await tx.ordemServicoItem.deleteMany({ where: { id: { in: removidos } } });
         }
 
+        // Uma ida ao banco por item estourava o tempo da transação em planilhas grandes (banco remoto):
+        // os novos entram num createMany só e os existentes só são gravados se algo mudou
+        const atuais = new Map(planilha.itens.map((i) => [i.id, i]));
         const now = new Date();
+        const novos = [];
+        const alterados = [];
         for (const [index, item] of itens.entries()) {
           const data = {
             ordem: index + 1,
@@ -281,13 +286,24 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
             precoUnitario: item.precoUnitario,
             valorTotal: item.valorTotal,
           };
-          if (item.id) {
-            await tx.ordemServicoItem.update({ where: { id: item.id }, data: { ...data, updatedAt: now } });
-          } else {
-            await tx.ordemServicoItem.create({ data: { ...data, ordemServico_id } });
+          if (!item.id) {
+            novos.push({ ...data, ordemServico_id });
+            continue;
           }
+          const atual = atuais.get(item.id);
+          const mudou =
+            !atual ||
+            (Object.keys(data) as (keyof typeof data)[]).some((campo) => atual[campo] !== data[campo]);
+          if (mudou) alterados.push({ id: item.id, data });
         }
-      });
+
+        for (const { id, data } of alterados) {
+          await tx.ordemServicoItem.update({ where: { id }, data: { ...data, updatedAt: now } });
+        }
+        if (novos.length > 0) {
+          await tx.ordemServicoItem.createMany({ data: novos });
+        }
+      }, { timeout: 30_000 });
     } catch (error) {
       rethrow(error, "Error saving the budget");
     }
