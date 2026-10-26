@@ -6,24 +6,29 @@ import type { IMedicaoRepository } from "../../../domain/repositories/IMedicaoRe
 import { podeEditar } from "./medicao-access.js";
 import { reais } from "./medicao-presenter.js";
 
-// Tela de medições: cada OS com a situação do orçamento e das medições. Trabalho da fiscalização,
-// então a EMPRESA fica de fora (ela vê as medições fechadas no modal da OS)
+// Tela de medições: cada OS com a situação do orçamento e das medições. A EMPRESA só consulta as OS
+// dos próprios contratos e não vê o rascunho (trabalho interno da fiscalização)
 export class ListPainelMedicoesUseCase {
   constructor(private repository: IMedicaoRepository) {}
 
   async execute(user: AuthenticatedUser) {
-    if (user.role === "EMPRESA") {
-      throw new DomainError("You are not authorized to access the medições panel");
+    const daEmpresa = user.role === "EMPRESA";
+    if (daEmpresa && !user.company_id) {
+      throw new DomainError("This user is not linked to a company");
     }
 
-    const ordensServico = await this.repository.listOsDoPainel(
-      user.role === "PLATFORM_ADMIN" ? undefined : user.tenant_id,
-    );
+    const ordensServico = await this.repository.listOsDoPainel({
+      tenant_id: user.role === "PLATFORM_ADMIN" ? undefined : user.tenant_id,
+      company_id: daEmpresa ? user.company_id! : undefined,
+    });
     const planilhas = await this.repository.getPlanilhas(ordensServico.map((os) => os.id));
     const editor = podeEditar(user);
 
     return ordensServico.map((os) => {
-      const resumo = resumirPlanilha(planilhas.get(os.id) ?? { itens: [], medicoes: [] });
+      const planilha = planilhas.get(os.id) ?? { itens: [], medicoes: [] };
+      const resumo = resumirPlanilha(
+        daEmpresa ? { ...planilha, medicoes: planilha.medicoes.filter((m) => m.status === "FECHADA") } : planilha,
+      );
       const valorOs = valorFinalOs(os);
       const podeEditarOs = editor && os.tenant_id === user.tenant_id && os.status === "ATIVO";
       const divergencia = editor && resumo.itens > 0 ? divergenciaTotal(resumo.valorOrcado, valorOs) : null;

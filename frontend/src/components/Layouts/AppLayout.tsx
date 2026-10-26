@@ -5,7 +5,7 @@ import Sidebar from "../Sidebar/Sidebar";
 import MobileSidebar from "../Sidebar/MobileSidebar";
 import { useUser } from "../../store/user";
 import { useTramitacao } from "../../store/tramitacao";
-import { EMPRESA_PATHS } from "../Sidebar/empresa-items";
+import { isEmpresaPath } from "../Sidebar/empresa-items";
 import { CIENCIA_PENDENTE_EVENT } from "../../services/api";
 import PendenciasCiencia from "../../pages/Pendencias/page";
 import { describePrazoCiencia } from "../../pages/OrdemServico/ordem-servico-ciencia";
@@ -35,7 +35,7 @@ const AppLayout = () => {
   }, [isEmpresa, fetchPendencias]);
 
   // Empresa só acessa as telas do próprio menu (somente leitura); o resto volta ao mapa
-  if (isEmpresa && !EMPRESA_PATHS.includes(location.pathname)) {
+  if (isEmpresa && !isEmpresaPath(location.pathname)) {
     return <Navigate to={EMPRESA_HOME} replace />;
   }
 
