@@ -3,20 +3,23 @@ import {
   computeLinhasMedicao,
   computePanorama,
   divergenciaTotal,
+  folgaValorTotal,
   fromMilesimos,
   toMilesimos,
   validateMedicaoQuantidades,
   validateOrcamentoChange,
   valorFinalOs,
+  valorAcumuladoItem,
   valorItem,
+  valorOrcadoItem,
   type ItemPlanilha,
   type OrcamentoItemInput,
 } from "./medicao-calc.js";
 
 // Reboco: 10 m² a R$ 50,00
-const reboco: ItemPlanilha = { id: "i-1", descricao: "Reboco", unidade: "m²", quantidade: 10_000, precoUnitario: 5000 };
+const reboco: ItemPlanilha = { id: "i-1", descricao: "Reboco", unidade: "m²", quantidade: 10_000, precoUnitario: 5000, valorTotal: null };
 // Pintura: 3,333 m² a R$ 12,34 (valores que não fecham redondo)
-const pintura: ItemPlanilha = { id: "i-2", descricao: "Pintura", unidade: "m²", quantidade: 3333, precoUnitario: 1234 };
+const pintura: ItemPlanilha = { id: "i-2", descricao: "Pintura", unidade: "m²", quantidade: 3333, precoUnitario: 1234, valorTotal: null };
 
 const qtd = (entries: [string, number][] = []) => new Map(entries);
 
@@ -109,6 +112,55 @@ describe("computeLinhasMedicao", () => {
   });
 });
 
+describe("total ajustado", () => {
+  // Pintura com o total da planilha de referência truncado: R$ 41,12 em vez de R$ 41,13
+  const truncado: ItemPlanilha = { ...pintura, valorTotal: 4112 };
+
+  it("folga de meio centavo por unidade mais um centavo", () => {
+    expect(folgaValorTotal(1000)).toBe(2);
+    expect(folgaValorTotal(3333)).toBe(3);
+    expect(folgaValorTotal(100_000)).toBe(51);
+  });
+
+  it("vale como orçado e como acumulado do item medido por inteiro", () => {
+    expect(valorOrcadoItem(truncado)).toBe(4112);
+    expect(valorOrcadoItem(pintura)).toBe(4113);
+    expect(valorAcumuladoItem(truncado, 3333)).toBe(4112);
+    // Parcial segue quantidade × preço, limitado ao total
+    expect(valorAcumuladoItem(truncado, 1111)).toBe(valorItem(1111, 1234));
+    expect(valorAcumuladoItem({ ...pintura, valorTotal: 1000 }, 1111)).toBe(1000);
+  });
+
+  it("a soma das medições bate com o total ajustado, para menos e para mais", () => {
+    for (const valorTotal of [4111, 4115]) {
+      const item: ItemPlanilha = { ...pintura, valorTotal };
+      let anterior = 0;
+      let soma = 0;
+      for (const esta of [1111, 1111, 1111]) {
+        const { linhas } = computeLinhasMedicao({
+          itens: [item],
+          anterior: qtd([["i-2", anterior]]),
+          esta: qtd([["i-2", esta]]),
+        });
+        expect(linhas[0]!.valorEsta).toBeGreaterThanOrEqual(0);
+        soma += linhas[0]!.valorEsta;
+        anterior += esta;
+      }
+      expect(soma).toBe(valorTotal);
+    }
+  });
+
+  it("o panorama zera o saldo em valor quando o item é medido por inteiro", () => {
+    const { itens, totais } = computePanorama({
+      itens: [truncado],
+      medidoFechado: qtd([["i-2", 3333]]),
+      rascunho: qtd(),
+    });
+    expect(itens[0]).toMatchObject({ valorOrcado: 4112, valorMedido: 4112, valorSaldo: 0 });
+    expect(totais.valorOrcado).toBe(4112);
+  });
+});
+
 describe("validateMedicaoQuantidades", () => {
   const base = { itens: [reboco, pintura], medidoFechado: qtd([["i-1", 3000]]) };
 
@@ -156,6 +208,7 @@ describe("validateOrcamentoChange", () => {
     unidade: item.unidade,
     quantidade: item.quantidade,
     precoUnitario: item.precoUnitario,
+    valorTotal: item.valorTotal,
     ...overrides,
   });
   const medido = qtd([["i-1", 3000]]);
@@ -166,7 +219,7 @@ describe("validateOrcamentoChange", () => {
     expect(() =>
       run([
         input(reboco, { quantidade: 12_000, descricao: "Reboco interno" }),
-        { codigo: "87529", descricao: "Chapisco", unidade: "m²", quantidade: 5000, precoUnitario: 800 },
+        { codigo: "87529", descricao: "Chapisco", unidade: "m²", quantidade: 5000, precoUnitario: 800, valorTotal: null },
       ]),
     ).not.toThrow();
   });
@@ -183,13 +236,31 @@ describe("validateOrcamentoChange", () => {
   });
 
   it("valida os campos de cada item", () => {
-    const novo = { codigo: null, descricao: "X", unidade: "un", quantidade: 1000, precoUnitario: 100 };
+    const novo = { codigo: null, descricao: "X", unidade: "un", quantidade: 1000, precoUnitario: 100, valorTotal: null };
     expect(() => run([input(reboco), { ...novo, descricao: "" }])).toThrow(/Item 2: descrição is required/);
     expect(() => run([input(reboco), { ...novo, unidade: "" }])).toThrow(/unidade is required/);
     expect(() => run([input(reboco), { ...novo, quantidade: 0 }])).toThrow(/quantidade/);
     expect(() => run([input(reboco), { ...novo, precoUnitario: -1 }])).toThrow(/preço/);
     expect(() => run([input(reboco), input(reboco)])).toThrow(/sent twice/);
     expect(() => run([input(reboco), { ...novo, id: "outro" }])).toThrow(/not found/);
+  });
+
+  it("aceita total ajustado dentro da folga e recusa fora dela", () => {
+    // Reboco: 10 m² a R$ 50,00 = R$ 500,00; folga de 5 + 1 centavos
+    expect(() => run([input(reboco, { valorTotal: 49_994 }), input(pintura)])).not.toThrow();
+    expect(() => run([input(reboco, { valorTotal: 50_006 }), input(pintura)])).not.toThrow();
+    expect(() => run([input(reboco, { valorTotal: 50_007 }), input(pintura)])).toThrow(/too far/);
+    expect(() => run([input(reboco, { valorTotal: -1 }), input(pintura)])).toThrow(/valor total is invalid/);
+  });
+
+  it("recusa ajuste que muda o valor já medido", () => {
+    // Pintura medida por inteiro: o medido vale o total, então o total não muda mais
+    const inteiro = qtd([["i-2", pintura.quantidade]]);
+    const runInteiro = (novos: OrcamentoItemInput[]) =>
+      validateOrcamentoChange({ atuais: [pintura], novos, medidoFechado: inteiro });
+    expect(() => runInteiro([input(pintura, { valorTotal: 4112 })])).toThrow(/value already measured/);
+    // Reboco medido em parte (3 m² = R$ 150,00): ajustar o total não mexe nesse valor
+    expect(() => run([input(reboco, { valorTotal: 49_999 }), input(pintura)])).not.toThrow();
   });
 
   it("permite remover item que só tem quantidade em rascunho", () => {

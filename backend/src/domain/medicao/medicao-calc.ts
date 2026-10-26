@@ -36,7 +36,36 @@ export type ItemPlanilha = {
   unidade: string;
   quantidade: number;
   precoUnitario: number;
+  // Total digitado para bater com a planilha de referência; nulo = quantidade × preço
+  valorTotal: number | null;
 };
+
+type ValoresItem = Pick<ItemPlanilha, "quantidade" | "precoUnitario" | "valorTotal">;
+
+/**
+ * Maior diferença aceita entre o total ajustado e quantidade × preço, em centavos: meio centavo
+ * por unidade (preço com casas escondidas, ex. BDI × desconto) mais um centavo (total truncado).
+ */
+export function folgaValorTotal(quantidadeMil: number): number {
+  return Math.ceil(quantidadeMil / (2 * QTD_ESCALA)) + 1;
+}
+
+/** Valor orçado do item: o total ajustado, ou quantidade × preço. */
+export function valorOrcadoItem(item: ValoresItem): number {
+  return item.valorTotal ?? valorItem(item.quantidade, item.precoUnitario);
+}
+
+/**
+ * Valor de uma quantidade acumulada do item. Com total ajustado, o parcial segue quantidade × preço
+ * (limitado ao total) e o item medido por inteiro vale o total: a última medição absorve a diferença.
+ */
+export function valorAcumuladoItem(item: ValoresItem, quantidadeMil: number): number {
+  const calculado = valorItem(quantidadeMil, item.precoUnitario);
+  if (item.valorTotal === null) return calculado;
+  if (quantidadeMil < item.quantidade) return Math.min(calculado, item.valorTotal);
+  // Acima do orçado (rascunho lançado antes de o orçamento diminuir) soma o excedente pelo preço
+  return item.valorTotal + calculado - valorItem(item.quantidade, item.precoUnitario);
+}
 
 // Quantidade por item (milésimos)
 export type QuantidadesPorItem = ReadonlyMap<string, number>;
@@ -80,8 +109,8 @@ export function computePanorama({
   const linhas = itens.map((item): PanoramaItem => {
     const medido = medidoFechado.get(item.id) ?? 0;
     const emRascunho = rascunho.get(item.id) ?? 0;
-    const valorOrcado = valorItem(item.quantidade, item.precoUnitario);
-    const valorMedido = valorItem(medido, item.precoUnitario);
+    const valorOrcado = valorOrcadoItem(item);
+    const valorMedido = valorAcumuladoItem(item, medido);
     const saldo = item.quantidade - medido;
     return {
       item_id: item.id,
@@ -99,11 +128,10 @@ export function computePanorama({
 
   const totais = linhas.reduce<PanoramaTotais>(
     (acc, l, i) => {
-      const preco = itens[i]!.precoUnitario;
       acc.valorOrcado += l.valorOrcado;
       acc.valorMedido += l.valorMedido;
       acc.valorSaldo += l.valorSaldo;
-      acc.valorRascunho += valorItem(l.medido + l.rascunho, preco) - l.valorMedido;
+      acc.valorRascunho += valorAcumuladoItem(itens[i]!, l.medido + l.rascunho) - l.valorMedido;
       return acc;
     },
     { valorOrcado: 0, valorMedido: 0, valorSaldo: 0, valorRascunho: 0 },
@@ -149,9 +177,9 @@ export function computeLinhasMedicao({
     const qAnterior = anterior.get(item.id) ?? 0;
     const qEsta = esta.get(item.id) ?? 0;
     const acumulado = qAnterior + qEsta;
-    const valorOrcado = valorItem(item.quantidade, item.precoUnitario);
-    const valorAnterior = valorItem(qAnterior, item.precoUnitario);
-    const valorAcumulado = valorItem(acumulado, item.precoUnitario);
+    const valorOrcado = valorOrcadoItem(item);
+    const valorAnterior = valorAcumuladoItem(item, qAnterior);
+    const valorAcumulado = valorAcumuladoItem(item, acumulado);
     return {
       item_id: item.id,
       orcado: item.quantidade,
@@ -230,11 +258,15 @@ export type OrcamentoItemInput = {
   unidade: string;
   quantidade: number;
   precoUnitario: number;
+  // Total ajustado; nulo = quantidade × preço
+  valorTotal: number | null;
 };
 
 /**
  * Confere a planilha nova contra a atual e o que já foi medido em medições fechadas:
- * item medido não sai, não fica abaixo do medido e não muda de preço nem de unidade.
+ * item medido não sai, não fica abaixo do medido, não muda de preço nem de unidade e o total
+ * ajustado não altera o valor já medido.
+ * O total ajustado só pode diferir de quantidade × preço dentro da folga (`folgaValorTotal`).
  * Itens só com quantidade em rascunho mudam à vontade (o rascunho é revalidado ao fechar).
  */
 export function validateOrcamentoChange({
@@ -271,6 +303,15 @@ export function validateOrcamentoChange({
     if (!Number.isInteger(novo.precoUnitario) || novo.precoUnitario < 0 || novo.precoUnitario > INT_MAX) {
       throw new DomainError(`${pos}: preço unitário is invalid`);
     }
+    if (novo.valorTotal !== null) {
+      if (!Number.isInteger(novo.valorTotal) || novo.valorTotal < 0 || novo.valorTotal > INT_MAX) {
+        throw new DomainError(`${pos}: valor total is invalid`);
+      }
+      const diferenca = Math.abs(novo.valorTotal - valorItem(novo.quantidade, novo.precoUnitario));
+      if (diferenca > folgaValorTotal(novo.quantidade)) {
+        throw new DomainError(`${pos}: valor total is too far from quantidade × preço unitário`);
+      }
+    }
 
     if (novo.id === undefined) return;
     const atual = atuaisPorId.get(novo.id);
@@ -287,6 +328,10 @@ export function validateOrcamentoChange({
     }
     if (novo.precoUnitario !== atual.precoUnitario) {
       throw new DomainError(`${pos}: preço unitário of a measured item cannot change`);
+    }
+    // O total ajustado pode mudar só se não mexer no valor já medido (ex.: item medido por inteiro)
+    if (valorAcumuladoItem(novo, medido) !== valorAcumuladoItem(atual, medido)) {
+      throw new DomainError(`${pos}: valor total would change the value already measured`);
     }
     if (novo.unidade !== atual.unidade) {
       throw new DomainError(`${pos}: unidade of a measured item cannot change`);

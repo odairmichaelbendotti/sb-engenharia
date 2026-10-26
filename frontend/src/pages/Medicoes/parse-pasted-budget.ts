@@ -1,3 +1,5 @@
+import { folgaValorTotal, valorItem } from "../../utils/decimal";
+import { formatCurrency } from "../../utils/format-currency";
 import { normalizeCode, normalizeFreeText, normalizeUnidade } from "../../utils/normalization/text-normalizers";
 
 // Limites do item da planilha (espelham backend/src/domain/medicao/medicao-calc.ts)
@@ -12,6 +14,8 @@ export type PastedItem = {
   unidade: string;
   quantidade: number;
   precoUnitario: number;
+  // Total da planilha quando difere de quantidade × preço (truncamento, preço com mais casas)
+  valorTotal: number | null;
 };
 
 export type PastedLine = { linha: number; item: PastedItem | null; erro: string | null; texto: string };
@@ -34,12 +38,12 @@ export function parsePastedNumber(raw: string): number | null {
 
 /**
  * Colunas aceitas, na ordem da planilha SINAPI: código, descrição, unidade, quantidade, preço
- * unitário (colunas a mais, como o total, são ignoradas). Com só quatro colunas, não há código.
+ * unitário e total (opcional; colunas depois dele são ignoradas). Com só quatro colunas, não há código.
  */
 function splitColumns(cells: string[]) {
-  const [a = "", b = "", c = "", d = "", e = ""] = cells;
-  if (cells.length === 4) return { codigo: "", descricao: a, unidade: b, quantidade: c, preco: d };
-  return { codigo: a, descricao: b, unidade: c, quantidade: d, preco: e };
+  const [a = "", b = "", c = "", d = "", e = "", f = ""] = cells;
+  if (cells.length === 4) return { codigo: "", descricao: a, unidade: b, quantidade: c, preco: d, total: "" };
+  return { codigo: a, descricao: b, unidade: c, quantidade: d, preco: e, total: f };
 }
 
 function parseLine(cells: string[], linha: number, texto: string): PastedLine {
@@ -70,6 +74,20 @@ function parseLine(cells: string[], linha: number, texto: string): PastedLine {
                 : null;
 
   if (erro) return { linha, item: null, erro, texto };
+  const qtd = Math.round(quantidade! * 1000) / 1000;
+  const precoUnitario = Math.round(preco! * 100) / 100;
+  // Coluna do total: o que não for número é ignorado
+  const totalColado = col.total ? parsePastedNumber(col.total) : null;
+  const total = totalColado === null ? null : Math.round(totalColado * 100) / 100;
+  const calculado = valorItem(qtd, precoUnitario);
+  if (total !== null && Math.abs(total - calculado) > folgaValorTotal(qtd) + 1e-9) {
+    return {
+      linha,
+      item: null,
+      erro: `Total ${formatCurrency(total)} não bate com quantidade × preço (${formatCurrency(calculado)})`,
+      texto,
+    };
+  }
   return {
     linha,
     erro: null,
@@ -78,8 +96,9 @@ function parseLine(cells: string[], linha: number, texto: string): PastedLine {
       codigo,
       descricao,
       unidade,
-      quantidade: Math.round(quantidade! * 1000) / 1000,
-      precoUnitario: Math.round(preco! * 100) / 100,
+      quantidade: qtd,
+      precoUnitario,
+      valorTotal: total === null || total === calculado ? null : total,
     },
   };
 }

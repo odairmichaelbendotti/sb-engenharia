@@ -39,3 +39,28 @@ export function valorItem(quantidade: number, precoUnitario: number) {
   const produto = BigInt(Math.round(quantidade * 1000)) * BigInt(Math.round(precoUnitario * 100));
   return Number((produto + 500n) / 1000n) / 100;
 }
+
+/**
+ * Maior diferença aceita entre o total ajustado e quantidade × preço, em reais: meio centavo por
+ * unidade (preço com casas escondidas) mais um centavo (total truncado). Espelha `folgaValorTotal`
+ * de backend/src/domain/medicao/medicao-calc.ts.
+ */
+export function folgaValorTotal(quantidade: number) {
+  return (Math.ceil(Math.round(quantidade * 1000) / 2000) + 1) / 100;
+}
+
+/**
+ * Valor em reais de uma quantidade acumulada de um item (espelha `valorAcumuladoItem` do backend):
+ * o parcial é quantidade × preço limitado ao total do item, e o item medido por inteiro vale o
+ * total (que pode ser o ajustado). Sem ajuste, o total é o próprio quantidade × preço e dá no mesmo.
+ */
+export function valorAcumuladoItem(
+  item: { orcado: number; precoUnitario: number; valorOrcado: number },
+  quantidade: number,
+) {
+  const calculado = valorItem(quantidade, item.precoUnitario);
+  const mil = Math.round(quantidade * 1000);
+  const orcadoMil = Math.round(item.orcado * 1000);
+  if (mil < orcadoMil) return Math.min(calculado, item.valorOrcado);
+  return Math.round((item.valorOrcado + calculado - valorItem(item.orcado, item.precoUnitario)) * 100) / 100;
+}
