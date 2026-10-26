@@ -95,6 +95,17 @@ function assertRascunho(medicao: MedicaoResumo) {
   if (medicao.status !== "RASCUNHO") throw new DomainError("Only a draft medição can be changed");
 }
 
+// Reabrir e excluir uma fechada: só a última da OS e sem rascunho aberto (as seguintes nunca mudam)
+function assertUltimaFechada(planilha: PlanilhaOs, medicao: MedicaoResumo, acao: "reopened" | "deleted") {
+  if (medicao.status !== "FECHADA") throw new DomainError(`Only a closed medição can be ${acao}`);
+  if (planilha.medicoes.some((m) => m.status === "RASCUNHO")) {
+    throw new DomainError(`Finish or delete the draft medição before this one can be ${acao}`);
+  }
+  if (planilha.medicoes.at(-1)?.id !== medicao.id) {
+    throw new DomainError(`Only the last closed medição can be ${acao}`);
+  }
+}
+
 function validarDados(planilha: PlanilhaOs, dados: MedicaoDadosInput) {
   validateMedicaoQuantidades({
     itens: planilha.itens,
@@ -345,8 +356,22 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
   async deleteMedicao(medicao_id: string) {
     try {
       await prisma.$transaction(async (tx) => {
-        const { atual } = await loadMedicaoNaTransacao(tx, medicao_id);
-        assertRascunho(atual);
+        const { planilha, atual } = await loadMedicaoNaTransacao(tx, medicao_id);
+        if (atual.status === "FECHADA") {
+          assertUltimaFechada(planilha, atual, "deleted");
+          // O gatilho do banco barra excluir a fechada, mas aceita a volta para rascunho
+          await tx.medicao.update({
+            where: { id: medicao_id },
+            data: {
+              status: "RASCUNHO",
+              fechadaEm: null,
+              fechadaPor_id: null,
+              fechadaPorNome: null,
+              planilhaFechamento: Prisma.DbNull,
+            },
+          });
+        }
+        // As quantidades saem com as linhas (cascata) e voltam ao saldo do orçamento
         await tx.medicao.delete({ where: { id: medicao_id } });
       });
     } catch (error) {
@@ -402,13 +427,7 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
     try {
       await prisma.$transaction(async (tx) => {
         const { planilha, atual } = await loadMedicaoNaTransacao(tx, medicao_id);
-        if (atual.status !== "FECHADA") throw new DomainError("Only a closed medição can be reopened");
-        if (planilha.medicoes.some((m) => m.status === "RASCUNHO")) {
-          throw new DomainError("Finish or delete the draft medição before reopening another one");
-        }
-        if (planilha.medicoes.at(-1)?.id !== atual.id) {
-          throw new DomainError("Only the last closed medição can be reopened");
-        }
+        assertUltimaFechada(planilha, atual, "reopened");
         await tx.medicao.update({
           where: { id: medicao_id },
           data: {

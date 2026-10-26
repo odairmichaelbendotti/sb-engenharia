@@ -2,7 +2,7 @@ import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
 import type { IMedicaoRepository } from "../../../domain/repositories/IMedicaoRepository.js";
 import { assertPodeEditar, loadOsDaMedicao } from "./medicao-access.js";
 
-// Só o rascunho é excluído; a fechada precisa ser reaberta antes
+// Exclui o rascunho ou a última medição fechada (as quantidades voltam ao saldo do orçamento)
 export class DeleteMedicaoUseCase {
   constructor(private repository: IMedicaoRepository) {}
 
