@@ -35,7 +35,7 @@ import {
 type Status = "ATIVO" | "FINALIZADO" | "CANCELADO";
 
 const STATUS_OPTIONS: SegmentOption<Status>[] = [
-  { value: "ATIVO", label: "Ativo", icon: Activity, tone: "info" },
+  { value: "ATIVO", label: "Ativo", icon: Activity, tone: "neutral" },
   { value: "FINALIZADO", label: "Finalizado", icon: CheckCircle2, tone: "neutral" },
   { value: "CANCELADO", label: "Cancelado", icon: XCircle, tone: "neutral" },
 ];
@@ -171,12 +171,12 @@ export default function DesignSystem() {
 
         <Block title="Selos de status (StatusPill)">
           <div className="flex flex-wrap gap-2">
-            <StatusPill tone="info">Ativa</StatusPill>
+            <StatusPill tone="active">Ativa</StatusPill>
             <StatusPill tone="warning">Aguardando ciência</StatusPill>
             <StatusPill tone="danger">Vencida</StatusPill>
             <StatusPill tone="success">Paga</StatusPill>
-            <StatusPill tone="neutral">Cancelada</StatusPill>
-            <StatusPill tone="info" size="sm">
+            <StatusPill tone="closed">Cancelada</StatusPill>
+            <StatusPill tone="active" size="sm">
               sm
             </StatusPill>
           </div>
@@ -204,7 +204,7 @@ export default function DesignSystem() {
               </TableHead>
               <TableBody>
                 <Tr onOpen={() => setModalOpen(true)}>
-                  <Td accent="#1f5f7a">
+                  <Td accent="#357d8d">
                     <p className="font-semibold text-text-primary truncate">Reforma da cobertura do hangar 3</p>
                     <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] text-text-muted">
                       <CodeTag>BAFL-0412</CodeTag>
@@ -249,7 +249,7 @@ export default function DesignSystem() {
           </StatTiles>
           <RelationGrid>
             <RelationCard icon={Building2} label="Empresa" title="Construtora Horizonte" hint="12.345.678/0001-90" onClick={() => {}} />
-            <RelationCard icon={Layers2} label="Empenho" title="2026NE000318" color="#1f5f7a" hint="a liquidar R$ 96.300,00" onClick={() => {}} />
+            <RelationCard icon={Layers2} label="Empenho" title="2026NE000318" color="#357d8d" hint="a liquidar R$ 96.300,00" onClick={() => {}} />
           </RelationGrid>
           <Button variant="danger" icon={Trash2} onClick={() => setConfirmOpen(true)}>
             Abrir diálogo de confirmação

@@ -12,7 +12,7 @@ export { SegmentedControl, type SegmentOption, type SegmentTone } from "./Segmen
 export { Pagination } from "./Pagination";
 export { Badge, type BadgeTone } from "./Badge";
 export { Table, TableHead, TableBody, TableFoot, Tr, Th, Td } from "./Table";
-export { StatusPill } from "./StatusPill";
+export { StatusPill, type StatusTone } from "./StatusPill";
 export { ActionMenu, type ActionMenuItem } from "./ActionMenu";
 export { ConfirmDialog } from "./ConfirmDialog";
 export { CodeTag } from "./CodeTag";

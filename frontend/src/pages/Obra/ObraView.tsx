@@ -51,16 +51,16 @@ import { useEnsureData } from "../../components/EntityViewer/useEnsureData";
 // Leaflet só é baixado quando a obra tem coordenadas
 const ObraMiniMap = lazy(() => import("../OrdemServico/ObraMiniMap"));
 
-const OS_STATUS: Record<string, { label: string; tone: "info" | "neutral" }> = {
-  ATIVO: { label: "Ativa", tone: "info" },
-  FINALIZADO: { label: "Finalizada", tone: "neutral" },
-  CANCELADO: { label: "Cancelada", tone: "neutral" },
+const OS_STATUS: Record<string, { label: string; tone: "active" | "closed" }> = {
+  ATIVO: { label: "Ativa", tone: "active" },
+  FINALIZADO: { label: "Finalizada", tone: "closed" },
+  CANCELADO: { label: "Cancelada", tone: "closed" },
 };
 
 const TONE_FILL: Record<ScheduleTone, string> = {
-  danger: "bg-danger-text",
-  warning: "bg-accent-400",
-  success: "bg-primary-500",
+  danger: "bg-danger-dot",
+  warning: "bg-warning-dot",
+  success: "bg-progress",
   neutral: "bg-border-strong",
 };
 
@@ -77,7 +77,7 @@ function percentOf(part: number, total: number) {
 
 function Bar({ percent, className }: { percent: number; className: string }) {
   return (
-    <div className="h-1.5 rounded-full bg-surface-muted overflow-hidden">
+    <div className="h-1.5 rounded-full bg-progress-track overflow-hidden">
       <div className={cx("h-full rounded-full", className)} style={{ width: `${Math.min(100, Math.max(0, percent))}%` }} />
     </div>
   );
@@ -404,7 +404,7 @@ export function ObraView({ id, ...frame }: ViewProps) {
             <ObraMiniMap
               latitude={obra.latitude!}
               longitude={obra.longitude!}
-              color={obra.contrato?.cor ?? "#27272a"}
+              color={obra.contrato?.cor ?? "#2a2b2e"}
               label={obra.identificacaoPatrimonial}
             />
           </Suspense>

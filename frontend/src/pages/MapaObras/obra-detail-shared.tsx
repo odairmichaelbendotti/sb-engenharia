@@ -25,7 +25,7 @@ export function PendingBadge() {
 export function ProgressBar({ percent, colorClassName }: { percent: number; colorClassName: string }) {
   const clamped = Math.min(100, Math.max(0, percent));
   return (
-    <div className="w-full h-1.5 rounded-full bg-surface-muted overflow-hidden">
+    <div className="w-full h-1.5 rounded-full bg-progress-track overflow-hidden">
       <div className={`h-full rounded-full ${colorClassName}`} style={{ width: `${clamped}%` }} />
     </div>
   );

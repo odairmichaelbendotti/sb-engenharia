@@ -42,9 +42,9 @@ import { getOrdemServicoSchedule, type OrdemServicoSchedule, type ScheduleKind, 
 const ITEMS_PER_PAGE = 10;
 
 const TONE_FILL: Record<ScheduleTone, string> = {
-  danger: "bg-danger-text",
-  warning: "bg-accent-400",
-  success: "bg-primary-500",
+  danger: "bg-danger-dot",
+  warning: "bg-warning-dot",
+  success: "bg-progress",
   neutral: "bg-border-strong",
 };
 
@@ -139,7 +139,7 @@ export function OrdemServicoList({ ordensServico, isLoading = false, onView, onE
                       <span className="text-warning-text font-semibold">sem obra</span>
                     )}
                     {os.contestacoesAbertas > 0 && (
-                      <span className="text-info-text font-semibold">
+                      <span className="text-warning-text font-semibold">
                         {os.contestacoesAbertas} {os.contestacoesAbertas === 1 ? "apontamento" : "apontamentos"}
                       </span>
                     )}

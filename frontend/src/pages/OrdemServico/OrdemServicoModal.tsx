@@ -64,7 +64,7 @@ interface OrdemServicoModalProps {
 }
 
 const STATUS_OPTIONS: SegmentOption<OrdemServicoStatus>[] = [
-  { value: "ATIVO", label: "Ativa", icon: Activity, tone: "info" },
+  { value: "ATIVO", label: "Ativa", icon: Activity, tone: "neutral" },
   { value: "FINALIZADO", label: "Finalizada", icon: CheckCircle2, tone: "neutral" },
   { value: "CANCELADO", label: "Cancelada", icon: XCircle, tone: "neutral" },
 ];

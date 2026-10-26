@@ -9,9 +9,9 @@ const DUE_SOON_DAYS = 30;
 export const OBRA_STATUS: Record<ObraStatus, { label: string; dot: string; text: string; badge: string }> = {
   EM_ANDAMENTO: {
     label: "Em andamento",
-    dot: "bg-info-text",
-    text: "text-info-text",
-    badge: "bg-info-bg text-info-text border-info-border",
+    dot: "bg-neutral-800",
+    text: "text-text-primary",
+    badge: "bg-neutral-100 text-text-primary border-transparent",
   },
   CONCLUIDA: {
     label: "Concluída",

@@ -227,7 +227,7 @@ const MapaObras = () => {
           <Marker
             key={obra.id}
             position={[obra.latitude, obra.longitude]}
-            icon={getObraIcon(obra.contrato?.cor ?? "#27272a", obra.identificacaoPatrimonial)}
+            icon={getObraIcon(obra.contrato?.cor ?? "#2a2b2e", obra.identificacaoPatrimonial)}
             eventHandlers={{ click: () => setSelectedObra(obra) }}
           />
         ))}

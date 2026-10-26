@@ -22,7 +22,7 @@ export type AttentionItem = {
   label: string;
   meta: string;
   // Cor da dica, igual às tabelas: vermelho = passou do prazo, âmbar = vence em breve/aguarda
-  tone: "danger" | "warning" | "info";
+  tone: "danger" | "warning" | "active";
   href: string;
   // Registro que abre no modal de visualização (sem sair do Dashboard)
   entity?: EntityRef;
@@ -264,7 +264,7 @@ export function useDashboardData() {
                 : fase === "AGUARDANDO_CIENCIA"
                   ? `ciência: ${describePrazoCiencia(os.cienciaPrazoAte!, now)}`
                   : `${os.contestacoesAbertas} ${os.contestacoesAbertas === 1 ? "apontamento" : "apontamentos"}`,
-            tone: fase === "CIENCIA_VENCIDA" ? ("danger" as const) : fase === "AGUARDANDO_CIENCIA" ? ("warning" as const) : ("info" as const),
+            tone: fase === "CIENCIA_VENCIDA" ? ("danger" as const) : fase === "AGUARDANDO_CIENCIA" ? ("warning" as const) : ("active" as const),
             href: `/ordens-servico?os=${os.id}`,
             entity: { kind: "ordemServico" as const, id: os.id },
           })),

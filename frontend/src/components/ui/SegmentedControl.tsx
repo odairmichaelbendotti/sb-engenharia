@@ -2,11 +2,10 @@ import { Loader2, type LucideIcon } from "lucide-react";
 import { cx } from "../../utils/cx";
 
 // Cor do ícone na opção selecionada; o resto do controle é neutro
-export type SegmentTone = "neutral" | "info" | "success" | "warning" | "danger";
+export type SegmentTone = "neutral" | "success" | "warning" | "danger";
 
 const toneClasses: Record<SegmentTone, string> = {
   neutral: "text-text-primary",
-  info: "text-info-text",
   success: "text-success-text",
   warning: "text-warning-text",
   danger: "text-danger-text",

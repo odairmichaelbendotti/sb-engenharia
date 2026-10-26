@@ -1,27 +1,30 @@
 import { cx } from "../../utils/cx";
-import type { BadgeTone } from "./Badge";
 
-const toneClasses: Record<BadgeTone, { pill: string; dot: string }> = {
-  neutral: { pill: "bg-surface-muted text-text-secondary border-border", dot: "bg-primary-300" },
-  info: { pill: "bg-info-bg text-info-text border-info-border", dot: "bg-info-text" },
-  success: { pill: "bg-success-bg text-success-text border-success-border", dot: "bg-success-text" },
-  warning: { pill: "bg-warning-bg text-warning-text border-warning-border", dot: "bg-warning-text" },
-  danger: { pill: "bg-danger-bg text-danger-text border-danger-border", dot: "bg-danger-text" },
+/**
+ * Tons do selo de status (paleta "Grafite e sinal", 2026-10-26):
+ * active = em curso (estado padrão, grafite com ponto cheio), closed = encerrado (sem fundo,
+ * ponto vazado), warning = vence em breve / aguarda alguém, danger = vencido / paralisado,
+ * success = pago / concluído. Azul não é status.
+ */
+export type StatusTone = "active" | "closed" | "success" | "warning" | "danger";
+
+const toneClasses: Record<StatusTone, { pill: string; dot: string }> = {
+  active: { pill: "bg-neutral-100 text-text-primary border-transparent", dot: "bg-neutral-800" },
+  closed: { pill: "bg-transparent text-text-muted border-border-strong", dot: "ring-[1.5px] ring-inset ring-current" },
+  success: { pill: "bg-success-bg text-success-text border-success-border", dot: "bg-success-dot" },
+  warning: { pill: "bg-warning-bg text-warning-text border-warning-border", dot: "bg-warning-dot" },
+  danger: { pill: "bg-danger-bg text-danger-text border-danger-border", dot: "bg-danger-dot" },
 };
 
 interface StatusPillProps {
-  tone: BadgeTone;
+  tone: StatusTone;
   // Dica ao passar o mouse (ex.: "Prazo vencido há 3 dias")
   title?: string;
   size?: "sm" | "md";
   children: React.ReactNode;
 }
 
-/**
- * Selo de status com ponto, igual em todas as telas. O tom vem de `utils/status-display.ts`:
- * info = em curso, warning = vence em breve / aguarda alguém, danger = vencido / paralisado,
- * success = pago / concluído, neutral = encerrado (finalizado, cancelado).
- */
+/** Selo de status com ponto, igual em todas as telas. O tom vem de `utils/status-display.ts`. */
 export function StatusPill({ tone, title, size = "md", children }: StatusPillProps) {
   const classes = toneClasses[tone];
   return (

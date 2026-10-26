@@ -17,23 +17,21 @@ import type {
 } from "../../../domain/repositories/IContratoRepository.js";
 import { prisma } from "../../prisma/prisma.js";
 
-// Paleta categórica pra diferenciar contratos visualmente (mapa/legenda). Atribuída
-// por rodízio conforme a quantidade de contratos já existentes no tenant — com poucos
-// contratos (o caso comum) garante cores sempre distintas; além do tamanho da paleta,
-// as cores voltam a se repetir (inevitável sem limite de contratos).
+// Paleta dos contratos (faixa nas listagens, cabeçalho do modal e ícone no mapa). Oito tons
+// com a mesma luminosidade e saturação baixa (paleta "Grafite e sinal", 2026-10-26), para
+// identificar o contrato sem parecer status. A ordem alterna os matizes para contratos
+// seguidos ficarem bem diferentes. Atribuída por rodízio conforme a quantidade de contratos
+// já existentes no tenant; a partir do nono, as cores se repetem.
+// Mudou aqui, mudar também a migration 2026-10-26-paleta-contratos.sql.
 const CONTRATO_COLOR_PALETTE = [
-  "#4478b6",
-  "#3c8567",
-  "#d48a12",
-  "#8256d0",
-  "#c2416b",
-  "#2f9e9e",
-  "#b6653c",
-  "#5a6b8c",
-  "#6b9e3f",
-  "#a1459a",
-  "#3f7ea6",
-  "#c9932f",
+  "#4f759c", // ardósia
+  "#8b6b3d", // ocre
+  "#517e5a", // musgo
+  "#985f67", // vinho
+  "#357d8d", // petróleo
+  "#976250", // terracota
+  "#707742", // oliva
+  "#85638d", // ameixa
 ];
 
 const LOTES_INCLUDE = { orderBy: { numero: "asc" as const } };

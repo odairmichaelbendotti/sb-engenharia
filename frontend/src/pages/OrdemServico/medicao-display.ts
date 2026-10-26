@@ -2,11 +2,11 @@ import type { MedicaoStatus, MotivoBloqueioMedicao } from "../../../types/medica
 import type { StatusDisplay } from "../../utils/status-display";
 import { toFilename } from "../../utils/download-file";
 
-// Rascunho = em elaboração (âmbar: aguarda a fiscalização fechar); fechada = encerrada (cinza)
+// Rascunho = em elaboração (âmbar: aguarda a fiscalização fechar); fechada = encerrada (selo vazado)
 export function medicaoStatusDisplay(status: MedicaoStatus): StatusDisplay {
   return status === "RASCUNHO"
     ? { label: "Rascunho", tone: "warning", title: "Em elaboração: ainda não entra no acumulado" }
-    : { label: "Fechada", tone: "neutral", title: "Entra no acumulado e está travada" };
+    : { label: "Fechada", tone: "closed", title: "Entra no acumulado e está travada" };
 }
 
 export const MOTIVO_BLOQUEIO_LABEL: Record<MotivoBloqueioMedicao, string> = {

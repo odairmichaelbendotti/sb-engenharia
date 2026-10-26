@@ -112,9 +112,9 @@ export function EmpenhoDetails({ empenho, newValue }: EmpenhoDetailsProps) {
               {Math.min(100, Math.round(paidPercentage))}%
             </span>
           </div>
-          <div className="w-full bg-surface-muted border border-border rounded-full h-2.5 overflow-hidden">
+          <div className="w-full bg-progress-track rounded-full h-2.5 overflow-hidden">
             <div
-              className="bg-secondary-500 h-full rounded-full transition-all duration-300"
+              className="bg-progress h-full rounded-full transition-all duration-300"
               style={{ width: `${Math.min(100, paidPercentage)}%` }}
             />
           </div>
@@ -137,10 +137,10 @@ export function EmpenhoDetails({ empenho, newValue }: EmpenhoDetailsProps) {
               {Math.round(Math.min(150, totalPercentage))}%
             </span>
           </div>
-          <div className="w-full bg-surface-muted border border-border rounded-full h-2.5 overflow-hidden">
+          <div className="w-full bg-progress-track rounded-full h-2.5 overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-300 ${
-                exceedsLimit ? "bg-danger-text" : "bg-primary-400"
+                exceedsLimit ? "bg-danger-dot" : "bg-primary-400"
               }`}
               style={{ width: `${Math.min(100, totalPercentage)}%` }}
             />

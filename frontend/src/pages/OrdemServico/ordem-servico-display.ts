@@ -9,8 +9,8 @@ import { getOrdemServicoSchedule } from "./ordem-servico-schedule";
  * ciência pendente ou vencida, quitada (pronta para finalizar) e prazo vencido.
  */
 export function ordemServicoStatusDisplay(os: OrdemServico): StatusDisplay {
-  if (os.status === "CANCELADO") return { label: "Cancelada", tone: "neutral" };
-  if (os.status === "FINALIZADO") return { label: "Finalizada", tone: "neutral" };
+  if (os.status === "CANCELADO") return { label: "Cancelada", tone: "closed" };
+  if (os.status === "FINALIZADO") return { label: "Finalizada", tone: "closed" };
 
   const fase = getFaseEmissao(os);
   if (fase === "CIENCIA_VENCIDA") {
@@ -27,5 +27,5 @@ export function ordemServicoStatusDisplay(os: OrdemServico): StatusDisplay {
 
   const schedule = getOrdemServicoSchedule(os);
   if (schedule.kind === "overdue") return { label: "Ativa", tone: "danger", title: schedule.label };
-  return { label: "Ativa", tone: "info" };
+  return { label: "Ativa", tone: "active" };
 }

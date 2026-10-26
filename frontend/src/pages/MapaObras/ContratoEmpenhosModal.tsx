@@ -57,7 +57,7 @@ export function ContratoEmpenhosModal({ contrato, financial, currentEmpenhoIds, 
         <Summary
           label="Saldo a empenhar"
           value={formatCurrency(saldoAEmpenhar)}
-          tone={saldoAEmpenhar < 0 ? "text-danger-text" : "text-accent-600"}
+          tone={saldoAEmpenhar < 0 ? "text-danger-text" : "text-text-primary"}
         />
       </div>
 
@@ -103,7 +103,7 @@ export function ContratoEmpenhosModal({ contrato, financial, currentEmpenhoIds, 
                 <Td className="hidden md:table-cell">
                   {/* A barra não tem largura própria: o bloco fixa a largura dela dentro da célula */}
                   <div className="w-24">
-                    <ProgressBar percent={liquidadoPercent} colorClassName="bg-secondary-500" />
+                    <ProgressBar percent={liquidadoPercent} colorClassName="bg-progress" />
                     <p className="text-[10px] text-text-muted mt-0.5">{formatPercent(liquidadoPercent)}</p>
                   </div>
                 </Td>

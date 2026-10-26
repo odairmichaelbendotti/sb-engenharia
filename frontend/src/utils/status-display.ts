@@ -1,12 +1,12 @@
-import type { BadgeTone } from "../components/ui/Badge";
+import type { StatusTone } from "../components/ui/StatusPill";
 
 /**
  * Rótulo e tom do selo de status de cada entidade, num lugar só (StatusPill).
- * Regra da direção visual de 2026-10-23: o estado normal (ativo, em andamento) é azul calmo (info);
- * âmbar só para o que vence em breve ou aguarda alguém; vermelho só para o que já passou;
- * verde para pago/concluído; cinza para o que foi encerrado (finalizado, cancelado).
+ * Regra da paleta "Grafite e sinal" (2026-10-26): o estado normal (ativo, em andamento) é grafite
+ * (active); âmbar só para o que vence em breve ou aguarda alguém; vermelho só para o que já passou;
+ * verde para pago/concluído; selo vazado para o que foi encerrado (closed: finalizado, cancelado).
  */
-export type StatusDisplay = { label: string; tone: BadgeTone; title?: string };
+export type StatusDisplay = { label: string; tone: StatusTone; title?: string };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -51,11 +51,11 @@ export const HINT_TEXT: Record<HintTone, string> = {
 // Contrato e empenho têm o mesmo ciclo: ativo, finalizado, cancelado
 export function contratoStatusDisplay(status: string, dataFim?: string | Date | null): StatusDisplay {
   const s = status.toUpperCase();
-  if (s === "FINALIZADO") return { label: "Finalizado", tone: "neutral" };
-  if (s === "CANCELADO") return { label: "Cancelado", tone: "neutral" };
+  if (s === "FINALIZADO") return { label: "Finalizado", tone: "closed" };
+  if (s === "CANCELADO") return { label: "Cancelado", tone: "closed" };
   const hint = getDeadlineHint(dataFim ?? null);
   if (hint && hint.days < 0) return { label: "Vigência vencida", tone: "danger", title: `Vigência ${hint.label}` };
-  return { label: "Ativo", tone: "info" };
+  return { label: "Ativo", tone: "active" };
 }
 
 export const empenhoStatusDisplay = contratoStatusDisplay;
@@ -67,7 +67,7 @@ export function invoiceStatusDisplay(status: string | null | undefined): StatusD
     case "VENCIDO":
       return { label: "Vencida", tone: "danger" };
     case "CANCELADO":
-      return { label: "Cancelada", tone: "neutral" };
+      return { label: "Cancelada", tone: "closed" };
     default:
       return { label: "Pendente", tone: "warning" };
   }
@@ -80,11 +80,11 @@ export function obraStatusDisplay(status: string, overdue = false): StatusDispla
     case "PARALISADA":
       return { label: "Paralisada", tone: "danger" };
     case "CANCELADA":
-      return { label: "Cancelada", tone: "neutral" };
+      return { label: "Cancelada", tone: "closed" };
     default:
       return overdue
         ? { label: "Em andamento", tone: "danger", title: "Prazo de término vencido" }
-        : { label: "Em andamento", tone: "info" };
+        : { label: "Em andamento", tone: "active" };
   }
 }
 

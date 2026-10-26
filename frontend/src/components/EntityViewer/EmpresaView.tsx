@@ -50,7 +50,7 @@ export function EmpresaView({ id, ...frame }: ViewProps) {
       eyebrow={
         <>
           <CodeTag>{maskCnpj(empresa.cnpj)}</CodeTag>
-          <StatusPill tone={ativos > 0 ? "info" : "neutral"}>
+          <StatusPill tone={ativos > 0 ? "active" : "closed"}>
             {ativos > 0 ? `${ativos} ${ativos === 1 ? "contrato ativo" : "contratos ativos"}` : "Sem contrato ativo"}
           </StatusPill>
           <span className="truncate">

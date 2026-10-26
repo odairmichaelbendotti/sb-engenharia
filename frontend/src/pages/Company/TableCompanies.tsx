@@ -107,7 +107,7 @@ const TableCompanies = ({
                   </div>
                 </Td>
                 <Td className="hidden lg:table-cell">
-                  <StatusPill tone={ativos > 0 ? "info" : "neutral"}>
+                  <StatusPill tone={ativos > 0 ? "active" : "closed"}>
                     {ativos > 0 ? `${ativos} ${ativos === 1 ? "ativo" : "ativos"}` : "Nenhum ativo"}
                   </StatusPill>
                   {contratos.length > ativos && (

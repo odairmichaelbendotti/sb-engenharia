@@ -26,7 +26,7 @@ export const FASE_TONE: Record<FaseEmissao, BadgeTone> = {
   DISPENSADA: "neutral",
   AGUARDANDO_CIENCIA: "warning",
   CIENCIA_VENCIDA: "danger",
-  EM_CONTESTACAO: "info",
+  EM_CONTESTACAO: "warning",
   EFETIVADA: "success",
 };
 
