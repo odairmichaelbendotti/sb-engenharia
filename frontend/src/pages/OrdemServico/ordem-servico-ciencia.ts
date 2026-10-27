@@ -5,6 +5,7 @@ import type { BadgeTone } from "../../components/ui";
 // Espelha backend/src/domain/tramitacao/ciencia.ts (mudou lá, mudar aqui). Na lista a fase é
 // calculada no navegador; no modal vale a que vem de GET /ordem-servico/:id/tramitacao
 export function getFaseEmissao(os: OrdemServico, now: Date = new Date()): FaseEmissao {
+  if (os.aguardandoEmissao) return "AGUARDANDO_EMISSAO";
   if (os.cienciaDispensada || !os.emitidaEm || !os.cienciaPrazoAte) return "DISPENSADA";
   if (!os.cienteEm) {
     const vencida = os.status === "ATIVO" && now.getTime() > new Date(os.cienciaPrazoAte).getTime();
@@ -15,6 +16,7 @@ export function getFaseEmissao(os: OrdemServico, now: Date = new Date()): FaseEm
 }
 
 export const FASE_LABEL: Record<FaseEmissao, string> = {
+  AGUARDANDO_EMISSAO: "Aguardando emissão",
   DISPENSADA: "Ciência dispensada",
   AGUARDANDO_CIENCIA: "Aguardando ciência",
   CIENCIA_VENCIDA: "Ciência vencida",
@@ -23,6 +25,7 @@ export const FASE_LABEL: Record<FaseEmissao, string> = {
 };
 
 export const FASE_TONE: Record<FaseEmissao, BadgeTone> = {
+  AGUARDANDO_EMISSAO: "neutral",
   DISPENSADA: "neutral",
   AGUARDANDO_CIENCIA: "warning",
   CIENCIA_VENCIDA: "danger",

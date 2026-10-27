@@ -2,10 +2,13 @@ import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import {
   INT_MAX,
+  PRECO_BASES,
+  precoComDesconto,
   toMilesimos,
   valorItem,
   type LinhaMedicaoInput,
   type OrcamentoItemInput,
+  type PrecoBase,
 } from "../../../domain/medicao/medicao-calc.js";
 import {
   MEDICAO_RULES,
@@ -26,7 +29,8 @@ const policy = new DomainAccessPolicy();
 
 /**
  * Carrega a OS e confere o acesso de leitura: a organização só vê as próprias OS (PLATFORM_ADMIN
- * vê todas) e a empresa só as dos próprios contratos. OS de fora do escopo responde como inexistente.
+ * vê todas) e a empresa só as dos próprios contratos, já emitidas. OS de fora do escopo responde
+ * como inexistente.
  */
 export async function loadOsComAcesso(
   repository: IMedicaoRepository,
@@ -38,7 +42,8 @@ export async function loadOsComAcesso(
   }
   const os = await repository.findOsContext(ordemServico_id);
   const foraDoTenant = user.role !== "PLATFORM_ADMIN" && os?.tenant_id !== user.tenant_id;
-  const foraDaEmpresa = user.role === "EMPRESA" && os?.company_id !== user.company_id;
+  const foraDaEmpresa =
+    user.role === "EMPRESA" && (os?.company_id !== user.company_id || os?.aguardandoEmissao);
   if (!os || foraDoTenant || foraDaEmpresa) {
     throw new DomainError("OrdemServico not found");
   }
@@ -83,11 +88,21 @@ function numero(value: unknown): number {
   return NaN;
 }
 
+export function parsePrecoBase(raw: unknown, atual: PrecoBase): PrecoBase {
+  if (raw === undefined || raw === null) return atual;
+  if (!PRECO_BASES.includes(raw as PrecoBase)) throw new DomainError("precoBase is invalid");
+  return raw as PrecoBase;
+}
+
 /**
- * Planilha enviada pela API: quantidade decimal, preço unitário e total ajustado (opcional) em reais.
- * Total igual a quantidade × preço é gravado como nulo (sem ajuste).
+ * Planilha enviada pela API: quantidade decimal, preço unitário (como informado) e total ajustado
+ * (opcional) em reais. No modo COM_BDI o preço informado vira a referência e o preço que vale
+ * recebe o desconto da OS. Total igual a quantidade × preço é gravado como nulo (sem ajuste).
  */
-export function parseOrcamentoItens(raw: unknown): OrcamentoItemInput[] {
+export function parseOrcamentoItens(
+  raw: unknown,
+  { precoBase, desconto }: { precoBase: PrecoBase; desconto: number },
+): OrcamentoItemInput[] {
   if (!Array.isArray(raw)) throw new DomainError("Itens must be a list");
   return raw.map((value, index) => {
     const item = (value ?? {}) as Record<string, unknown>;
@@ -105,7 +120,9 @@ export function parseOrcamentoItens(raw: unknown): OrcamentoItemInput[] {
       ORDEM_SERVICO_ITEM_RULES,
     );
     const quantidadeMil = toMilesimos(quantidade);
-    const precoCent = Math.round(preco * 100);
+    const informadoCent = Math.round(preco * 100);
+    const aplicaDesconto = precoBase === "COM_BDI";
+    const precoCent = aplicaDesconto ? precoComDesconto(informadoCent, desconto) : informadoCent;
     const totalCent = total === null ? null : Math.round(total * 100);
     return {
       id: typeof item.id === "string" && item.id ? item.id : undefined,
@@ -115,6 +132,7 @@ export function parseOrcamentoItens(raw: unknown): OrcamentoItemInput[] {
       quantidade: quantidadeMil,
       precoUnitario: precoCent,
       valorTotal: totalCent === valorItem(quantidadeMil, precoCent) ? null : totalCent,
+      precoReferencia: aplicaDesconto ? informadoCent : null,
     };
   });
 }

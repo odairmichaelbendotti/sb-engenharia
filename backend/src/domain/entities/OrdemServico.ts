@@ -38,7 +38,7 @@ export type OrdemServicoType = {
   dataEmissao?: string | null | undefined;
   prazoMobilizacaoDias?: number | undefined;
   prazoDias?: number | null | undefined;
-  // Total com BDI informado pelo usuário, em reais
+  // Total com BDI em reais: informado só nas OS antigas; com orçamento ele sai dos itens
   totalComBdi?: number | null | undefined;
   fiscalSetorial?: string | null | undefined;
   fiscalTecnico_id?: string | null | undefined;
@@ -69,6 +69,11 @@ export type PersistedOrdemServico = {
   prazoDias: number | null;
   // Em reais
   totalComBdi: number | null;
+  // Orçamento: como os preços foram informados e o desconto copiado do lote (porcentagem)
+  precoBase: "COM_BDI" | "COM_BDI_E_DESCONTO";
+  desconto: number;
+  // Criada e ainda não emitida (sem orçamento): a empresa não vê
+  aguardandoEmissao: boolean;
   fiscalSetorial: string | null;
   fiscalTecnico_id: string | null;
   fiscalAdministrativo_id: string | null;
@@ -146,8 +151,9 @@ export class OrdemServicoEntity {
     if (ids.size !== props.empenhos.length) {
       throw new DomainError("The same empenho cannot be linked twice to an OrdemServico");
     }
-    if (props.empenhos.some((e) => !e.empenho_id || !(e.valor > 0))) {
-      throw new DomainError("Each linked empenho must have a valor greater than 0");
+    // Valor 0 só faz sentido na OS que aguarda orçamento; quem decide isso é o use case
+    if (props.empenhos.some((e) => !e.empenho_id || !(e.valor >= 0))) {
+      throw new DomainError("Each linked empenho must have a valid valor");
     }
 
     if (props.urgencia && !ORDEM_SERVICO_URGENCIAS.includes(props.urgencia)) {

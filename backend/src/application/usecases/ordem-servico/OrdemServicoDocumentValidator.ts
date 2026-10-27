@@ -6,14 +6,13 @@ import type {
   OrdemServicoContratoDados,
 } from "../../../domain/repositories/IOrdemServicoRepository.js";
 
-// Campos que o documento da OS exige quando a OS é criada
+// Campos que o documento da OS exige quando a OS é criada (o valor vem depois, do orçamento)
 const REQUIRED_ON_CREATE = [
   "setorRequisitante",
   "urgencia",
   "dataVistoria",
   "descricaoProblema",
   "prazoDias",
-  "totalComBdi",
   "fiscalSetorial",
   "fiscalTecnico_id",
   "fiscalAdministrativo_id",

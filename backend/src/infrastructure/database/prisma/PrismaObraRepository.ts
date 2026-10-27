@@ -16,6 +16,7 @@ import type {
   ObraSummaryByTenant,
 } from "../../../domain/repositories/IObraRepository.js";
 import { prisma } from "../../prisma/prisma.js";
+import { osDaEmpresa } from "./os-escopo.js";
 
 type InvoiceRow = { value: number; status: string; ordemServico_id: string | null };
 
@@ -59,7 +60,7 @@ const ORDEM_SERVICO_RESUMO_SELECT = {
 // OS da obra em ordem de criação (a primeira define o contrato); para EMPRESA, só as da própria empresa
 function ordensServicoInclude(company_id?: string) {
   return {
-    ...(company_id ? { where: { empenho: { contrato: { company_id } } } } : {}),
+    ...(company_id ? { where: osDaEmpresa(company_id) } : {}),
     orderBy: { createdAt: "asc" },
     select: ORDEM_SERVICO_RESUMO_SELECT,
   } as const;
@@ -191,7 +192,7 @@ export class PrismaObraRepository implements IObraRepository {
     try {
       const baseWhere = {
         ...(tenant_id ? { tenant_id } : {}),
-        ...(company_id ? { ordensServico: { some: { empenho: { contrato: { company_id } } } } } : {}),
+        ...(company_id ? { ordensServico: { some: osDaEmpresa(company_id) } } : {}),
       };
 
       const [obras, total, emAndamento, concluidas, paralisadas, canceladas] = await Promise.all([
@@ -244,12 +245,12 @@ export class PrismaObraRepository implements IObraRepository {
         where: {
           id,
           ...(tenant_id ? { tenant_id } : {}),
-          ...(company_id ? { ordensServico: { some: { empenho: { contrato: { company_id } } } } } : {}),
+          ...(company_id ? { ordensServico: { some: osDaEmpresa(company_id) } } : {}),
         },
         include: {
           invoices: { select: INVOICE_INFO_SELECT, orderBy: { vencimento: "asc" } },
           ordensServico: {
-            ...(company_id ? { where: { empenho: { contrato: { company_id } } } } : {}),
+            ...(company_id ? { where: osDaEmpresa(company_id) } : {}),
             orderBy: { createdAt: "asc" },
             select: {
               ...ORDEM_SERVICO_RESUMO_SELECT,

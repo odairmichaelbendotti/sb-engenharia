@@ -13,6 +13,13 @@ export function ordemServicoStatusDisplay(os: OrdemServico): StatusDisplay {
   if (os.status === "FINALIZADO") return { label: "Finalizada", tone: "closed" };
 
   const fase = getFaseEmissao(os);
+  if (fase === "AGUARDANDO_EMISSAO") {
+    return {
+      label: "Aguardando orçamento",
+      tone: "closed",
+      title: "A empresa ainda não vê a OS: lance o orçamento e emita",
+    };
+  }
   if (fase === "CIENCIA_VENCIDA") {
     return { label: "Ciência vencida", tone: "danger", title: "A empresa não deu ciência dentro do prazo" };
   }

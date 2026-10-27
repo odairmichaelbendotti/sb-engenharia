@@ -19,15 +19,17 @@ import { RequireDomainAccess } from "../middleware/RequireDomainAccess.js";
 import { RequireCienciaEmDia } from "../middleware/RequireCienciaEmDia.js";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
 import { PrismaUserRepository } from "../../infrastructure/database/prisma/PrismaUserRepository.js";
+import { PrismaEmpenhoRepository } from "../../infrastructure/database/prisma/PrismaEmpenhoRepository.js";
 
 // Orçamento e medições da OS (domínio engenharia): lançam ENGENHARIA, COORDENACAO e MASTER; os
 // demais perfis só leem, e a EMPRESA só as OS dos próprios contratos e as medições fechadas
 export const MedicaoRoutes = Router();
 
 const repository = new PrismaMedicaoRepository();
+const empenhoRepository = new PrismaEmpenhoRepository();
 const controller = new MedicaoController(
-  new GetPlanilhaOrcamentoUseCase(repository),
-  new SaveOrcamentoUseCase(repository),
+  new GetPlanilhaOrcamentoUseCase(repository, empenhoRepository),
+  new SaveOrcamentoUseCase(repository, empenhoRepository),
   new CreateMedicaoUseCase(repository),
   new GetMedicaoUseCase(repository),
   new UpdateMedicaoUseCase(repository),

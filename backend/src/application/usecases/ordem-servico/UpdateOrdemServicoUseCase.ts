@@ -98,6 +98,9 @@ export class UpdateOrdemServicoUseCase {
       }
     }
 
+    // Soma dos itens em centavos: com orçamento, é o valor da OS que os empenhos precisam somar
+    const valorOrcamento = await this.repository.getValorOrcamento(ordemServicoId);
+
     // Campo ausente na edição mantém o valor atual; vazio/null limpa
     const keep = <T,>(value: T | undefined, current: T) => (value === undefined ? current : value);
     const day = (date: Date | null) => (date ? date.toISOString().slice(0, 10) : null);
@@ -117,7 +120,8 @@ export class UpdateOrdemServicoUseCase {
       dataEmissao: keep(data.dataEmissao, day(existing.dataEmissao)),
       prazoMobilizacaoDias: keep(data.prazoMobilizacaoDias, existing.prazoMobilizacaoDias),
       prazoDias: keep(data.prazoDias, existing.prazoDias),
-      totalComBdi: keep(data.totalComBdi, existing.totalComBdi),
+      // Com orçamento o total com BDI sai dele; só a OS antiga sem orçamento ainda o recebe digitado
+      totalComBdi: valorOrcamento === null ? keep(data.totalComBdi, existing.totalComBdi) : existing.totalComBdi,
       fiscalSetorial: keep(data.fiscalSetorial, existing.fiscalSetorial),
       fiscalTecnico_id: keep(data.fiscalTecnico_id, existing.fiscalTecnico_id),
       fiscalAdministrativo_id: keep(data.fiscalAdministrativo_id, existing.fiscalAdministrativo_id),
@@ -140,6 +144,16 @@ export class UpdateOrdemServicoUseCase {
       empenhos: ordemServicoEntity.empenhos,
       ordemServicoId,
     });
+    if (valorOrcamento !== null) {
+      if (vinculos.reduce((acc, v) => acc + v.valor, 0) !== valorOrcamento) {
+        throw new DomainError(
+          `Os empenhos precisam somar o valor do orçamento da OS (${(valorOrcamento / 100).toFixed(2)}).`,
+        );
+      }
+    } else if (!existing.aguardandoEmissao && vinculos.some((v) => v.valor <= 0)) {
+      // OS antiga, sem orçamento: o valor continua sendo o que cada empenho destina
+      throw new DomainError("Each linked empenho must have a valor greater than 0");
+    }
     await this.obraValidator.validate({
       user,
       ordemServicoId,
@@ -164,8 +178,10 @@ export class UpdateOrdemServicoUseCase {
       totalComBdiCentavos: existing.totalComBdi === null ? null : Math.round(existing.totalComBdi * 100),
     });
     const depois = conteudoDe({ ...ordemServicoEntity, totalComBdiCentavos: totalComBdi });
+    // A que ainda aguarda emissão não foi para a empresa: nada a reemitir
     const reemitir =
       existing.status === "ATIVO" &&
+      !existing.aguardandoEmissao &&
       !isCienciaDispensada({ ...existing, contestacoesAbertas: 0 }) &&
       houveMudancaNoConteudo(antes, depois);
     const emitidaEm = new Date();

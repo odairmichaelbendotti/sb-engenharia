@@ -11,8 +11,12 @@ import type { OrdemServicoDocumentData } from "../repositories/IOrdemServicoRepo
 
 const dia = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
-function sampleData(overrides: Partial<OrdemServicoDocumentData["ordemServico"]> = {}): OrdemServicoDocumentData {
+function sampleData(
+  overrides: Partial<OrdemServicoDocumentData["ordemServico"]> = {},
+  temOrcamento = false,
+): OrdemServicoDocumentData {
   return {
+    temOrcamento,
     ordemServico: {
       id: "os-1",
       numero: "OS 010/BAFL/2026-L4",
@@ -34,6 +38,9 @@ function sampleData(overrides: Partial<OrdemServicoDocumentData["ordemServico"]>
       prazoMobilizacaoDias: 7,
       prazoDias: 49,
       totalComBdi: 50547.24,
+      precoBase: "COM_BDI",
+      desconto: 24.8,
+      aguardandoEmissao: false,
       fiscalSetorial: "SO RAPHAEL C.",
       fiscalTecnico_id: "f-1",
       fiscalAdministrativo_id: "f-2",
@@ -126,6 +133,18 @@ describe("buildOrdemServicoDocumentModel", () => {
       contato: "Ramal 5174 · florianocaagf@fab.mil.br",
     });
     expect(model.local).toBe("Florianópolis, 18 de agosto de 2026.");
+  });
+
+  it("com orçamento, o valor final é o valor da OS (soma dos itens) e o desconto é a diferença", () => {
+    const model = buildOrdemServicoDocumentModel(sampleData({}, true));
+    expect(model.orcamento.totalComBdi).toBe("R$ 50.547,24");
+    expect(model.orcamento.totalComBdiEDesconto).toBe("R$ 38.013,98");
+    expect(model.orcamento.valorDesconto).toBe("R$ 12.533,26");
+  });
+
+  it("usa o desconto copiado na OS, não o atual do lote", () => {
+    const model = buildOrdemServicoDocumentModel({ ...sampleData(), lote: { numero: 4, nome: "DO", desconto: 30 } });
+    expect(model.orcamento.totalComBdiEDesconto).toBe("R$ 38.011,52");
   });
 
   it("deixa em branco o que uma OS antiga não tem e mostra só o valor gravado", () => {

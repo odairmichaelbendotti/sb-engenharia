@@ -52,6 +52,11 @@ export function WorkspaceHeader({ planilha }: { planilha: PlanilhaOrcamento }) {
             <span className="truncate" title={`${os.empresa.name} · ${os.contrato.identificador}`}>
               {os.empresa.name} · {os.contrato.identificador}
             </span>
+            {os.aguardandoEmissao && os.status === "ATIVO" && (
+              <StatusPill tone="closed" size="sm" title="A empresa ainda não vê a OS: lance o orçamento e emita">
+                Aguardando emissão
+              </StatusPill>
+            )}
             {os.status !== "ATIVO" && (
               <StatusPill tone="closed" size="sm" title="Orçamento e medições ficam só para consulta">
                 OS {OS_STATUS_LABEL[os.status].toLowerCase()}
@@ -66,7 +71,7 @@ export function WorkspaceHeader({ planilha }: { planilha: PlanilhaOrcamento }) {
           <StatTile
             label="Valor da OS"
             value={valorOs !== null ? formatCurrency(valorOs) : "—"}
-            hint={valorOs !== null ? "com BDI e desconto do lote" : "visível para a engenharia"}
+            hint={valorOs !== null ? "soma dos empenhos" : "visível para a engenharia"}
           />
           <StatTile label="Orçado" value={formatCurrency(totais.valorOrcado)} hint={`${itens.length} itens`} />
           <StatTile

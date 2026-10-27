@@ -1,6 +1,6 @@
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
-import { divergenciaTotal, valorFinalOs } from "../../../domain/medicao/medicao-calc.js";
+import { divergenciaTotal } from "../../../domain/medicao/medicao-calc.js";
 import { resumirPlanilha } from "../../../domain/medicao/medicao-resumo.js";
 import type { IMedicaoRepository } from "../../../domain/repositories/IMedicaoRepository.js";
 import { podeEditar } from "./medicao-access.js";
@@ -29,13 +29,14 @@ export class ListPainelMedicoesUseCase {
       const resumo = resumirPlanilha(
         daEmpresa ? { ...planilha, medicoes: planilha.medicoes.filter((m) => m.status === "FECHADA") } : planilha,
       );
-      const valorOs = valorFinalOs(os);
+      const valorOs = os.valor;
       const podeEditarOs = editor && os.tenant_id === user.tenant_id && os.status === "ATIVO";
       const divergencia = editor && resumo.itens > 0 ? divergenciaTotal(resumo.valorOrcado, valorOs) : null;
       return {
         id: os.id,
         numero: os.numero,
         status: os.status,
+        aguardandoEmissao: os.aguardandoEmissao,
         dataInicio: os.dataInicio,
         dataPrevisaoTermino: os.dataPrevisaoTermino,
         descricaoEmpenho: os.descricaoEmpenho,

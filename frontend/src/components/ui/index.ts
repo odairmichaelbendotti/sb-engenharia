@@ -2,6 +2,7 @@
 export { Button, type ButtonVariant } from "./Button";
 export { IconButton } from "./IconButton";
 export { Input } from "./Input";
+export { InlineEdit } from "./InlineEdit";
 export { Select } from "./Select";
 export { Textarea } from "./Textarea";
 export { Field } from "./Field";

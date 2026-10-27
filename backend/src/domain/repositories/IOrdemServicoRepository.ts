@@ -64,6 +64,9 @@ export type OrdemServicoEmissao = {
 // Dados já validados para gravar a OS — valores em centavos
 export type OrdemServicoPersistData = OrdemServicoDocumentFields & {
   emissao?: OrdemServicoEmissao | undefined;
+  // Só na criação: a OS nasce aguardando o orçamento, com o desconto do lote copiado
+  aguardandoEmissao?: boolean | undefined;
+  desconto?: number | undefined;
   // Na criação, com `numeracao` o repository gera o número (sequência por lote e ano)
   numero: string;
   numeracao?: { loteNumero: number | null; ano: number } | undefined;
@@ -93,13 +96,15 @@ export type OrdemServicoFiscalInfo = {
 export type OrdemServicoContratoDados = {
   id: string;
   tenant_id: string;
-  lotes: { id: string; numero: number }[];
+  lotes: { id: string; numero: number; desconto: number }[];
   fiscais: { id: string; tipo: "TECNICO" | "ADMINISTRATIVO" }[];
 };
 
 // Tudo o que o PDF da OS precisa, já com os valores em reais
 export type OrdemServicoDocumentData = {
   ordemServico: PersistedOrdemServico;
+  // Se a OS tem orçamento (itens): aí o valor final é o valor da OS
+  temOrcamento: boolean;
   empenhoDescricao: string;
   contrato: {
     identificador: string;
@@ -211,6 +216,10 @@ export interface IOrdemServicoRepository {
    * é recalculado). Se a OS mudar de obra, as notas fiscais dela acompanham.
    */
   update(id: string, data: Omit<OrdemServicoPersistData, "tenant_id">): Promise<OrdemServicoListItem>;
+  /** Soma dos itens do orçamento em centavos (o valor da OS), ou null se a OS ainda não tem orçamento. */
+  getValorOrcamento(id: string): Promise<number | null>;
+  /** Primeira emissão da OS que aguardava o orçamento: prazo de ciência, histórico e aviso à empresa. */
+  emitir(id: string, emissao: OrdemServicoEmissao): Promise<void>;
   /** Empenhos vinculados à OS (valores em reais). */
   listVinculos(id: string): Promise<OrdemServicoVinculo[]>;
   /** Se já existe nota fiscal (qualquer status) desta OS lançada no empenho. */

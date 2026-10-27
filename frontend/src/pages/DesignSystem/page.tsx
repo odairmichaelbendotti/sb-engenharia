@@ -21,6 +21,7 @@ import {
   Field,
   FormSection,
   IconButton,
+  InlineEdit,
   Input,
   Modal,
   ModalBody,
@@ -54,6 +55,9 @@ export default function DesignSystem() {
   const [status, setStatus] = useState<Status>("ATIVO");
   const [modalOpen, setModalOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [descricao, setDescricao] = useState("Execução de reboco em parede");
+  const [preco, setPreco] = useState("48,90");
+  const [codigo, setCodigo] = useState("");
 
   return (
     <div className="min-h-screen bg-background p-6 md:p-10">
@@ -167,6 +171,42 @@ export default function DesignSystem() {
           <FormSection title="Situação" icon={Activity}>
             <SegmentedControl label="Status" options={STATUS_OPTIONS} value={status} onChange={setStatus} />
           </FormSection>
+        </Block>
+
+        <Block title="Edição por clique (InlineEdit)">
+          <p className="text-xs text-text-muted">
+            Mostra o valor como texto; clique ou Tab abre o campo. Enter ou sair do campo fecha, Esc desfaz. Vazio ou
+            inválido fica aberto; desabilitado mostra só o texto.
+          </p>
+          <div className="grid grid-cols-[6rem_minmax(0,1fr)_8rem_8rem] gap-2 items-center">
+            <InlineEdit
+              size="sm"
+              aria-label="Código"
+              placeholder="Código"
+              optional
+              display={codigo || <span className="text-text-muted">—</span>}
+              value={codigo}
+              onChange={(e) => setCodigo(e.target.value)}
+              onRevert={setCodigo}
+            />
+            <InlineEdit
+              size="sm"
+              aria-label="Descrição"
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+              onRevert={setDescricao}
+            />
+            <InlineEdit
+              size="sm"
+              align="right"
+              prefix="R$"
+              aria-label="Preço"
+              value={preco}
+              onChange={(e) => setPreco(e.target.value)}
+              onRevert={setPreco}
+            />
+            <InlineEdit size="sm" align="right" prefix="R$" aria-label="Preço travado" value="12,34" disabled />
+          </div>
         </Block>
 
         <Block title="Selos de status (StatusPill)">

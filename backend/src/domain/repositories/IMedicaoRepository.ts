@@ -1,6 +1,7 @@
 import type { OrdemServicoStatusValue } from "../entities/OrdemServico.js";
-import type { LinhaMedicaoInput, OrcamentoItemInput } from "../medicao/medicao-calc.js";
+import type { LinhaMedicaoInput, OrcamentoItemInput, PrecoBase } from "../medicao/medicao-calc.js";
 import type { ItemPlanilhaCompleto, PlanilhaMedicao } from "../medicao/planilha-medicao.js";
+import type { OrdemServicoEmissao } from "./IOrdemServicoRepository.js";
 
 // Quantidades em milésimos e valores em centavos em todo este repositório: as contas de saldo
 // precisam ser exatas. A conversão para a API (reais e decimais) fica nos use cases
@@ -16,8 +17,18 @@ export type MedicaoOsContext = {
   // Empresa do contrato do empenho principal
   company_id: string;
   totalComBdi: number | null;
+  // Soma dos empenhos
   valor: number;
-  descontoLote: number;
+  // Desconto copiado do lote na criação da OS (porcentagem) e como os preços foram informados
+  desconto: number;
+  precoBase: PrecoBase;
+  // Emissão para a empresa (ver domain/tramitacao/ciencia.ts)
+  aguardandoEmissao: boolean;
+  emitidaEm: Date | null;
+  cienciaPrazoAte: Date | null;
+  cienciaDispensada: boolean;
+  // Empenhos que financiam a OS, o principal primeiro
+  empenhos: { empenho_id: string; numero: string; valor: number }[];
   dataInicio: Date | null;
   dataPrevisaoTermino: Date | null;
   // Identificação para as telas: obra, descrição do empenho principal, contrato e empresa
@@ -60,9 +71,8 @@ export type PainelOsRow = {
   status: OrdemServicoStatusValue;
   dataInicio: Date | null;
   dataPrevisaoTermino: Date | null;
-  totalComBdi: number | null;
   valor: number;
-  descontoLote: number;
+  aguardandoEmissao: boolean;
   // Descrição do empenho principal: título da linha quando a OS ainda não tem obra
   descricaoEmpenho: string;
   obra: { id: string; nome: string } | null;
@@ -111,8 +121,19 @@ export interface IMedicaoRepository {
   listOsDoPainel(params: { tenant_id: string | undefined; company_id: string | undefined }): Promise<PainelOsRow[]>;
   hasMedicaoFechada(ordemServico_id: string): Promise<boolean>;
 
-  /** Grava a planilha inteira: mantém os itens com id, cria os novos e exclui os que faltam. */
-  saveOrcamento(params: { ordemServico_id: string; itens: OrcamentoItemInput[] }): Promise<void>;
+  /**
+   * Grava a planilha inteira (mantém os itens com id, cria os novos e exclui os que faltam) e, na
+   * mesma transação, o modo de preço, o total com BDI e o valor de cada empenho (o valor da OS
+   * passa a ser a soma dos itens). Com `emissao`, reemite a OS para a empresa.
+   */
+  saveOrcamento(params: {
+    ordemServico_id: string;
+    precoBase: PrecoBase;
+    itens: OrcamentoItemInput[];
+    totalComBdi: number;
+    empenhos: { empenho_id: string; valor: number }[];
+    emissao: OrdemServicoEmissao | null;
+  }): Promise<void>;
 
   /** Cria o rascunho com o próximo número; recusa se já houver um. */
   createMedicao(params: { ordemServico_id: string; dados: MedicaoDadosInput; autor: MedicaoAutor }): Promise<string>;

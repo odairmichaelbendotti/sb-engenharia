@@ -314,8 +314,14 @@ model OrdemServico {
   // Dias de mobilização, já incluídos no prazo total
   prazoMobilizacaoDias Int                  @default(7)
   prazoDias           Int?
-  // Total com BDI informado pelo usuário, em centavos
+  // Total com BDI em centavos: informado nas OS antigas; nas com orçamento sai da soma dos itens
   totalComBdi         Int?
+  // Como os preços do orçamento foram informados (o sistema aplica o desconto em COM_BDI)
+  precoBase           OrcamentoPrecoBase   @default(COM_BDI)
+  // Desconto do lote copiado na criação, em porcentagem: editar o lote depois não muda a OS
+  desconto            Float                @default(0)
+  // Criada e ainda não emitida (sem orçamento): a empresa não vê
+  aguardandoEmissao   Boolean              @default(false)
   fiscalSetorial      String?
   fiscalTecnico_id    String?
   fiscalTecnico       FiscalContrato?      @relation("FiscalTecnicoOS", fields: [fiscalTecnico_id], references: [id], onDelete: SetNull)
@@ -489,7 +495,14 @@ model OrdemServicoEmpenho {
   @@index([empenho_id])
 }
 
-// Item da planilha orçamentária da OS. O preço unitário já inclui BDI e o desconto do lote
+// Como os preços do orçamento da OS foram informados
+enum OrcamentoPrecoBase {
+  // Só com BDI: o sistema aplica o desconto da OS, truncando o centavo
+  COM_BDI
+  COM_BDI_E_DESCONTO
+}
+
+// Item da planilha orçamentária da OS. O preço unitário é o que vale nas medições: com BDI e desconto
 model OrdemServicoItem {
   id            String   @id @default(uuid())
   // Posição na planilha (1, 2, 3...)
@@ -502,6 +515,8 @@ model OrdemServicoItem {
   quantidade    Int
   // Centavos
   precoUnitario Int
+  // Preço com BDI digitado, em centavos (só no modo COM_BDI; o unitário é ele com o desconto)
+  precoReferencia Int?
   // Total em centavos digitado para bater com a planilha de referência (truncamento, preço com
   // mais casas); nulo = quantidade × preço. Nas medições, o item medido por inteiro vale este total
   valorTotal    Int?

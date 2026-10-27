@@ -64,3 +64,12 @@ export function valorAcumuladoItem(
   if (mil < orcadoMil) return Math.min(calculado, item.valorOrcado);
   return Math.round((item.valorOrcado + calculado - valorItem(item.orcado, item.precoUnitario)) * 100) / 100;
 }
+
+/**
+ * Preço com BDI menos o desconto (porcentagem), truncado no centavo (espelha `precoComDesconto` de
+ * backend/src/domain/medicao/medicao-calc.ts: conta em inteiros, desconto com até 4 casas).
+ */
+export function precoComDesconto(preco: number, desconto: number) {
+  const fator = BigInt(1_000_000 - Math.round(desconto * 10_000));
+  return Number((BigInt(Math.round(preco * 100)) * fator) / 1_000_000n) / 100;
+}

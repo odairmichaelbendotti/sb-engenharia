@@ -29,15 +29,34 @@ export function valorItem(quantidadeMil: number, precoCent: number): number {
   return Number((produto + escala / 2n) / escala);
 }
 
+// Como os preços do orçamento foram informados (OrdemServico.precoBase)
+export type PrecoBase = "COM_BDI" | "COM_BDI_E_DESCONTO";
+export const PRECO_BASES: readonly PrecoBase[] = ["COM_BDI", "COM_BDI_E_DESCONTO"];
+
+// Desconto em porcentagem com até 4 casas, levado a milionésimos para a conta ser em inteiros
+const DESCONTO_ESCALA = 1_000_000;
+
+/**
+ * Preço com BDI menos o desconto (porcentagem), truncado no centavo, como nas planilhas de
+ * licitação: o preço com desconto nunca passa do referencial. Conta em BigInt, sem ponto flutuante.
+ */
+export function precoComDesconto(precoCent: number, desconto: number): number {
+  const fator = BigInt(DESCONTO_ESCALA - Math.round(desconto * 10_000));
+  return Number((BigInt(precoCent) * fator) / BigInt(DESCONTO_ESCALA));
+}
+
 // Item da planilha em unidades internas (milésimos e centavos)
 export type ItemPlanilha = {
   id: string;
   descricao: string;
   unidade: string;
   quantidade: number;
+  // Preço que vale nas medições (com BDI e desconto)
   precoUnitario: number;
   // Total digitado para bater com a planilha de referência; nulo = quantidade × preço
   valorTotal: number | null;
+  // Preço com BDI digitado, quando o sistema aplicou o desconto; ausente no snapshot da medição
+  precoReferencia?: number | null;
 };
 
 type ValoresItem = Pick<ItemPlanilha, "quantidade" | "precoUnitario" | "valorTotal">;
@@ -257,9 +276,12 @@ export type OrcamentoItemInput = {
   descricao: string;
   unidade: string;
   quantidade: number;
+  // Preço que vale (no modo COM_BDI, já calculado com o desconto)
   precoUnitario: number;
-  // Total ajustado; nulo = quantidade × preço
+  // Total ajustado; nulo = quantidade × preço. Só no modo COM_BDI_E_DESCONTO
   valorTotal: number | null;
+  // Preço com BDI digitado (modo COM_BDI); nulo no modo com desconto
+  precoReferencia: number | null;
 };
 
 /**
@@ -303,6 +325,13 @@ export function validateOrcamentoChange({
     if (!Number.isInteger(novo.precoUnitario) || novo.precoUnitario < 0 || novo.precoUnitario > INT_MAX) {
       throw new DomainError(`${pos}: preço unitário is invalid`);
     }
+    if (novo.precoReferencia !== null) {
+      if (!Number.isInteger(novo.precoReferencia) || novo.precoReferencia < 0 || novo.precoReferencia > INT_MAX) {
+        throw new DomainError(`${pos}: preço unitário is invalid`);
+      }
+      // O total ajustado é da planilha com desconto; aplicando o desconto, o total é sempre calculado
+      if (novo.valorTotal !== null) throw new DomainError(`${pos}: valor total can only be adjusted with discounted prices`);
+    }
     if (novo.valorTotal !== null) {
       if (!Number.isInteger(novo.valorTotal) || novo.valorTotal < 0 || novo.valorTotal > INT_MAX) {
         throw new DomainError(`${pos}: valor total is invalid`);
@@ -326,7 +355,10 @@ export function validateOrcamentoChange({
         `${pos}: quantidade cannot be lower than what was already measured (${formatQtd(medido, atual.unidade)})`,
       );
     }
-    if (novo.precoUnitario !== atual.precoUnitario) {
+    if (
+      novo.precoUnitario !== atual.precoUnitario ||
+      (atual.precoReferencia !== undefined && novo.precoReferencia !== atual.precoReferencia)
+    ) {
       throw new DomainError(`${pos}: preço unitário of a measured item cannot change`);
     }
     // O total ajustado pode mudar só se não mexer no valor já medido (ex.: item medido por inteiro)
@@ -346,25 +378,34 @@ export function validateOrcamentoChange({
 }
 
 /**
- * Valor final da OS em centavos, o mesmo do quadro-resumo do PDF da OS: total com BDI menos o
- * desconto do lote. OS antiga, sem total com BDI, fica com o valor gravado (soma dos empenhos).
+ * Totais do orçamento em centavos. O valor da OS é a soma dos itens (preços com desconto). O total
+ * com BDI é a soma pelo preço de referência quando o sistema aplicou o desconto; com os preços já
+ * descontados, é o valor da OS sem o desconto (arredondado).
  */
-export function valorFinalOs({
-  totalComBdi,
-  valor,
-  descontoLote,
+export function totaisOrcamento({
+  itens,
+  precoBase,
+  desconto,
 }: {
-  totalComBdi: number | null;
-  valor: number;
-  descontoLote: number;
-}): number {
-  if (totalComBdi === null) return valor;
-  return Math.round(totalComBdi * (1 - descontoLote / 100));
+  itens: readonly Pick<ItemPlanilha, "quantidade" | "precoUnitario" | "valorTotal" | "precoReferencia">[];
+  precoBase: PrecoBase;
+  desconto: number;
+}): { totalComBdi: number; valorOs: number } {
+  const valorOs = itens.reduce((acc, item) => acc + valorOrcadoItem(item), 0);
+  if (precoBase === "COM_BDI") {
+    const totalComBdi = itens.reduce(
+      (acc, item) => acc + valorItem(item.quantidade, item.precoReferencia ?? item.precoUnitario),
+      0,
+    );
+    return { totalComBdi, valorOs };
+  }
+  const fator = 1 - desconto / 100;
+  return { totalComBdi: fator > 0 ? Math.round(valorOs / fator) : valorOs, valorOs };
 }
 
 /**
- * Diferença entre a soma dos itens (preços já com BDI e desconto) e o valor final da OS, em
- * centavos. Nula quando bate.
+ * Diferença entre a soma dos itens e o valor da OS (soma dos empenhos), em centavos. Nula quando
+ * bate. Salvar o orçamento acerta os empenhos; sobra diferença em OS que ainda não foi salva assim.
  */
 export function divergenciaTotal(somaItens: number, valorOs: number): { diferenca: number } | null {
   const diferenca = somaItens - valorOs;

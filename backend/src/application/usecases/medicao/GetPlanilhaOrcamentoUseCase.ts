@@ -1,7 +1,10 @@
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
-import { computePanorama, divergenciaTotal, valorFinalOs } from "../../../domain/medicao/medicao-calc.js";
+import { computePanorama, divergenciaTotal, totaisOrcamento } from "../../../domain/medicao/medicao-calc.js";
 import { somarQuantidades } from "../../../domain/medicao/medicao-resumo.js";
+import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository.js";
 import type { IMedicaoRepository } from "../../../domain/repositories/IMedicaoRepository.js";
+import { isCienciaDispensada } from "../../../domain/tramitacao/ciencia.js";
+import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import { loadOsComAcesso, podeEditar } from "./medicao-access.js";
 import { presentMedicaoResumo, qtd, reais, valoresDasMedicoes } from "./medicao-presenter.js";
 
@@ -12,7 +15,10 @@ const DIA_MS = 24 * 60 * 60 * 1000;
 
 // Planilha orçamentária da OS com o panorama (orçado, medido, saldo) e as medições
 export class GetPlanilhaOrcamentoUseCase {
-  constructor(private repository: IMedicaoRepository) {}
+  constructor(
+    private repository: IMedicaoRepository,
+    private empenhoRepository: IEmpenhoRepository,
+  ) {}
 
   async execute({ ordemServicoId, user }: { ordemServicoId: string; user: AuthenticatedUser }) {
     const os = await loadOsComAcesso(this.repository, ordemServicoId, user);
@@ -41,7 +47,22 @@ export class GetPlanilhaOrcamentoUseCase {
               ? "SEM_SALDO"
               : null;
 
-    const valorOs = valorFinalOs(os);
+    // Valor da OS = soma dos empenhos; salvar o orçamento acerta os empenhos com a soma dos itens
+    const valorOs = os.valor;
+    const totais = totaisOrcamento({ itens: planilha.itens, precoBase: os.precoBase, desconto: os.desconto });
+    const temFechada = fechadas.length > 0;
+    const emiteOs = editor && new DomainAccessPolicy().canDo(user.role, "createOrdemServico");
+    // Para distribuir o valor entre os empenhos: o saldo livre de cada um sem contar esta OS
+    const empenhos = editor
+      ? await Promise.all(
+          os.empenhos.map(async (v) => ({
+            id: v.empenho_id,
+            numero: v.numero,
+            valor: reais(v.valor),
+            saldoLivre: await this.empenhoRepository.getSaldoDisponivel(v.empenho_id, os.id),
+          })),
+        )
+      : [];
     const divergencia =
       editor && planilha.itens.length > 0 ? divergenciaTotal(panorama.totais.valorOrcado, valorOs) : null;
     const valores = valoresDasMedicoes(planilha);
@@ -68,7 +89,13 @@ export class GetPlanilhaOrcamentoUseCase {
         obra: os.obra,
         contrato: os.contrato,
         empresa: os.empresa,
+        aguardandoEmissao: os.aguardandoEmissao,
       },
+      // Como os preços foram informados e o desconto da OS (porcentagem)
+      precoBase: os.precoBase,
+      desconto: os.desconto,
+      totalComBdi: planilha.itens.length > 0 ? reais(totais.totalComBdi) : null,
+      empenhos,
       itens: planilha.itens.map((item, index) => {
         const p = panorama.itens[index]!;
         return {
@@ -79,6 +106,7 @@ export class GetPlanilhaOrcamentoUseCase {
           unidade: item.unidade,
           quantidade: qtd(item.quantidade),
           precoUnitario: reais(item.precoUnitario),
+          precoReferencia: item.precoReferencia === null || item.precoReferencia === undefined ? null : reais(item.precoReferencia),
           valorTotal: reais(p.valorOrcado),
           totalAjustado: item.valorTotal !== null,
           medido: qtd(p.medido),
@@ -103,6 +131,14 @@ export class GetPlanilhaOrcamentoUseCase {
       proximoPeriodoInicio,
       permissoes: {
         editarOrcamento: editor && os.status === "ATIVO",
+        // Trocar o modo mudaria o preço dos itens já medidos
+        trocarPrecoBase: editor && os.status === "ATIVO" && !temFechada,
+        emitir: emiteOs && os.status === "ATIVO" && os.aguardandoEmissao && planilha.itens.length > 0,
+        // Salvar com outro valor reemite a OS para a empresa
+        reemiteAoMudarValor:
+          os.status === "ATIVO" &&
+          !os.aguardandoEmissao &&
+          !isCienciaDispensada({ ...os, cienteEm: null, contestacoesAbertas: 0 }),
         criarMedicao: motivo === null,
         editarMedicoes: editor && os.status === "ATIVO",
         motivo,

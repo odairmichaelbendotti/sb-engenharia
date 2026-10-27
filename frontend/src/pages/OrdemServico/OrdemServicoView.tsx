@@ -222,15 +222,19 @@ function DocumentSection({ ordemServico }: { ordemServico: OrdemServico }) {
     fiscalAdministrativo,
     fiscalSetorial,
     condicoesEspeciais,
+    aguardandoEmissao,
+    desconto,
   } = ordemServico;
-  const incompleta = !setorRequisitante || !urgencia || !dataVistoria || !totalComBdi || !fiscalTecnico;
+  // O total com BDI da OS nova só existe depois do orçamento: não conta como campo em branco
+  const incompleta =
+    !setorRequisitante || !urgencia || !dataVistoria || (!totalComBdi && !aguardandoEmissao) || !fiscalTecnico;
 
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
         {lote && (
           <InfoItem icon={Tag} label="Lote">
-            {String(lote.numero).padStart(2, "0")} – {lote.nome} · desconto de {String(lote.desconto).replace(".", ",")}%
+            {String(lote.numero).padStart(2, "0")} – {lote.nome} · desconto de {String(desconto).replace(".", ",")}%
           </InfoItem>
         )}
         <InfoItem icon={Wrench} label="Setor requisitante">
@@ -246,7 +250,7 @@ function DocumentSection({ ordemServico }: { ordemServico: OrdemServico }) {
           {prazoDias ? `${prazoDias} dias corridos (mobilização de ${prazoMobilizacaoDias})` : "—"}
         </InfoItem>
         <InfoItem icon={Banknote} label="Total com BDI">
-          {totalComBdi ? formatCurrency(totalComBdi) : "—"}
+          {totalComBdi ? formatCurrency(totalComBdi) : aguardandoEmissao ? "sai do orçamento" : "—"}
         </InfoItem>
         <InfoItem icon={ShieldCheck} label="Fiscal técnico">
           {fiscalTecnico ? `${fiscalTecnico.nome} – ${fiscalTecnico.ramal}` : "—"}

@@ -33,6 +33,8 @@ export type OrdemServicoTramitacaoInfo = {
   // Empresa do contrato do empenho principal
   company_id: string;
   companyName: string;
+  // Ainda não emitida: a empresa não vê
+  aguardandoEmissao: boolean;
   emitidaEm: Date | null;
   cienciaPrazoAte: Date | null;
   cienciaDispensada: boolean;
