@@ -113,6 +113,23 @@ export async function loadResumo(db: Db, ordemServico_id: string): Promise<Ordem
   };
 }
 
+/**
+ * Colunas que a emissão (ou reemissão) grava na OS: novo prazo de ciência, e a ciência, a
+ * visualização e o vencimento da versão anterior deixam de valer.
+ */
+export function colunasEmissao(emissao: OrdemServicoEmissao) {
+  return {
+    aguardandoEmissao: false,
+    emitidaEm: emissao.emitidaEm,
+    cienciaPrazoAte: emissao.cienciaPrazoAte,
+    visualizadaEm: null,
+    cienteEm: null,
+    cienteUser_id: null,
+    cienteNome: null,
+    prazoVencidoEm: null,
+  };
+}
+
 /** Evento EMITIDA/REEMITIDA e aviso à empresa, na transação que gravou a OS. */
 export async function registrarEmissao(db: Db, ordemServico_id: string, emissao: OrdemServicoEmissao) {
   const resumo = await loadResumo(db, ordemServico_id);

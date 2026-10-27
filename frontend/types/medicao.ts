@@ -2,6 +2,10 @@ import type { OrdemServicoStatus } from "./ordem-servico";
 
 export type MedicaoStatus = "RASCUNHO" | "FECHADA";
 
+// Como os preços do orçamento foram informados: só com BDI (o sistema aplica o desconto da OS,
+// truncando o centavo) ou já com BDI e desconto
+export type PrecoBase = "COM_BDI" | "COM_BDI_E_DESCONTO";
+
 // Por que não dá para lançar uma medição agora
 export type MotivoBloqueioMedicao = "SEM_PERMISSAO" | "OS_INATIVA" | "SEM_ORCAMENTO" | "RASCUNHO_ABERTO" | "SEM_SALDO";
 
@@ -13,7 +17,10 @@ export interface OrcamentoItem {
   descricao: string;
   unidade: string;
   quantidade: number;
+  // Preço que vale nas medições (com BDI e desconto)
   precoUnitario: number;
+  // Preço com BDI informado, quando o sistema aplicou o desconto (modo COM_BDI)
+  precoReferencia: number | null;
   // Total ajustado (quando `totalAjustado`) ou quantidade × preço
   valorTotal: number;
   // Total digitado para bater com a planilha de referência
@@ -59,13 +66,31 @@ export interface MedicaoOsInfo {
   obra: { id: string; nome: string } | null;
   contrato: { id: string; identificador: string; cor: string };
   empresa: { id: string; name: string };
+  // Criada e ainda não emitida para a empresa (sem orçamento)
+  aguardandoEmissao: boolean;
+}
+
+// Empenho da OS, para repartir o valor do orçamento (só para quem edita)
+export interface OrcamentoEmpenho {
+  id: string;
+  numero: string;
+  // Quanto destina hoje à OS
+  valor: number;
+  // Saldo livre sem contar esta OS
+  saldoLivre: number;
 }
 
 export interface PlanilhaOrcamento {
   ordemServico: MedicaoOsInfo;
+  // Como os preços foram informados e o desconto da OS (porcentagem, copiado do lote)
+  precoBase: PrecoBase;
+  desconto: number;
+  // Total com BDI do orçamento (nulo sem itens)
+  totalComBdi: number | null;
+  empenhos: OrcamentoEmpenho[];
   itens: OrcamentoItem[];
   totais: { valorOrcado: number; valorMedido: number; valorSaldo: number; valorRascunho: number };
-  // Valor final da OS (com BDI e desconto do lote) e a diferença da soma dos itens; nulos para quem não edita
+  // Valor da OS (soma dos empenhos) e a diferença da soma dos itens; nulos para quem não edita
   valorOs: number | null;
   divergencia: { diferenca: number } | null;
   medicoes: (MedicaoResumo & { podeReabrir: boolean })[];
@@ -73,6 +98,12 @@ export interface PlanilhaOrcamento {
   proximoPeriodoInicio: string | null;
   permissoes: {
     editarOrcamento: boolean;
+    // Trocar o modo de preço (travado depois de uma medição fechada)
+    trocarPrecoBase: boolean;
+    // Emitir a OS para a empresa (aguarda emissão e já tem orçamento)
+    emitir: boolean;
+    // Salvar o orçamento com outro valor reemite a OS
+    reemiteAoMudarValor: boolean;
     criarMedicao: boolean;
     editarMedicoes: boolean;
     motivo: MotivoBloqueioMedicao | null;
@@ -114,9 +145,17 @@ export interface OrcamentoItemPayload {
   descricao: string;
   unidade: string;
   quantidade: number;
+  // Como informado: com BDI (modo COM_BDI) ou com BDI e desconto
   precoUnitario: number;
-  // Total ajustado; null = quantidade × preço
+  // Total ajustado; null = quantidade × preço. Só no modo com desconto
   valorTotal: number | null;
+}
+
+export interface OrcamentoPayload {
+  precoBase: PrecoBase;
+  itens: OrcamentoItemPayload[];
+  // Quanto cada empenho destina à OS, quando ela tem mais de um (soma = valor do orçamento)
+  empenhos?: { empenho_id: string; valor: number }[];
 }
 
 export interface MedicaoPayload {
@@ -129,7 +168,7 @@ export interface MedicaoPayload {
 // GET /medicao/painel — uma linha por OS na tela de medições (valores em reais)
 export interface PainelMedicaoItem extends MedicaoOsInfo {
   empenhos: { id: string; numero: string }[];
-  // Valor final da OS (com BDI e desconto do lote)
+  // Valor da OS (soma dos empenhos; salvar o orçamento acerta com a soma dos itens)
   valorOs: number;
   itens: number;
   valorOrcado: number;

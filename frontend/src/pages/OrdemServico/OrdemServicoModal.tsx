@@ -37,6 +37,7 @@ import { useEmpenhos } from "../../store/empenhos";
 import { useContratos } from "../../store/contratos";
 import { useOrdensServico } from "../../store/ordensServico";
 import { useObras } from "../../store/obras";
+import { useMedicoes } from "../../store/medicoes";
 import { maskCurrency, formatValueToCurrencyMask, parseCurrencyMask } from "../../utils/masks";
 import { formatCurrency } from "../../utils/format-currency";
 import type {
@@ -130,6 +131,7 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
   const { data: empenhosData, fetchListEmpenhos } = useEmpenhos();
   const { data: contratosData, fetchContratos } = useContratos();
   const { obraOptions, fetchObraOptions } = useObras();
+  const fetchPlanilha = useMedicoes((s) => s.fetchPlanilha);
   const [isLoading, setIsLoading] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState<OrdemServicoStatus | null>(null);
   const [currentStatus, setCurrentStatus] = useState<OrdemServicoStatus>(ordemServico?.status ?? "ATIVO");
@@ -180,6 +182,24 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
   useEffect(() => {
     fetchObraOptions().catch(() => toast.error("Erro ao carregar as obras"));
   }, [fetchObraOptions]);
+
+  // Valor do orçamento (soma dos itens) da OS em edição: com orçamento, é o valor da OS e os
+  // empenhos precisam somar ele. undefined = carregando; null = sem orçamento
+  const [valorOrcamento, setValorOrcamento] = useState<number | null | undefined>(ordemServico ? undefined : null);
+  useEffect(() => {
+    if (!ordemServico) return;
+    let cancelled = false;
+    fetchPlanilha(ordemServico.id)
+      .then((p) => {
+        if (!cancelled) setValorOrcamento(p.itens.length > 0 ? p.totais.valorOrcado : null);
+      })
+      .catch(() => {
+        if (!cancelled) setValorOrcamento(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ordemServico, fetchPlanilha]);
 
   // Obra só depois do empenho: primeiro as obras com OS do(s) empenho(s) escolhido(s), depois
   // as demais do mesmo contrato (ex.: serviço que faltou numa obra, pago por um empenho novo).
@@ -253,7 +273,14 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
 
   const valorTotal = vinculos.reduce((sum, v) => sum + parseCurrencyMask(v.valor), 0);
 
-  // Orçamento: o usuário informa o total com BDI; o valor final aplica o desconto do lote
+  // O valor da OS sai do orçamento (lançado depois, em Medições). Só a OS antiga sem orçamento
+  // ainda tem o total com BDI digitado e o valor informado em cada empenho
+  const temOrcamento = valorOrcamento !== undefined && valorOrcamento !== null;
+  const valorPeloOrcamento = ordemServico === null || ordemServico.aguardandoEmissao || temOrcamento;
+  // Com orçamento e vários empenhos, o usuário reparte o valor entre eles
+  const valorPorEmpenho = !valorPeloOrcamento || (temOrcamento && vinculos.length > 1);
+
+  // OS antiga: o usuário informa o total com BDI; o valor final aplica o desconto do lote
   const totalComBdi = parseCurrencyMask(form.totalComBdi);
   const orcamento =
     contratoDados && totalComBdi > 0 ? calcularOrcamento(totalComBdi, contratoDados.bdi, lote?.desconto ?? 0) : null;
@@ -286,12 +313,9 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
     }
   }
 
+  // O lote só é escolhido na OS nova (depois ele não muda), que ainda não tem valor
   function handleLoteChange(loteId: string) {
     setForm((prev) => ({ ...prev, lote_id: loteId }));
-    const novoLote = lotes.find((l) => l.id === loteId);
-    if (contratoDados && totalComBdi > 0) {
-      syncValorUnico(calcularOrcamento(totalComBdi, contratoDados.bdi, novoLote?.desconto ?? 0).valorFinal);
-    }
   }
 
   function handleContratoChange(contratoId: string) {
@@ -302,9 +326,17 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
   }
 
   function handleEmpenhoChange(key: number, empenhoId: string) {
-    // Por padrão o empenho vai inteiro; com o orçamento informado e um só empenho, vai o valor final calculado
-    const valorPadrao =
-      vinculos.length === 1 && orcamento !== null ? orcamento.valorFinal : empenhoId ? saldoLivre(empenhoId) : 0;
+    // OS antiga: por padrão o empenho vai inteiro; com o total informado e um só empenho, vai o valor
+    // final calculado. Com orçamento, um empenho só leva o valor dele; os demais começam zerados
+    const valorPadrao = valorPeloOrcamento
+      ? vinculos.length === 1 && temOrcamento
+        ? valorOrcamento
+        : 0
+      : vinculos.length === 1 && orcamento !== null
+        ? orcamento.valorFinal
+        : empenhoId
+          ? saldoLivre(empenhoId)
+          : 0;
     setVinculos((prev) =>
       prev.map((v) =>
         v.key === key
@@ -356,14 +388,27 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
     return null;
   }
 
+  // Quanto cada empenho destina à OS: o informado na OS antiga e na repartição; com um empenho só,
+  // o valor do orçamento; sem orçamento ainda, zero
+  function valorDoVinculo(v: VinculoForm) {
+    if (valorPorEmpenho) return parseCurrencyMask(v.valor);
+    return temOrcamento ? valorOrcamento : 0;
+  }
+
   function validateEmpenhos() {
     if (empenhosPreenchidos.length === 0) return "Vincule pelo menos um empenho à ordem de serviço";
     for (const v of empenhosPreenchidos) {
-      const valor = parseCurrencyMask(v.valor);
+      const valor = valorDoVinculo(v);
       const numero = empenhos.find((e) => e.id === v.empenho_id)?.numero ?? "";
-      if (valor <= 0) return `Informe o valor destinado do empenho ${numero}`;
+      if (!valorPeloOrcamento && valor <= 0) return `Informe o valor destinado do empenho ${numero}`;
       if (Math.round(valor * 100) > Math.round(saldoLivre(v.empenho_id) * 100)) {
         return `O valor do empenho ${numero} excede o saldo livre dele (${formatCurrency(saldoLivre(v.empenho_id))})`;
+      }
+    }
+    if (temOrcamento) {
+      const soma = empenhosPreenchidos.reduce((acc, v) => acc + valorDoVinculo(v), 0);
+      if (Math.round(soma * 100) !== Math.round(valorOrcamento * 100)) {
+        return `Os empenhos somam ${formatCurrency(soma)}; precisam somar o valor do orçamento (${formatCurrency(valorOrcamento)})`;
       }
     }
     return null;
@@ -386,11 +431,6 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
     return null;
   }
 
-  function validateValor() {
-    if (isCreate && !(totalComBdi > 0)) return "Informe o total com BDI da ordem de serviço";
-    return null;
-  }
-
   function validateFiscais() {
     if (!isCreate) return null;
     if (!form.fiscalTecnico_id) return "Informe o fiscal técnico da ordem de serviço";
@@ -403,7 +443,7 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
     if (!termino) return;
     const payload: CreateOrdemServicoPayload = {
       ...(isCreate ? {} : { numero: form.numero }),
-      empenhos: empenhosPreenchidos.map((v) => ({ empenho_id: v.empenho_id, valor: parseCurrencyMask(v.valor) })),
+      empenhos: empenhosPreenchidos.map((v) => ({ empenho_id: v.empenho_id, valor: valorDoVinculo(v) })),
       dataInicio: form.dataInicio,
       dataPrevisaoTermino: termino,
       obra_id: obraId || null,
@@ -415,7 +455,8 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
       dataEmissao: form.dataEmissao,
       prazoMobilizacaoDias: mobilizacaoNum,
       prazoDias: prazoDiasNum,
-      totalComBdi: totalComBdi > 0 ? totalComBdi : null,
+      // Com orçamento o total com BDI sai dos itens; o backend ignora o enviado
+      totalComBdi: !valorPeloOrcamento && totalComBdi > 0 ? totalComBdi : null,
       fiscalSetorial: form.fiscalSetorial,
       fiscalTecnico_id: form.fiscalTecnico_id || null,
       fiscalAdministrativo_id: form.fiscalAdministrativo_id || null,
@@ -435,7 +476,9 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
         );
       } else {
         const created = await createOrdemServico(payload);
-        toast.success(`Ordem de serviço "${created.numero}" criada e enviada à empresa, que tem 48 h para dar ciência.`);
+        toast.success(
+          `Ordem de serviço "${created.numero}" criada. Lance o orçamento em Medições e emita a OS para a empresa.`,
+        );
       }
       await fetchOrdensServico();
       handleClose();
@@ -566,8 +609,13 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
         <>
           <FormSection title="Empenhos" icon={Layers2}>
             <p className="text-xs text-text-muted">
-              Ao escolher o empenho, o valor já vem com todo o saldo livre dele (ou com o valor final calculado, se o
-              total com BDI já foi informado). Diminua só se o empenho for dividido entre várias ordens de serviço.
+              {!valorPeloOrcamento
+                ? "Ao escolher o empenho, o valor já vem com todo o saldo livre dele (ou com o valor final calculado, se o total com BDI já foi informado). Diminua só se o empenho for dividido entre várias ordens de serviço."
+                : temOrcamento
+                  ? vinculos.length > 1
+                    ? `Reparta o valor do orçamento (${formatCurrency(valorOrcamento)}) entre os empenhos.`
+                    : `O empenho leva o valor do orçamento (${formatCurrency(valorOrcamento)}).`
+                  : "O valor da OS sai do orçamento: depois de criar, lance o orçamento em Medições e emita a OS para a empresa. Com mais de um empenho, a repartição é feita no orçamento."}
             </p>
 
             {vinculos.map((vinculo) => {
@@ -595,15 +643,17 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
                       ))}
                     </Select>
                     <div className="flex gap-2">
-                      <Input
-                        prefix="R$"
-                        inputMode="numeric"
-                        aria-label="Valor destinado à OS"
-                        value={vinculo.valor}
-                        onChange={(e) => handleValorChange(vinculo.key, e.target.value)}
-                        placeholder="0,00"
-                        className="sm:w-44 flex-1"
-                      />
+                      {valorPorEmpenho && (
+                        <Input
+                          prefix="R$"
+                          inputMode="numeric"
+                          aria-label="Valor destinado à OS"
+                          value={vinculo.valor}
+                          onChange={(e) => handleValorChange(vinculo.key, e.target.value)}
+                          placeholder="0,00"
+                          className="sm:w-44 flex-1"
+                        />
+                      )}
                       <IconButton
                         icon={Trash2}
                         label="Remover empenho da OS"
@@ -802,16 +852,54 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
         </FormSection>
       ),
     },
+    // Com orçamento, só o resumo; OS antiga sem orçamento ainda informa o total com BDI; OS nova não tem etapa
+    ...(temOrcamento
+      ? [
     {
       id: "valor",
       label: "Valor",
       icon: DollarSign,
-      validate: validateValor,
+      content: (
+        <FormSection title="Financeiro" icon={DollarSign}>
+          <p className="text-xs text-text-muted">
+            O valor da OS é a soma dos itens do orçamento, já com o desconto. Para mudá-lo, edite o orçamento em
+            Medições.
+          </p>
+          <div className="bg-surface-muted rounded-lg p-3 border border-border grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <p className="text-xs text-text-muted">Total com BDI</p>
+              <p className="text-sm font-semibold text-text-primary tabular-nums">
+                {ordemServico?.totalComBdi != null ? formatCurrency(ordemServico.totalComBdi) : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-text-muted">Desconto da OS</p>
+              <p className="text-sm font-semibold text-text-primary tabular-nums">
+                {String(ordemServico?.desconto ?? 0).replace(".", ",")}%
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-text-muted">Valor da Ordem de Serviço</p>
+              <p className="text-sm font-semibold text-text-primary tabular-nums">
+                {formatCurrency(valorOrcamento ?? 0)}
+              </p>
+            </div>
+          </div>
+        </FormSection>
+      ),
+    },
+        ]
+      : valorPeloOrcamento
+        ? []
+        : [
+    {
+      id: "valor",
+      label: "Valor",
+      icon: DollarSign,
       content: (
         <FormSection title="Financeiro" icon={DollarSign}>
           <Field
             label="Total com BDI (R$)"
-            required={!ordemServico}
             hint={
               contratoDados
                 ? `O total sem BDI e o valor final saem dele (BDI de ${String(contratoDados.bdi).replace(".", ",")}%${lote ? ` e desconto de ${String(lote.desconto).replace(".", ",")}%` : ""}).`
@@ -856,6 +944,7 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
         </FormSection>
       ),
     },
+          ]),
     {
       id: "fiscais",
       label: "Fiscais e condições",
@@ -980,7 +1069,8 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
         description={
           ordemServico
             ? `Editando: ${ordemServico.numero}${
-                ordemServico.status === "ATIVO" && getFaseEmissao(ordemServico) !== "DISPENSADA"
+                ordemServico.status === "ATIVO" &&
+                !["DISPENSADA", "AGUARDANDO_EMISSAO"].includes(getFaseEmissao(ordemServico))
                   ? " · alterar o conteúdo reemite a OS e a empresa precisa dar ciência de novo"
                   : ""
               }`

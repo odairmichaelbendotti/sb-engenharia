@@ -39,7 +39,17 @@ export function OrcamentoLeitura({ planilha }: { planilha: PlanilhaOrcamento }) 
                   {item.codigo && <p className="text-[11px] text-text-muted truncate">{item.codigo}</p>}
                 </Td>
                 <Td className="hidden md:table-cell">
-                  {formatCurrency(item.precoUnitario)}/{item.unidade}
+                  <span className="block">
+                    {formatCurrency(item.precoUnitario)}/{item.unidade}
+                  </span>
+                  {item.precoReferencia !== null && (
+                    <span
+                      className="block text-[11px] text-text-muted"
+                      title="Preço com BDI; o que vale tem o desconto da OS"
+                    >
+                      c/ BDI {formatCurrency(item.precoReferencia)}
+                    </span>
+                  )}
                 </Td>
                 <Td>
                   <span className="block">

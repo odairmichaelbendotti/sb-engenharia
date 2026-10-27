@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type {
   MedicaoDetalhe,
   MedicaoPayload,
-  OrcamentoItemPayload,
+  OrcamentoPayload,
   PainelMedicaoItem,
   PlanilhaOrcamento,
 } from "../../types/medicao";
@@ -13,7 +13,9 @@ import { defaultFetch } from "../services/api";
 type MedicoesState = {
   fetchPainel: () => Promise<PainelMedicaoItem[]>;
   fetchPlanilha: (ordemServicoId: string) => Promise<PlanilhaOrcamento>;
-  saveOrcamento: (ordemServicoId: string, itens: OrcamentoItemPayload[]) => Promise<void>;
+  // Devolve se a OS foi reemitida para a empresa (o valor mudou)
+  saveOrcamento: (ordemServicoId: string, orcamento: OrcamentoPayload) => Promise<{ reemitida: boolean }>;
+  emitirOrdemServico: (ordemServicoId: string) => Promise<void>;
   fetchMedicao: (medicaoId: string) => Promise<MedicaoDetalhe>;
   createMedicao: (ordemServicoId: string, dados: MedicaoPayload) => Promise<string>;
   updateMedicao: (medicaoId: string, dados: MedicaoPayload) => Promise<void>;
@@ -45,8 +47,18 @@ export const useMedicoes = create<MedicoesState>(() => ({
   fetchPlanilha: (ordemServicoId) =>
     send(`/ordem-servico/${ordemServicoId}/orcamento`, "GET", undefined, "Erro ao carregar o orçamento da OS"),
 
-  saveOrcamento: async (ordemServicoId, itens) => {
-    await send(`/ordem-servico/${ordemServicoId}/orcamento`, "PUT", { itens }, "Erro ao salvar o orçamento");
+  saveOrcamento: async (ordemServicoId, orcamento) => {
+    const { reemitida } = await send<{ reemitida?: boolean }>(
+      `/ordem-servico/${ordemServicoId}/orcamento`,
+      "PUT",
+      orcamento,
+      "Erro ao salvar o orçamento",
+    );
+    return { reemitida: Boolean(reemitida) };
+  },
+
+  emitirOrdemServico: async (ordemServicoId) => {
+    await send(`/ordem-servico/${ordemServicoId}/emitir`, "POST", {}, "Erro ao emitir a ordem de serviço");
   },
 
   fetchMedicao: (medicaoId) => send(`/medicao/${medicaoId}`, "GET", undefined, "Erro ao carregar a medição"),

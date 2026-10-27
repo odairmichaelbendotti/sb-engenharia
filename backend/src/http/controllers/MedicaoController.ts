@@ -63,8 +63,8 @@ export class MedicaoController {
 
   async saveOrcamento(req: Request, res: Response) {
     try {
-      await this.saveOrcamentoUseCase.execute({ ordemServicoId: paramId(req), user: req.user, itens: body(req).itens });
-      res.status(200).json({ message: "Budget saved" });
+      const result = await this.saveOrcamentoUseCase.execute({ ordemServicoId: paramId(req), user: req.user, body: body(req) });
+      res.status(200).json({ message: "Budget saved", ...result });
     } catch (error) {
       return handleError(res, error);
     }

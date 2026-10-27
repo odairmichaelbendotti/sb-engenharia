@@ -9,6 +9,7 @@ import type {
 } from "../../../domain/repositories/IOrdemServicoTramitacaoRepository.js";
 import { prisma } from "../../prisma/prisma.js";
 import { formatDataHora, inserirEvento, loadResumo, notificar } from "./tramitacao-tx.js";
+import { osDaEmpresa } from "./os-escopo.js";
 
 const SISTEMA: TramitacaoAutor = { id: null, nome: "Sistema", perfil: "SISTEMA", empresa: null };
 
@@ -17,6 +18,7 @@ const INFO_SELECT = {
   numero: true,
   tenant_id: true,
   status: true,
+  aguardandoEmissao: true,
   emitidaEm: true,
   cienciaPrazoAte: true,
   cienciaDispensada: true,
@@ -32,6 +34,7 @@ type InfoRow = {
   numero: string;
   tenant_id: string;
   status: OrdemServicoTramitacaoInfo["status"];
+  aguardandoEmissao: boolean;
   emitidaEm: Date | null;
   cienciaPrazoAte: Date | null;
   cienciaDispensada: boolean;
@@ -75,7 +78,7 @@ const AGUARDANDO_CIENCIA = {
 function escopoWhere({ tenant_id, company_id, ordemServico_id }: TramitacaoEscopo) {
   return {
     ...(tenant_id ? { tenant_id } : {}),
-    ...(company_id ? { empenho: { contrato: { company_id } } } : {}),
+    ...(company_id ? osDaEmpresa(company_id) : {}),
     ...(ordemServico_id ? { id: ordemServico_id } : {}),
   };
 }

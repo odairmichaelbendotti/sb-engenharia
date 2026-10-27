@@ -185,21 +185,23 @@ function formatFiscal(fiscal: { nome: string; ramal: string; email: string } | n
 export function buildOrdemServicoDocumentModel(data: OrdemServicoDocumentData): OrdemServicoDocumentModel {
   const { ordemServico: os, contrato, lote, obra, tenant } = data;
   const bdi = contrato.bdi;
-  const desconto = lote?.desconto ?? 0;
+  // Desconto copiado do lote na criação da OS
+  const desconto = os.desconto;
 
-  // O usuário informa o total com BDI; o total sem BDI e o final (com desconto do lote) saem dele.
-  // OS antiga, sem esse dado, mostra só o valor final já gravado
+  // Com orçamento, o total com BDI sai dos itens e o valor final é a soma deles (preços com desconto,
+  // truncados item a item), igual ao valor da OS. OS antiga sem orçamento: total com BDI informado e
+  // final = total × (1 − desconto). Sem total com BDI, só o valor final já gravado
   const totalComBdi = os.totalComBdi;
+  const valorFinal =
+    totalComBdi === null ? null : data.temOrcamento ? os.valor : arredondar(totalComBdi * (1 - desconto / 100));
   const orcamento =
-    totalComBdi !== null
+    totalComBdi !== null && valorFinal !== null
       ? {
           total: formatMoeda(arredondar(totalComBdi / (1 + bdi / 100))),
           totalComBdi: formatMoeda(arredondar(totalComBdi)),
           // Diferença dos valores já arredondados, para a conta fechar no papel
-          valorDesconto: formatMoeda(
-            arredondar(arredondar(totalComBdi) - arredondar(totalComBdi * (1 - desconto / 100))),
-          ),
-          totalComBdiEDesconto: formatMoeda(arredondar(totalComBdi * (1 - desconto / 100))),
+          valorDesconto: formatMoeda(arredondar(arredondar(totalComBdi) - valorFinal)),
+          totalComBdiEDesconto: formatMoeda(valorFinal),
         }
       : { total: "", totalComBdi: "", valorDesconto: "", totalComBdiEDesconto: formatMoeda(os.valor) };
 

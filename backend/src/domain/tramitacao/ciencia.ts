@@ -9,6 +9,8 @@ const HOUR_MS = 60 * 60 * 1000;
 export const TRAMITACAO_TEXTO_MAX = 4000;
 
 export type FaseEmissao =
+  // Criada e ainda não emitida (sem orçamento): a empresa não vê
+  | "AGUARDANDO_EMISSAO"
   // OS anterior à regra: não exige ciência
   | "DISPENSADA"
   | "AGUARDANDO_CIENCIA"
@@ -20,6 +22,8 @@ export type FaseEmissao =
 
 export type SituacaoCiencia = {
   status: OrdemServicoStatusValue;
+  // Sem emissão ainda; ausente conta como false
+  aguardandoEmissao?: boolean;
   emitidaEm: Date | null;
   cienciaPrazoAte: Date | null;
   cienciaDispensada: boolean;
@@ -31,7 +35,10 @@ export function calcularPrazoCiencia(emitidaEm: Date): Date {
   return new Date(emitidaEm.getTime() + CIENCIA_PRAZO_HORAS * HOUR_MS);
 }
 
-/** OS sem emissão registrada (anterior à regra, ou gravada pelo código antigo) não exige ciência. */
+/**
+ * OS sem emissão registrada não exige ciência: a anterior à regra, a gravada pelo código antigo e a
+ * que ainda aguarda emissão (essa ganha a fase própria em getFaseEmissao).
+ */
 export function isCienciaDispensada(os: SituacaoCiencia): boolean {
   return os.cienciaDispensada || !os.emitidaEm || !os.cienciaPrazoAte;
 }
@@ -47,6 +54,7 @@ export function isCienciaVencida(os: SituacaoCiencia, now: Date): boolean {
 }
 
 export function getFaseEmissao(os: SituacaoCiencia, now: Date): FaseEmissao {
+  if (os.aguardandoEmissao) return "AGUARDANDO_EMISSAO";
   if (isCienciaDispensada(os)) return "DISPENSADA";
   if (!os.cienteEm) return isCienciaVencida(os, now) ? "CIENCIA_VENCIDA" : "AGUARDANDO_CIENCIA";
   if (os.contestacoesAbertas > 0) return "EM_CONTESTACAO";

@@ -58,6 +58,18 @@ describe("dispensa da ciência", () => {
   });
 });
 
+describe("OS aguardando emissão", () => {
+  it("tem fase própria e não abre ciência, apontamento nem trava", () => {
+    const aguardando = os({ aguardandoEmissao: true, emitidaEm: null, cienciaPrazoAte: null });
+    expect(getFaseEmissao(aguardando, plusMs(prazo, 1))).toBe("AGUARDANDO_EMISSAO");
+    expect(isAguardandoCiencia(aguardando)).toBe(false);
+    expect(isCienciaVencida(aguardando, plusMs(prazo, 1_000_000))).toBe(false);
+    expect(podeEmpresaContestar(aguardando, emitidaEm)).toBe(false);
+    expect(podeEmpresaComentar(aguardando, emitidaEm)).toBe(false);
+    expect(podeFiscalizacaoTramitar(aguardando)).toBe(false);
+  });
+});
+
 describe("trava por prazo vencido", () => {
   it("no instante exato do prazo ainda não venceu; um milissegundo depois, venceu", () => {
     expect(isCienciaVencida(os(), prazo)).toBe(false);

@@ -29,12 +29,21 @@ interface PasteOrcamentoDialogProps {
   limite: Record<PasteMode, number>;
   // Há itens já medidos: "substituir" mantém esses
   temMedidos: boolean;
+  // Preços já com desconto (vale o total da planilha); sem ele, o sistema aplica o desconto e o total é ignorado
+  comDesconto: boolean;
   onClose: () => void;
   onApply: (itens: PastedItem[], mode: PasteMode) => void;
 }
 
 // Itens copiados do Excel: prévia com o erro de cada linha antes de entrar na grade
-export function PasteOrcamentoDialog({ initialText, limite, temMedidos, onClose, onApply }: PasteOrcamentoDialogProps) {
+export function PasteOrcamentoDialog({
+  initialText,
+  limite,
+  temMedidos,
+  comDesconto,
+  onClose,
+  onApply,
+}: PasteOrcamentoDialogProps) {
   const [texto, setTexto] = useState(initialText);
   const [mode, setMode] = useState<PasteMode>("append");
   const linhas = useMemo(() => parsePastedBudget(texto), [texto]);
@@ -50,13 +59,17 @@ export function PasteOrcamentoDialog({ initialText, limite, temMedidos, onClose,
       <ModalHeader
         icon={ClipboardPaste}
         title="Colar itens do Excel"
-        description="Colunas: código, descrição, unidade, quantidade, preço unitário (com BDI e desconto) e total (opcional)"
+        description={`Colunas: código, descrição, unidade, quantidade, preço unitário (${comDesconto ? "com BDI e desconto" : "com BDI"}) e total (opcional)`}
         onClose={onClose}
       />
       <ModalBody className="space-y-3">
         <Field
           label="Linhas copiadas da planilha"
-          hint="Selecione as linhas no Excel, copie (Ctrl+C) e cole aqui. Sem a coluna de código, use quatro colunas. Com a coluna do total, vale o total da planilha quando ele difere de quantidade × preço por centavos."
+          hint={
+            comDesconto
+              ? "Selecione as linhas no Excel, copie (Ctrl+C) e cole aqui. Sem a coluna de código, use quatro colunas. Com a coluna do total, vale o total da planilha quando ele difere de quantidade × preço por centavos."
+              : "Selecione as linhas no Excel, copie (Ctrl+C) e cole aqui. Sem a coluna de código, use quatro colunas. O desconto da OS é aplicado em cada preço depois de colar; a coluna do total só confere a linha."
+          }
         >
           <Textarea
             rows={linhas.length > 0 ? 3 : 8}
@@ -72,7 +85,7 @@ export function PasteOrcamentoDialog({ initialText, limite, temMedidos, onClose,
               <p className="text-xs text-text-secondary">
                 <span className="font-semibold text-text-primary">{validas.length}</span>{" "}
                 {validas.length === 1 ? "item reconhecido" : "itens reconhecidos"} · {formatCurrency(total)}
-                {ajustados > 0 && (
+                {comDesconto && ajustados > 0 && (
                   <span className="text-text-muted">
                     {" "}
                     · {ajustados} {ajustados === 1 ? "total ajustado" : "totais ajustados"} à planilha
@@ -135,7 +148,7 @@ export function PasteOrcamentoDialog({ initialText, limite, temMedidos, onClose,
                         {l.item ? (
                           <>
                             <span className="block">{formatCurrency(totalItem(l.item))}</span>
-                            {l.item.valorTotal !== null && (
+                            {comDesconto && l.item.valorTotal !== null && (
                               <span className="block text-[11px] text-text-muted">ajustado</span>
                             )}
                           </>

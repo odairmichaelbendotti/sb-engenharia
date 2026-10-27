@@ -10,7 +10,7 @@ import { TRAMITACAO_TEXTO_MAX, type SituacaoCiencia } from "../../../domain/tram
 
 /**
  * Carrega a OS e confere o acesso: a organização só vê as próprias OS (PLATFORM_ADMIN vê todas)
- * e a empresa só as dos próprios contratos. OS de fora do escopo responde como inexistente.
+ * e a empresa só as dos próprios contratos, já emitidas. OS de fora do escopo responde como inexistente.
  */
 export async function loadInfoComAcesso(
   repository: IOrdemServicoTramitacaoRepository,
@@ -22,7 +22,8 @@ export async function loadInfoComAcesso(
   }
   const info = await repository.findInfo(ordemServico_id);
   const foraDoTenant = user.role !== "PLATFORM_ADMIN" && info?.tenant_id !== user.tenant_id;
-  const foraDaEmpresa = user.role === "EMPRESA" && info?.company_id !== user.company_id;
+  const foraDaEmpresa =
+    user.role === "EMPRESA" && (info?.company_id !== user.company_id || info?.aguardandoEmissao);
   if (!info || foraDoTenant || foraDaEmpresa) {
     throw new DomainError("OrdemServico not found");
   }
@@ -42,6 +43,7 @@ export function autorDe(user: AuthenticatedUser, empresa: string | null = null):
 export function situacaoDe(info: OrdemServicoTramitacaoInfo): SituacaoCiencia {
   return {
     status: info.status,
+    aguardandoEmissao: info.aguardandoEmissao,
     emitidaEm: info.emitidaEm,
     cienciaPrazoAte: info.cienciaPrazoAte,
     cienciaDispensada: info.cienciaDispensada,

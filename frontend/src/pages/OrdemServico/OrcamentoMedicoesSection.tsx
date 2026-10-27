@@ -1,14 +1,27 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, ArrowUpRight, Eye, FileDown, Ruler } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Eye, FileDown, Ruler, Send } from "lucide-react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import type { MedicaoResumo, PlanilhaOrcamento } from "../../../types/medicao";
 import { useMedicoes } from "../../store/medicoes";
+import { useOrdensServico } from "../../store/ordensServico";
 import { usePermission } from "../../hooks/usePermission";
 import { formatCurrency, formatDateOnly } from "../../utils/format-currency";
 import { downloadBlob } from "../../utils/download-file";
 import { cx } from "../../utils/cx";
-import { ActionMenu, Button, FormSection, StatusPill, Table, TableBody, TableHead, Td, Th, Tr } from "../../components/ui";
+import {
+  ActionMenu,
+  Button,
+  ConfirmDialog,
+  FormSection,
+  StatusPill,
+  Table,
+  TableBody,
+  TableHead,
+  Td,
+  Th,
+  Tr,
+} from "../../components/ui";
 import { EmptyNote } from "../../components/EntityViewer/ViewFrame";
 import { MedicaoLeituraModal } from "./MedicaoLeituraModal";
 import { medicaoFilename, medicaoStatusDisplay, medicaoTitulo } from "./medicao-display";
@@ -23,7 +36,8 @@ interface OrcamentoMedicoesSectionProps {
  * Lançar orçamento e medir ficam na tela Medições (Engenharia), que tem espaço para a planilha.
  */
 export function OrcamentoMedicoesSection({ ordemServicoId, numero }: OrcamentoMedicoesSectionProps) {
-  const { fetchPlanilha, fetchMedicaoDocument } = useMedicoes();
+  const { fetchPlanilha, fetchMedicaoDocument, emitirOrdemServico } = useMedicoes();
+  const fetchOrdensServico = useOrdensServico((s) => s.fetchOrdensServico);
   const { canViewEngenharia } = usePermission();
   const navigate = useNavigate();
   const [planilha, setPlanilha] = useState<PlanilhaOrcamento | null>(null);
@@ -35,6 +49,7 @@ export function OrcamentoMedicoesSection({ ordemServicoId, numero }: OrcamentoMe
 
   // Pedido de nova tentativa depois de um erro
   const [tentativa, setTentativa] = useState(0);
+  const [emitindo, setEmitindo] = useState<"confirmar" | "enviando" | null>(null);
 
   useEffect(() => {
     let ativo = true;
@@ -60,6 +75,21 @@ export function OrcamentoMedicoesSection({ ordemServicoId, numero }: OrcamentoMe
       downloadBlob(await fetchMedicaoDocument(medicao.id), medicaoFilename(medicao.numero, numero));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao gerar o PDF da medição");
+    }
+  }
+
+  async function emitir() {
+    setEmitindo("enviando");
+    try {
+      await emitirOrdemServico(ordemServicoId);
+      toast.success("OS emitida: a empresa tem 48 horas para dar ciência.");
+      // A lista traz a emissão (selo e tramitação) e esta seção recarrega a planilha
+      await fetchOrdensServico().catch(() => undefined);
+      reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao emitir a ordem de serviço");
+    } finally {
+      setEmitindo(null);
     }
   }
 
@@ -101,6 +131,20 @@ export function OrcamentoMedicoesSection({ ordemServicoId, numero }: OrcamentoMe
 
   return (
     <FormSection title="Orçamento e medições" icon={Ruler} action={atalho || undefined}>
+      {planilha.ordemServico.aguardandoEmissao && planilha.ordemServico.status === "ATIVO" && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface-muted px-3 py-2">
+          <p className="text-xs text-text-secondary">
+            {itens.length === 0
+              ? "A OS aguarda o orçamento: o valor dela sai dos itens. Depois de lançá-lo, emita a OS para a empresa."
+              : `Orçamento lançado (${formatCurrency(planilha.totais.valorOrcado)}). A empresa só vê a OS depois da emissão.`}
+          </p>
+          {permissoes.emitir && (
+            <Button size="sm" icon={Send} onClick={() => setEmitindo("confirmar")}>
+              Emitir OS
+            </Button>
+          )}
+        </div>
+      )}
       {itens.length === 0 ? (
         <EmptyNote>
           {permissoes.editarOrcamento
@@ -115,6 +159,19 @@ export function OrcamentoMedicoesSection({ ordemServicoId, numero }: OrcamentoMe
       )}
 
       {lendo && <MedicaoLeituraModal medicaoId={lendo} numeroOs={numero} onClose={() => setLendo(null)} />}
+      <ConfirmDialog
+        open={emitindo !== null}
+        tone="neutral"
+        icon={Send}
+        title={`Emitir a ${numero} para a empresa?`}
+        confirmLabel="Emitir OS"
+        loading={emitindo === "enviando"}
+        onConfirm={emitir}
+        onCancel={() => setEmitindo(null)}
+      >
+        A empresa passa a ver a OS, com o valor de {formatCurrency(planilha.totais.valorOrcado)}, e tem 48 horas
+        para dar ciência. Depois disso, mudar o valor do orçamento reemite a OS.
+      </ConfirmDialog>
     </FormSection>
   );
 }

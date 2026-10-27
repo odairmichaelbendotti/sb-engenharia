@@ -11,6 +11,7 @@ import { DeleteOrdemServicoUseCase } from "../../application/usecases/ordem-serv
 import { GenerateOrdemServicoDocumentUseCase } from "../../application/usecases/ordem-servico/GenerateOrdemServicoDocumentUseCase.js";
 import { PuppeteerOrdemServicoGenerator } from "../../infrastructure/pdf/PuppeteerOrdemServicoGenerator.js";
 import { GetProximoNumeroOrdemServicoUseCase } from "../../application/usecases/ordem-servico/GetProximoNumeroOrdemServicoUseCase.js";
+import { EmitirOrdemServicoUseCase } from "../../application/usecases/ordem-servico/EmitirOrdemServicoUseCase.js";
 import { OrdemServicoController } from "../controllers/OrdemServicoController.js";
 import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
@@ -53,6 +54,7 @@ const ordemServicoController = new OrdemServicoController(
   deleteOrdemServicoUseCase,
   generateOrdemServicoDocumentUseCase,
   getProximoNumeroOrdemServicoUseCase,
+  new EmitirOrdemServicoUseCase(repository),
 );
 
 const token = new TokenGenerator();
@@ -108,6 +110,14 @@ OrdemServicoRoutes.get(
   authMiddleware.handle,
   requireCapability.handle("viewOrdensServico"),
   (req, res) => ordemServicoController.document(req, res),
+);
+
+// Primeira emissão para a empresa, depois de lançado o orçamento: quem abre OS também emite
+OrdemServicoRoutes.post(
+  "/ordem-servico/:id/emitir",
+  authMiddleware.handle,
+  requireCapability.handle("createOrdemServico"),
+  (req, res) => ordemServicoController.emitir(req, res),
 );
 
 OrdemServicoRoutes.put(

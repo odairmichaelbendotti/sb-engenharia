@@ -97,8 +97,13 @@ export type OrdemServico = {
   // Dias de mobilização, já incluídos no prazo total
   prazoMobilizacaoDias: number;
   prazoDias: number | null;
-  // Total com BDI informado na criação, em reais
+  // Total com BDI em reais: das OS antigas, informado; das com orçamento, a soma dos itens com BDI
   totalComBdi: number | null;
+  // Como os preços do orçamento foram informados e o desconto copiado do lote (porcentagem)
+  precoBase: "COM_BDI" | "COM_BDI_E_DESCONTO";
+  desconto: number;
+  // Criada e ainda não emitida: o valor sai do orçamento e a empresa só vê depois da emissão
+  aguardandoEmissao: boolean;
   fiscalSetorial: string | null;
   fiscalTecnico_id: string | null;
   fiscalTecnico: OrdemServicoFiscal | null;

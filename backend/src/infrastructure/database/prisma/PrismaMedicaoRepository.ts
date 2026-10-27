@@ -3,6 +3,7 @@ import {
   validateMedicaoQuantidades,
   validateOrcamentoChange,
   type OrcamentoItemInput,
+  type PrecoBase,
 } from "../../../domain/medicao/medicao-calc.js";
 import { somarQuantidades } from "../../../domain/medicao/medicao-resumo.js";
 import {
@@ -22,7 +23,10 @@ import type {
 } from "../../../domain/repositories/IMedicaoRepository.js";
 import { Prisma } from "../../../generated/prisma/client.js";
 import type { TransactionClient } from "../../../generated/prisma/internal/prismaNamespace.js";
+import { colunasEmissao, registrarEmissao } from "./tramitacao-tx.js";
+import type { OrdemServicoEmissao } from "../../../domain/repositories/IOrdemServicoRepository.js";
 import { prisma } from "../../prisma/prisma.js";
+import { osDaEmpresa } from "./os-escopo.js";
 
 const ITEM_SELECT = {
   id: true,
@@ -33,6 +37,7 @@ const ITEM_SELECT = {
   quantidade: true,
   precoUnitario: true,
   valorTotal: true,
+  precoReferencia: true,
 } as const;
 
 const MEDICAO_SELECT = {
@@ -128,12 +133,22 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
           numero: true,
           tenant_id: true,
           status: true,
+          empenho_id: true,
           totalComBdi: true,
           valor: true,
+          desconto: true,
+          precoBase: true,
+          aguardandoEmissao: true,
+          emitidaEm: true,
+          cienciaPrazoAte: true,
+          cienciaDispensada: true,
           dataInicio: true,
           dataPrevisaoTermino: true,
-          lote: { select: { desconto: true } },
           obra: { select: { id: true, nome: true } },
+          empenhos: {
+            orderBy: { createdAt: "asc" },
+            select: { empenho_id: true, valor: true, empenho: { select: { numero: true } } },
+          },
           empenho: {
             select: {
               description: true,
@@ -151,12 +166,16 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
         },
       });
       if (!row) return null;
-      const { lote, empenho, ...os } = row;
+      const { empenho, empenhos, ...os } = row;
       const { company, company_id, ...contrato } = empenho.contrato;
+      // Principal primeiro: é por ele que se chega ao contrato
+      const vinculos = empenhos
+        .map((v) => ({ empenho_id: v.empenho_id, numero: v.empenho.numero, valor: v.valor }))
+        .sort((a, b) => Number(b.empenho_id === os.empenho_id) - Number(a.empenho_id === os.empenho_id));
       return {
         ...os,
         company_id,
-        descontoLote: lote?.desconto ?? 0,
+        empenhos: vinculos,
         descricaoEmpenho: empenho.description,
         contrato,
         empresa: company,
@@ -216,7 +235,7 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
         // Empresa: pelo empenho principal, o mesmo critério da lista de OS e do acesso à planilha
         where: {
           ...(tenant_id ? { tenant_id } : {}),
-          ...(company_id ? { empenho: { contrato: { company_id } } } : {}),
+          ...(company_id ? osDaEmpresa(company_id) : {}),
         },
         orderBy: { createdAt: "desc" },
         select: {
@@ -226,9 +245,8 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
           status: true,
           dataInicio: true,
           dataPrevisaoTermino: true,
-          totalComBdi: true,
           valor: true,
-          lote: { select: { desconto: true } },
+          aguardandoEmissao: true,
           obra: { select: { id: true, nome: true } },
           empenhos: { orderBy: { createdAt: "asc" }, select: { empenho: { select: { id: true, numero: true } } } },
           empenho: {
@@ -241,9 +259,8 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
           },
         },
       });
-      return rows.map(({ lote, empenho, empenhos, ...os }) => ({
+      return rows.map(({ empenho, empenhos, ...os }) => ({
         ...os,
-        descontoLote: lote?.desconto ?? 0,
         descricaoEmpenho: empenho.description,
         contrato: {
           id: empenho.contrato.id,
@@ -266,7 +283,21 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
     }
   }
 
-  async saveOrcamento({ ordemServico_id, itens }: { ordemServico_id: string; itens: OrcamentoItemInput[] }) {
+  async saveOrcamento({
+    ordemServico_id,
+    precoBase,
+    itens,
+    totalComBdi,
+    empenhos,
+    emissao,
+  }: {
+    ordemServico_id: string;
+    precoBase: PrecoBase;
+    itens: OrcamentoItemInput[];
+    totalComBdi: number;
+    empenhos: { empenho_id: string; valor: number }[];
+    emissao: OrdemServicoEmissao | null;
+  }) {
     try {
       await prisma.$transaction(async (tx) => {
         await travarOs(tx, ordemServico_id);
@@ -295,6 +326,7 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
             quantidade: item.quantidade,
             precoUnitario: item.precoUnitario,
             valorTotal: item.valorTotal,
+            precoReferencia: item.precoReferencia,
           };
           if (!item.id) {
             novos.push({ ...data, ordemServico_id });
@@ -313,6 +345,25 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
         if (novos.length > 0) {
           await tx.ordemServicoItem.createMany({ data: novos });
         }
+
+        // O valor da OS acompanha o orçamento: cada empenho recebe o que lhe cabe e a OS soma os vínculos
+        for (const vinculo of empenhos) {
+          await tx.ordemServicoEmpenho.update({
+            where: { ordemServico_id_empenho_id: { ordemServico_id, empenho_id: vinculo.empenho_id } },
+            data: { valor: vinculo.valor },
+          });
+        }
+        await tx.ordemServico.update({
+          where: { id: ordemServico_id },
+          data: {
+            precoBase,
+            totalComBdi,
+            valor: empenhos.reduce((acc, v) => acc + v.valor, 0),
+            ...(emissao ? colunasEmissao(emissao) : {}),
+            updatedAt: now,
+          },
+        });
+        if (emissao) await registrarEmissao(tx, ordemServico_id, emissao);
       }, { timeout: 30_000 });
     } catch (error) {
       rethrow(error, "Error saving the budget");

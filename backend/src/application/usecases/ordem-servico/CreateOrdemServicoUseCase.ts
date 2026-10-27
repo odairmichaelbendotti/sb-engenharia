@@ -10,8 +10,6 @@ import { OrdemServicoEmpenhosValidator } from "./OrdemServicoEmpenhosValidator.j
 import { normalizeFreeText } from "../../../domain/normalization/text-normalizers.js";
 import { OrdemServicoDocumentValidator } from "./OrdemServicoDocumentValidator.js";
 import { OrdemServicoObraValidator } from "./OrdemServicoObraValidator.js";
-import { calcularPrazoCiencia } from "../../../domain/tramitacao/ciencia.js";
-import { autorDe } from "../ordem-servico-tramitacao/tramitacao-access.js";
 
 export class CreateOrdemServicoUseCase {
   private empenhosValidator: OrdemServicoEmpenhosValidator;
@@ -56,10 +54,11 @@ export class CreateOrdemServicoUseCase {
     const contrato = await this.documentValidator.validate({ user, ordemServico: ordemServicoEntity, isCreate: true });
 
     const lote = contrato.lotes.find((l) => l.id === ordemServicoEntity.lote_id);
-    // Emissão no horário do servidor: a partir dela a empresa tem o prazo para dar ciência
-    const emitidaEm = new Date();
+    // A OS nasce aguardando o orçamento, que dá o valor dela; só depois é emitida para a empresa
+    // (EmitirOrdemServicoUseCase). O desconto do lote fica copiado na OS
     return this.repository.create({
-      emissao: { tipo: "EMITIDA", emitidaEm, cienciaPrazoAte: calcularPrazoCiencia(emitidaEm), autor: autorDe(user) },
+      aguardandoEmissao: true,
+      desconto: lote?.desconto ?? 0,
       numero: "",
       numeracao: { loteNumero: lote?.numero ?? null, ano: Number(dataEmissao.slice(0, 4)) },
       tenant_id: user.tenant_id,
@@ -75,9 +74,8 @@ export class CreateOrdemServicoUseCase {
       dataEmissao: new Date(dataEmissao),
       prazoMobilizacaoDias: ordemServicoEntity.prazoMobilizacaoDias,
       prazoDias: ordemServicoEntity.prazoDias,
-      // Math.round evita que erros de ponto flutuante quebrem o insert na coluna Int do Prisma
-      totalComBdi:
-        ordemServicoEntity.totalComBdi === null ? null : Math.round(ordemServicoEntity.totalComBdi * 100),
+      // O total com BDI sai do orçamento
+      totalComBdi: null,
       fiscalSetorial: ordemServicoEntity.fiscalSetorial,
       fiscalTecnico_id: ordemServicoEntity.fiscalTecnico_id,
       fiscalAdministrativo_id: ordemServicoEntity.fiscalAdministrativo_id,

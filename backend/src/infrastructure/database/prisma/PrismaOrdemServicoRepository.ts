@@ -10,6 +10,7 @@ import type {
   OrdemServicoContratoDados,
   OrdemServicoDocumentData,
   OrdemServicoDocumentFields,
+  OrdemServicoEmissao,
   OrdemServicoListItem,
   OrdemServicoOption,
   OrdemServicoPersistData,
@@ -17,7 +18,9 @@ import type {
   OrdemServicoVinculoFinanceiro,
 } from "../../../domain/repositories/IOrdemServicoRepository.js";
 import { prisma } from "../../prisma/prisma.js";
-import { registrarEmissao } from "./tramitacao-tx.js";
+import { colunasEmissao, registrarEmissao } from "./tramitacao-tx.js";
+import { valorOrcadoItem } from "../../../domain/medicao/medicao-calc.js";
+import { osDaEmpresa } from "./os-escopo.js";
 
 // Primeira sequência da numeração das OS (as anteriores ao padrão ficam fora da contagem)
 const FIRST_SEQUENCIA = 10;
@@ -224,9 +227,12 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
             obra_id: data.obra_id,
             tenant_id: data.tenant_id,
             ...documentColumns(data),
+            desconto: data.desconto ?? 0,
             ...(data.emissao
               ? { emitidaEm: data.emissao.emitidaEm, cienciaPrazoAte: data.emissao.cienciaPrazoAte }
-              : { cienciaDispensada: true }),
+              : data.aguardandoEmissao
+                ? { aguardandoEmissao: true }
+                : { cienciaDispensada: true }),
             empenhos: {
               create: data.empenhos.map((e) => ({ empenho_id: e.empenho_id, valor: e.valor })),
             },
@@ -291,7 +297,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
     // Escopo da organização e, para EMPRESA, só as OS de contratos da própria empresa
     const tenantFilter = {
       ...(tenant_id ? { tenant_id } : {}),
-      ...(company_id ? { empenho: { contrato: { company_id } } } : {}),
+      ...(company_id ? osDaEmpresa(company_id) : {}),
     };
     try {
       const [ordensServico, total, ativas, finalizadas, canceladas, valorAgg, executadoPorOS] = await Promise.all([
@@ -445,17 +451,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
             obra_id: data.obra_id,
             ...documentColumns(data),
             // Reemissão: a ciência da versão anterior deixa de valer e o prazo recomeça
-            ...(data.emissao
-              ? {
-                  emitidaEm: data.emissao.emitidaEm,
-                  cienciaPrazoAte: data.emissao.cienciaPrazoAte,
-                  visualizadaEm: null,
-                  cienteEm: null,
-                  cienteUser_id: null,
-                  cienteNome: null,
-                  prazoVencidoEm: null,
-                }
-              : {}),
+            ...(data.emissao ? colunasEmissao(data.emissao) : {}),
             updatedAt: new Date(),
           },
           include: LIST_ITEM_INCLUDE,
@@ -484,7 +480,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
             select: {
               id: true,
               tenant_id: true,
-              lotes: { select: { id: true, numero: true } },
+              lotes: { select: { id: true, numero: true, desconto: true } },
               fiscais: { select: { id: true, tipo: true } },
             },
           },
@@ -534,13 +530,15 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
           fiscalTecnico: { select: { nome: true, ramal: true, email: true } },
           fiscalAdministrativo: { select: { nome: true, ramal: true, email: true } },
           tenant: { select: { city: true, apelido: true } },
+          _count: { select: { itens: true } },
         },
       });
       if (!row) return null;
 
-      const { empenho, obra, lote, fiscalTecnico, fiscalAdministrativo, tenant, ...ordemServico } = row;
+      const { empenho, obra, lote, fiscalTecnico, fiscalAdministrativo, tenant, _count, ...ordemServico } = row;
       return {
         ordemServico: withReais(ordemServico),
+        temOrcamento: _count.itens > 0,
         empenhoDescricao: empenho.description,
         contrato: empenho.contrato,
         obra,
@@ -551,6 +549,35 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
       };
     } catch (error) {
       throw new DomainError("Error getting ordem de serviço document data: " + error);
+    }
+  }
+
+  async getValorOrcamento(id: string): Promise<number | null> {
+    try {
+      const itens = await prisma.ordemServicoItem.findMany({
+        where: { ordemServico_id: id },
+        select: { quantidade: true, precoUnitario: true, valorTotal: true },
+      });
+      return itens.length === 0 ? null : itens.reduce((acc, item) => acc + valorOrcadoItem(item), 0);
+    } catch (error) {
+      throw new DomainError("Error loading the budget of the ordem de serviço: " + error);
+    }
+  }
+
+  async emitir(id: string, emissao: OrdemServicoEmissao): Promise<void> {
+    try {
+      await prisma.$transaction(async (tx) => {
+        // Só a que ainda aguarda: duas emissões ao mesmo tempo não gravam dois eventos
+        const { count } = await tx.ordemServico.updateMany({
+          where: { id, aguardandoEmissao: true },
+          data: { ...colunasEmissao(emissao), updatedAt: new Date() },
+        });
+        if (count === 0) throw new DomainError("This ordem de serviço was already emitted");
+        await registrarEmissao(tx, id, emissao);
+      });
+    } catch (error) {
+      if (error instanceof DomainError) throw error;
+      throw new DomainError("Error emitting ordem de serviço: " + error);
     }
   }
 

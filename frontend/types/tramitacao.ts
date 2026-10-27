@@ -3,6 +3,8 @@ import type { User } from "./user";
 
 // Espelha backend/src/domain/tramitacao/ciencia.ts
 export type FaseEmissao =
+  // Criada e ainda não emitida (sem orçamento): a empresa não vê
+  | "AGUARDANDO_EMISSAO"
   | "DISPENSADA"
   | "AGUARDANDO_CIENCIA"
   | "CIENCIA_VENCIDA"

@@ -7,8 +7,9 @@ import {
   fromMilesimos,
   toMilesimos,
   validateMedicaoQuantidades,
+  precoComDesconto,
+  totaisOrcamento,
   validateOrcamentoChange,
-  valorFinalOs,
   valorAcumuladoItem,
   valorItem,
   valorOrcadoItem,
@@ -209,6 +210,7 @@ describe("validateOrcamentoChange", () => {
     quantidade: item.quantidade,
     precoUnitario: item.precoUnitario,
     valorTotal: item.valorTotal,
+    precoReferencia: null,
     ...overrides,
   });
   const medido = qtd([["i-1", 3000]]);
@@ -219,7 +221,15 @@ describe("validateOrcamentoChange", () => {
     expect(() =>
       run([
         input(reboco, { quantidade: 12_000, descricao: "Reboco interno" }),
-        { codigo: "87529", descricao: "Chapisco", unidade: "m²", quantidade: 5000, precoUnitario: 800, valorTotal: null },
+        {
+          codigo: "87529",
+          descricao: "Chapisco",
+          unidade: "m²",
+          quantidade: 5000,
+          precoUnitario: 800,
+          valorTotal: null,
+          precoReferencia: null,
+        },
       ]),
     ).not.toThrow();
   });
@@ -236,7 +246,15 @@ describe("validateOrcamentoChange", () => {
   });
 
   it("valida os campos de cada item", () => {
-    const novo = { codigo: null, descricao: "X", unidade: "un", quantidade: 1000, precoUnitario: 100, valorTotal: null };
+    const novo = {
+      codigo: null,
+      descricao: "X",
+      unidade: "un",
+      quantidade: 1000,
+      precoUnitario: 100,
+      valorTotal: null,
+      precoReferencia: null,
+    };
     expect(() => run([input(reboco), { ...novo, descricao: "" }])).toThrow(/Item 2: descrição is required/);
     expect(() => run([input(reboco), { ...novo, unidade: "" }])).toThrow(/unidade is required/);
     expect(() => run([input(reboco), { ...novo, quantidade: 0 }])).toThrow(/quantidade/);
@@ -263,6 +281,22 @@ describe("validateOrcamentoChange", () => {
     expect(() => run([input(reboco, { valorTotal: 49_999 }), input(pintura)])).not.toThrow();
   });
 
+  it("com o desconto aplicado pelo sistema, não aceita total ajustado", () => {
+    expect(() => run([input(reboco), input(pintura, { precoReferencia: 1500 })])).not.toThrow();
+    expect(() => run([input(reboco), input(pintura, { precoReferencia: 1500, valorTotal: 4112 })])).toThrow(
+      /discounted prices/,
+    );
+    expect(() => run([input(reboco), input(pintura, { precoReferencia: -1 })])).toThrow(/preço unitário is invalid/);
+  });
+
+  it("recusa mudar o preço de referência de item medido", () => {
+    const comReferencia = { ...reboco, precoReferencia: 6000 };
+    const runRef = (novos: OrcamentoItemInput[]) =>
+      validateOrcamentoChange({ atuais: [comReferencia], novos, medidoFechado: medido });
+    expect(() => runRef([input(comReferencia, { precoReferencia: 6000 })])).not.toThrow();
+    expect(() => runRef([input(comReferencia, { precoReferencia: 6001 })])).toThrow(/preço unitário/);
+  });
+
   it("permite remover item que só tem quantidade em rascunho", () => {
     expect(() =>
       validateOrcamentoChange({ atuais: [reboco, pintura], novos: [input(reboco)], medidoFechado: qtd() }),
@@ -270,12 +304,42 @@ describe("validateOrcamentoChange", () => {
   });
 });
 
-describe("valor da OS e divergência", () => {
-  it("aplica o desconto do lote ao total com BDI", () => {
-    expect(valorFinalOs({ totalComBdi: 5_054_724, valor: 0, descontoLote: 24.8 })).toBe(3_801_152);
-    expect(valorFinalOs({ totalComBdi: null, valor: 123_45, descontoLote: 24.8 })).toBe(123_45);
+describe("desconto e totais do orçamento", () => {
+  it("aplica o desconto truncando o centavo, sem erro de ponto flutuante", () => {
+    // R$ 10,00 com 17% = R$ 8,30 exatos
+    expect(precoComDesconto(1000, 17)).toBe(830);
+    // R$ 12,34 com 24,8% = 9,27968 → R$ 9,27 (truncado, não arredondado)
+    expect(precoComDesconto(1234, 24.8)).toBe(927);
+    // Desconto com casas: R$ 100,00 com 17,3456% = 82,6544 → R$ 82,65
+    expect(precoComDesconto(10_000, 17.3456)).toBe(8265);
+    expect(precoComDesconto(1234, 0)).toBe(1234);
+    // Maior valor de uma coluna Int não estoura
+    expect(precoComDesconto(2_147_483_647, 10)).toBe(1_932_735_282);
   });
 
+  it("com o desconto aplicado pelo sistema, o total com BDI soma o preço de referência", () => {
+    const itens = [
+      { quantidade: 2000, precoReferencia: 1000, precoUnitario: precoComDesconto(1000, 17), valorTotal: null },
+      { quantidade: 3333, precoReferencia: 1234, precoUnitario: precoComDesconto(1234, 17), valorTotal: null },
+    ];
+    // 2 × 10,00 + 3,333 × 12,34 = 20,00 + 41,13 / com desconto 2 × 8,30 + 3,333 × 10,24 = 16,60 + 34,13
+    expect(totaisOrcamento({ itens, precoBase: "COM_BDI", desconto: 17 })).toEqual({
+      totalComBdi: 6113,
+      valorOs: 5073,
+    });
+  });
+
+  it("com o preço já descontado, o total com BDI tira o desconto do valor da OS", () => {
+    const itens = [{ quantidade: 1000, precoReferencia: null, precoUnitario: 7520, valorTotal: 7519 }];
+    // Total ajustado conta no valor da OS; 75,19 ÷ 0,752 = 99,99
+    expect(totaisOrcamento({ itens, precoBase: "COM_BDI_E_DESCONTO", desconto: 24.8 })).toEqual({
+      totalComBdi: 9999,
+      valorOs: 7519,
+    });
+  });
+});
+
+describe("divergência", () => {
   it("aponta só quando há diferença", () => {
     expect(divergenciaTotal(1000, 1000)).toBeNull();
     expect(divergenciaTotal(1000, 1200)).toEqual({ diferenca: -200 });
