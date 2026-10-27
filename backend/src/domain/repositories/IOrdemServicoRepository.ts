@@ -64,8 +64,9 @@ export type OrdemServicoEmissao = {
 // Dados já validados para gravar a OS — valores em centavos
 export type OrdemServicoPersistData = OrdemServicoDocumentFields & {
   emissao?: OrdemServicoEmissao | undefined;
-  // Só na criação: a OS nasce aguardando o orçamento, com o desconto do lote copiado
+  // Só na criação: a OS nasce aguardando o orçamento
   aguardandoEmissao?: boolean | undefined;
+  // Desconto do lote copiado: na criação e quando a OS antiga recebe o lote na edição
   desconto?: number | undefined;
   // Na criação, com `numeracao` o repository gera o número (sequência por lote e ano)
   numero: string;

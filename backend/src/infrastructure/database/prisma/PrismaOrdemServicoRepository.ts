@@ -450,6 +450,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
             dataPrevisaoTermino: data.dataPrevisaoTermino,
             obra_id: data.obra_id,
             ...documentColumns(data),
+            ...(data.desconto !== undefined ? { desconto: data.desconto } : {}),
             // Reemissão: a ciência da versão anterior deixa de valer e o prazo recomeça
             ...(data.emissao ? colunasEmissao(data.emissao) : {}),
             updatedAt: new Date(),

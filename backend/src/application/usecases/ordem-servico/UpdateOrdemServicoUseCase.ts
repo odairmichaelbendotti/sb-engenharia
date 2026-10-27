@@ -161,12 +161,17 @@ export class UpdateOrdemServicoUseCase {
       obraNova: ordemServicoEntity.obra_id,
     });
 
-    await this.documentValidator.validate({
+    const contrato = await this.documentValidator.validate({
       user,
       ordemServico: ordemServicoEntity,
       isCreate: false,
       loteAnterior: existing.lote_id,
     });
+    // OS antiga que recebe o lote agora: o desconto dele passa a valer na OS (depois o lote não muda)
+    const loteNovo =
+      existing.lote_id === null && ordemServicoEntity.lote_id
+        ? contrato.lotes.find((l) => l.id === ordemServicoEntity.lote_id)
+        : undefined;
 
     const totalComBdi =
       ordemServicoEntity.totalComBdi === null ? null : Math.round(ordemServicoEntity.totalComBdi * 100);
@@ -187,6 +192,7 @@ export class UpdateOrdemServicoUseCase {
     const emitidaEm = new Date();
 
     return this.repository.update(ordemServicoId, {
+      ...(loteNovo ? { desconto: loteNovo.desconto } : {}),
       ...(reemitir
         ? {
             emissao: {

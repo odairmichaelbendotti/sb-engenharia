@@ -678,7 +678,8 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
             Emitir OS
           </Button>
         )}
-        <Button loading={saving} disabled={!dirty && itens.length > 0} onClick={handleSave}>
+        {/* Sem edição, salvar ainda serve para acertar o valor da OS com o orçamento */}
+        <Button loading={saving} disabled={!dirty && itens.length > 0 && !valorMuda} onClick={handleSave}>
           Salvar orçamento
         </Button>
       </StickyFooter>
