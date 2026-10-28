@@ -105,6 +105,7 @@ export class GetPlanilhaOrcamentoUseCase {
           ordem: item.ordem,
           codigo: item.codigo,
           descricao: item.descricao,
+          etapa: item.etapa,
           unidade: item.unidade,
           quantidade: qtd(item.quantidade),
           precoUnitario: reais(item.precoUnitario),

@@ -67,6 +67,18 @@ function renderLinha(l: MedicaoDocumentLinha): string {
 </tr>`;
 }
 
+// Faixa da etapa que começa nesta linha, com os subtotais em valor
+function renderEtapa(m: MedicaoDocumentModel, index: number): string {
+  const etapa = m.etapas.find((e) => e.inicio === index);
+  if (!etapa) return "";
+  return `<tr class="stage">
+<td colspan="9">${escapeHtml(etapa.titulo)}</td>
+<td class="num grp">${etapa.esta}</td>
+<td class="num">${etapa.acumulado}</td>
+<td class="num">${etapa.saldo}</td>
+</tr>`;
+}
+
 function renderPlanilha(m: MedicaoDocumentModel): string {
   const t = m.totais;
   return `
@@ -90,7 +102,7 @@ function renderPlanilha(m: MedicaoDocumentModel): string {
     </tr>
   </thead>
   <tbody>
-    ${m.linhas.map(renderLinha).join("")}
+    ${m.linhas.map((l, index) => renderEtapa(m, index) + renderLinha(l)).join("")}
   </tbody>
   <tfoot>
     <tr>
@@ -198,6 +210,7 @@ h1 { font-size: 15pt; font-weight: 700; line-height: 1.2; letter-spacing: .16em;
 .sheet .desc { overflow-wrap: anywhere; }
 .sheet .code { display: block; font-size: 6.2pt; color: var(--faint); margin-top: .3mm; }
 .sheet tr.on td { background: var(--tint); color: var(--ink); }
+.sheet tr.stage td { background: var(--hair); color: var(--ink); font-weight: 700; font-size: 7.5pt; text-transform: uppercase; letter-spacing: .02em; break-after: avoid; }
 .sheet td.strong { font-weight: 600; color: var(--ink); }
 .sheet .done-tag { margin-left: 1.6mm; font-size: 5.6pt; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); white-space: nowrap; }
 .sheet tfoot td { border-top: .75pt solid var(--ink); border-bottom: .75pt solid var(--ink); background: var(--tint); font-weight: 700; color: var(--ink); font-size: 8pt; padding: 1.8mm 1.6mm; }

@@ -1,7 +1,9 @@
-import type { MedicaoDetalhe } from "../../../types/medicao";
+import { Fragment } from "react";
+import type { MedicaoDetalhe, MedicaoLinha } from "../../../types/medicao";
 import { formatCurrency, formatDateOnly, formatDateTimeFull } from "../../utils/format-currency";
 import { formatQuantidade } from "../../utils/decimal";
-import { DetailItem, Table, TableBody, TableFoot, TableHead, Td, Th, Tr } from "../../components/ui";
+import { DetailItem, Table, TableBody, TableFoot, TableGroupRow, TableHead, Td, Th, Tr } from "../../components/ui";
+import { contagemItens, gruposPorEtapa, SEM_ETAPA, temEtapas, useEtapasRecolhidas } from "./etapas";
 
 /**
  * Medição fechada (ou vista por quem não edita): a planilha como foi fechada. `compact` para o
@@ -9,6 +11,9 @@ import { DetailItem, Table, TableBody, TableFoot, TableHead, Td, Th, Tr } from "
  */
 export function MedicaoLeitura({ detalhe, compact = false }: { detalhe: MedicaoDetalhe; compact?: boolean }) {
   const medidas = detalhe.linhas.filter((l) => l.esta > 0);
+  const grupos = gruposPorEtapa(medidas, (l) => l.etapa);
+  const comEtapas = temEtapas(grupos);
+  const etapas = useEtapasRecolhidas();
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3.5">
@@ -34,27 +39,24 @@ export function MedicaoLeitura({ detalhe, compact = false }: { detalhe: MedicaoD
             <Th width="w-28">Saldo</Th>
           </TableHead>
           <TableBody>
-            {medidas.map((l) => (
-              <Tr key={l.item_id}>
-                <Td>
-                  <span className="block text-text-primary line-clamp-2" title={l.descricao}>
-                    {l.descricao}
-                  </span>
-                  <span className="block text-[11px] text-text-muted">
-                    {[l.codigo, `${formatQuantidade(l.orcado)} ${l.unidade} orçados`].filter(Boolean).join(" · ")}
-                  </span>
-                </Td>
-                <Td className="hidden sm:table-cell">{formatQuantidade(l.anterior)}</Td>
-                <Td>
-                  <span className="block font-semibold text-text-primary">
-                    {formatQuantidade(l.esta)} {l.unidade}
-                  </span>
-                  <span className="block text-[11px] text-text-muted">{formatCurrency(l.valorEsta)}</span>
-                </Td>
-                <Td className="hidden sm:table-cell">{formatQuantidade(l.acumulado)}</Td>
-                <Td>{l.saldo <= 0 ? "Concluído" : formatQuantidade(l.saldo)}</Td>
-              </Tr>
-            ))}
+            {grupos.map((grupo) => {
+              const aberta = etapas.aberta(grupo.key);
+              return (
+                <Fragment key={grupo.key}>
+                  {comEtapas && (
+                    <TableGroupRow
+                      columns={[undefined, "hidden sm:table-cell", undefined, "hidden sm:table-cell", undefined]}
+                      title={grupo.etapa ?? SEM_ETAPA}
+                      count={contagemItens(grupo.itens.length)}
+                      values={[undefined, undefined, formatCurrency(grupo.itens.reduce((acc, l) => acc + l.valorEsta, 0))]}
+                      open={aberta}
+                      onToggle={() => etapas.alternar(grupo.key)}
+                    />
+                  )}
+                  {aberta && grupo.itens.map((l) => <LinhaMedida key={l.item_id} l={l} />)}
+                </Fragment>
+              );
+            })}
           </TableBody>
           <TableFoot>
             <Tr>
@@ -84,5 +86,30 @@ export function MedicaoLeitura({ detalhe, compact = false }: { detalhe: MedicaoD
         </p>
       )}
     </div>
+  );
+}
+
+// Item medido nesta medição: anterior, esta, acumulado e saldo
+function LinhaMedida({ l }: { l: MedicaoLinha }) {
+  return (
+    <Tr>
+      <Td>
+        <span className="block text-text-primary line-clamp-2" title={l.descricao}>
+          {l.descricao}
+        </span>
+        <span className="block text-[11px] text-text-muted">
+          {[l.codigo, `${formatQuantidade(l.orcado)} ${l.unidade} orçados`].filter(Boolean).join(" · ")}
+        </span>
+      </Td>
+      <Td className="hidden sm:table-cell">{formatQuantidade(l.anterior)}</Td>
+      <Td>
+        <span className="block font-semibold text-text-primary">
+          {formatQuantidade(l.esta)} {l.unidade}
+        </span>
+        <span className="block text-[11px] text-text-muted">{formatCurrency(l.valorEsta)}</span>
+      </Td>
+      <Td className="hidden sm:table-cell">{formatQuantidade(l.acumulado)}</Td>
+      <Td>{l.saldo <= 0 ? "Concluído" : formatQuantidade(l.saldo)}</Td>
+    </Tr>
   );
 }

@@ -46,6 +46,7 @@ export function presentLinha(linha: LinhaPlanilhaMedicao) {
     ordem: linha.ordem,
     codigo: linha.codigo,
     descricao: linha.descricao,
+    etapa: linha.etapa,
     unidade: linha.unidade,
     precoUnitario: reais(linha.precoUnitario),
     orcado: qtd(linha.orcado),

@@ -7,6 +7,7 @@ import {
   CodeTag,
   ConfirmDialog,
   DateHint,
+  GroupHeader,
   RelationCard,
   RelationGrid,
   StatTile,
@@ -14,6 +15,7 @@ import {
   StatusPill,
   Table,
   TableBody,
+  TableGroupRow,
   TableHead,
   Td,
   Th,
@@ -58,6 +60,7 @@ export default function DesignSystem() {
   const [descricao, setDescricao] = useState("Execução de reboco em parede");
   const [preco, setPreco] = useState("48,90");
   const [codigo, setCodigo] = useState("");
+  const [etapaAberta, setEtapaAberta] = useState(true);
 
   return (
     <div className="min-h-screen bg-background p-6 md:p-10">
@@ -277,6 +280,49 @@ export default function DesignSystem() {
           <p className="text-xs text-text-muted">
             Sem rolagem horizontal: colunas de dado com <code>width</code>, a primeira fica com a sobra; colunas
             secundárias somem por breakpoint.
+          </p>
+        </Block>
+
+        <Block title="Grupo que abre e fecha (GroupHeader / TableGroupRow)">
+          <GroupHeader
+            title="Remoção/demolição"
+            count="4 itens"
+            meta="R$ 1.798,61"
+            open={etapaAberta}
+            onToggle={() => setEtapaAberta((v) => !v)}
+          />
+          <div className="bg-surface rounded-xl border border-border overflow-hidden">
+            <Table>
+              <TableHead>
+                <Th>Item</Th>
+                <Th width="w-36">Orçado</Th>
+              </TableHead>
+              <TableBody>
+                <TableGroupRow
+                  columns={[undefined, undefined]}
+                  values={[undefined, "R$ 14.752,04"]}
+                  title="Nova cobertura"
+                  count="2 itens"
+                  open={etapaAberta}
+                  onToggle={() => setEtapaAberta((v) => !v)}
+                />
+                {etapaAberta && (
+                  <>
+                    <Tr>
+                      <Td>Impermeabilização com membrana de poliuretano</Td>
+                      <Td>R$ 9.852,11</Td>
+                    </Tr>
+                    <Tr>
+                      <Td>Tratamento de fissuras com resina epóxi</Td>
+                      <Td>R$ 4.899,45</Td>
+                    </Tr>
+                  </>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <p className="text-xs text-text-muted">
+            Etapas do orçamento e da medição: faixa neutra, seta para abrir e fechar, subtotal à direita.
           </p>
         </Block>
 

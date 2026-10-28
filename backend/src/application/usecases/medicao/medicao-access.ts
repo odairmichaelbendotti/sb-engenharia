@@ -116,7 +116,12 @@ export function parseOrcamentoItens(
       throw new DomainError(`Item ${index + 1}: valor total must be a number`);
     }
     const normalized = normalizeInput(
-      { codigo: texto(item.codigo), descricao: texto(item.descricao), unidade: texto(item.unidade) },
+      {
+        codigo: texto(item.codigo),
+        descricao: texto(item.descricao),
+        etapa: texto(item.etapa),
+        unidade: texto(item.unidade),
+      },
       ORDEM_SERVICO_ITEM_RULES,
     );
     const quantidadeMil = toMilesimos(quantidade);
@@ -128,6 +133,7 @@ export function parseOrcamentoItens(
       id: typeof item.id === "string" && item.id ? item.id : undefined,
       codigo: normalized.codigo || null,
       descricao: normalized.descricao,
+      etapa: normalized.etapa || null,
       unidade: normalized.unidade,
       quantidade: quantidadeMil,
       precoUnitario: precoCent,

@@ -7,7 +7,7 @@ import {
 } from "./medicao-calc.js";
 
 // Item da planilha com os dados de exibição
-export type ItemPlanilhaCompleto = ItemPlanilha & { ordem: number; codigo: string | null };
+export type ItemPlanilhaCompleto = ItemPlanilha & { ordem: number; codigo: string | null; etapa: string | null };
 
 /**
  * Planilha de uma medição, em unidades internas (milésimos e centavos). Na fechada é gravada
@@ -21,6 +21,8 @@ export type PlanilhaMedicao = {
     ordem: number;
     codigo: string | null;
     descricao: string;
+    // Etapa do item; ausente nas planilhas gravadas antes das etapas (= sem etapa)
+    etapa?: string | null;
     unidade: string;
     orcado: number;
     precoUnitario: number;
@@ -53,6 +55,7 @@ export function buildPlanilhaMedicao({
         ordem: item.ordem,
         codigo: item.codigo,
         descricao: item.descricao,
+        etapa: item.etapa,
         unidade: item.unidade,
         orcado: item.quantidade,
         precoUnitario: item.precoUnitario,
@@ -62,6 +65,23 @@ export function buildPlanilhaMedicao({
       })),
     fiscais,
   };
+}
+
+/**
+ * Itens em grupos de etapa, na ordem da planilha: os itens seguidos com a mesma etapa formam um
+ * grupo (a mesma etapa mais adiante abre outro). Item sem etapa fica num grupo com etapa nula.
+ */
+export function gruposPorEtapa<T extends { etapa?: string | null }>(
+  itens: readonly T[],
+): { etapa: string | null; itens: T[] }[] {
+  const grupos: { etapa: string | null; itens: T[] }[] = [];
+  for (const item of itens) {
+    const etapa = item.etapa ?? null;
+    const atual = grupos.at(-1);
+    if (atual && atual.etapa === etapa) atual.itens.push(item);
+    else grupos.push({ etapa, itens: [item] });
+  }
+  return grupos;
 }
 
 /** Lê a planilha gravada no banco (JSON), recusando um formato desconhecido. */
@@ -76,6 +96,7 @@ export type LinhaPlanilhaMedicao = LinhaMedicao & {
   ordem: number;
   codigo: string | null;
   descricao: string;
+  etapa: string | null;
   unidade: string;
   precoUnitario: number;
 };
@@ -106,6 +127,7 @@ export function calcularPlanilhaMedicao(planilha: PlanilhaMedicao): {
         ordem: item.ordem,
         codigo: item.codigo,
         descricao: item.descricao,
+        etapa: item.etapa ?? null,
         unidade: item.unidade,
         precoUnitario: item.precoUnitario,
       };

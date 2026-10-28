@@ -48,7 +48,9 @@ export function PasteOrcamentoDialog({
   const [mode, setMode] = useState<PasteMode>("append");
   const linhas = useMemo(() => parsePastedBudget(texto), [texto]);
   const validas = linhas.flatMap((l) => (l.item ? [l.item] : []));
-  const comErro = linhas.length - validas.length;
+  const comErro = linhas.filter((l) => l.erro).length;
+  // Etapas que recebem algum item (títulos aninhados sem item direto não viram etapa)
+  const etapas = new Set(validas.map((i) => i.etapa).filter(Boolean)).size;
   const excedente = Math.max(0, validas.length - limite[mode]);
   const totalItem = (i: PastedItem) => i.valorTotal ?? valorItem(i.quantidade, i.precoUnitario);
   const total = validas.reduce((acc, i) => acc + totalItem(i), 0);
@@ -59,7 +61,7 @@ export function PasteOrcamentoDialog({
       <ModalHeader
         icon={ClipboardPaste}
         title="Colar itens do Excel"
-        description={`Colunas: código, descrição, unidade, quantidade, preço unitário (${comDesconto ? "com BDI e desconto" : "com BDI"}) e total (opcional)`}
+        description={`Colunas: código, descrição, unidade, quantidade, preço unitário (${comDesconto ? "com BDI e desconto" : "com BDI"}) e total (opcional). Linha sem código e sem unidade vira etapa`}
         onClose={onClose}
       />
       <ModalBody className="space-y-3">
@@ -84,7 +86,8 @@ export function PasteOrcamentoDialog({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-text-secondary">
                 <span className="font-semibold text-text-primary">{validas.length}</span>{" "}
-                {validas.length === 1 ? "item reconhecido" : "itens reconhecidos"} · {formatCurrency(total)}
+                {validas.length === 1 ? "item reconhecido" : "itens reconhecidos"}
+                {etapas > 0 && ` em ${etapas} ${etapas === 1 ? "etapa" : "etapas"}`} · {formatCurrency(total)}
                 {comDesconto && ajustados > 0 && (
                   <span className="text-text-muted">
                     {" "}
@@ -120,10 +123,14 @@ export function PasteOrcamentoDialog({
                 </TableHead>
                 <TableBody>
                   {linhas.map((l) => (
-                    <Tr key={l.linha} muted={!l.item}>
+                    <Tr key={l.linha} muted={Boolean(l.erro)}>
                       <Td>{l.linha}</Td>
                       <Td>
-                        {l.item ? (
+                        {l.etapa !== null ? (
+                          <span className="block text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
+                            Etapa · {l.etapa}
+                          </span>
+                        ) : l.item ? (
                           <>
                             <span className="block text-text-primary line-clamp-2" title={l.item.descricao}>
                               {l.item.descricao}

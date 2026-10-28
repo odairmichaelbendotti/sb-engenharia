@@ -7,10 +7,13 @@ export const ORCAMENTO_ITENS_MAX = 500;
 const CODIGO_MAX = 40;
 const DESCRICAO_MAX = 500;
 const UNIDADE_MAX = 20;
+export const ETAPA_MAX = 120;
 
 export type PastedItem = {
   codigo: string;
   descricao: string;
+  // Título da planilha logo acima do item; vazio = sem etapa
+  etapa: string;
   unidade: string;
   quantidade: number;
   precoUnitario: number;
@@ -18,7 +21,14 @@ export type PastedItem = {
   valorTotal: number | null;
 };
 
-export type PastedLine = { linha: number; item: PastedItem | null; erro: string | null; texto: string };
+// Linha colada: um item, um título de etapa (`etapa`) ou um erro
+export type PastedLine = {
+  linha: number;
+  item: PastedItem | null;
+  etapa: string | null;
+  erro: string | null;
+  texto: string;
+};
 
 /**
  * Número como vem do Excel em pt-BR ("1.234,56", "R$ 12,50", "3,5") ou em inglês ("3.5").
@@ -46,9 +56,28 @@ function splitColumns(cells: string[]) {
   return { codigo: a, descricao: b, unidade: c, quantidade: d, preco: e, total: f };
 }
 
-function parseLine(cells: string[], linha: number, texto: string): PastedLine {
+/**
+ * Título de etapa (ex.: "REMOÇÃO/DEMOLIÇÃO" da planilha SINAPI): linha sem código e sem unidade, ou
+ * só com um texto. Os subtotais que vêm na linha do título são ignorados.
+ */
+function tituloEtapa(cells: string[]): string | null {
+  const preenchidas = cells.filter((c) => c !== "");
+  if (cells.length < 4) return preenchidas.length === 1 ? preenchidas[0]! : null;
+  const col = splitColumns(cells);
+  return !col.codigo && !col.unidade && col.descricao ? col.descricao : null;
+}
+
+function parseLine(cells: string[], linha: number, texto: string, etapa: string): PastedLine {
+  const titulo = tituloEtapa(cells);
+  if (titulo !== null) {
+    const nome = normalizeFreeText(titulo);
+    if (nome.length > ETAPA_MAX) {
+      return { linha, item: null, etapa: null, erro: `Etapa com mais de ${ETAPA_MAX} caracteres`, texto };
+    }
+    return { linha, item: null, etapa: nome, erro: null, texto };
+  }
   if (cells.length < 4) {
-    return { linha, item: null, erro: "Faltam colunas: descrição, unidade, quantidade e preço", texto };
+    return { linha, item: null, etapa: null, erro: "Faltam colunas: descrição, unidade, quantidade e preço", texto };
   }
   const col = splitColumns(cells);
   const descricao = normalizeFreeText(col.descricao);
@@ -73,7 +102,7 @@ function parseLine(cells: string[], linha: number, texto: string): PastedLine {
                 ? "Preço unitário inválido"
                 : null;
 
-  if (erro) return { linha, item: null, erro, texto };
+  if (erro) return { linha, item: null, etapa: null, erro, texto };
   const qtd = Math.round(quantidade! * 1000) / 1000;
   const precoUnitario = Math.round(preco! * 100) / 100;
   // Coluna do total: o que não for número é ignorado
@@ -84,6 +113,7 @@ function parseLine(cells: string[], linha: number, texto: string): PastedLine {
     return {
       linha,
       item: null,
+      etapa: null,
       erro: `Total ${formatCurrency(total)} não bate com quantidade × preço (${formatCurrency(calculado)})`,
       texto,
     };
@@ -91,10 +121,12 @@ function parseLine(cells: string[], linha: number, texto: string): PastedLine {
   return {
     linha,
     erro: null,
+    etapa: null,
     texto,
     item: {
       codigo,
       descricao,
+      etapa,
       unidade,
       quantidade: qtd,
       precoUnitario,
@@ -103,7 +135,11 @@ function parseLine(cells: string[], linha: number, texto: string): PastedLine {
   };
 }
 
-/** Texto copiado de uma planilha (colunas separadas por tabulação) → linhas com o item ou o erro. */
+/**
+ * Texto copiado de uma planilha (colunas separadas por tabulação) → linhas com o item, o título de
+ * etapa ou o erro. Cada item fica na etapa do último título acima dele (com títulos aninhados, o
+ * mais próximo dos itens).
+ */
 export function parsePastedBudget(text: string): PastedLine[] {
   const rows = text
     .replace(/\r\n?/g, "\n")
@@ -111,7 +147,12 @@ export function parsePastedBudget(text: string): PastedLine[] {
     .map((texto, index) => ({ texto, linha: index + 1, cells: texto.split("\t").map((c) => c.trim()) }))
     .filter((row) => row.cells.some((c) => c !== ""));
 
-  const lines = rows.map((row) => parseLine(row.cells, row.linha, row.texto));
+  let etapa = "";
+  const lines = rows.map((row) => {
+    const line = parseLine(row.cells, row.linha, row.texto, etapa);
+    if (line.etapa !== null) etapa = line.etapa;
+    return line;
+  });
   // Cabeçalho ("Código | Descrição | Un | Qtd | Preço"): primeira linha sem número na quantidade
   const first = lines[0];
   const firstRow = rows[0];

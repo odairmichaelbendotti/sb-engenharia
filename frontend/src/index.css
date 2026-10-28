@@ -234,6 +234,16 @@
     background-color: color-mix(in srgb, var(--color-surface-muted) 70%, transparent);
   }
 
+  /* Faixa de grupo (TableGroupRow): tom neutro na linha toda, sem o realce de hover */
+  .data-table tbody tr.table-group,
+  .data-table tbody tr.table-group:hover {
+    background-color: var(--color-neutral-100);
+  }
+
+  .data-table tr.table-group td {
+    padding-block: 0.5rem;
+  }
+
   /* Rodapé de totais */
   .data-table tfoot {
     border-top: 1px solid var(--color-border);

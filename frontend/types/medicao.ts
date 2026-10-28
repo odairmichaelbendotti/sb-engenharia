@@ -15,6 +15,8 @@ export interface OrcamentoItem {
   ordem: number;
   codigo: string | null;
   descricao: string;
+  // Etapa que agrupa o item (itens seguidos com a mesma etapa); null = sem etapa
+  etapa: string | null;
   unidade: string;
   quantidade: number;
   // Preço que vale nas medições (com BDI e desconto)
@@ -117,6 +119,7 @@ export interface MedicaoLinha {
   ordem: number;
   codigo: string | null;
   descricao: string;
+  etapa: string | null;
   unidade: string;
   precoUnitario: number;
   orcado: number;
@@ -145,6 +148,8 @@ export interface OrcamentoItemPayload {
   id?: string;
   codigo: string;
   descricao: string;
+  // Vazio = sem etapa
+  etapa: string;
   unidade: string;
   quantidade: number;
   // Como informado: com BDI (modo COM_BDI) ou com BDI e desconto
