@@ -111,8 +111,10 @@ export function AddModal({ isOpen, setIsOpen, initialEmpenho = null }: AddModalP
 
   if (!isOpen) return null;
 
-  const medicoesDaOS =
-    obraOptionsForInvoice.find((o) => o.ordemServico.id === formData.ordemServico_id)?.medicoes ?? [];
+  // Medição já paga por outra nota não aparece: só as livres podem ser escolhidas
+  const medicoesDaOS = (
+    obraOptionsForInvoice.find((o) => o.ordemServico.id === formData.ordemServico_id)?.medicoes ?? []
+  ).filter((m) => !m.notaFiscal);
 
   // Escolher a medição traz o valor dela; voltar para "sem medição" mantém o valor para editar
   function selectMedicao(medicao: MedicaoParaNota | null) {

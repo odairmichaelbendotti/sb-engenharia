@@ -111,8 +111,10 @@ export default function EditModal({
       .catch(() => {});
   }
 
-  const medicoesDaOS =
-    obraOptionsForInvoice.find((o) => o.ordemServico.id === formData.ordemServico_id)?.medicoes ?? [];
+  // Medição já paga por outra nota não aparece; a que esta nota já paga continua na lista
+  const medicoesDaOS = (
+    obraOptionsForInvoice.find((o) => o.ordemServico.id === formData.ordemServico_id)?.medicoes ?? []
+  ).filter((m) => !m.notaFiscal || m.notaFiscal.id === editInvoice?.id);
 
   // Escolher a medição traz o valor dela; voltar para "sem medição" mantém o valor para editar
   function selectMedicao(medicao: MedicaoParaNota | null) {
@@ -277,7 +279,6 @@ export default function EditModal({
                         <MedicaoField
                           medicoes={medicoesDaOS}
                           value={formData.medicao_id}
-                          invoiceId={editInvoice.id}
                           onChange={selectMedicao}
                         />
                       </div>
