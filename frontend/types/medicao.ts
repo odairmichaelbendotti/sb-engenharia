@@ -18,12 +18,15 @@ export interface OrcamentoItem {
   // Etapa que agrupa o item (itens seguidos com a mesma etapa); null = sem etapa
   etapa: string | null;
   unidade: string;
+  // Contratada; a que vale é ela menos a suprimida
   quantidade: number;
+  // Supressão: parte da quantidade que saiu do contrato (0 = nenhuma)
+  quantidadeSuprimida: number;
   // Preço que vale nas medições (com BDI e desconto)
   precoUnitario: number;
   // Preço com BDI informado, quando o sistema aplicou o desconto (modo COM_BDI)
   precoReferencia: number | null;
-  // Total ajustado (quando `totalAjustado`) ou quantidade × preço
+  // Total ajustado (quando `totalAjustado`) ou quantidade efetiva × preço
   valorTotal: number;
   // Total digitado para bater com a planilha de referência
   totalAjustado: boolean;
@@ -122,7 +125,10 @@ export interface MedicaoLinha {
   etapa: string | null;
   unidade: string;
   precoUnitario: number;
+  // Quantidade efetiva (contratada − suprimida)
   orcado: number;
+  // Supressão do item (0 = nenhuma; ausente em respostas antigas)
+  suprimido?: number;
   // Acumulado das medições fechadas antes desta
   anterior: number;
   esta: number;
@@ -152,6 +158,8 @@ export interface OrcamentoItemPayload {
   etapa: string;
   unidade: string;
   quantidade: number;
+  // Supressão (0 = nenhuma)
+  quantidadeSuprimida: number;
   // Como informado: com BDI (modo COM_BDI) ou com BDI e desconto
   precoUnitario: number;
   // Total ajustado; null = quantidade × preço. Só no modo com desconto

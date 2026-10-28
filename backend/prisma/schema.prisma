@@ -515,6 +515,9 @@ model OrdemServicoItem {
   unidade       String
   // Quantidade orçada em milésimos da unidade (3,5 m² = 3500)
   quantidade    Int
+  // Supressão: parte da quantidade que saiu do contrato, em milésimos. O item fica na planilha e
+  // vale pela quantidade efetiva (quantidade − suprimida)
+  quantidadeSuprimida Int @default(0)
   // Centavos
   precoUnitario Int
   // Preço com BDI digitado, em centavos (só no modo COM_BDI; o unitário é ele com o desconto)

@@ -95,8 +95,8 @@ export function parsePrecoBase(raw: unknown, atual: PrecoBase): PrecoBase {
 }
 
 /**
- * Planilha enviada pela API: quantidade decimal, preço unitário (como informado) e total ajustado
- * (opcional) em reais. No modo COM_BDI o preço informado vira a referência e o preço que vale
+ * Planilha enviada pela API: quantidade e quantidade suprimida (opcional) decimais, preço unitário
+ * (como informado) e total ajustado (opcional) em reais. No modo COM_BDI o preço informado vira a referência e o preço que vale
  * recebe o desconto da OS. Total igual a quantidade × preço é gravado como nulo (sem ajuste).
  */
 export function parseOrcamentoItens(
@@ -108,7 +108,8 @@ export function parseOrcamentoItens(
     const item = (value ?? {}) as Record<string, unknown>;
     const quantidade = numero(item.quantidade);
     const preco = numero(item.precoUnitario);
-    if (!Number.isFinite(quantidade) || !Number.isFinite(preco)) {
+    const suprimida = item.quantidadeSuprimida === null || item.quantidadeSuprimida === undefined ? 0 : numero(item.quantidadeSuprimida);
+    if (!Number.isFinite(quantidade) || !Number.isFinite(preco) || !Number.isFinite(suprimida)) {
       throw new DomainError(`Item ${index + 1}: quantidade and preço unitário must be numbers`);
     }
     const total = item.valorTotal === null || item.valorTotal === undefined ? null : numero(item.valorTotal);
@@ -136,6 +137,7 @@ export function parseOrcamentoItens(
       etapa: normalized.etapa || null,
       unidade: normalized.unidade,
       quantidade: quantidadeMil,
+      quantidadeSuprimida: toMilesimos(suprimida),
       precoUnitario: precoCent,
       valorTotal: totalCent === valorItem(quantidadeMil, precoCent) ? null : totalCent,
       precoReferencia: aplicaDesconto ? informadoCent : null,

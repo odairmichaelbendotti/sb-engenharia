@@ -50,12 +50,17 @@ function renderResumo(m: MedicaoDocumentModel): string {
 function renderLinha(l: MedicaoDocumentLinha): string {
   const classes = l.medidoNesta ? "on" : "";
   const codigo = l.codigo ? `<span class="code">${escapeHtml(l.codigo)}</span>` : "";
-  const concluido = l.concluido ? '<span class="done-tag">concluído</span>' : "";
+  const concluido = l.suprimidoTotal
+    ? '<span class="done-tag">suprimido</span>'
+    : l.concluido
+      ? '<span class="done-tag">concluído</span>'
+      : "";
+  const suprimido = l.suprimido ? `<span class="code">−${l.suprimido} suprimido</span>` : "";
   return `<tr${classes ? ` class="${classes}"` : ""}>
 <td class="c">${escapeHtml(l.item)}</td>
 <td class="desc">${escapeHtml(l.descricao)}${concluido}${codigo}</td>
 <td class="c">${escapeHtml(l.unidade)}</td>
-<td class="num">${l.orcado}</td>
+<td class="num">${l.orcado}${suprimido}</td>
 <td class="num">${l.precoUnitario}</td>
 <td class="num grp">${l.anterior}</td>
 <td class="num strong">${l.esta}</td>

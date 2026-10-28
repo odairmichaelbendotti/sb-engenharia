@@ -4,6 +4,7 @@ import { formatCurrency, formatDateOnly, formatDateTimeFull } from "../../utils/
 import { formatQuantidade } from "../../utils/decimal";
 import { DetailItem, Table, TableBody, TableFoot, TableGroupRow, TableHead, Td, Th, Tr } from "../../components/ui";
 import { contagemItens, gruposPorEtapa, SEM_ETAPA, temEtapas, useEtapasRecolhidas } from "./etapas";
+import { SupressaoNota } from "./supressao";
 
 /**
  * Medição fechada (ou vista por quem não edita): a planilha como foi fechada. `compact` para o
@@ -100,6 +101,7 @@ function LinhaMedida({ l }: { l: MedicaoLinha }) {
         <span className="block text-[11px] text-text-muted">
           {[l.codigo, `${formatQuantidade(l.orcado)} ${l.unidade} orçados`].filter(Boolean).join(" · ")}
         </span>
+        <SupressaoNota suprimido={l.suprimido ?? 0} unidade={l.unidade} />
       </Td>
       <Td className="hidden sm:table-cell">{formatQuantidade(l.anterior)}</Td>
       <Td>

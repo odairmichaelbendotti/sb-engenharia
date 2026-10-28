@@ -52,6 +52,8 @@ export type ItemPlanilha = {
   descricao: string;
   unidade: string;
   quantidade: number;
+  // Parte da quantidade que saiu do contrato (supressão), em milésimos; ausente = 0
+  quantidadeSuprimida?: number;
   // Preço que vale nas medições (com BDI e desconto)
   precoUnitario: number;
   // Total digitado para bater com a planilha de referência; nulo = quantidade × preço
@@ -60,7 +62,17 @@ export type ItemPlanilha = {
   precoReferencia?: number | null;
 };
 
-type ValoresItem = Pick<ItemPlanilha, "quantidade" | "precoUnitario" | "valorTotal">;
+type ValoresItem = Pick<ItemPlanilha, "quantidade" | "precoUnitario" | "valorTotal" | "quantidadeSuprimida">;
+
+/** Quantidade que vale no orçamento: a contratada menos a suprimida. */
+export function quantidadeEfetiva(item: Pick<ItemPlanilha, "quantidade" | "quantidadeSuprimida">): number {
+  return item.quantidade - (item.quantidadeSuprimida ?? 0);
+}
+
+// Com supressão, o total ajustado (da quantidade cheia) deixa de valer
+function totalAjustado(item: ValoresItem): number | null {
+  return (item.quantidadeSuprimida ?? 0) > 0 ? null : item.valorTotal;
+}
 
 /**
  * Maior diferença aceita entre o total ajustado e quantidade × preço, em centavos: meio centavo
@@ -70,9 +82,9 @@ export function folgaValorTotal(quantidadeMil: number): number {
   return Math.ceil(quantidadeMil / (2 * QTD_ESCALA)) + 1;
 }
 
-/** Valor orçado do item: o total ajustado, ou quantidade × preço. */
+/** Valor orçado do item: o total ajustado, ou quantidade efetiva × preço. */
 export function valorOrcadoItem(item: ValoresItem): number {
-  return item.valorTotal ?? valorItem(item.quantidade, item.precoUnitario);
+  return totalAjustado(item) ?? valorItem(quantidadeEfetiva(item), item.precoUnitario);
 }
 
 /**
@@ -81,10 +93,11 @@ export function valorOrcadoItem(item: ValoresItem): number {
  */
 export function valorAcumuladoItem(item: ValoresItem, quantidadeMil: number): number {
   const calculado = valorItem(quantidadeMil, item.precoUnitario);
-  if (item.valorTotal === null) return calculado;
-  if (quantidadeMil < item.quantidade) return Math.min(calculado, item.valorTotal);
+  const total = totalAjustado(item);
+  if (total === null) return calculado;
+  if (quantidadeMil < item.quantidade) return Math.min(calculado, total);
   // Acima do orçado (rascunho lançado antes de o orçamento diminuir) soma o excedente pelo preço
-  return item.valorTotal + calculado - valorItem(item.quantidade, item.precoUnitario);
+  return total + calculado - valorItem(item.quantidade, item.precoUnitario);
 }
 
 // Quantidade por item (milésimos)
@@ -92,7 +105,9 @@ export type QuantidadesPorItem = ReadonlyMap<string, number>;
 
 export type PanoramaItem = {
   item_id: string;
+  // Quantidade efetiva (contratada − suprimida)
   orcado: number;
+  suprimido: number;
   valorOrcado: number;
   // Soma das medições fechadas
   medido: number;
@@ -131,10 +146,12 @@ export function computePanorama({
     const emRascunho = rascunho.get(item.id) ?? 0;
     const valorOrcado = valorOrcadoItem(item);
     const valorMedido = valorAcumuladoItem(item, medido);
-    const saldo = item.quantidade - medido;
+    const orcado = quantidadeEfetiva(item);
+    const saldo = orcado - medido;
     return {
       item_id: item.id,
-      orcado: item.quantidade,
+      orcado,
+      suprimido: item.quantidadeSuprimida ?? 0,
       valorOrcado,
       medido,
       valorMedido,
@@ -162,7 +179,9 @@ export function computePanorama({
 
 export type LinhaMedicao = {
   item_id: string;
+  // Quantidade efetiva (contratada − suprimida)
   orcado: number;
+  suprimido: number;
   // Acumulado das medições fechadas anteriores a esta
   anterior: number;
   esta: number;
@@ -197,16 +216,18 @@ export function computeLinhasMedicao({
     const qAnterior = anterior.get(item.id) ?? 0;
     const qEsta = esta.get(item.id) ?? 0;
     const acumulado = qAnterior + qEsta;
+    const orcado = quantidadeEfetiva(item);
     const valorOrcado = valorOrcadoItem(item);
     const valorAnterior = valorAcumuladoItem(item, qAnterior);
     const valorAcumulado = valorAcumuladoItem(item, acumulado);
     return {
       item_id: item.id,
-      orcado: item.quantidade,
+      orcado,
+      suprimido: item.quantidadeSuprimida ?? 0,
       anterior: qAnterior,
       esta: qEsta,
       acumulado,
-      saldo: item.quantidade - acumulado,
+      saldo: orcado - acumulado,
       valorOrcado,
       valorAnterior,
       valorEsta: valorAcumulado - valorAnterior,
@@ -260,7 +281,9 @@ export function validateMedicaoQuantidades({
     if (!Number.isInteger(linha.quantidade) || linha.quantidade <= 0 || linha.quantidade > INT_MAX) {
       throw new DomainError(`Invalid quantity for item "${item.descricao}"`);
     }
-    const saldo = item.quantidade - (medidoFechado.get(item.id) ?? 0);
+    const efetiva = quantidadeEfetiva(item);
+    if (efetiva === 0 && item.quantidade > 0) throw new DomainError(`Item "${item.descricao}" was suppressed from the budget`);
+    const saldo = efetiva - (medidoFechado.get(item.id) ?? 0);
     if (saldo <= 0) throw new DomainError(`Item "${item.descricao}" is already fully measured`);
     if (linha.quantidade > saldo) {
       throw new DomainError(
@@ -279,6 +302,8 @@ export type OrcamentoItemInput = {
   etapa: string | null;
   unidade: string;
   quantidade: number;
+  // Supressão (milésimos): sai do contrato sem apagar o item; 0 = nenhuma
+  quantidadeSuprimida: number;
   // Preço que vale (no modo COM_BDI, já calculado com o desconto)
   precoUnitario: number;
   // Total ajustado; nulo = quantidade × preço. Só no modo COM_BDI_E_DESCONTO
@@ -328,6 +353,13 @@ export function validateOrcamentoChange({
     if (!Number.isInteger(novo.quantidade) || novo.quantidade <= 0 || novo.quantidade > INT_MAX) {
       throw new DomainError(`${pos}: quantidade must be greater than zero`);
     }
+    if (
+      !Number.isInteger(novo.quantidadeSuprimida) ||
+      novo.quantidadeSuprimida < 0 ||
+      novo.quantidadeSuprimida > novo.quantidade
+    ) {
+      throw new DomainError(`${pos}: quantidade suprimida must be between zero and the item quantity`);
+    }
     if (!Number.isInteger(novo.precoUnitario) || novo.precoUnitario < 0 || novo.precoUnitario > INT_MAX) {
       throw new DomainError(`${pos}: preço unitário is invalid`);
     }
@@ -346,6 +378,7 @@ export function validateOrcamentoChange({
       if (diferenca > folgaValorTotal(novo.quantidade)) {
         throw new DomainError(`${pos}: valor total is too far from quantidade × preço unitário`);
       }
+      if (novo.quantidadeSuprimida > 0) throw new DomainError(`${pos}: valor total cannot be adjusted on a suppressed item`);
     }
 
     if (novo.id === undefined) return;
@@ -359,6 +392,11 @@ export function validateOrcamentoChange({
     if (novo.quantidade < medido) {
       throw new DomainError(
         `${pos}: quantidade cannot be lower than what was already measured (${formatQtd(medido, atual.unidade)})`,
+      );
+    }
+    if (quantidadeEfetiva(novo) < medido) {
+      throw new DomainError(
+        `${pos}: the suppression cannot reach what was already measured (${formatQtd(medido, atual.unidade)})`,
       );
     }
     if (
@@ -393,14 +431,17 @@ export function totaisOrcamento({
   precoBase,
   desconto,
 }: {
-  itens: readonly Pick<ItemPlanilha, "quantidade" | "precoUnitario" | "valorTotal" | "precoReferencia">[];
+  itens: readonly Pick<
+    ItemPlanilha,
+    "quantidade" | "quantidadeSuprimida" | "precoUnitario" | "valorTotal" | "precoReferencia"
+  >[];
   precoBase: PrecoBase;
   desconto: number;
 }): { totalComBdi: number; valorOs: number } {
   const valorOs = itens.reduce((acc, item) => acc + valorOrcadoItem(item), 0);
   if (precoBase === "COM_BDI") {
     const totalComBdi = itens.reduce(
-      (acc, item) => acc + valorItem(item.quantidade, item.precoReferencia ?? item.precoUnitario),
+      (acc, item) => acc + valorItem(quantidadeEfetiva(item), item.precoReferencia ?? item.precoUnitario),
       0,
     );
     return { totalComBdi, valorOs };
@@ -409,7 +450,10 @@ export function totaisOrcamento({
   return { totalComBdi: fator > 0 ? Math.round(valorOs / fator) : valorOs, valorOs };
 }
 
-type ItemComReferencia = Pick<ItemPlanilha, "id" | "quantidade" | "precoUnitario" | "valorTotal" | "precoReferencia">;
+type ItemComReferencia = Pick<
+  ItemPlanilha,
+  "id" | "quantidade" | "quantidadeSuprimida" | "precoUnitario" | "valorTotal" | "precoReferencia"
+>;
 
 /**
  * Preços do orçamento com outro desconto (ex.: a OS antiga recebeu o lote): o item com preço de

@@ -15,7 +15,10 @@ export type MedicaoDocumentLinha = {
   codigo: string;
   descricao: string;
   unidade: string;
+  // Quantidade efetiva (contratada − suprimida)
   orcado: string;
+  // Quantidade suprimida ("" sem supressão)
+  suprimido: string;
   precoUnitario: string;
   anterior: string;
   esta: string;
@@ -24,9 +27,10 @@ export type MedicaoDocumentLinha = {
   valorEsta: string;
   valorAcumulado: string;
   valorSaldo: string;
-  // Item medido nesta medição (linha em destaque) e item sem saldo
+  // Item medido nesta medição (linha em destaque), item sem saldo e item suprimido por inteiro
   medidoNesta: boolean;
   concluido: boolean;
+  suprimidoTotal: boolean;
 };
 
 // Faixa de etapa antes da linha `inicio` (índice em `linhas`), com os subtotais dos itens dela
@@ -125,6 +129,7 @@ export function buildMedicaoDocumentModel(data: MedicaoDocumentData, emitidoEm: 
       descricao: l.descricao,
       unidade: l.unidade,
       orcado: formatQuantidade(l.orcado),
+      suprimido: l.suprimido > 0 ? formatQuantidade(l.suprimido) : "",
       precoUnitario: valorTabela(l.precoUnitario),
       anterior: ouTraco(l.anterior, formatQuantidade(l.anterior)),
       esta: ouTraco(l.esta, formatQuantidade(l.esta)),
@@ -134,7 +139,8 @@ export function buildMedicaoDocumentModel(data: MedicaoDocumentData, emitidoEm: 
       valorAcumulado: valorTabela(l.valorAcumulado),
       valorSaldo: valorTabela(l.valorSaldo),
       medidoNesta: l.esta > 0,
-      concluido: l.saldo <= 0,
+      concluido: l.saldo <= 0 && l.orcado > 0,
+      suprimidoTotal: l.orcado === 0 && l.suprimido > 0,
     })),
     etapas: etapasDoDocumento(linhas),
     totais: {

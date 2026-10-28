@@ -9,6 +9,7 @@ import {
   toMilesimos,
   validateMedicaoQuantidades,
   precoComDesconto,
+  quantidadeEfetiva,
   totaisOrcamento,
   validateOrcamentoChange,
   valorAcumuladoItem,
@@ -209,6 +210,7 @@ describe("validateOrcamentoChange", () => {
     descricao: item.descricao,
     unidade: item.unidade,
     quantidade: item.quantidade,
+    quantidadeSuprimida: item.quantidadeSuprimida ?? 0,
     precoUnitario: item.precoUnitario,
     valorTotal: item.valorTotal,
     precoReferencia: null,
@@ -227,6 +229,7 @@ describe("validateOrcamentoChange", () => {
           descricao: "Chapisco",
           unidade: "m²",
           quantidade: 5000,
+          quantidadeSuprimida: 0,
           precoUnitario: 800,
           valorTotal: null,
           precoReferencia: null,
@@ -252,6 +255,7 @@ describe("validateOrcamentoChange", () => {
       descricao: "X",
       unidade: "un",
       quantidade: 1000,
+      quantidadeSuprimida: 0,
       precoUnitario: 100,
       valorTotal: null,
       precoReferencia: null,
@@ -357,6 +361,79 @@ describe("desconto e totais do orçamento", () => {
     });
     // Mesmo desconto: nada muda
     expect(aplicarDesconto(itens, 0).precos).toEqual([]);
+  });
+});
+
+describe("supressão", () => {
+  // Reboco de 10 m² com 4 m² suprimidos: valem 6 m²
+  const suprimido: ItemPlanilha = { ...reboco, quantidadeSuprimida: 4000 };
+  const inteiro: ItemPlanilha = { ...pintura, quantidadeSuprimida: pintura.quantidade };
+
+  it("o orçado, o saldo e o valor saem da quantidade efetiva", () => {
+    expect(quantidadeEfetiva(suprimido)).toBe(6000);
+    expect(valorOrcadoItem(suprimido)).toBe(30_000);
+    const { itens, totais } = computePanorama({ itens: [suprimido, inteiro], medidoFechado: qtd([["i-1", 2000]]), rascunho: qtd() });
+    expect(itens[0]).toMatchObject({ orcado: 6000, suprimido: 4000, saldo: 4000, valorSaldo: 20_000, completo: false });
+    expect(itens[1]).toMatchObject({ orcado: 0, suprimido: 3333, valorOrcado: 0, saldo: 0, completo: true });
+    expect(totais.valorOrcado).toBe(30_000);
+  });
+
+  it("a supressão ignora o total ajustado da quantidade cheia", () => {
+    const ajustado: ItemPlanilha = { ...pintura, valorTotal: 4112, quantidadeSuprimida: 333 };
+    expect(valorOrcadoItem(ajustado)).toBe(valorItem(3000, 1234));
+    expect(valorAcumuladoItem(ajustado, 3000)).toBe(valorItem(3000, 1234));
+  });
+
+  it("as linhas da medição levam o orçado efetivo e a supressão", () => {
+    const { linhas } = computeLinhasMedicao({ itens: [suprimido], anterior: qtd([["i-1", 2000]]), esta: qtd([["i-1", 4000]]) });
+    expect(linhas[0]).toMatchObject({ orcado: 6000, suprimido: 4000, acumulado: 6000, saldo: 0, valorSaldo: 0 });
+  });
+
+  it("a medição não passa do saldo efetivo nem mede item suprimido por inteiro", () => {
+    const base = { itens: [suprimido, inteiro], medidoFechado: qtd() };
+    expect(() => validateMedicaoQuantidades({ ...base, linhas: [{ item_id: "i-1", quantidade: 6000 }] })).not.toThrow();
+    expect(() => validateMedicaoQuantidades({ ...base, linhas: [{ item_id: "i-1", quantidade: 6001 }] })).toThrow(/max 6 m²/);
+    expect(() => validateMedicaoQuantidades({ ...base, linhas: [{ item_id: "i-2", quantidade: 1 }] })).toThrow(/suppressed/);
+  });
+
+  it("o total com BDI e o novo desconto também saem da quantidade efetiva", () => {
+    const comReferencia = { ...suprimido, precoReferencia: 6000 };
+    expect(totaisOrcamento({ itens: [comReferencia], precoBase: "COM_BDI", desconto: 0 }).totalComBdi).toBe(36_000);
+    expect(aplicarDesconto([comReferencia], 25).valorOs).toBe(valorItem(6000, 4500));
+  });
+
+  describe("no orçamento", () => {
+    const novo = (overrides: Partial<OrcamentoItemInput>): OrcamentoItemInput => ({
+      id: reboco.id,
+      codigo: null,
+      descricao: reboco.descricao,
+      etapa: null,
+      unidade: reboco.unidade,
+      quantidade: reboco.quantidade,
+      quantidadeSuprimida: 0,
+      precoUnitario: reboco.precoUnitario,
+      valorTotal: null,
+      precoReferencia: null,
+      ...overrides,
+    });
+    const run = (item: OrcamentoItemInput, medido = 0) =>
+      validateOrcamentoChange({ atuais: [reboco], novos: [item], medidoFechado: qtd([["i-1", medido]]) });
+
+    it("aceita de zero até a quantidade inteira", () => {
+      expect(() => run(novo({ quantidadeSuprimida: 4000 }))).not.toThrow();
+      expect(() => run(novo({ quantidadeSuprimida: 10_000 }))).not.toThrow();
+    });
+
+    it("recusa supressão negativa, acima da quantidade ou com total ajustado", () => {
+      expect(() => run(novo({ quantidadeSuprimida: -1 }))).toThrow(/quantidade suprimida/);
+      expect(() => run(novo({ quantidadeSuprimida: 10_001 }))).toThrow(/quantidade suprimida/);
+      expect(() => run(novo({ quantidadeSuprimida: 1000, valorTotal: 50_001 }))).toThrow(/suppressed item/);
+    });
+
+    it("não deixa a supressão alcançar o que já foi medido", () => {
+      expect(() => run(novo({ quantidadeSuprimida: 7000 }), 3000)).not.toThrow();
+      expect(() => run(novo({ quantidadeSuprimida: 7001 }), 3000)).toThrow(/already measured/);
+    });
   });
 });
 

@@ -129,6 +129,7 @@ type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 const ORCAMENTO_ITEM_SELECT = {
   id: true,
   quantidade: true,
+  quantidadeSuprimida: true,
   precoUnitario: true,
   valorTotal: true,
   precoReferencia: true,
@@ -595,7 +596,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
     try {
       const itens = await prisma.ordemServicoItem.findMany({
         where: { ordemServico_id: id },
-        select: { quantidade: true, precoUnitario: true, valorTotal: true },
+        select: { quantidade: true, quantidadeSuprimida: true, precoUnitario: true, valorTotal: true },
       });
       return itens.length === 0 ? null : itens.reduce((acc, item) => acc + valorOrcadoItem(item), 0);
     } catch (error) {

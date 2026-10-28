@@ -66,6 +66,14 @@ export function valorAcumuladoItem(
 }
 
 /**
+ * Quantidade que vale no orçamento: a contratada menos a suprimida (espelha `quantidadeEfetiva` do
+ * backend). Conta em milésimos para não sobrar resto de ponto flutuante.
+ */
+export function quantidadeEfetiva(item: { quantidade: number; quantidadeSuprimida: number }) {
+  return (Math.round(item.quantidade * 1000) - Math.round(item.quantidadeSuprimida * 1000)) / 1000;
+}
+
+/**
  * Preço com BDI menos o desconto (porcentagem), truncado no centavo (espelha `precoComDesconto` de
  * backend/src/domain/medicao/medicao-calc.ts: conta em inteiros, desconto com até 4 casas).
  */
@@ -79,14 +87,14 @@ export function precoComDesconto(preco: number, desconto: number) {
  * preço de referência (lançado só com BDI) recebe o desconto; os demais valem o total que já têm.
  */
 export function valorOrcamentoComDesconto(
-  itens: readonly { quantidade: number; precoReferencia: number | null; valorTotal: number }[],
+  itens: readonly { quantidade: number; quantidadeSuprimida: number; precoReferencia: number | null; valorTotal: number }[],
   desconto: number,
 ) {
   const centavos = itens.reduce((acc, item) => {
     const valor =
       item.precoReferencia === null
         ? item.valorTotal
-        : valorItem(item.quantidade, precoComDesconto(item.precoReferencia, desconto));
+        : valorItem(quantidadeEfetiva(item), precoComDesconto(item.precoReferencia, desconto));
     return acc + Math.round(valor * 100);
   }, 0);
   return centavos / 100;

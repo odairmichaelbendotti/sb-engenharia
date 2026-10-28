@@ -24,7 +24,10 @@ export type PlanilhaMedicao = {
     // Etapa do item; ausente nas planilhas gravadas antes das etapas (= sem etapa)
     etapa?: string | null;
     unidade: string;
+    // Quantidade contratada (a efetiva desconta a suprimida)
     orcado: number;
+    // Supressão; ausente nas planilhas gravadas antes dela existir (= 0)
+    suprimido?: number;
     precoUnitario: number;
     // Total ajustado; ausente nas planilhas gravadas antes dele existir (= quantidade × preço)
     valorTotal?: number | null;
@@ -58,6 +61,7 @@ export function buildPlanilhaMedicao({
         etapa: item.etapa,
         unidade: item.unidade,
         orcado: item.quantidade,
+        suprimido: item.quantidadeSuprimida ?? 0,
         precoUnitario: item.precoUnitario,
         valorTotal: item.valorTotal,
         anterior: anterior.get(item.id) ?? 0,
@@ -111,6 +115,7 @@ export function calcularPlanilhaMedicao(planilha: PlanilhaMedicao): {
     descricao: i.descricao,
     unidade: i.unidade,
     quantidade: i.orcado,
+    quantidadeSuprimida: i.suprimido ?? 0,
     precoUnitario: i.precoUnitario,
     valorTotal: i.valorTotal ?? null,
   }));

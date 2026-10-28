@@ -107,7 +107,9 @@ export class GetPlanilhaOrcamentoUseCase {
           descricao: item.descricao,
           etapa: item.etapa,
           unidade: item.unidade,
+          // Contratada; a que vale é ela menos a suprimida
           quantidade: qtd(item.quantidade),
+          quantidadeSuprimida: qtd(p.suprimido),
           precoUnitario: reais(item.precoUnitario),
           precoReferencia: item.precoReferencia === null || item.precoReferencia === undefined ? null : reais(item.precoReferencia),
           valorTotal: reais(p.valorOrcado),

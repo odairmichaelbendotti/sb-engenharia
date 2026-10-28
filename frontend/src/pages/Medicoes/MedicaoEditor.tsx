@@ -9,6 +9,7 @@ import {
   formatQuantidade,
   parseQuantidade,
   sanitizeDecimalInput,
+  quantidadeEfetiva,
   toDecimalInput,
   valorAcumuladoItem,
 } from "../../utils/decimal";
@@ -35,6 +36,7 @@ import { medicaoTitulo, toDateInput } from "../OrdemServico/medicao-display";
 import { StickyFooter } from "./Workspace";
 import { matchesItemSearch } from "./medicao-progress";
 import { contagemItens, gruposPorEtapa, SEM_ETAPA, temEtapas, useEtapasRecolhidas } from "./etapas";
+import { SupressaoNota, SuprimidoPill } from "./supressao";
 
 const OBSERVACAO_MAX = 2000;
 
@@ -46,7 +48,9 @@ type Linha = {
   etapa: string | null;
   unidade: string;
   precoUnitario: number;
+  // Quantidade efetiva (contratada − suprimida)
   orcado: number;
+  suprimido: number;
   // Total do item (o ajustado, quando há): o item medido por inteiro vale isso
   valorOrcado: number;
   anterior: number;
@@ -109,6 +113,7 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
         unidade: l.unidade,
         precoUnitario: l.precoUnitario,
         orcado: l.orcado,
+        suprimido: l.suprimido ?? 0,
         valorOrcado: l.valorOrcado,
         anterior: l.anterior,
         maximo: Math.max(0, Math.round((l.orcado - l.anterior) * 1000) / 1000),
@@ -121,7 +126,8 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
       etapa: i.etapa,
       unidade: i.unidade,
       precoUnitario: i.precoUnitario,
-      orcado: i.quantidade,
+      orcado: quantidadeEfetiva(i),
+      suprimido: i.quantidadeSuprimida,
       valorOrcado: i.valorTotal,
       anterior: i.medido,
       maximo: Math.max(0, i.saldo),
@@ -411,6 +417,7 @@ interface LinhaEditorProps {
 // Item da medição em edição: quanto foi executado, até o saldo
 function LinhaEditor({ l, quantidade, esta, valorEsta, onChange }: LinhaEditorProps) {
   const concluido = l.maximo <= 0;
+  const suprimidoTotal = l.orcado === 0 && l.suprimido > 0;
   const excede = esta > l.maximo;
   return (
     <Tr muted={concluido}>
@@ -421,14 +428,20 @@ function LinhaEditor({ l, quantidade, esta, valorEsta, onChange }: LinhaEditorPr
         <p className="text-[11px] text-text-muted truncate">
           {[l.codigo, `${formatCurrency(l.precoUnitario)}/${l.unidade}`].filter(Boolean).join(" · ")}
           <span className="md:hidden"> · {formatQuantidade(l.orcado)} {l.unidade} orçados</span>
+          {l.suprimido > 0 && (
+            <span className="md:hidden text-danger-text"> · −{formatQuantidade(l.suprimido)} suprimido</span>
+          )}
         </p>
       </Td>
       <Td className="hidden md:table-cell">
         {formatQuantidade(l.orcado)} {l.unidade}
+        <SupressaoNota suprimido={l.suprimido} />
       </Td>
       <Td className="hidden lg:table-cell">{formatQuantidade(l.anterior)}</Td>
       <Td>
-        {concluido ? (
+        {suprimidoTotal ? (
+          <SuprimidoPill />
+        ) : concluido ? (
           <StatusPill tone="success" size="sm">
             Concluído
           </StatusPill>
