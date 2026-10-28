@@ -1,5 +1,5 @@
 import { fromMilesimos } from "../medicao/medicao-calc.js";
-import { calcularPlanilhaMedicao } from "../medicao/planilha-medicao.js";
+import { calcularPlanilhaMedicao, gruposPorEtapa } from "../medicao/planilha-medicao.js";
 import type { MedicaoDocumentData } from "../repositories/IMedicaoRepository.js";
 import {
   formatCnpj,
@@ -29,6 +29,15 @@ export type MedicaoDocumentLinha = {
   concluido: boolean;
 };
 
+// Faixa de etapa antes da linha `inicio` (índice em `linhas`), com os subtotais dos itens dela
+export type MedicaoDocumentEtapa = {
+  titulo: string;
+  inicio: number;
+  esta: string;
+  acumulado: string;
+  saldo: string;
+};
+
 // Tudo o que o PDF da medição mostra, já formatado
 export type MedicaoDocumentModel = {
   titulo: string;
@@ -46,6 +55,8 @@ export type MedicaoDocumentModel = {
   dataFechamento: string;
   resumo: { orcado: string; esta: string; acumulado: string; percentualAcumulado: string; saldo: string };
   linhas: MedicaoDocumentLinha[];
+  // Só os grupos com etapa: orçamento sem etapas sai como lista única
+  etapas: MedicaoDocumentEtapa[];
   totais: { orcado: string; anterior: string; esta: string; acumulado: string; saldo: string };
   observacao: string;
   fiscais: { tecnico: string; administrativo: string };
@@ -125,6 +136,7 @@ export function buildMedicaoDocumentModel(data: MedicaoDocumentData, emitidoEm: 
       medidoNesta: l.esta > 0,
       concluido: l.saldo <= 0,
     })),
+    etapas: etapasDoDocumento(linhas),
     totais: {
       orcado: valorTabela(totais.valorOrcado),
       anterior: valorTabela(totais.valorAnterior),
@@ -136,4 +148,26 @@ export function buildMedicaoDocumentModel(data: MedicaoDocumentData, emitidoEm: 
     fiscais: { tecnico: planilha.fiscais.tecnico ?? "", administrativo: planilha.fiscais.administrativo ?? "" },
     local: `${tenant.city}, ${formatDataExtensa(dataDocumento)}.`,
   };
+}
+
+function etapasDoDocumento(
+  linhas: readonly { etapa: string | null; valorEsta: number; valorAcumulado: number; valorSaldo: number }[],
+): MedicaoDocumentEtapa[] {
+  const etapas: MedicaoDocumentEtapa[] = [];
+  let inicio = 0;
+  for (const grupo of gruposPorEtapa(linhas)) {
+    if (grupo.etapa !== null) {
+      const soma = (campo: "valorEsta" | "valorAcumulado" | "valorSaldo") =>
+        valorTabela(grupo.itens.reduce((acc, l) => acc + l[campo], 0));
+      etapas.push({
+        titulo: grupo.etapa,
+        inicio,
+        esta: soma("valorEsta"),
+        acumulado: soma("valorAcumulado"),
+        saldo: soma("valorSaldo"),
+      });
+    }
+    inicio += grupo.itens.length;
+  }
+  return etapas;
 }

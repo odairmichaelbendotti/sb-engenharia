@@ -510,6 +510,8 @@ model OrdemServicoItem {
   // Referência da composição (ex.: código SINAPI), opcional
   codigo        String?
   descricao     String
+  // Etapa do orçamento (ex.: "Remoção/demolição"): os itens seguidos com a mesma etapa formam um grupo
+  etapa         String?
   unidade       String
   // Quantidade orçada em milésimos da unidade (3,5 m² = 3500)
   quantidade    Int

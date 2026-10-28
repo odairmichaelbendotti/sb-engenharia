@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle2, FileDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { MedicaoDetalhe, PlanilhaOrcamento } from "../../../types/medicao";
@@ -23,6 +23,7 @@ import {
   StatusPill,
   Table,
   TableBody,
+  TableGroupRow,
   TableHead,
   Td,
   Textarea,
@@ -33,6 +34,7 @@ import { todayInput } from "../OrdemServico/ordem-servico-form-utils";
 import { medicaoTitulo, toDateInput } from "../OrdemServico/medicao-display";
 import { StickyFooter } from "./Workspace";
 import { matchesItemSearch } from "./medicao-progress";
+import { contagemItens, gruposPorEtapa, SEM_ETAPA, temEtapas, useEtapasRecolhidas } from "./etapas";
 
 const OBSERVACAO_MAX = 2000;
 
@@ -41,6 +43,7 @@ type Linha = {
   item_id: string;
   codigo: string | null;
   descricao: string;
+  etapa: string | null;
   unidade: string;
   precoUnitario: number;
   orcado: number;
@@ -102,6 +105,7 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
         item_id: l.item_id,
         codigo: l.codigo,
         descricao: l.descricao,
+        etapa: l.etapa,
         unidade: l.unidade,
         precoUnitario: l.precoUnitario,
         orcado: l.orcado,
@@ -114,6 +118,7 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
       item_id: i.id,
       codigo: i.codigo,
       descricao: i.descricao,
+      etapa: i.etapa,
       unidade: i.unidade,
       precoUnitario: i.precoUnitario,
       orcado: i.quantidade,
@@ -135,6 +140,10 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
       (filtro === "saldo" ? l.maximo > 0 : filtro === "nesta" ? qtd(l.item_id) > 0 : true) &&
       matchesItemSearch(l, busca),
   );
+  const grupos = gruposPorEtapa(visiveis, (l) => l.etapa);
+  const comEtapas = temEtapas(grupos);
+  // Com busca ou filtro, as etapas abrem para o resultado aparecer
+  const etapas = useEtapasRecolhidas(busca !== "" || filtro !== "todos");
 
   // Compara o que seria enviado com o carregado (quantidade zerada = linha ausente)
   const snapshot = (q: Record<string, string>, inicio: string, fim: string, obs: string) =>
@@ -182,6 +191,9 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
     if (acima.length > 0) {
       setBusca("");
       setFiltro("todos");
+      // A etapa do item com erro pode estar recolhida
+      const grupo = gruposPorEtapa(linhas, (l) => l.etapa).find((g) => g.itens.includes(acima[0]!));
+      if (grupo) etapas.abrir(grupo.key);
       requestAnimationFrame(() => {
         const campo = document.querySelector<HTMLInputElement>('[data-medicao] [aria-invalid="true"]');
         campo?.scrollIntoView({ block: "center" });
@@ -288,63 +300,33 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
               <Th width="w-32">Saldo após</Th>
             </TableHead>
             <TableBody>
-              {visiveis.map((l) => {
-                const esta = qtd(l.item_id);
-                const concluido = l.maximo <= 0;
-                const excede = esta > l.maximo;
+              {grupos.map((grupo) => {
+                const aberta = etapas.aberta(grupo.key);
+                const valorGrupo = grupo.itens.reduce((acc, l) => acc + valorEsta(l), 0);
                 return (
-                  <Tr key={l.item_id} muted={concluido}>
-                    <Td>
-                      <p className="truncate text-text-primary font-medium" title={l.descricao}>
-                        {l.descricao}
-                      </p>
-                      <p className="text-[11px] text-text-muted truncate">
-                        {[l.codigo, `${formatCurrency(l.precoUnitario)}/${l.unidade}`].filter(Boolean).join(" · ")}
-                        <span className="md:hidden"> · {formatQuantidade(l.orcado)} {l.unidade} orçados</span>
-                      </p>
-                    </Td>
-                    <Td className="hidden md:table-cell">
-                      {formatQuantidade(l.orcado)} {l.unidade}
-                    </Td>
-                    <Td className="hidden lg:table-cell">{formatQuantidade(l.anterior)}</Td>
-                    <Td>
-                      {concluido ? (
-                        <StatusPill tone="success" size="sm">
-                          Concluído
-                        </StatusPill>
-                      ) : (
-                        <div className="w-40 max-w-full mx-auto text-left">
-                          <Input
-                            size="sm"
-                            inputMode="decimal"
-                            aria-label={`Quantidade executada de ${l.descricao}`}
-                            placeholder="0,00"
-                            suffix={l.unidade}
-                            invalid={excede}
-                            value={quantidades[l.item_id] ?? ""}
-                            onChange={(e) => setQuantidade(l.item_id, sanitizeDecimalInput(e.target.value))}
-                          />
-                          <button
-                            type="button"
-                            className={cx(
-                              "mt-0.5 text-[11px] whitespace-nowrap cursor-pointer hover:underline",
-                              excede ? "text-danger-text" : "text-text-muted",
-                            )}
-                            title="Preencher com todo o saldo do item"
-                            onClick={() => setQuantidade(l.item_id, toDecimalInput(l.maximo))}
-                          >
-                            máx. {formatQuantidade(l.maximo)} · medir saldo
-                          </button>
-                        </div>
-                      )}
-                    </Td>
-                    <Td>
-                      <span className={cx("block", excede ? "text-danger-text font-semibold" : "text-text-primary")}>
-                        {formatQuantidade(Math.round((l.maximo - esta) * 1000) / 1000)}
-                      </span>
-                      {esta > 0 && <span className="block text-[11px] text-text-muted">{formatCurrency(valorEsta(l))}</span>}
-                    </Td>
-                  </Tr>
+                  <Fragment key={grupo.key}>
+                    {comEtapas && (
+                      <TableGroupRow
+                        columns={[undefined, "hidden md:table-cell", "hidden lg:table-cell", undefined, undefined]}
+                        title={grupo.etapa ?? SEM_ETAPA}
+                        count={contagemItens(grupo.itens.length)}
+                        values={[undefined, undefined, undefined, valorGrupo > 0 ? formatCurrency(valorGrupo) : undefined]}
+                        open={aberta}
+                        onToggle={() => etapas.alternar(grupo.key)}
+                      />
+                    )}
+                    {aberta &&
+                      grupo.itens.map((l) => (
+                        <LinhaEditor
+                          key={l.item_id}
+                          l={l}
+                          quantidade={quantidades[l.item_id] ?? ""}
+                          esta={qtd(l.item_id)}
+                          valorEsta={valorEsta(l)}
+                          onChange={(valor) => setQuantidade(l.item_id, valor)}
+                        />
+                      ))}
+                  </Fragment>
                 );
               })}
             </TableBody>
@@ -415,5 +397,73 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
       </ConfirmDialog>
       {guard.dialog}
     </>
+  );
+}
+
+interface LinhaEditorProps {
+  l: Linha;
+  quantidade: string;
+  esta: number;
+  valorEsta: number;
+  onChange: (valor: string) => void;
+}
+
+// Item da medição em edição: quanto foi executado, até o saldo
+function LinhaEditor({ l, quantidade, esta, valorEsta, onChange }: LinhaEditorProps) {
+  const concluido = l.maximo <= 0;
+  const excede = esta > l.maximo;
+  return (
+    <Tr muted={concluido}>
+      <Td>
+        <p className="truncate text-text-primary font-medium" title={l.descricao}>
+          {l.descricao}
+        </p>
+        <p className="text-[11px] text-text-muted truncate">
+          {[l.codigo, `${formatCurrency(l.precoUnitario)}/${l.unidade}`].filter(Boolean).join(" · ")}
+          <span className="md:hidden"> · {formatQuantidade(l.orcado)} {l.unidade} orçados</span>
+        </p>
+      </Td>
+      <Td className="hidden md:table-cell">
+        {formatQuantidade(l.orcado)} {l.unidade}
+      </Td>
+      <Td className="hidden lg:table-cell">{formatQuantidade(l.anterior)}</Td>
+      <Td>
+        {concluido ? (
+          <StatusPill tone="success" size="sm">
+            Concluído
+          </StatusPill>
+        ) : (
+          <div className="w-40 max-w-full mx-auto text-left">
+            <Input
+              size="sm"
+              inputMode="decimal"
+              aria-label={`Quantidade executada de ${l.descricao}`}
+              placeholder="0,00"
+              suffix={l.unidade}
+              invalid={excede}
+              value={quantidade}
+              onChange={(e) => onChange(sanitizeDecimalInput(e.target.value))}
+            />
+            <button
+              type="button"
+              className={cx(
+                "mt-0.5 text-[11px] whitespace-nowrap cursor-pointer hover:underline",
+                excede ? "text-danger-text" : "text-text-muted",
+              )}
+              title="Preencher com todo o saldo do item"
+              onClick={() => onChange(toDecimalInput(l.maximo))}
+            >
+              máx. {formatQuantidade(l.maximo)} · medir saldo
+            </button>
+          </div>
+        )}
+      </Td>
+      <Td>
+        <span className={cx("block", excede ? "text-danger-text font-semibold" : "text-text-primary")}>
+          {formatQuantidade(Math.round((l.maximo - esta) * 1000) / 1000)}
+        </span>
+        {esta > 0 && <span className="block text-[11px] text-text-muted">{formatCurrency(valorEsta)}</span>}
+      </Td>
+    </Tr>
   );
 }

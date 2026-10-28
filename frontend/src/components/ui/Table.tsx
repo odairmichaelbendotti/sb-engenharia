@@ -1,4 +1,5 @@
 import type { ComponentProps, KeyboardEvent, ReactNode } from "react";
+import { ChevronRight } from "lucide-react";
 import { cx } from "../../utils/cx";
 
 interface TableProps {
@@ -115,5 +116,52 @@ export function Td({ className, accent, actions = false, children }: TdProps) {
           Na primeira coluna (identidade) vira bloco de largura total, para o título truncar */}
       <div className="cell-inner inline-block align-middle max-w-full min-w-0">{children}</div>
     </td>
+  );
+}
+
+interface TableGroupRowProps {
+  title: string;
+  // Texto curto depois do título (ex.: "4 itens")
+  count?: string;
+  // Classe responsiva de cada coluna, igual à do Th (ex.: [undefined, "hidden md:table-cell", ...]):
+  // a faixa tem uma célula por coluna, então some junto com as colunas escondidas
+  columns: (string | undefined)[];
+  // Subtotais por coluna, na mesma posição de `columns` (a primeira é a do título)
+  values?: ReactNode[];
+  open: boolean;
+  onToggle: () => void;
+}
+
+// Faixa de grupo que abre e fecha (ex.: etapa do orçamento): título na primeira coluna, subtotais nas demais
+export function TableGroupRow({ title, count, columns, values = [], open, onToggle }: TableGroupRowProps) {
+  return (
+    <tr className="table-group">
+      {columns.map((className, index) => (
+        <td key={index} className={className}>
+          {index === 0 ? (
+            <button
+              type="button"
+              aria-expanded={open}
+              onClick={onToggle}
+              className="flex items-center gap-2 w-full min-w-0 cursor-pointer text-left text-text-primary focus-visible:outline-2 focus-visible:outline-primary-500"
+            >
+              <ChevronRight
+                size={14}
+                className={cx("shrink-0 text-text-secondary transition-transform", open && "rotate-90")}
+                aria-hidden
+              />
+              <span className="truncate text-[11px] font-semibold uppercase tracking-wide" title={title}>
+                {title}
+              </span>
+              {count && <span className="shrink-0 text-[11px] font-normal text-text-muted">{count}</span>}
+            </button>
+          ) : (
+            values[index] !== undefined && (
+              <span className="text-[11px] font-semibold text-text-secondary tabular-nums">{values[index]}</span>
+            )
+          )}
+        </td>
+      ))}
+    </tr>
   );
 }

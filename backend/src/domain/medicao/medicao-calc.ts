@@ -6,6 +6,7 @@ export const QTD_ESCALA = 1000;
 // Maior valor de uma coluna Int do Postgres
 export const INT_MAX = 2_147_483_647;
 export const DESCRICAO_ITEM_MAX = 500;
+export const ETAPA_MAX = 120;
 export const UNIDADE_MAX = 20;
 export const CODIGO_ITEM_MAX = 40;
 export const ORCAMENTO_ITENS_MAX = 500;
@@ -274,6 +275,8 @@ export type OrcamentoItemInput = {
   id?: string | undefined;
   codigo: string | null;
   descricao: string;
+  // Etapa que agrupa o item; nulo = sem etapa
+  etapa: string | null;
   unidade: string;
   quantidade: number;
   // Preço que vale (no modo COM_BDI, já calculado com o desconto)
@@ -311,6 +314,9 @@ export function validateOrcamentoChange({
     if (!novo.descricao) throw new DomainError(`${pos}: descrição is required`);
     if (novo.descricao.length > DESCRICAO_ITEM_MAX) {
       throw new DomainError(`${pos}: descrição must have at most ${DESCRICAO_ITEM_MAX} characters`);
+    }
+    if (novo.etapa && novo.etapa.length > ETAPA_MAX) {
+      throw new DomainError(`${pos}: etapa must have at most ${ETAPA_MAX} characters`);
     }
     if (!novo.unidade) throw new DomainError(`${pos}: unidade is required`);
     if (novo.unidade.length > UNIDADE_MAX) {

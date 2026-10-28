@@ -112,6 +112,7 @@ export const OBRA_RULES: InputRules = {
 export const ORDEM_SERVICO_ITEM_RULES: InputRules = {
   codigo: normalizeCode,
   descricao: normalizeFreeText,
+  etapa: normalizeFreeText,
   unidade: normalizeUnidade,
 };
 

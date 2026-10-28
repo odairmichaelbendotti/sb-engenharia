@@ -105,3 +105,22 @@ describe("buildMedicaoDocumentModel", () => {
     expect(m.local).toBe("Florianópolis, 24 de outubro de 2026.");
   });
 });
+
+describe("etapas no boletim", () => {
+  it("abre uma faixa por etapa com os subtotais; sem etapas, não há faixa", () => {
+    expect(buildMedicaoDocumentModel(sampleData(), dia("2026-10-24")).etapas).toEqual([]);
+
+    const data = sampleData();
+    data.planilha = buildPlanilhaMedicao({
+      itens: itens.map((i, index) => ({ ...i, etapa: index === 0 ? "Revestimento" : "Pintura" })),
+      anterior: new Map([["i-1", 3000]]),
+      esta: new Map([["i-1", 7000]]),
+      fiscais: { tecnico: null, administrativo: null },
+    });
+    // Reboco: 10 m² a R$ 50,00, medido por inteiro (350,00 nesta); pintura: 20 m² a R$ 15,00, nada medido
+    expect(buildMedicaoDocumentModel(data, dia("2026-10-24")).etapas).toEqual([
+      { titulo: "Revestimento", inicio: 0, esta: "350,00", acumulado: "500,00", saldo: "0,00" },
+      { titulo: "Pintura", inicio: 1, esta: "0,00", acumulado: "0,00", saldo: "300,00" },
+    ]);
+  });
+});

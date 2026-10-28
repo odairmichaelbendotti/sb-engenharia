@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, ClipboardPaste, Lock, Plus, Send, Trash2 } from "lucide-react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, CheckCircle2, ClipboardPaste, FolderPlus, Lock, Plus, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { OrcamentoItem, OrcamentoPayload, PlanilhaOrcamento, PrecoBase } from "../../../types/medicao";
 import { useMedicoes } from "../../store/medicoes";
@@ -16,12 +16,22 @@ import {
   valorItem,
 } from "../../utils/decimal";
 import { ORDEM_SERVICO_ITEM_FIELD_RULES } from "../../utils/normalization/form-rules";
+import { normalizeFreeText } from "../../utils/normalization/text-normalizers";
 import { cx } from "../../utils/cx";
 import { SearchInput } from "../../components/filters/SearchInput";
-import { Button, ConfirmDialog, IconButton, InlineEdit, Input, SegmentedControl } from "../../components/ui";
+import {
+  Button,
+  ConfirmDialog,
+  GroupHeader,
+  IconButton,
+  InlineEdit,
+  Input,
+  SegmentedControl,
+} from "../../components/ui";
 import { StickyFooter } from "./Workspace";
 import { matchesItemSearch } from "./medicao-progress";
-import { ORCAMENTO_ITENS_MAX, type PastedItem } from "./parse-pasted-budget";
+import { ETAPA_MAX, ORCAMENTO_ITENS_MAX, type PastedItem } from "./parse-pasted-budget";
+import { contagemItens, gruposPorEtapa, SEM_ETAPA, temEtapas, useEtapasRecolhidas } from "./etapas";
 import { PasteOrcamentoDialog, type PasteMode } from "./PasteOrcamentoDialog";
 
 type ItemForm = {
@@ -29,6 +39,8 @@ type ItemForm = {
   id?: string;
   codigo: string;
   descricao: string;
+  // Vazio = sem etapa
+  etapa: string;
   unidade: string;
   quantidade: string;
   // Como informado: com BDI (o sistema aplica o desconto) ou já com desconto, conforme o modo
@@ -58,6 +70,7 @@ function toForm(item: OrcamentoItem, key: number): ItemForm {
     id: item.id,
     codigo: item.codigo ?? "",
     descricao: item.descricao,
+    etapa: item.etapa ?? "",
     unidade: item.unidade,
     quantidade: toDecimalInput(item.quantidade),
     // No modo com BDI o campo mostra o preço informado (referência); o que vale sai dele com o desconto
@@ -105,6 +118,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
     key: nextKey.current++,
     codigo: "",
     descricao: "",
+    etapa: "",
     unidade: "",
     quantidade: "",
     preco: "",
@@ -125,7 +139,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
       precoBase,
       linhas
         .filter(preenchida)
-        .map((l) => [l.id ?? null, l.codigo, l.descricao, l.unidade, l.quantidade, l.preco, l.total]),
+        .map((l) => [l.id ?? null, l.codigo, l.descricao, l.etapa, l.unidade, l.quantidade, l.preco, l.total]),
       empenhos.length > 1 ? distribuicao : null,
     ]);
   const [inicial] = useState(serialize);
@@ -204,6 +218,31 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
         .filter(({ l }) => (!l.codigo && !l.descricao) || matchesItemSearch(l, busca)),
     [linhas, busca],
   );
+  const grupos = gruposPorEtapa(visiveis, ({ l }) => l.etapa);
+  const comEtapas = temEtapas(grupos);
+  const etapas = useEtapasRecolhidas(busca !== "");
+
+  // Renomear a etapa vale para os itens do grupo (a mesma etapa mais adiante é outro grupo)
+  function renomearEtapa(keys: number[], etapa: string) {
+    const doGrupo = new Set(keys);
+    setLinhas((prev) => prev.map((l) => (doGrupo.has(l.key) ? { ...l, etapa } : l)));
+  }
+
+  // Item novo no fim da etapa (logo depois do último item do grupo)
+  function adicionarNaEtapa(ultimaKey: number, etapa: string) {
+    setLinhas((prev) => {
+      const index = prev.findIndex((l) => l.key === ultimaKey);
+      return [...prev.slice(0, index + 1), novaLinha({ etapa }), ...prev.slice(index + 1)];
+    });
+  }
+
+  function novaEtapa() {
+    setBusca("");
+    const nomes = new Set(linhas.map((l) => l.etapa));
+    let n = 1;
+    while (nomes.has(`Etapa ${n}`)) n++;
+    setLinhas((prev) => [...prev, novaLinha({ etapa: `Etapa ${n}` })]);
+  }
 
   // Primeiro problema, na ordem da planilha (a mensagem aponta o item)
   function validar(): Erro | null {
@@ -271,8 +310,15 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
 
   function mostrarErro(problema: Erro) {
     setErro(problema);
-    // O item com erro pode estar escondido pela busca: limpa e leva até ele
-    if (problema.key !== null) setBusca("");
+    // O item com erro pode estar escondido pela busca ou numa etapa recolhida: limpa e leva até ele
+    if (problema.key !== null) {
+      setBusca("");
+      const grupo = gruposPorEtapa(
+        linhas.map((l, index) => ({ l, index })),
+        ({ l }) => l.etapa,
+      ).find((g) => g.itens.some(({ l }) => l.key === problema.key));
+      if (grupo) etapas.abrir(grupo.key);
+    }
     requestAnimationFrame(() => {
       const campo = document.querySelector<HTMLInputElement>('[data-orcamento] [aria-invalid="true"]');
       campo?.scrollIntoView({ block: "center" });
@@ -292,6 +338,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
         ...(l.id ? { id: l.id } : {}),
         codigo: l.codigo,
         descricao: l.descricao,
+        etapa: l.etapa,
         unidade: l.unidade,
         quantidade: parseQuantidade(l.quantidade) ?? 0,
         precoUnitario: parseCurrencyMask(l.preco),
@@ -343,6 +390,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
       novaLinha({
         codigo: item.codigo,
         descricao: item.descricao,
+        etapa: item.etapa,
         unidade: item.unidade,
         quantidade: toDecimalInput(item.quantidade),
         preco: formatValueToCurrencyMask(item.precoUnitario),
@@ -362,6 +410,170 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
   }
 
   const invalido = (l: ItemForm, campo: Campo) => erro?.key === l.key && erro.campo === campo;
+
+  // Linha de um item (cartão até lg, grade a partir dele)
+  const renderLinha = ({ l, index }: { l: ItemForm; index: number }) => {
+    const medido = l.medido > 0;
+    // Medido por inteiro: a última medição já usou o total, que não muda mais
+    const totalTravado = medido && l.medido >= (parseQuantidade(l.quantidade) ?? 0);
+    const ajustado = l.total !== null && !aplicaDesconto;
+    const calculadoMask = formatValueToCurrencyMask(totalCalculado(l));
+    const diferencaTotal = ajustado ? Math.round((totalLinha(l) - totalCalculado(l)) * 100) / 100 : 0;
+    return (
+      <div key={l.key} className="rounded-lg border border-border p-2.5 lg:border-0 lg:p-0">
+        <div className={cx("grid grid-cols-2 sm:grid-cols-4 gap-2 items-start", COLS)}>
+          <span className="hidden lg:flex h-8 items-center justify-center text-xs text-text-muted tabular-nums">
+            {index + 1}
+          </span>
+          <InlineEdit
+            size="sm"
+            aria-label={`Código do item ${index + 1}`}
+            placeholder="Código"
+            value={l.codigo}
+            optional
+            display={l.codigo || <span className="text-text-muted">—</span>}
+            maxLength={40}
+            onChange={(e) => update(l.key, { codigo: e.target.value })}
+            onRevert={(codigo) => update(l.key, { codigo })}
+            onBlur={() => normalizar(l.key, "codigo")}
+          />
+          <InlineEdit
+            size="sm"
+            className="col-span-2 sm:col-span-3 lg:col-span-1"
+            aria-label={`Descrição do item ${index + 1}`}
+            placeholder="Descrição do serviço (ex.: execução de reboco)"
+            title={l.descricao}
+            value={l.descricao}
+            maxLength={500}
+            invalid={invalido(l, "descricao")}
+            onChange={(e) => update(l.key, { descricao: e.target.value })}
+            onRevert={(descricao) => update(l.key, { descricao })}
+            onBlur={() => normalizar(l.key, "descricao")}
+          />
+          <InlineEdit
+            size="sm"
+            aria-label={`Unidade do item ${index + 1}`}
+            placeholder="m²"
+            value={l.unidade}
+            maxLength={20}
+            disabled={medido}
+            title={medido ? "Item já medido: a unidade não muda" : undefined}
+            invalid={invalido(l, "unidade")}
+            onChange={(e) => update(l.key, { unidade: e.target.value })}
+            onRevert={(unidade) => update(l.key, { unidade })}
+            onBlur={() => normalizar(l.key, "unidade")}
+          />
+          <InlineEdit
+            size="sm"
+            align="right"
+            aria-label={`Quantidade do item ${index + 1}`}
+            inputMode="decimal"
+            placeholder="0,00"
+            value={l.quantidade}
+            display={
+              parseQuantidade(l.quantidade) !== null
+                ? formatQuantidade(parseQuantidade(l.quantidade)!)
+                : l.quantidade
+            }
+            invalid={invalido(l, "quantidade")}
+            onChange={(e) => update(l.key, { quantidade: sanitizeDecimalInput(e.target.value) })}
+            onRevert={(quantidade) => update(l.key, { quantidade })}
+          />
+          <div className="min-w-0">
+            <InlineEdit
+              size="sm"
+              align="right"
+              aria-label={`Preço unitário ${aplicaDesconto ? "com BDI " : ""}do item ${index + 1}`}
+              inputMode="numeric"
+              prefix="R$"
+              placeholder="0,00"
+              value={l.preco}
+              disabled={medido}
+              title={medido ? "Item já medido: o preço não muda" : undefined}
+              invalid={invalido(l, "preco")}
+              onChange={(e) => update(l.key, { preco: maskCurrency(e.target.value) })}
+              onRevert={(preco) => update(l.key, { preco })}
+            />
+            {aplicaDesconto && l.preco && (
+              <p
+                className="mt-0.5 pr-2.5 text-right text-[11px] text-text-muted tabular-nums truncate"
+                title="Preço que vale nas medições: com o desconto da OS, truncado no centavo"
+              >
+                c/ desc. {formatCurrency(precoEfetivo(l))}
+              </p>
+            )}
+          </div>
+          {aplicaDesconto ? (
+            <span className="flex h-8 items-center justify-end px-2.5 text-xs font-semibold text-text-primary tabular-nums truncate">
+              {formatCurrency(totalLinha(l))}
+            </span>
+          ) : (
+            <InlineEdit
+              size="sm"
+              align="right"
+              aria-label={`Total ajustado do item ${index + 1}`}
+              inputMode="numeric"
+              placeholder="0,00"
+              value={l.total ?? calculadoMask}
+              display={<span className="font-semibold">{formatCurrency(totalLinha(l))}</span>}
+              disabled={totalTravado}
+              title={
+                totalTravado
+                  ? "Item medido por inteiro: o total não muda mais"
+                  : "Ajustar o total para bater com a planilha de referência"
+              }
+              invalid={invalido(l, "total")}
+              onChange={(e) => update(l.key, { total: maskCurrency(e.target.value) })}
+              onRevert={(anterior) => update(l.key, { total: anterior === calculadoMask ? null : anterior })}
+            />
+          )}
+          <span
+            className={cx(
+              "hidden xl:flex h-8 items-center justify-end text-xs tabular-nums truncate",
+              medido ? "text-text-secondary" : "text-text-muted",
+            )}
+            title={medido ? `${formatQuantidade(l.medido)} ${l.unidade} medidos em medições fechadas` : undefined}
+          >
+            {medido ? `${formatQuantidade(l.medido)} ${l.unidade}` : "—"}
+          </span>
+          <div className="flex justify-end">
+            <IconButton
+              icon={Trash2}
+              label={medido ? "Item já medido: não pode ser removido" : `Remover item ${index + 1}`}
+              variant="danger"
+              disabled={medido || (linhas.length === 1 && itens.length === 0)}
+              onClick={() => setLinhas((prev) => prev.filter((x) => x.key !== l.key))}
+            />
+          </div>
+        </div>
+        {medido && (
+          <p className="mt-1 lg:pl-8 flex items-center gap-1 text-[11px] text-text-muted">
+            <Lock size={11} />
+            Medido {formatQuantidade(l.medido)} {l.unidade}: preço e unidade travados, quantidade mínima{" "}
+            {formatQuantidade(l.medido)}
+          </p>
+        )}
+        {ajustado && (
+          <p className="mt-1 lg:pl-8 flex flex-wrap items-center gap-x-1 text-[11px] text-text-muted tabular-nums">
+            Total ajustado à planilha: calculado {formatCurrency(totalCalculado(l))}
+            {diferencaTotal !== 0 && ` (${formatDiferenca(diferencaTotal)})`}
+            {!totalTravado && (
+              <>
+                {" · "}
+                <button
+                  type="button"
+                  className="font-semibold text-text-secondary underline-offset-2 hover:underline cursor-pointer"
+                  onClick={() => update(l.key, { total: null })}
+                >
+                  Usar o calculado
+                </button>
+              </>
+            )}
+          </p>
+        )}
+      </div>
+    );
+  };
 
   return (
     <>
@@ -409,166 +621,42 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
         </div>
 
         <div className="space-y-3 lg:space-y-1">
-          {visiveis.map(({ l, index }) => {
-            const medido = l.medido > 0;
-            // Medido por inteiro: a última medição já usou o total, que não muda mais
-            const totalTravado = medido && l.medido >= (parseQuantidade(l.quantidade) ?? 0);
-            const ajustado = l.total !== null && !aplicaDesconto;
-            const calculadoMask = formatValueToCurrencyMask(totalCalculado(l));
-            const diferencaTotal = ajustado ? Math.round((totalLinha(l) - totalCalculado(l)) * 100) / 100 : 0;
+          {grupos.map((grupo, g) => {
+            const aberta = etapas.aberta(grupo.key);
+            const ultima = grupo.itens.at(-1)!.l;
+            const subtotal = grupo.itens.reduce((acc, { l }) => acc + totalLinha(l), 0);
             return (
-              <div key={l.key} className="rounded-lg border border-border p-2.5 lg:border-0 lg:p-0">
-                <div className={cx("grid grid-cols-2 sm:grid-cols-4 gap-2 items-start", COLS)}>
-                  <span className="hidden lg:flex h-8 items-center justify-center text-xs text-text-muted tabular-nums">
-                    {index + 1}
-                  </span>
-                  <InlineEdit
-                    size="sm"
-                    aria-label={`Código do item ${index + 1}`}
-                    placeholder="Código"
-                    value={l.codigo}
-                    optional
-                    display={l.codigo || <span className="text-text-muted">—</span>}
-                    maxLength={40}
-                    onChange={(e) => update(l.key, { codigo: e.target.value })}
-                    onRevert={(codigo) => update(l.key, { codigo })}
-                    onBlur={() => normalizar(l.key, "codigo")}
-                  />
-                  <InlineEdit
-                    size="sm"
-                    className="col-span-2 sm:col-span-3 lg:col-span-1"
-                    aria-label={`Descrição do item ${index + 1}`}
-                    placeholder="Descrição do serviço (ex.: execução de reboco)"
-                    title={l.descricao}
-                    value={l.descricao}
-                    maxLength={500}
-                    invalid={invalido(l, "descricao")}
-                    onChange={(e) => update(l.key, { descricao: e.target.value })}
-                    onRevert={(descricao) => update(l.key, { descricao })}
-                    onBlur={() => normalizar(l.key, "descricao")}
-                  />
-                  <InlineEdit
-                    size="sm"
-                    aria-label={`Unidade do item ${index + 1}`}
-                    placeholder="m²"
-                    value={l.unidade}
-                    maxLength={20}
-                    disabled={medido}
-                    title={medido ? "Item já medido: a unidade não muda" : undefined}
-                    invalid={invalido(l, "unidade")}
-                    onChange={(e) => update(l.key, { unidade: e.target.value })}
-                    onRevert={(unidade) => update(l.key, { unidade })}
-                    onBlur={() => normalizar(l.key, "unidade")}
-                  />
-                  <InlineEdit
-                    size="sm"
-                    align="right"
-                    aria-label={`Quantidade do item ${index + 1}`}
-                    inputMode="decimal"
-                    placeholder="0,00"
-                    value={l.quantidade}
-                    display={
-                      parseQuantidade(l.quantidade) !== null
-                        ? formatQuantidade(parseQuantidade(l.quantidade)!)
-                        : l.quantidade
+              <Fragment key={grupo.key}>
+                {comEtapas && (
+                  <GroupHeader
+                    className={g > 0 ? "mt-3" : undefined}
+                    editable
+                    title={
+                      <EtapaNome
+                        key={grupo.etapa ?? ""}
+                        nome={grupo.etapa ?? ""}
+                        disabled={busca !== ""}
+                        onRename={(etapa) => renomearEtapa(grupo.itens.map(({ l }) => l.key), etapa)}
+                      />
                     }
-                    invalid={invalido(l, "quantidade")}
-                    onChange={(e) => update(l.key, { quantidade: sanitizeDecimalInput(e.target.value) })}
-                    onRevert={(quantidade) => update(l.key, { quantidade })}
+                    count={contagemItens(grupo.itens.length)}
+                    meta={formatCurrency(subtotal)}
+                    actions={
+                      <IconButton
+                        icon={Plus}
+                        label={`Adicionar item em ${grupo.etapa ?? SEM_ETAPA.toLowerCase()}`}
+                        onClick={() => {
+                          etapas.abrir(grupo.key);
+                          adicionarNaEtapa(ultima.key, ultima.etapa);
+                        }}
+                      />
+                    }
+                    open={aberta}
+                    onToggle={() => etapas.alternar(grupo.key)}
                   />
-                  <div className="min-w-0">
-                    <InlineEdit
-                      size="sm"
-                      align="right"
-                      aria-label={`Preço unitário ${aplicaDesconto ? "com BDI " : ""}do item ${index + 1}`}
-                      inputMode="numeric"
-                      prefix="R$"
-                      placeholder="0,00"
-                      value={l.preco}
-                      disabled={medido}
-                      title={medido ? "Item já medido: o preço não muda" : undefined}
-                      invalid={invalido(l, "preco")}
-                      onChange={(e) => update(l.key, { preco: maskCurrency(e.target.value) })}
-                      onRevert={(preco) => update(l.key, { preco })}
-                    />
-                    {aplicaDesconto && l.preco && (
-                      <p
-                        className="mt-0.5 pr-2.5 text-right text-[11px] text-text-muted tabular-nums truncate"
-                        title="Preço que vale nas medições: com o desconto da OS, truncado no centavo"
-                      >
-                        c/ desc. {formatCurrency(precoEfetivo(l))}
-                      </p>
-                    )}
-                  </div>
-                  {aplicaDesconto ? (
-                    <span className="flex h-8 items-center justify-end px-2.5 text-xs font-semibold text-text-primary tabular-nums truncate">
-                      {formatCurrency(totalLinha(l))}
-                    </span>
-                  ) : (
-                    <InlineEdit
-                      size="sm"
-                      align="right"
-                      aria-label={`Total ajustado do item ${index + 1}`}
-                      inputMode="numeric"
-                      placeholder="0,00"
-                      value={l.total ?? calculadoMask}
-                      display={<span className="font-semibold">{formatCurrency(totalLinha(l))}</span>}
-                      disabled={totalTravado}
-                      title={
-                        totalTravado
-                          ? "Item medido por inteiro: o total não muda mais"
-                          : "Ajustar o total para bater com a planilha de referência"
-                      }
-                      invalid={invalido(l, "total")}
-                      onChange={(e) => update(l.key, { total: maskCurrency(e.target.value) })}
-                      onRevert={(anterior) => update(l.key, { total: anterior === calculadoMask ? null : anterior })}
-                    />
-                  )}
-                  <span
-                    className={cx(
-                      "hidden xl:flex h-8 items-center justify-end text-xs tabular-nums truncate",
-                      medido ? "text-text-secondary" : "text-text-muted",
-                    )}
-                    title={medido ? `${formatQuantidade(l.medido)} ${l.unidade} medidos em medições fechadas` : undefined}
-                  >
-                    {medido ? `${formatQuantidade(l.medido)} ${l.unidade}` : "—"}
-                  </span>
-                  <div className="flex justify-end">
-                    <IconButton
-                      icon={Trash2}
-                      label={medido ? "Item já medido: não pode ser removido" : `Remover item ${index + 1}`}
-                      variant="danger"
-                      disabled={medido || (linhas.length === 1 && itens.length === 0)}
-                      onClick={() => setLinhas((prev) => prev.filter((x) => x.key !== l.key))}
-                    />
-                  </div>
-                </div>
-                {medido && (
-                  <p className="mt-1 lg:pl-8 flex items-center gap-1 text-[11px] text-text-muted">
-                    <Lock size={11} />
-                    Medido {formatQuantidade(l.medido)} {l.unidade}: preço e unidade travados, quantidade mínima{" "}
-                    {formatQuantidade(l.medido)}
-                  </p>
                 )}
-                {ajustado && (
-                  <p className="mt-1 lg:pl-8 flex flex-wrap items-center gap-x-1 text-[11px] text-text-muted tabular-nums">
-                    Total ajustado à planilha: calculado {formatCurrency(totalCalculado(l))}
-                    {diferencaTotal !== 0 && ` (${formatDiferenca(diferencaTotal)})`}
-                    {!totalTravado && (
-                      <>
-                        {" · "}
-                        <button
-                          type="button"
-                          className="font-semibold text-text-secondary underline-offset-2 hover:underline cursor-pointer"
-                          onClick={() => update(l.key, { total: null })}
-                        >
-                          Usar o calculado
-                        </button>
-                      </>
-                    )}
-                  </p>
-                )}
-              </div>
+                {aberta && grupo.itens.map(renderLinha)}
+              </Fragment>
             );
           })}
           {visiveis.length === 0 && (
@@ -583,10 +671,14 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
             icon={Plus}
             onClick={() => {
               setBusca("");
-              setLinhas((prev) => [...prev, novaLinha()]);
+              // Continua a última etapa
+              setLinhas((prev) => [...prev, novaLinha({ etapa: prev.at(-1)?.etapa ?? "" })]);
             }}
           >
             Adicionar item
+          </Button>
+          <Button variant="ghost" size="sm" icon={FolderPlus} onClick={novaEtapa}>
+            Nova etapa
           </Button>
           <span className="text-[11px] text-text-muted">
             Dica: clique num valor para editar; copie as linhas no Excel e cole (Ctrl+V) em qualquer ponto fora de
@@ -712,5 +804,45 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
       </ConfirmDialog>
       {guard.dialog}
     </>
+  );
+}
+
+interface EtapaNomeProps {
+  nome: string;
+  disabled: boolean;
+  onRename: (etapa: string) => void;
+}
+
+// Nome da etapa editado no lugar. Grava ao sair do campo: renomear a cada tecla juntaria e
+// separaria grupos enquanto o usuário digita
+function EtapaNome({ nome, disabled, onRename }: EtapaNomeProps) {
+  const [draft, setDraft] = useState(nome);
+  const revertido = useRef(false);
+  return (
+    <InlineEdit
+      size="sm"
+      aria-label="Nome da etapa"
+      placeholder="Nome da etapa"
+      optional
+      value={draft}
+      display={<span className="text-[11px] font-semibold uppercase tracking-wide">{draft || SEM_ETAPA}</span>}
+      maxLength={ETAPA_MAX}
+      disabled={disabled}
+      title={disabled ? "Limpe a busca para renomear a etapa" : "Renomear a etapa (vazio = sem etapa)"}
+      onChange={(e) => setDraft(e.target.value)}
+      onRevert={(original) => {
+        revertido.current = true;
+        setDraft(original);
+      }}
+      onBlur={(e) => {
+        if (revertido.current) {
+          revertido.current = false;
+          return;
+        }
+        const etapa = normalizeFreeText(e.currentTarget.value);
+        setDraft(etapa);
+        if (etapa !== nome) onRename(etapa);
+      }}
+    />
   );
 }
