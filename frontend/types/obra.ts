@@ -82,12 +82,25 @@ export type ListObras = {
   stats: ObraStats;
 };
 
+// Medição fechada da OS que a nota fiscal pode pagar: o valor da nota passa a ser o dela
+export type MedicaoParaNota = {
+  id: string;
+  numero: number;
+  periodoInicio: string;
+  periodoFim: string;
+  valor: number;
+  // Nota não cancelada que já paga a medição
+  notaFiscal: { id: string; numero: string } | null;
+};
+
 // Uma opção por OS: a nota fiscal indica a obra e a OS dela que está sendo paga
 export type ObraOptionForInvoice = {
   id: string;
   nome: string;
   identificacaoPatrimonial: string;
   ordemServico: { id: string; numero: string };
+  // Ausente antes do deploy do backend de 2026-10-28
+  medicoes?: MedicaoParaNota[];
 };
 
 // Opção do campo "Obra" no cadastro de OS

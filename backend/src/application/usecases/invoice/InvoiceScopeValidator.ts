@@ -4,6 +4,8 @@ import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRe
 import type { IContratoRepository } from "../../../domain/repositories/IContratoRepository.js";
 import type { IInvoiceRepository } from "../../../domain/repositories/IInvoiceRepository.js";
 import type { IObraRepository } from "../../../domain/repositories/IObraRepository.js";
+import type { IMedicaoRepository } from "../../../domain/repositories/IMedicaoRepository.js";
+import { reais, valoresDasMedicoes } from "../medicao/medicao-presenter.js";
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
 
 // Garante que o empenho da nota é da organização do usuário e que a empresa
@@ -14,7 +16,46 @@ export class InvoiceScopeValidator {
     private contratoRepository: IContratoRepository,
     private invoiceRepository: IInvoiceRepository,
     private obraRepository: IObraRepository,
+    private medicaoRepository: IMedicaoRepository,
   ) {}
+
+  // Nota de medição: a medição precisa estar fechada, ser da OS da nota e não ter outra nota
+  // não cancelada. Devolve o valor da medição em reais, que vira o valor da nota (null = sem medição)
+  async resolveMedicao({
+    medicao_id,
+    ordemServico_id,
+    invoice_id,
+    ativa,
+  }: {
+    medicao_id?: string | null | undefined;
+    ordemServico_id: string | null;
+    // Nota em edição: ela mesma não conta como "outra nota"
+    invoice_id?: string;
+    // Nota cancelada não ocupa a medição
+    ativa: boolean;
+  }): Promise<number | null> {
+    if (!medicao_id) return null;
+    if (!ordemServico_id) {
+      throw new DomainError("Medição does not belong to this ordem de serviço");
+    }
+
+    const planilha = await this.medicaoRepository.getPlanilha(ordemServico_id);
+    const medicao = planilha.medicoes.find((m) => m.id === medicao_id);
+    if (!medicao) {
+      throw new DomainError("Medição does not belong to this ordem de serviço");
+    }
+    if (medicao.status !== "FECHADA") {
+      throw new DomainError("Only a closed medição can be invoiced");
+    }
+    if (ativa) {
+      const nota = (await this.medicaoRepository.findNotasFiscais([medicao_id])).get(medicao_id);
+      if (nota && nota.id !== invoice_id) {
+        throw new DomainError("Medição already has an invoice");
+      }
+    }
+
+    return reais(valoresDasMedicoes(planilha).get(medicao_id) ?? 0);
+  }
 
   // A nota soma na execução da obra e da OS: a OS precisa ser financiada por este empenho
   // e estar na obra informada, senão uma nota inflaria a execução de outra obra (ou de

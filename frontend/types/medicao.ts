@@ -100,7 +100,8 @@ export interface PlanilhaOrcamento {
   // Valor da OS (soma dos empenhos) e a diferença da soma dos itens; nulos para quem não edita
   valorOs: number | null;
   divergencia: { diferenca: number } | null;
-  medicoes: (MedicaoResumo & { podeReabrir: boolean })[];
+  // notaFiscal: nota não cancelada que paga a medição (a medição com nota não reabre nem sai)
+  medicoes: (MedicaoResumo & { podeReabrir: boolean; notaFiscal?: { id: string; numero: string } | null })[];
   // Sugestão de início da próxima medição (dia seguinte ao fim da última fechada)
   proximoPeriodoInicio: string | null;
   permissoes: {

@@ -15,6 +15,9 @@ const API_ERROR_MESSAGES: Record<string, string> = {
   "Value must be greater than 0": "O valor deve ser maior que zero",
   "Obra does not belong to this empenho": "A obra selecionada não pertence a este empenho",
   "Nota fiscal already exists": "Já existe uma nota fiscal com este número para esta empresa e empenho",
+  "Medição already has an invoice": "Esta medição já tem uma nota fiscal",
+  "Only a closed medição can be invoiced": "Só uma medição fechada pode ser paga por nota fiscal",
+  "Medição does not belong to this ordem de serviço": "A medição selecionada não é desta OS",
 };
 
 async function apiErrorMessage(response: Response, fallback: string): Promise<string> {

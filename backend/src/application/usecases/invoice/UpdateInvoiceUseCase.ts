@@ -22,10 +22,6 @@ export class UpdateInvoiceUseCase {
   }) {
     // Padroniza os textos antes de validar, buscar duplicados e gravar
     invoice = normalizeInput(invoice, INVOICE_RULES);
-    const value = Number(invoice.value);
-    if (!Number.isFinite(value) || value <= 0) {
-      throw new DomainError("Value must be greater than 0");
-    }
 
     await this.scopeValidator.validateOwnership(user, id);
     const empenho = await this.scopeValidator.validate(user, invoice.empenho_id, invoice.company_id);
@@ -35,6 +31,18 @@ export class UpdateInvoiceUseCase {
       ordemServico_id: invoice.ordemServico_id,
     });
 
+    // Com medição, o valor da nota é o dela; sem medição, vale o valor digitado
+    const valorMedicao = await this.scopeValidator.resolveMedicao({
+      medicao_id: invoice.medicao_id,
+      ordemServico_id: vinculo.ordemServico_id,
+      invoice_id: id,
+      ativa: invoice.status !== "CANCELADO",
+    });
+    const value = valorMedicao ?? Number(invoice.value);
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new DomainError("Value must be greater than 0");
+    }
+
     // Nota cancelada não consome o empenho; as demais somam ao que já foi lançado, sem contar a própria nota
     if (invoice.status !== "CANCELADO") {
       const otherInvoices = await this.repository.sumActiveValueByEmpenho(invoice.empenho_id, id);
@@ -43,6 +51,9 @@ export class UpdateInvoiceUseCase {
       }
     }
 
-    return this.repository.update({ ...invoice, ...vinculo, value }, id);
+    return this.repository.update(
+      { ...invoice, ...vinculo, medicao_id: valorMedicao === null ? null : invoice.medicao_id, value },
+      id,
+    );
   }
 }

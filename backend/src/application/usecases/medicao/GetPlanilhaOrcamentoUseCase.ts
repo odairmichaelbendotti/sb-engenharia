@@ -67,11 +67,17 @@ export class GetPlanilhaOrcamentoUseCase {
       editor && planilha.itens.length > 0 ? divergenciaTotal(panorama.totais.valorOrcado, valorOs) : null;
     const valores = valoresDasMedicoes(planilha);
     const ultimaFechada = fechadas.at(-1);
-    const medicoes = (daEmpresa ? fechadas : planilha.medicoes).map((m) => ({
-      ...presentMedicaoResumo(m, valores.get(m.id) ?? 0),
-      // Vale para reabrir e para excluir: só a última fechada, sem rascunho aberto
-      podeReabrir: editor && os.status === "ATIVO" && !rascunho && m.id === ultimaFechada?.id,
-    }));
+    // A nota fiscal que paga a medição é dado administrativo; a empresa não vê
+    const notas = daEmpresa ? new Map() : await this.repository.findNotasFiscais(fechadas.map((m) => m.id));
+    const medicoes = (daEmpresa ? fechadas : planilha.medicoes).map((m) => {
+      const notaFiscal = notas.get(m.id) ?? null;
+      return {
+        ...presentMedicaoResumo(m, valores.get(m.id) ?? 0),
+        notaFiscal,
+        // Vale para reabrir e para excluir: só a última fechada, sem rascunho aberto e sem nota fiscal
+        podeReabrir: editor && os.status === "ATIVO" && !rascunho && m.id === ultimaFechada?.id && !notaFiscal,
+      };
+    });
 
     // Sugestão de período da próxima medição: do dia seguinte ao fim da última fechada (ou do início da OS)
     const proximoPeriodoInicio = ultimaFechada

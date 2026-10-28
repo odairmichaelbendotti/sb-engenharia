@@ -18,6 +18,7 @@ import type {
   MedicaoDocumentData,
   MedicaoOsContext,
   MedicaoResumo,
+  NotaFiscalDaMedicao,
   PainelOsRow,
   PlanilhaOs,
 } from "../../../domain/repositories/IMedicaoRepository.js";
@@ -111,6 +112,15 @@ function assertUltimaFechada(planilha: PlanilhaOs, medicao: MedicaoResumo, acao:
   if (planilha.medicoes.at(-1)?.id !== medicao.id) {
     throw new DomainError(`Only the last closed medição can be ${acao}`);
   }
+}
+
+// A medição paga por uma nota fiscal não cancelada fica como está: reabrir ou excluir mudaria o que a nota cobrou
+async function assertSemNotaFiscal(tx: TransactionClient, medicao_id: string, acao: "reopened" | "deleted") {
+  const nota = await tx.invoice.findFirst({
+    where: { medicao_id, status: { not: "CANCELADO" } },
+    select: { numero: true },
+  });
+  if (nota) throw new DomainError(`This medição is paid by invoice ${nota.numero} and cannot be ${acao}`);
 }
 
 function validarDados(planilha: PlanilhaOs, dados: MedicaoDadosInput) {
@@ -288,6 +298,19 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
     }
   }
 
+  async findNotasFiscais(medicao_ids: string[]): Promise<Map<string, NotaFiscalDaMedicao>> {
+    if (medicao_ids.length === 0) return new Map();
+    try {
+      const notas = await prisma.invoice.findMany({
+        where: { medicao_id: { in: medicao_ids }, status: { not: "CANCELADO" } },
+        select: { id: true, numero: true, medicao_id: true },
+      });
+      return new Map(notas.map((n) => [n.medicao_id!, { id: n.id, numero: n.numero }]));
+    } catch (error) {
+      rethrow(error, "Error finding invoices of medições");
+    }
+  }
+
   async hasMedicaoFechada(ordemServico_id: string): Promise<boolean> {
     try {
       return (await prisma.medicao.count({ where: { ordemServico_id, status: "FECHADA" } })) > 0;
@@ -451,6 +474,7 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
         const { planilha, atual } = await loadMedicaoNaTransacao(tx, medicao_id);
         if (atual.status === "FECHADA") {
           assertUltimaFechada(planilha, atual, "deleted");
+          await assertSemNotaFiscal(tx, medicao_id, "deleted");
           // O gatilho do banco barra excluir a fechada, mas aceita a volta para rascunho
           await tx.medicao.update({
             where: { id: medicao_id },
@@ -520,6 +544,7 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
       await prisma.$transaction(async (tx) => {
         const { planilha, atual } = await loadMedicaoNaTransacao(tx, medicao_id);
         assertUltimaFechada(planilha, atual, "reopened");
+        await assertSemNotaFiscal(tx, medicao_id, "reopened");
         await tx.medicao.update({
           where: { id: medicao_id },
           data: {

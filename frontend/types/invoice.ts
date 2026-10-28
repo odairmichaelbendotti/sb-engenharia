@@ -14,10 +14,13 @@ export type Invoice = {
   obra_id?: string | null;
   // OS da obra que a nota paga
   ordemServico_id?: string | null;
+  // Medição que a nota paga (o valor é o dela); nulo = valor digitado
+  medicao_id?: string | null;
   // Origem da nota, enviada pela listagem (create/update não trazem)
   // contrato só vem depois do deploy do backend de 2026-10-08
   empenho?: { id: string; numero: string; contrato?: { id: string; identificador: string } };
   ordemServico?: { id: string; numero: string } | null;
+  medicao?: { id: string; numero: number } | null;
   obra?: { id: string; nome: string; identificacaoPatrimonial: string } | null;
   company: {
     id: string;
@@ -56,6 +59,8 @@ export type InvoiceFormData = {
   company_id: string;
   // A nota indica a OS (e, por ela, a obra); vazio quando o empenho não financia obra
   ordemServico_id: string;
+  // Medição da OS que a nota paga; vazio = valor digitado
+  medicao_id: string;
   status: InvoiceStatus;
 };
 
@@ -68,4 +73,5 @@ export type CreateInvoiceProps = {
   company_id: string;
   obra_id?: string;
   ordemServico_id?: string;
+  medicao_id?: string;
 };

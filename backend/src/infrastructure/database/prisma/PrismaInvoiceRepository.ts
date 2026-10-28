@@ -68,6 +68,7 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
             company: { connect: { id: invoice.company_id } },
             ...(invoice.obra_id ? { obra: { connect: { id: invoice.obra_id } } } : {}),
             ...(invoice.ordemServico_id ? { ordemServico: { connect: { id: invoice.ordemServico_id } } } : {}),
+            ...(invoice.medicao_id ? { medicao: { connect: { id: invoice.medicao_id } } } : {}),
           },
           include: { company: true },
         });
@@ -162,6 +163,7 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
             // Contrato do empenho: a listagem filtra as notas por contrato
             empenho: { select: { id: true, numero: true, contrato: { select: { id: true, identificador: true } } } },
             ordemServico: { select: { id: true, numero: true } },
+            medicao: { select: { id: true, numero: true } },
             obra: { select: { id: true, nome: true, identificacaoPatrimonial: true } },
           },
         }),
@@ -241,6 +243,7 @@ export class PrismaInvoiceRepository implements IInvoiceRepository {
             company_id: invoice.company_id,
             obra_id: invoice.obra_id ?? null,
             ordemServico_id: invoice.ordemServico_id ?? null,
+            medicao_id: invoice.medicao_id ?? null,
             ...(invoice.status ? { status: invoice.status } : {}),
           },
           include: { company: true },

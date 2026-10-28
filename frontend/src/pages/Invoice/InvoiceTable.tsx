@@ -4,6 +4,7 @@ import type { Invoice } from "../../../types/invoice";
 import { usePermission } from "../../hooks/usePermission";
 import { useContratos } from "../../store/contratos";
 import { formatCurrency, formatDateOnly } from "../../utils/format-currency";
+import { medicaoTitulo } from "../OrdemServico/medicao-display";
 import { getDeadlineHint, invoiceStatusDisplay, invoiceLabel } from "../../utils/status-display";
 import {
   ActionMenu,
@@ -156,7 +157,14 @@ const InvoiceTable = ({ allInvoices, onView, onEdit, onDelete, onMarkPaid }: Inv
                   </p>
                   <div
                     className="flex items-center justify-center gap-1.5 mt-0.5 text-[11px] text-text-muted min-w-0"
-                    title={[invoice.empenho?.numero, invoice.ordemServico?.numero, invoice.obra?.nome].filter(Boolean).join(" · ")}
+                    title={[
+                      invoice.empenho?.numero,
+                      invoice.ordemServico?.numero,
+                      invoice.medicao && medicaoTitulo(invoice.medicao.numero),
+                      invoice.obra?.nome,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   >
                     {invoice.empenho && <span className="font-medium text-text-secondary shrink-0">{invoice.empenho.numero}</span>}
                     {invoice.ordemServico && (

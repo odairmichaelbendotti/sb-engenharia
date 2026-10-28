@@ -15,6 +15,7 @@ import { MedicaoLeitura } from "./MedicaoLeitura";
 import { usePlanilha } from "./usePlanilha";
 import { StickyFooter, WorkspaceHeader, WorkspacePage } from "./Workspace";
 import { WorkspaceState } from "./WorkspaceState";
+import { invoiceLabel } from "../../utils/status-display";
 
 const NOVA = "nova";
 
@@ -154,6 +155,8 @@ export default function MedicaoPage() {
                   {formatCurrency(detalhe.totais.valorEsta)}
                 </span>
                 <span className="text-text-muted"> · {detalhe.status === "FECHADA" ? "fechada" : "rascunho"}</span>
+                {/* Paga por nota fiscal: não reabre nem sai enquanto a nota não for cancelada */}
+                {resumo?.notaFiscal && <span className="text-text-muted"> · paga pela {invoiceLabel(resumo.notaFiscal.numero)}</span>}
               </p>
             }
           >

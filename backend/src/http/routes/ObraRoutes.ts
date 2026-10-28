@@ -23,13 +23,14 @@ export const ObraRoutes = Router();
 
 const repository = new PrismaObraRepository();
 const ordemServicoRepository = new PrismaOrdemServicoRepository();
+const medicaoRepository = new PrismaMedicaoRepository();
 const createObraUseCase = new CreateObraUseCase(repository, ordemServicoRepository);
 const listObrasUseCase = new ListObrasUseCase(repository);
-const listObraOptionsForInvoiceUseCase = new ListObraOptionsForInvoiceUseCase(repository);
+const listObraOptionsForInvoiceUseCase = new ListObraOptionsForInvoiceUseCase(repository, medicaoRepository);
 const updateObraUseCase = new UpdateObraUseCase(repository, ordemServicoRepository);
 const updateObraStatusUseCase = new UpdateObraStatusUseCase(repository);
 const deleteObraUseCase = new DeleteObraUseCase(repository);
-const getObraDetailUseCase = new GetObraDetailUseCase(repository, new PrismaMedicaoRepository());
+const getObraDetailUseCase = new GetObraDetailUseCase(repository, medicaoRepository);
 const listObraOptionsUseCase = new ListObraOptionsUseCase(repository);
 
 const obraController = new ObraController(
