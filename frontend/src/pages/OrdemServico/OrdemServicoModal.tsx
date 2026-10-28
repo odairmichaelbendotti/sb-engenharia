@@ -40,12 +40,14 @@ import { useObras } from "../../store/obras";
 import { useMedicoes } from "../../store/medicoes";
 import { maskCurrency, formatValueToCurrencyMask, parseCurrencyMask } from "../../utils/masks";
 import { formatCurrency } from "../../utils/format-currency";
+import { valorOrcamentoComDesconto } from "../../utils/decimal";
 import type {
   OrdemServico,
   OrdemServicoStatus,
   OrdemServicoUrgencia,
   CreateOrdemServicoPayload,
 } from "../../../types/ordem-servico";
+import type { PlanilhaOrcamento } from "../../../types/medicao";
 import { createBlurNormalizer, ORDEM_SERVICO_FIELD_RULES } from "../../utils/normalization/form-rules";
 import {
   DEFAULT_PRAZO_MOBILIZACAO_DIAS,
@@ -183,18 +185,18 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
     fetchObraOptions().catch(() => toast.error("Erro ao carregar as obras"));
   }, [fetchObraOptions]);
 
-  // Valor do orçamento (soma dos itens) da OS em edição: com orçamento, é o valor da OS e os
-  // empenhos precisam somar ele. undefined = carregando; null = sem orçamento
-  const [valorOrcamento, setValorOrcamento] = useState<number | null | undefined>(ordemServico ? undefined : null);
+  // Orçamento da OS em edição: com itens, a soma deles é o valor da OS e os empenhos precisam
+  // somar ele. undefined = carregando; null = sem orçamento
+  const [planilha, setPlanilha] = useState<PlanilhaOrcamento | null | undefined>(ordemServico ? undefined : null);
   useEffect(() => {
     if (!ordemServico) return;
     let cancelled = false;
     fetchPlanilha(ordemServico.id)
       .then((p) => {
-        if (!cancelled) setValorOrcamento(p.itens.length > 0 ? p.totais.valorOrcado : null);
+        if (!cancelled) setPlanilha(p.itens.length > 0 ? p : null);
       })
       .catch(() => {
-        if (!cancelled) setValorOrcamento(null);
+        if (!cancelled) setPlanilha(null);
       });
     return () => {
       cancelled = true;
@@ -228,6 +230,21 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
   const contratoDados = contratosData?.contratos.find((c) => c.id === selectedContratoId);
   const lotes = contratoDados?.lotes ?? [];
   const lote = lotes.find((l) => l.id === form.lote_id);
+  // OS antiga que recebe o lote agora: o orçamento lançado só com BDI passa a ter o desconto dele
+  // (o backend refaz os preços ao salvar), salvo com medição fechada, que trava os preços
+  const descontoNovo =
+    ordemServico !== null &&
+    !ordemServico.lote_id &&
+    lote !== undefined &&
+    planilha?.precoBase === "COM_BDI" &&
+    lote.desconto !== planilha.desconto;
+  const loteTravadoPorMedicao = descontoNovo && Boolean(planilha?.medicoes.some((m) => m.status === "FECHADA"));
+  const valorOrcamento =
+    planilha === undefined || planilha === null
+      ? planilha
+      : descontoNovo && !loteTravadoPorMedicao && lote
+        ? valorOrcamentoComDesconto(planilha.itens, lote.desconto)
+        : planilha.totais.valorOrcado;
   const fiscaisTecnicos = (contratoDados?.fiscais ?? []).filter((f) => f.tipo === "TECNICO");
   const fiscaisAdministrativos = (contratoDados?.fiscais ?? []).filter((f) => f.tipo === "ADMINISTRATIVO");
 
@@ -385,6 +402,9 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
     if (!isCreate && ordemServico.sequencia === null && !form.numero) return "Preencha o número da ordem de serviço";
     if (!selectedContratoId) return "Selecione o contrato da ordem de serviço";
     if (lotes.length > 0 && isCreate && !form.lote_id) return "Selecione o lote da ordem de serviço";
+    if (loteTravadoPorMedicao) {
+      return "Esta OS já tem medição fechada com os preços sem desconto: exclua as medições fechadas antes de definir o lote";
+    }
     return null;
   }
 
@@ -578,7 +598,9 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
                 hint={
                   ordemServico?.lote_id
                     ? "O lote de uma OS já emitida não muda."
-                    : "O desconto do lote entra no cálculo do valor da OS."
+                    : descontoNovo && !loteTravadoPorMedicao && planilha
+                      ? `Os preços do orçamento recebem o desconto do lote: o valor da OS passa de ${formatCurrency(planilha.totais.valorOrcado)} para ${formatCurrency(valorOrcamento ?? 0)}.`
+                      : "O desconto do lote entra no cálculo do valor da OS."
                 }
               >
                 <Select
@@ -875,7 +897,7 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
             <div>
               <p className="text-xs text-text-muted">Desconto da OS</p>
               <p className="text-sm font-semibold text-text-primary tabular-nums">
-                {String(ordemServico?.desconto ?? 0).replace(".", ",")}%
+                {String(descontoNovo && lote ? lote.desconto : (ordemServico?.desconto ?? 0)).replace(".", ",")}%
               </p>
             </div>
             <div>

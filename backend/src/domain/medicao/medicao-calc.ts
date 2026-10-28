@@ -403,6 +403,30 @@ export function totaisOrcamento({
   return { totalComBdi: fator > 0 ? Math.round(valorOs / fator) : valorOs, valorOs };
 }
 
+type ItemComReferencia = Pick<ItemPlanilha, "id" | "quantidade" | "precoUnitario" | "valorTotal" | "precoReferencia">;
+
+/**
+ * Preços do orçamento com outro desconto (ex.: a OS antiga recebeu o lote): o item com preço de
+ * referência (modo COM_BDI) recebe o desconto de novo; os demais ficam como estão. Devolve os
+ * preços que mudaram e o novo valor da OS (centavos).
+ */
+export function aplicarDesconto(
+  itens: readonly ItemComReferencia[],
+  desconto: number,
+): { precos: { id: string; precoUnitario: number }[]; valorOs: number } {
+  const precos: { id: string; precoUnitario: number }[] = [];
+  let valorOs = 0;
+  for (const item of itens) {
+    const precoUnitario =
+      item.precoReferencia === null || item.precoReferencia === undefined
+        ? item.precoUnitario
+        : precoComDesconto(item.precoReferencia, desconto);
+    if (precoUnitario !== item.precoUnitario) precos.push({ id: item.id, precoUnitario });
+    valorOs += valorOrcadoItem({ ...item, precoUnitario });
+  }
+  return { precos, valorOs };
+}
+
 /**
  * Diferença entre a soma dos itens e o valor da OS (soma dos empenhos), em centavos. Nula quando
  * bate. Salvar o orçamento acerta os empenhos; sobra diferença em OS que ainda não foi salva assim.

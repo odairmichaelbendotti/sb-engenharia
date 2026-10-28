@@ -68,6 +68,8 @@ export interface MedicaoOsInfo {
   empresa: { id: string; name: string };
   // Criada e ainda não emitida para a empresa (sem orçamento)
   aguardandoEmissao: boolean;
+  // Contrato com lotes e OS antiga sem lote: o desconto ficou 0 (só para quem edita)
+  semLote: boolean;
 }
 
 // Empenho da OS, para repartir o valor do orçamento (só para quem edita)

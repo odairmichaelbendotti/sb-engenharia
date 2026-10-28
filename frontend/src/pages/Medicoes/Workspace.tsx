@@ -8,6 +8,7 @@ import { cx } from "../../utils/cx";
 import { OrdemServicoNumeroTag } from "../../components/OrdemServicoNumeroTag";
 import { Button, StatTile, StatTiles, StatusPill } from "../../components/ui";
 import { percent } from "./medicao-progress";
+import { SEM_LOTE_DICA } from "./painel-display";
 
 // Casca das telas de orçamento e de medição: largura cheia, sem a margem de baixo (o rodapé fixo encosta)
 export function WorkspacePage({ children }: { children: ReactNode }) {
@@ -55,6 +56,11 @@ export function WorkspaceHeader({ planilha }: { planilha: PlanilhaOrcamento }) {
             {os.aguardandoEmissao && os.status === "ATIVO" && (
               <StatusPill tone="closed" size="sm" title="A empresa ainda não vê a OS: lance o orçamento e emita">
                 Aguardando emissão
+              </StatusPill>
+            )}
+            {os.semLote && (
+              <StatusPill tone="warning" size="sm" title={SEM_LOTE_DICA}>
+                Sem lote · desconto 0%
               </StatusPill>
             )}
             {os.status !== "ATIVO" && (

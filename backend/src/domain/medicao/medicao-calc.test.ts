@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  aplicarDesconto,
   computeLinhasMedicao,
   computePanorama,
   divergenciaTotal,
@@ -336,6 +337,26 @@ describe("desconto e totais do orçamento", () => {
       totalComBdi: 9999,
       valorOs: 7519,
     });
+  });
+
+  it("aplica outro desconto nos itens com preço de referência (OS antiga recebe o lote)", () => {
+    const itens = [
+      // Lançado só com BDI quando a OS estava sem lote (desconto 0)
+      { id: "a", quantidade: 2000, precoReferencia: 1000, precoUnitario: 1000, valorTotal: null },
+      { id: "b", quantidade: 3333, precoReferencia: 1234, precoUnitario: 1234, valorTotal: null },
+      // Já com desconto: não muda, nem o total ajustado
+      { id: "c", quantidade: 1000, precoReferencia: null, precoUnitario: 7520, valorTotal: 7519 },
+    ];
+    // 2 × 7,52 + 3,333 × 9,27 (truncado) + 75,19 = 15,04 + 30,90 + 75,19
+    expect(aplicarDesconto(itens, 24.8)).toEqual({
+      precos: [
+        { id: "a", precoUnitario: 752 },
+        { id: "b", precoUnitario: 927 },
+      ],
+      valorOs: 12113,
+    });
+    // Mesmo desconto: nada muda
+    expect(aplicarDesconto(itens, 0).precos).toEqual([]);
   });
 });
 

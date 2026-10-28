@@ -73,3 +73,21 @@ export function precoComDesconto(preco: number, desconto: number) {
   const fator = BigInt(1_000_000 - Math.round(desconto * 10_000));
   return Number((BigInt(Math.round(preco * 100)) * fator) / 1_000_000n) / 100;
 }
+
+/**
+ * Valor do orçamento em reais com outro desconto (espelha `aplicarDesconto` do backend): o item com
+ * preço de referência (lançado só com BDI) recebe o desconto; os demais valem o total que já têm.
+ */
+export function valorOrcamentoComDesconto(
+  itens: readonly { quantidade: number; precoReferencia: number | null; valorTotal: number }[],
+  desconto: number,
+) {
+  const centavos = itens.reduce((acc, item) => {
+    const valor =
+      item.precoReferencia === null
+        ? item.valorTotal
+        : valorItem(item.quantidade, precoComDesconto(item.precoReferencia, desconto));
+    return acc + Math.round(valor * 100);
+  }, 0);
+  return centavos / 100;
+}
