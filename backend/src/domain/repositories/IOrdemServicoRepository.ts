@@ -1,4 +1,5 @@
 import type { TramitacaoAutor } from "./IOrdemServicoTramitacaoRepository.js";
+import type { ItemPlanilha, PrecoBase } from "../medicao/medicao-calc.js";
 import type {
   OrdemServicoStatusValue,
   OrdemServicoUrgenciaValue,
@@ -68,6 +69,9 @@ export type OrdemServicoPersistData = OrdemServicoDocumentFields & {
   aguardandoEmissao?: boolean | undefined;
   // Desconto do lote copiado: na criação e quando a OS antiga recebe o lote na edição
   desconto?: number | undefined;
+  // Na edição, com o desconto novo: os preços do orçamento lançado só com BDI recebem esse desconto
+  // (o repository refaz a conta na transação e confere que os empenhos somam o novo valor)
+  aplicarDescontoNoOrcamento?: boolean | undefined;
   // Na criação, com `numeracao` o repository gera o número (sequência por lote e ano)
   numero: string;
   numeracao?: { loteNumero: number | null; ano: number } | undefined;
@@ -189,6 +193,13 @@ export type OrdemServicoOption = {
   empenhos: OrdemServicoVinculo[];
 };
 
+// Orçamento da OS para refazer os preços com outro desconto (centavos e milésimos)
+export type OrdemServicoOrcamento = {
+  precoBase: PrecoBase;
+  itens: Pick<ItemPlanilha, "id" | "quantidade" | "precoUnitario" | "valorTotal" | "precoReferencia">[];
+  temMedicaoFechada: boolean;
+};
+
 export type OrdemServicoActiveCountByTenant = {
   tenant_id: string;
   count: number;
@@ -219,6 +230,8 @@ export interface IOrdemServicoRepository {
   update(id: string, data: Omit<OrdemServicoPersistData, "tenant_id">): Promise<OrdemServicoListItem>;
   /** Soma dos itens do orçamento em centavos (o valor da OS), ou null se a OS ainda não tem orçamento. */
   getValorOrcamento(id: string): Promise<number | null>;
+  /** Modo de preço, itens e se há medição fechada; null se a OS ainda não tem orçamento. */
+  getOrcamento(id: string): Promise<OrdemServicoOrcamento | null>;
   /** Primeira emissão da OS que aguardava o orçamento: prazo de ciência, histórico e aviso à empresa. */
   emitir(id: string, emissao: OrdemServicoEmissao): Promise<void>;
   /** Empenhos vinculados à OS (valores em reais). */

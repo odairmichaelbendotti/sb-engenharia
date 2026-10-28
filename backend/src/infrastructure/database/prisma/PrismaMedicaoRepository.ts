@@ -138,6 +138,7 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
           valor: true,
           desconto: true,
           precoBase: true,
+          lote_id: true,
           aguardandoEmissao: true,
           emitidaEm: true,
           cienciaPrazoAte: true,
@@ -159,6 +160,7 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
                   cor: true,
                   company_id: true,
                   company: { select: { id: true, name: true } },
+                  _count: { select: { lotes: true } },
                 },
               },
             },
@@ -166,14 +168,15 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
         },
       });
       if (!row) return null;
-      const { empenho, empenhos, ...os } = row;
-      const { company, company_id, ...contrato } = empenho.contrato;
+      const { empenho, empenhos, lote_id, ...os } = row;
+      const { company, company_id, _count, ...contrato } = empenho.contrato;
       // Principal primeiro: é por ele que se chega ao contrato
       const vinculos = empenhos
         .map((v) => ({ empenho_id: v.empenho_id, numero: v.empenho.numero, valor: v.valor }))
         .sort((a, b) => Number(b.empenho_id === os.empenho_id) - Number(a.empenho_id === os.empenho_id));
       return {
         ...os,
+        semLote: lote_id === null && _count.lotes > 0,
         company_id,
         empenhos: vinculos,
         descricaoEmpenho: empenho.description,
@@ -247,20 +250,28 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
           dataPrevisaoTermino: true,
           valor: true,
           aguardandoEmissao: true,
+          lote_id: true,
           obra: { select: { id: true, nome: true } },
           empenhos: { orderBy: { createdAt: "asc" }, select: { empenho: { select: { id: true, numero: true } } } },
           empenho: {
             select: {
               description: true,
               contrato: {
-                select: { id: true, identificador: true, cor: true, company: { select: { id: true, name: true } } },
+                select: {
+                  id: true,
+                  identificador: true,
+                  cor: true,
+                  company: { select: { id: true, name: true } },
+                  _count: { select: { lotes: true } },
+                },
               },
             },
           },
         },
       });
-      return rows.map(({ empenho, empenhos, ...os }) => ({
+      return rows.map(({ empenho, empenhos, lote_id, ...os }) => ({
         ...os,
+        semLote: lote_id === null && empenho.contrato._count.lotes > 0,
         descricaoEmpenho: empenho.description,
         contrato: {
           id: empenho.contrato.id,

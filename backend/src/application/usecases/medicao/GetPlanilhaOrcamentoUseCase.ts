@@ -90,6 +90,8 @@ export class GetPlanilhaOrcamentoUseCase {
         contrato: os.contrato,
         empresa: os.empresa,
         aguardandoEmissao: os.aguardandoEmissao,
+        // Aviso interno: a OS antiga sem lote ficou com desconto 0
+        semLote: editor && os.semLote,
       },
       // Como os preços foram informados e o desconto da OS (porcentagem)
       precoBase: os.precoBase,

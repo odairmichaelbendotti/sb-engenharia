@@ -22,6 +22,8 @@ export type MedicaoOsContext = {
   // Desconto copiado do lote na criação da OS (porcentagem) e como os preços foram informados
   desconto: number;
   precoBase: PrecoBase;
+  // Contrato com lotes e OS sem lote (OS antiga): o desconto da OS ficou 0
+  semLote: boolean;
   // Emissão para a empresa (ver domain/tramitacao/ciencia.ts)
   aguardandoEmissao: boolean;
   emitidaEm: Date | null;
@@ -73,6 +75,8 @@ export type PainelOsRow = {
   dataPrevisaoTermino: Date | null;
   valor: number;
   aguardandoEmissao: boolean;
+  // Contrato com lotes e OS sem lote (OS antiga): o desconto da OS ficou 0
+  semLote: boolean;
   // Descrição do empenho principal: título da linha quando a OS ainda não tem obra
   descricaoEmpenho: string;
   obra: { id: string; nome: string } | null;

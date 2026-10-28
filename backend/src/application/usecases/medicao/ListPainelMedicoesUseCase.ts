@@ -37,6 +37,8 @@ export class ListPainelMedicoesUseCase {
         numero: os.numero,
         status: os.status,
         aguardandoEmissao: os.aguardandoEmissao,
+        // Aviso interno: a OS antiga sem lote ficou com desconto 0
+        semLote: editor && os.semLote,
         dataInicio: os.dataInicio,
         dataPrevisaoTermino: os.dataPrevisaoTermino,
         descricaoEmpenho: os.descricaoEmpenho,

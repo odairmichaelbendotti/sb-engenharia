@@ -1,6 +1,7 @@
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
 import { OrdemServicoEntity, type OrdemServicoType } from "../../../domain/entities/OrdemServico.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
+import { aplicarDesconto } from "../../../domain/medicao/medicao-calc.js";
 import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository.js";
 import type { IObraRepository } from "../../../domain/repositories/IObraRepository.js";
@@ -144,13 +145,7 @@ export class UpdateOrdemServicoUseCase {
       empenhos: ordemServicoEntity.empenhos,
       ordemServicoId,
     });
-    if (valorOrcamento !== null) {
-      if (vinculos.reduce((acc, v) => acc + v.valor, 0) !== valorOrcamento) {
-        throw new DomainError(
-          `Os empenhos precisam somar o valor do orçamento da OS (${(valorOrcamento / 100).toFixed(2)}).`,
-        );
-      }
-    } else if (!existing.aguardandoEmissao && vinculos.some((v) => v.valor <= 0)) {
+    if (valorOrcamento === null && !existing.aguardandoEmissao && vinculos.some((v) => v.valor <= 0)) {
       // OS antiga, sem orçamento: o valor continua sendo o que cada empenho destina
       throw new DomainError("Each linked empenho must have a valor greater than 0");
     }
@@ -173,6 +168,27 @@ export class UpdateOrdemServicoUseCase {
         ? contrato.lotes.find((l) => l.id === ordemServicoEntity.lote_id)
         : undefined;
 
+    // Com o lote, o orçamento lançado só com BDI recebe o desconto dele: muda o valor da OS
+    const aplicarDescontoNoOrcamento =
+      loteNovo !== undefined && loteNovo.desconto !== existing.desconto && valorOrcamento !== null;
+    let valorEsperado = valorOrcamento;
+    if (aplicarDescontoNoOrcamento) {
+      const orcamento = await this.repository.getOrcamento(ordemServicoId);
+      if (orcamento?.precoBase === "COM_BDI") {
+        if (orcamento.temMedicaoFechada) {
+          throw new DomainError(
+            "Exclua as medições fechadas antes de definir o lote: os preços já medidos não mudam.",
+          );
+        }
+        valorEsperado = aplicarDesconto(orcamento.itens, loteNovo.desconto).valorOs;
+      }
+    }
+    if (valorEsperado !== null && vinculos.reduce((acc, v) => acc + v.valor, 0) !== valorEsperado) {
+      throw new DomainError(
+        `Os empenhos precisam somar o valor do orçamento da OS (${(valorEsperado / 100).toFixed(2)}).`,
+      );
+    }
+
     const totalComBdi =
       ordemServicoEntity.totalComBdi === null ? null : Math.round(ordemServicoEntity.totalComBdi * 100);
 
@@ -192,7 +208,7 @@ export class UpdateOrdemServicoUseCase {
     const emitidaEm = new Date();
 
     return this.repository.update(ordemServicoId, {
-      ...(loteNovo ? { desconto: loteNovo.desconto } : {}),
+      ...(loteNovo ? { desconto: loteNovo.desconto, aplicarDescontoNoOrcamento } : {}),
       ...(reemitir
         ? {
             emissao: {

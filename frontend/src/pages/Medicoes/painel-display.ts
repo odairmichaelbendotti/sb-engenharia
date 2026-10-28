@@ -78,3 +78,7 @@ export function acaoMedicao(item: PainelMedicaoItem): PainelAcao {
     to: null,
   };
 }
+
+// OS antiga sem lote: o desconto ficou 0 e o orçamento lançado só com BDI vale com BDI
+export const SEM_LOTE_DICA =
+  "A OS não tem lote, então o desconto ficou 0%. Defina o lote na edição da OS: o orçamento lançado só com BDI recebe o desconto dele.";

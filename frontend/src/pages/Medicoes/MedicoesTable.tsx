@@ -25,7 +25,14 @@ import {
 import { medicaoFilename, medicaoTitulo } from "../OrdemServico/medicao-display";
 import { MedidoCell } from "./MedidoCell";
 import { percent } from "./medicao-progress";
-import { acaoMedicao, acaoOrcamento, painelRitmo, painelTitulo, type PainelAcao } from "./painel-display";
+import {
+  acaoMedicao,
+  acaoOrcamento,
+  painelRitmo,
+  painelTitulo,
+  SEM_LOTE_DICA,
+  type PainelAcao,
+} from "./painel-display";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -102,6 +109,11 @@ export function MedicoesTable({ items, isLoading }: MedicoesTableProps) {
                     <span className="truncate" title={`${item.empresa.name} · ${item.contrato.identificador}`}>
                       {item.empresa.name} · {item.contrato.identificador}
                     </span>
+                    {item.semLote && (
+                      <span className="text-warning-text" title={SEM_LOTE_DICA}>
+                        sem lote · desconto 0%
+                      </span>
+                    )}
                     {/* Sem as colunas de orçamento e medido, o essencial delas fica aqui */}
                     <span className="lg:hidden tabular-nums">
                       {item.itens === 0

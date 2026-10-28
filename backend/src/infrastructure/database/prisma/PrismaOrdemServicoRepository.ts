@@ -13,13 +13,14 @@ import type {
   OrdemServicoEmissao,
   OrdemServicoListItem,
   OrdemServicoOption,
+  OrdemServicoOrcamento,
   OrdemServicoPersistData,
   OrdemServicoVinculo,
   OrdemServicoVinculoFinanceiro,
 } from "../../../domain/repositories/IOrdemServicoRepository.js";
 import { prisma } from "../../prisma/prisma.js";
 import { colunasEmissao, registrarEmissao } from "./tramitacao-tx.js";
-import { valorOrcadoItem } from "../../../domain/medicao/medicao-calc.js";
+import { aplicarDesconto, valorOrcadoItem } from "../../../domain/medicao/medicao-calc.js";
 import { osDaEmpresa } from "./os-escopo.js";
 
 // Primeira sequência da numeração das OS (as anteriores ao padrão ficam fora da contagem)
@@ -124,6 +125,39 @@ function documentColumns(data: OrdemServicoDocumentFields) {
 }
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+const ORCAMENTO_ITEM_SELECT = {
+  id: true,
+  quantidade: true,
+  precoUnitario: true,
+  valorTotal: true,
+  precoReferencia: true,
+} as const;
+
+/**
+ * OS antiga que recebeu o lote: refaz os preços do orçamento lançado só com BDI com o desconto novo,
+ * com a OS travada (o orçamento e as medições escrevem com a mesma trava). Confere de novo o que o
+ * use case validou: sem medição fechada e empenhos somando o novo valor.
+ */
+async function aplicarDescontoTx(tx: Tx, id: string, desconto: number, valorEmpenhos: number) {
+  await tx.$queryRaw`SELECT "id" FROM "OrdemServico" WHERE "id" = ${id} FOR UPDATE`;
+  const os = await tx.ordemServico.findUniqueOrThrow({ where: { id }, select: { precoBase: true } });
+  const itens = await tx.ordemServicoItem.findMany({ where: { ordemServico_id: id }, select: ORCAMENTO_ITEM_SELECT });
+  if (os.precoBase !== "COM_BDI" || itens.length === 0) return;
+  if ((await tx.medicao.count({ where: { ordemServico_id: id, status: "FECHADA" } })) > 0) {
+    throw new DomainError("Exclua as medições fechadas antes de definir o lote: os preços já medidos não mudam.");
+  }
+  const { precos, valorOs } = aplicarDesconto(itens, desconto);
+  if (valorOs !== valorEmpenhos) {
+    throw new DomainError("O orçamento da OS mudou durante a edição. Abra a OS de novo e salve.");
+  }
+  for (const preco of precos) {
+    await tx.ordemServicoItem.update({
+      where: { id: preco.id },
+      data: { precoUnitario: preco.precoUnitario, updatedAt: new Date() },
+    });
+  }
+}
 
 // Número da OS: sequência por lote e ano (começa em 10), ex.: "OS 010/BAFL/2026-L1".
 // A sequência considera todos os contratos com o mesmo nº de lote, para o número nunca repetir
@@ -403,6 +437,9 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
   async update(id: string, data: Omit<OrdemServicoPersistData, "tenant_id">): Promise<OrdemServicoListItem> {
     try {
       const updated = await prisma.$transaction(async (tx) => {
+        if (data.aplicarDescontoNoOrcamento && data.desconto !== undefined) {
+          await aplicarDescontoTx(tx, id, data.desconto, data.empenhos.reduce((sum, e) => sum + e.valor, 0));
+        }
         const anterior = await tx.ordemServico.findUniqueOrThrow({ where: { id }, select: { obra_id: true } });
         const atuais = await tx.ordemServicoEmpenho.findMany({
           where: { ordemServico_id: id },
@@ -468,6 +505,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
         valorExecutado: (executado.get(id) ?? 0) / 100,
       };
     } catch (error) {
+      if (error instanceof DomainError) throw error;
       throw new DomainError("Error updating ordem de serviço: " + error);
     }
   }
@@ -560,6 +598,23 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
         select: { quantidade: true, precoUnitario: true, valorTotal: true },
       });
       return itens.length === 0 ? null : itens.reduce((acc, item) => acc + valorOrcadoItem(item), 0);
+    } catch (error) {
+      throw new DomainError("Error loading the budget of the ordem de serviço: " + error);
+    }
+  }
+
+  async getOrcamento(id: string): Promise<OrdemServicoOrcamento | null> {
+    try {
+      const os = await prisma.ordemServico.findUnique({
+        where: { id },
+        select: {
+          precoBase: true,
+          itens: { select: ORCAMENTO_ITEM_SELECT },
+          _count: { select: { medicoes: { where: { status: "FECHADA" } } } },
+        },
+      });
+      if (!os || os.itens.length === 0) return null;
+      return { precoBase: os.precoBase, itens: os.itens, temMedicaoFechada: os._count.medicoes > 0 };
     } catch (error) {
       throw new DomainError("Error loading the budget of the ordem de serviço: " + error);
     }
