@@ -63,6 +63,9 @@ export type PlanilhaOs = {
   medicoes: MedicaoResumo[];
 };
 
+// Nota fiscal não cancelada que paga a medição
+export type NotaFiscalDaMedicao = { id: string; numero: string };
+
 export type MedicaoAutor = { id: string; nome: string };
 
 // OS da tela de medições, com o necessário para identificar a linha e filtrar por empresa → contrato → empenho
@@ -124,6 +127,8 @@ export interface IMedicaoRepository {
   /** OS da tela de medições; sem tenant = todas (PLATFORM_ADMIN), com empresa = só as dos contratos dela. */
   listOsDoPainel(params: { tenant_id: string | undefined; company_id: string | undefined }): Promise<PainelOsRow[]>;
   hasMedicaoFechada(ordemServico_id: string): Promise<boolean>;
+  /** Nota fiscal não cancelada de cada medição (as sem nota ficam fora do mapa). */
+  findNotasFiscais(medicao_ids: string[]): Promise<Map<string, NotaFiscalDaMedicao>>;
 
   /**
    * Grava a planilha inteira (mantém os itens com id, cria os novos e exclui os que faltam) e, na

@@ -575,6 +575,9 @@ model Medicao {
 
   itens MedicaoItem[]
 
+  // Notas fiscais que pagam esta medição (só uma não cancelada)
+  invoices Invoice[]
+
   @@unique([ordemServico_id, numero])
 }
 
@@ -624,6 +627,12 @@ model Invoice {
   ordemServico_id String?
   ordemServico    OrdemServico? @relation(fields: [ordemServico_id], references: [id], onDelete: Restrict)
 
+  // Medição fechada da OS que a nota paga: o valor da nota é o dela. Nula = valor digitado.
+  // Uma nota não cancelada por medição; a medição com nota não reabre nem sai
+  medicao_id String?
+  medicao    Medicao? @relation(fields: [medicao_id], references: [id], onDelete: SetNull)
+
   @@index([ordemServico_id])
+  @@index([medicao_id])
   @@map("nota_fiscal")
 }

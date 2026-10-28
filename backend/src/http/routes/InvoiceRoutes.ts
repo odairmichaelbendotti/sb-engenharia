@@ -8,6 +8,7 @@ import { UpdateInvoiceUseCase } from "../../application/usecases/invoice/UpdateI
 import { PrismaEmpenhoRepository } from "../../infrastructure/database/prisma/PrismaEmpenhoRepository.js";
 import { PrismaObraRepository } from "../../infrastructure/database/prisma/PrismaObraRepository.js";
 import { PrismaContratoRepository } from "../../infrastructure/database/prisma/PrismaContratoRepository.js";
+import { PrismaMedicaoRepository } from "../../infrastructure/database/prisma/PrismaMedicaoRepository.js";
 import { PrismaCompanyRepository } from "../../infrastructure/database/prisma/PrismaCompanyRepository.js";
 import { InvoiceScopeValidator } from "../../application/usecases/invoice/InvoiceScopeValidator.js";
 import { ListInvoiceCompanyOptionsUseCase } from "../../application/usecases/invoice/ListInvoiceCompanyOptionsUseCase.js";
@@ -23,11 +24,13 @@ const empenhoRepository = new PrismaEmpenhoRepository();
 const obraRepository = new PrismaObraRepository();
 const contratoRepository = new PrismaContratoRepository();
 const companyRepository = new PrismaCompanyRepository();
+const medicaoRepository = new PrismaMedicaoRepository();
 const scopeValidator = new InvoiceScopeValidator(
   empenhoRepository,
   contratoRepository,
   repository,
   obraRepository,
+  medicaoRepository,
 );
 const createInvoice = new CreateInvoiceUseCase(repository, scopeValidator);
 const listInvoices = new ListInvoicesUseCase(repository);

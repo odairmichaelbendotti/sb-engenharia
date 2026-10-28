@@ -20,6 +20,7 @@ export type listInvoices = {
 export type InvoiceListItem = PersistedInvoice & {
   empenho: { id: string; numero: string; contrato: { id: string; identificador: string } };
   ordemServico: { id: string; numero: string } | null;
+  medicao: { id: string; numero: number } | null;
   obra: { id: string; nome: string; identificacaoPatrimonial: string } | null;
 };
 

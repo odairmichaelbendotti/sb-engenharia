@@ -18,6 +18,8 @@ import { toast } from "sonner";
 import { useInvoice } from "../../store/invoices";
 import { maskCurrency, formatValueToCurrencyMask, parseCurrencyMask } from "../../utils/masks";
 import { createBlurNormalizer, INVOICE_FIELD_RULES } from "../../utils/normalization/form-rules";
+import type { MedicaoParaNota } from "../../../types/obra";
+import { MedicaoField } from "./MedicaoField";
 
 interface EditModalProps {
   editInvoice: Invoice | null;
@@ -32,6 +34,7 @@ const emptyFormData: InvoiceFormData = {
   empenho_id: "",
   company_id: "",
   ordemServico_id: "",
+  medicao_id: "",
   status: "PENDENTE",
 };
 
@@ -69,6 +72,7 @@ export default function EditModal({
         empenho_id: editInvoice.empenho_id || "",
         company_id: editInvoice.company_id || "",
         ordemServico_id: editInvoice.ordemServico_id || "",
+        medicao_id: editInvoice.medicao_id || "",
         status: (editInvoice.status?.toUpperCase() ||
           "PENDENTE") as InvoiceFormData["status"],
       });
@@ -86,7 +90,7 @@ export default function EditModal({
   }, [editInvoice, companies]);
 
   function handleChangeCompany(companyId: string) {
-    setFormData((f) => ({ ...f, company_id: companyId, empenho_id: "", ordemServico_id: "" }));
+    setFormData((f) => ({ ...f, company_id: companyId, empenho_id: "", ordemServico_id: "", medicao_id: "" }));
     const company = companies.find((c) => c.id === companyId);
     if (company) {
       setEmpenhosByCompany(company.empenhos);
@@ -96,7 +100,7 @@ export default function EditModal({
   }
 
   function handleChangeEmpenho(empenhoId: string) {
-    setFormData((f) => ({ ...f, empenho_id: empenhoId, ordemServico_id: "" }));
+    setFormData((f) => ({ ...f, empenho_id: empenhoId, ordemServico_id: "", medicao_id: "" }));
     fetchObraOptionsForInvoice(empenhoId)
       .then((options) => {
         // Empenho que financia uma única OS com obra: ela já vem selecionada
@@ -105,6 +109,18 @@ export default function EditModal({
         }
       })
       .catch(() => {});
+  }
+
+  const medicoesDaOS =
+    obraOptionsForInvoice.find((o) => o.ordemServico.id === formData.ordemServico_id)?.medicoes ?? [];
+
+  // Escolher a medição traz o valor dela; voltar para "sem medição" mantém o valor para editar
+  function selectMedicao(medicao: MedicaoParaNota | null) {
+    setFormData((f) => ({
+      ...f,
+      medicao_id: medicao?.id ?? "",
+      value: medicao ? formatValueToCurrencyMask(medicao.valor) : f.value,
+    }));
   }
 
   // Validação de cada etapa: devolve a mensagem do primeiro problema ou null
@@ -136,6 +152,7 @@ export default function EditModal({
       company_id: formData.company_id,
       obra_id: obraDaOS?.id,
       ordemServico_id: formData.ordemServico_id || undefined,
+      medicao_id: formData.medicao_id || undefined,
       status: formData.status,
     };
 
@@ -226,7 +243,7 @@ export default function EditModal({
                   <Select
                     disabled={!formData.empenho_id}
                     value={formData.ordemServico_id}
-                    onChange={(e) => setFormData((f) => ({ ...f, ordemServico_id: e.target.value }))}
+                    onChange={(e) => setFormData((f) => ({ ...f, ordemServico_id: e.target.value, medicao_id: "" }))}
                   >
                     <option value="">
                       {!formData.empenho_id
@@ -254,6 +271,17 @@ export default function EditModal({
               <>
                 <FormSection title="Identificação" icon={Hash}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Medições fechadas da OS: a nota pode pagar uma delas em vez de um valor digitado */}
+                    {medicoesDaOS.length > 0 && (
+                      <div className="md:col-span-2">
+                        <MedicaoField
+                          medicoes={medicoesDaOS}
+                          value={formData.medicao_id}
+                          invoiceId={editInvoice.id}
+                          onChange={selectMedicao}
+                        />
+                      </div>
+                    )}
                     <Field label="Número da NF" required>
                       <Input
                         icon={Hash}
@@ -273,6 +301,8 @@ export default function EditModal({
                         type="text"
                         inputMode="numeric"
                         required
+                        // Com medição, o valor é o dela
+                        disabled={formData.medicao_id !== ""}
                         value={formData.value}
                         onChange={(e) =>
                           setFormData((f) => ({ ...f, value: maskCurrency(e.target.value) }))

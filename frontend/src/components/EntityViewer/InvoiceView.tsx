@@ -5,6 +5,7 @@ import { useEmpenhos } from "../../store/empenhos";
 import { useContratos } from "../../store/contratos";
 import { usePermission } from "../../hooks/usePermission";
 import { formatCurrency, formatDate, formatDateOnly } from "../../utils/format-currency";
+import { medicaoTitulo } from "../../pages/OrdemServico/medicao-display";
 import { maskCnpj } from "../../utils/masks";
 import { getDeadlineHint, invoiceStatusDisplay, invoiceLabel } from "../../utils/status-display";
 import {
@@ -176,7 +177,7 @@ export function InvoiceView({ id, ...frame }: ViewProps) {
               icon={ClipboardList}
               label="Ordem de serviço e obra"
               title={[invoice.ordemServico.numero, invoice.obra?.identificacaoPatrimonial].filter(Boolean).join(" · ")}
-              hint={invoice.obra?.nome}
+              hint={[invoice.medicao && medicaoTitulo(invoice.medicao.numero), invoice.obra?.nome].filter(Boolean).join(" · ")}
               onClick={linkTo("ordemServico", invoice.ordemServico.id)}
             />
           ) : (

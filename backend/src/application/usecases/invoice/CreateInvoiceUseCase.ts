@@ -20,25 +20,32 @@ export class CreateInvoiceUseCase {
       numero,
       description,
       vencimento,
-      value,
       empenho_id,
       company_id,
       obra_id,
       ordemServico_id,
+      medicao_id,
     } = normalizeInput(input, INVOICE_RULES);
-    if (value <= 0) {
-      throw new DomainError("Value must be greater than 0");
-    }
 
     const empenho = await this.scopeValidator.validate(user, empenho_id, company_id);
+    const vinculo = await this.scopeValidator.resolveObra({ empenho, obra_id, ordemServico_id });
+
+    // Com medição, o valor da nota é o dela; sem medição, vale o valor digitado
+    const valorMedicao = await this.scopeValidator.resolveMedicao({
+      medicao_id,
+      ordemServico_id: vinculo.ordemServico_id,
+      ativa: true,
+    });
+    const value = valorMedicao ?? Number(input.value);
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new DomainError("Value must be greater than 0");
+    }
 
     // Comparação em centavos: empenho.value vem do banco em centavos e a soma em reais
     const alreadyInvoiced = await this.repository.sumActiveValueByEmpenho(empenho_id);
     if (Math.round((alreadyInvoiced + value) * 100) > empenho.value) {
       throw new DomainError("Value exceeds empenho limit");
     }
-
-    const vinculo = await this.scopeValidator.resolveObra({ empenho, obra_id, ordemServico_id });
 
     const invoiceExist = await this.repository.findByNumber(numero);
 
@@ -59,6 +66,7 @@ export class CreateInvoiceUseCase {
       company_id,
       obra_id: vinculo.obra_id,
       ordemServico_id: vinculo.ordemServico_id,
+      medicao_id: valorMedicao === null ? null : medicao_id,
     });
 
     return await this.repository.create({
@@ -70,6 +78,7 @@ export class CreateInvoiceUseCase {
       company_id: invoiceEntity.company_id,
       obra_id: invoiceEntity.obra_id,
       ordemServico_id: invoiceEntity.ordemServico_id,
+      medicao_id: invoiceEntity.medicao_id,
     });
   }
 }
