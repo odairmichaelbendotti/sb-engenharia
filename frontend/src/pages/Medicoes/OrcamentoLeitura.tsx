@@ -1,12 +1,13 @@
 import { Fragment, useState } from "react";
 import type { OrcamentoItem, PlanilhaOrcamento } from "../../../types/medicao";
 import { formatCurrency } from "../../utils/format-currency";
-import { formatQuantidade } from "../../utils/decimal";
+import { formatQuantidade, quantidadeEfetiva } from "../../utils/decimal";
 import { cx } from "../../utils/cx";
 import { SearchInput } from "../../components/filters/SearchInput";
 import { StatusPill, Table, TableBody, TableFoot, TableGroupRow, TableHead, Td, Th, Tr } from "../../components/ui";
 import { matchesItemSearch } from "./medicao-progress";
 import { contagemItens, gruposPorEtapa, SEM_ETAPA, temEtapas, useEtapasRecolhidas } from "./etapas";
+import { SupressaoNota, SuprimidoPill } from "./supressao";
 
 // Orçado, medido e saldo de cada item, para quem só consulta (ou com a OS encerrada)
 export function OrcamentoLeitura({ planilha }: { planilha: PlanilhaOrcamento }) {
@@ -79,6 +80,7 @@ export function OrcamentoLeitura({ planilha }: { planilha: PlanilhaOrcamento }) 
 
 // Orçado, medido e saldo de um item
 function LinhaItem({ item }: { item: OrcamentoItem }) {
+  const efetiva = quantidadeEfetiva(item);
   return (
     <Tr muted={item.completo}>
       <Td>
@@ -102,8 +104,9 @@ function LinhaItem({ item }: { item: OrcamentoItem }) {
       </Td>
       <Td>
         <span className="block">
-          {formatQuantidade(item.quantidade)} {item.unidade}
+          {formatQuantidade(efetiva)} {item.unidade}
         </span>
+        <SupressaoNota suprimido={item.quantidadeSuprimida} />
         <span
           className="block text-[11px] text-text-muted"
           title={item.totalAjustado ? "Total ajustado para bater com a planilha de referência" : undefined}
@@ -126,7 +129,9 @@ function LinhaItem({ item }: { item: OrcamentoItem }) {
         )}
       </Td>
       <Td>
-        {item.completo ? (
+        {efetiva === 0 && item.quantidadeSuprimida > 0 ? (
+          <SuprimidoPill />
+        ) : item.completo ? (
           <StatusPill tone="success" size="sm">
             Concluído
           </StatusPill>

@@ -196,7 +196,10 @@ export type OrdemServicoOption = {
 // Orçamento da OS para refazer os preços com outro desconto (centavos e milésimos)
 export type OrdemServicoOrcamento = {
   precoBase: PrecoBase;
-  itens: Pick<ItemPlanilha, "id" | "quantidade" | "precoUnitario" | "valorTotal" | "precoReferencia">[];
+  itens: Pick<
+    ItemPlanilha,
+    "id" | "quantidade" | "quantidadeSuprimida" | "precoUnitario" | "valorTotal" | "precoReferencia"
+  >[];
   temMedicaoFechada: boolean;
 };
 

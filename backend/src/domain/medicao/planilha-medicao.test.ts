@@ -24,6 +24,17 @@ describe("planilha da medição", () => {
     expect(calcularPlanilhaMedicao(planilha).totais).toMatchObject({ valorOrcado: 4112, valorEsta: 4112 });
   });
 
+  it("guarda a supressão no snapshot; o antigo, sem ela, vale a quantidade inteira", () => {
+    const planilha = buildPlanilhaMedicao({
+      itens: [{ ...pintura, valorTotal: null, quantidadeSuprimida: 1333 }],
+      anterior: new Map(),
+      esta: new Map(),
+      fiscais: { tecnico: null, administrativo: null },
+    });
+    expect(planilha.itens[0]).toMatchObject({ orcado: 3333, suprimido: 1333 });
+    expect(calcularPlanilhaMedicao(planilha).linhas[0]).toMatchObject({ orcado: 2000, suprimido: 1333, valorOrcado: 2468 });
+  });
+
   it("lê snapshot antigo, sem o total ajustado, como quantidade × preço", () => {
     const antigo = parsePlanilhaMedicao({
       versao: 1,

@@ -106,6 +106,22 @@ describe("buildMedicaoDocumentModel", () => {
   });
 });
 
+describe("supressão no boletim", () => {
+  it("o orçado é a quantidade efetiva, com a supressão ao lado; suprimido por inteiro não é concluído", () => {
+    const data = sampleData();
+    data.planilha = buildPlanilhaMedicao({
+      itens: itens.map((i, index) => ({ ...i, quantidadeSuprimida: index === 0 ? 0 : i.quantidade })),
+      anterior: new Map([["i-1", 3000]]),
+      esta: new Map([["i-1", 7000]]),
+      fiscais: { tecnico: null, administrativo: null },
+    });
+    const m = buildMedicaoDocumentModel(data, dia("2026-10-24"));
+    expect(m.linhas[0]).toMatchObject({ suprimido: "", concluido: true, suprimidoTotal: false });
+    expect(m.linhas[1]).toMatchObject({ orcado: "0,00", suprimido: "20,00", concluido: false, suprimidoTotal: true });
+    expect(m.totais.orcado).toBe("500,00");
+  });
+});
+
 describe("etapas no boletim", () => {
   it("abre uma faixa por etapa com os subtotais; sem etapas, não há faixa", () => {
     expect(buildMedicaoDocumentModel(sampleData(), dia("2026-10-24")).etapas).toEqual([]);

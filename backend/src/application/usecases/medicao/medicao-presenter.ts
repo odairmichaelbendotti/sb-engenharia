@@ -50,6 +50,7 @@ export function presentLinha(linha: LinhaPlanilhaMedicao) {
     unidade: linha.unidade,
     precoUnitario: reais(linha.precoUnitario),
     orcado: qtd(linha.orcado),
+    suprimido: qtd(linha.suprimido),
     anterior: qtd(linha.anterior),
     esta: qtd(linha.esta),
     acumulado: qtd(linha.acumulado),

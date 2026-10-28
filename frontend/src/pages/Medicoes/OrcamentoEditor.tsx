@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, ClipboardPaste, FolderPlus, Lock, Plus, Send, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CircleMinus, ClipboardPaste, FolderPlus, Lock, Plus, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { OrcamentoItem, OrcamentoPayload, PlanilhaOrcamento, PrecoBase } from "../../../types/medicao";
 import { useMedicoes } from "../../store/medicoes";
@@ -33,6 +33,7 @@ import { matchesItemSearch } from "./medicao-progress";
 import { ETAPA_MAX, ORCAMENTO_ITENS_MAX, type PastedItem } from "./parse-pasted-budget";
 import { contagemItens, gruposPorEtapa, SEM_ETAPA, temEtapas, useEtapasRecolhidas } from "./etapas";
 import { PasteOrcamentoDialog, type PasteMode } from "./PasteOrcamentoDialog";
+import { SupressoesDialog } from "./SupressoesDialog";
 
 type ItemForm = {
   key: number;
@@ -48,8 +49,10 @@ type ItemForm = {
   // Total ajustado (máscara de moeda) para bater com a planilha de referência; null = qtd × preço.
   // Só no modo com desconto
   total: string | null;
-  // Soma das medições fechadas: trava preço e unidade e é o mínimo da quantidade
+  // Soma das medições fechadas: trava preço e unidade e é o mínimo da quantidade efetiva
   medido: number;
+  // Supressão (decimal): parte da quantidade que sai do contrato; 0 = nenhuma
+  suprimida: number;
 };
 
 type Campo = "codigo" | "descricao" | "unidade" | "quantidade" | "preco" | "total" | "empenhos";
@@ -77,6 +80,7 @@ function toForm(item: OrcamentoItem, key: number): ItemForm {
     preco: formatValueToCurrencyMask(item.precoReferencia ?? item.precoUnitario),
     total: item.totalAjustado ? formatValueToCurrencyMask(item.valorTotal) : null,
     medido: item.medido,
+    suprimida: item.quantidadeSuprimida,
   };
 }
 
@@ -124,6 +128,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
     preco: "",
     total: null,
     medido: 0,
+    suprimida: 0,
     ...patch,
   });
   const [linhas, setLinhas] = useState<ItemForm[]>(() =>
@@ -139,7 +144,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
       precoBase,
       linhas
         .filter(preenchida)
-        .map((l) => [l.id ?? null, l.codigo, l.descricao, l.etapa, l.unidade, l.quantidade, l.preco, l.total]),
+        .map((l) => [l.id ?? null, l.codigo, l.descricao, l.etapa, l.unidade, l.quantidade, l.suprimida, l.preco, l.total]),
       empenhos.length > 1 ? distribuicao : null,
     ]);
   const [inicial] = useState(serialize);
@@ -149,6 +154,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
   const [busca, setBusca] = useState("");
   // null = fechado; texto = colado direto na tela (vazio abre com o campo)
   const [colando, setColando] = useState<string | null>(null);
+  const [suprimindo, setSuprimindo] = useState(false);
 
   const dirty = serialize() !== inicial;
   const guard = useUnsavedChangesGuard(dirty);
@@ -172,13 +178,19 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
     const informado = parseCurrencyMask(l.preco);
     return aplicaDesconto ? precoComDesconto(informado, desconto) : informado;
   };
+  // Quantidade que vale: a contratada menos a suprimida
+  const quantidadeValida = (l: ItemForm) => {
+    const quantidade = parseQuantidade(l.quantidade);
+    return quantidade === null ? null : Math.max(0, Math.round((quantidade - l.suprimida) * 1000) / 1000);
+  };
   // Quantidade × preço que vale, sem o ajuste
   const totalCalculado = (l: ItemForm) => {
-    const quantidade = parseQuantidade(l.quantidade);
+    const quantidade = quantidadeValida(l);
     return quantidade === null ? 0 : valorItem(quantidade, precoEfetivo(l));
   };
+  // Com supressão, o total ajustado (da quantidade cheia) deixa de valer
   const totalLinha = (l: ItemForm) =>
-    l.total === null || aplicaDesconto ? totalCalculado(l) : parseCurrencyMask(l.total);
+    l.total === null || aplicaDesconto || l.suprimida > 0 ? totalCalculado(l) : parseCurrencyMask(l.total);
 
   const update = (key: number, patch: Partial<ItemForm>) => {
     setLinhas((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
@@ -201,7 +213,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
   // Total com BDI: pelo preço informado no modo com BDI; sem o desconto, no modo já descontado
   const totalComBdi = aplicaDesconto
     ? linhas.reduce((acc, l) => {
-        const quantidade = parseQuantidade(l.quantidade);
+        const quantidade = quantidadeValida(l);
         return acc + (quantidade === null ? 0 : valorItem(quantidade, parseCurrencyMask(l.preco)));
       }, 0)
     : desconto < 100
@@ -209,6 +221,11 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
       : total;
   const valorMuda = valorOs !== null && centavos(total) !== centavos(valorOs);
   const medidos = linhas.filter((l) => l.medido > 0).length;
+  const comSupressao = linhas.filter((l) => preenchida(l) && l.suprimida > 0);
+  const valorSuprimido = comSupressao.reduce(
+    (acc, l) => acc + valorItem(parseQuantidade(l.quantidade) ?? 0, precoEfetivo(l)) - totalCalculado(l),
+    0,
+  );
   const somaDistribuida = empenhos.reduce((acc, e) => acc + parseCurrencyMask(distribuicao[e.id] ?? ""), 0);
   const visiveis = useMemo(
     () =>
@@ -269,8 +286,22 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
           texto: `${pos}: já foram medidos ${formatQuantidade(l.medido)} ${l.unidade}; a quantidade não pode ficar abaixo disso.`,
         };
       }
+      if (l.suprimida > quantidade) {
+        return {
+          key: l.key,
+          campo: "quantidade",
+          texto: `${pos}: a quantidade não pode ficar abaixo da suprimida (${formatQuantidade(l.suprimida)} ${l.unidade}).`,
+        };
+      }
+      if (l.medido > 0 && quantidade - l.suprimida < l.medido - 1e-9) {
+        return {
+          key: l.key,
+          campo: "quantidade",
+          texto: `${pos}: com a supressão de ${formatQuantidade(l.suprimida)} ${l.unidade}, sobra menos do que já foi medido (${formatQuantidade(l.medido)}).`,
+        };
+      }
       if (!l.preco) return { key: l.key, campo: "preco", texto: `${pos}: informe o preço unitário.` };
-      if (l.total !== null && !aplicaDesconto) {
+      if (l.total !== null && !aplicaDesconto && l.suprimida === 0) {
         if (!l.total) return { key: l.key, campo: "total", texto: `${pos}: informe o total ou use o calculado.` };
         const folga = folgaValorTotal(quantidade);
         if (Math.abs(parseCurrencyMask(l.total) - totalCalculado(l)) > folga + 1e-9) {
@@ -341,8 +372,9 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
         etapa: l.etapa,
         unidade: l.unidade,
         quantidade: parseQuantidade(l.quantidade) ?? 0,
+        quantidadeSuprimida: l.suprimida,
         precoUnitario: parseCurrencyMask(l.preco),
-        valorTotal: l.total === null || aplicaDesconto ? null : parseCurrencyMask(l.total),
+        valorTotal: l.total === null || aplicaDesconto || l.suprimida > 0 ? null : parseCurrencyMask(l.total),
       })),
       ...(empenhos.length > 1
         ? {
@@ -409,14 +441,28 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
     toast.success(`${novos.length} ${novos.length === 1 ? "item incluído" : "itens incluídos"} na planilha. Confira e salve.`);
   }
 
+  // Supressões aplicadas pelo diálogo; o item suprimido perde o total ajustado
+  function aplicarSupressoes(supressoes: Map<number, number>) {
+    setLinhas((prev) =>
+      prev.map((l) => {
+        const suprimida = supressoes.get(l.key);
+        if (suprimida === undefined || suprimida === l.suprimida) return l;
+        return { ...l, suprimida, total: suprimida > 0 ? null : l.total };
+      }),
+    );
+    setErro(null);
+    setSuprimindo(false);
+  }
+
   const invalido = (l: ItemForm, campo: Campo) => erro?.key === l.key && erro.campo === campo;
 
   // Linha de um item (cartão até lg, grade a partir dele)
   const renderLinha = ({ l, index }: { l: ItemForm; index: number }) => {
     const medido = l.medido > 0;
     // Medido por inteiro: a última medição já usou o total, que não muda mais
-    const totalTravado = medido && l.medido >= (parseQuantidade(l.quantidade) ?? 0);
-    const ajustado = l.total !== null && !aplicaDesconto;
+    const totalTravado = medido && l.medido >= (quantidadeValida(l) ?? 0);
+    const suprimido = l.suprimida > 0;
+    const ajustado = l.total !== null && !aplicaDesconto && !suprimido;
     const calculadoMask = formatValueToCurrencyMask(totalCalculado(l));
     const diferencaTotal = ajustado ? Math.round((totalLinha(l) - totalCalculado(l)) * 100) / 100 : 0;
     return (
@@ -516,11 +562,13 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
               placeholder="0,00"
               value={l.total ?? calculadoMask}
               display={<span className="font-semibold">{formatCurrency(totalLinha(l))}</span>}
-              disabled={totalTravado}
+              disabled={totalTravado || suprimido}
               title={
-                totalTravado
-                  ? "Item medido por inteiro: o total não muda mais"
-                  : "Ajustar o total para bater com a planilha de referência"
+                suprimido
+                  ? "Item com supressão: vale a quantidade restante × preço"
+                  : totalTravado
+                    ? "Item medido por inteiro: o total não muda mais"
+                    : "Ajustar o total para bater com a planilha de referência"
               }
               invalid={invalido(l, "total")}
               onChange={(e) => update(l.key, { total: maskCurrency(e.target.value) })}
@@ -551,6 +599,13 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
             <Lock size={11} />
             Medido {formatQuantidade(l.medido)} {l.unidade}: preço e unidade travados, quantidade mínima{" "}
             {formatQuantidade(l.medido)}
+          </p>
+        )}
+        {suprimido && (
+          <p className="mt-1 lg:pl-8 flex flex-wrap items-center gap-x-1 text-[11px] text-danger-text tabular-nums">
+            <CircleMinus size={11} />
+            Suprimido {formatQuantidade(l.suprimida)} {l.unidade} de {formatQuantidade(parseQuantidade(l.quantidade) ?? 0)}:
+            vale {formatQuantidade(quantidadeValida(l) ?? 0)} {l.unidade}
           </p>
         )}
         {ajustado && (
@@ -598,6 +653,15 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
           <SearchInput value={busca} onChange={setBusca} placeholder="Buscar item por código ou descrição..." />
           <Button variant="secondary" size="sm" icon={ClipboardPaste} onClick={() => setColando("")}>
             Colar do Excel
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={CircleMinus}
+            disabled={!linhas.some(preenchida)}
+            onClick={() => setSuprimindo(true)}
+          >
+            Supressões
           </Button>
         </div>
       </div>
@@ -744,6 +808,13 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
                   · com BDI {formatCurrency(totalComBdi)} · desconto {formatPercentual(desconto)} ·{" "}
                   {linhas.filter(preenchida).length} itens{medidos > 0 ? ` · ${medidos} já medidos` : ""}
                 </span>
+                {comSupressao.length > 0 && (
+                  <span className="text-danger-text tabular-nums">
+                    {" "}
+                    · {comSupressao.length} {comSupressao.length === 1 ? "supressão" : "supressões"} (−
+                    {formatCurrency(valorSuprimido)})
+                  </span>
+                )}
               </p>
               {valorOs !== null && (
                 <p
@@ -787,6 +858,30 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
           }}
           onClose={() => setColando(null)}
           onApply={aplicarColagem}
+        />
+      )}
+      {suprimindo && (
+        <SupressoesDialog
+          itens={linhas.flatMap((l, index) =>
+            preenchida(l)
+              ? [
+                  {
+                    key: l.key,
+                    posicao: index + 1,
+                    codigo: l.codigo,
+                    descricao: l.descricao,
+                    etapa: l.etapa,
+                    unidade: l.unidade,
+                    quantidade: parseQuantidade(l.quantidade) ?? 0,
+                    suprimida: l.suprimida,
+                    medido: l.medido,
+                    preco: precoEfetivo(l),
+                  },
+                ]
+              : [],
+          )}
+          onClose={() => setSuprimindo(false)}
+          onApply={aplicarSupressoes}
         />
       )}
       <ConfirmDialog
