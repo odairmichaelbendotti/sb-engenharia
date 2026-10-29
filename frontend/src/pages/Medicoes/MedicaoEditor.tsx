@@ -6,10 +6,11 @@ import { useMedicoes } from "../../store/medicoes";
 import { useUnsavedChangesGuard } from "../../hooks/useUnsavedChangesGuard";
 import { formatCurrency } from "../../utils/format-currency";
 import {
+  arredondaQtd,
   formatQuantidade,
   parseQuantidade,
-  sanitizeDecimalInput,
   quantidadeEfetiva,
+  sanitizeDecimalInput,
   toDecimalInput,
   valorAcumuladoItem,
 } from "../../utils/decimal";
@@ -116,7 +117,7 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
         suprimido: l.suprimido ?? 0,
         valorOrcado: l.valorOrcado,
         anterior: l.anterior,
-        maximo: Math.max(0, Math.round((l.orcado - l.anterior) * 1000) / 1000),
+        maximo: Math.max(0, arredondaQtd(l.orcado - l.anterior)),
       }));
     }
     return planilha.itens.map((i) => ({
@@ -473,7 +474,7 @@ function LinhaEditor({ l, quantidade, esta, valorEsta, onChange }: LinhaEditorPr
       </Td>
       <Td>
         <span className={cx("block", excede ? "text-danger-text font-semibold" : "text-text-primary")}>
-          {formatQuantidade(Math.round((l.maximo - esta) * 1000) / 1000)}
+          {formatQuantidade(arredondaQtd(l.maximo - esta))}
         </span>
         {esta > 0 && <span className="block text-[11px] text-text-muted">{formatCurrency(valorEsta)}</span>}
       </Td>

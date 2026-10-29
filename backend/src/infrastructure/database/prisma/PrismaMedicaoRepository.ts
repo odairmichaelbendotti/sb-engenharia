@@ -6,6 +6,7 @@ import {
   type PrecoBase,
   type RegraDesconto,
 } from "../../../domain/medicao/medicao-calc.js";
+import { itemComQtd, medicaoComQtd } from "./quantidade-db.js";
 import { somarQuantidades } from "../../../domain/medicao/medicao-resumo.js";
 import {
   buildPlanilhaMedicao,
@@ -82,7 +83,7 @@ async function loadPlanilha(tx: TransactionClient | typeof prisma, ordemServico_
     tx.ordemServicoItem.findMany({ where: { ordemServico_id }, orderBy: { ordem: "asc" }, select: ITEM_SELECT }),
     tx.medicao.findMany({ where: { ordemServico_id }, orderBy: { numero: "asc" }, select: MEDICAO_SELECT }),
   ]);
-  return { itens, medicoes };
+  return { itens: itens.map(itemComQtd), medicoes: medicoes.map(medicaoComQtd) };
 }
 
 /** Soma por item das medições fechadas, opcionalmente só as de número menor que `antesDe`. */
@@ -232,8 +233,8 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
         }),
         prisma.medicao.findMany({ where, orderBy: { numero: "asc" }, select: MEDICAO_SELECT }),
       ]);
-      for (const { ordemServico_id, ...item } of itens) planilhas.get(ordemServico_id)?.itens.push(item);
-      for (const medicao of medicoes) planilhas.get(medicao.ordemServico_id)?.medicoes.push(medicao);
+      for (const { ordemServico_id, ...item } of itens) planilhas.get(ordemServico_id)?.itens.push(itemComQtd(item));
+      for (const medicao of medicoes) planilhas.get(medicao.ordemServico_id)?.medicoes.push(medicaoComQtd(medicao));
       return planilhas;
     } catch (error) {
       rethrow(error, "Error loading the budgets");
@@ -606,7 +607,8 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
         },
       });
       if (!row) return null;
-      const { ordemServico: os, planilhaFechamento, ...medicao } = row;
+      const { ordemServico: os, planilhaFechamento, ...lida } = row;
+      const medicao = medicaoComQtd(lida);
 
       let planilha = medicao.status === "FECHADA" ? parsePlanilhaMedicao(planilhaFechamento) : null;
       if (!planilha) {

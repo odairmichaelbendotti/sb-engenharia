@@ -180,7 +180,7 @@ describe("planilha orçamentária do anexo", () => {
     descricao: `Serviço ${ordem}`,
     etapa: null,
     unidade: "m²",
-    quantidade: 10_000,
+    quantidade: 1_000_000,
     quantidadeSuprimida: 0,
     precoUnitario: 1676,
     valorTotal: null,
@@ -197,8 +197,8 @@ describe("planilha orçamentária do anexo", () => {
     const planilha = buildOrcamentoPlanilha({
       itens: [
         item(1, { etapa: "COBERTURA" }),
-        item(2, { etapa: "COBERTURA", quantidadeSuprimida: 4000 }),
-        item(3, { etapa: null, codigo: null, precoReferencia: null, precoUnitario: 2667, quantidade: 21_500, valorTotal: 57_340 }),
+        item(2, { etapa: "COBERTURA", quantidadeSuprimida: 400_000 }),
+        item(3, { etapa: null, codigo: null, precoReferencia: null, precoUnitario: 2667, quantidade: 2_150_000, valorTotal: 57_340 }),
       ],
       regraDesconto: "SCOAM",
       bdi: 21.19,

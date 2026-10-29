@@ -522,11 +522,11 @@ model OrdemServicoItem {
   // Etapa do orçamento (ex.: "Remoção/demolição"): os itens seguidos com a mesma etapa formam um grupo
   etapa         String?
   unidade       String
-  // Quantidade orçada em milésimos da unidade (3,5 m² = 3500)
-  quantidade    Int
-  // Supressão: parte da quantidade que saiu do contrato, em milésimos. O item fica na planilha e
+  // Quantidade orçada em cem-milésimos da unidade (5 casas: 3,5 m² = 350000)
+  quantidade    BigInt
+  // Supressão: parte da quantidade que saiu do contrato, na mesma escala. O item fica na planilha e
   // vale pela quantidade efetiva (quantidade − suprimida)
-  quantidadeSuprimida Int @default(0)
+  quantidadeSuprimida BigInt @default(0)
   // Centavos
   precoUnitario Int
   // Preço com BDI digitado, em centavos (só no modo COM_BDI; o unitário é ele com o desconto)
@@ -593,8 +593,8 @@ model Medicao {
 // Quantidade medida de um item; só existem linhas com quantidade maior que zero
 model MedicaoItem {
   id         String @id @default(uuid())
-  // Milésimos da unidade
-  quantidade Int
+  // Cem-milésimos da unidade (5 casas)
+  quantidade BigInt
 
   medicao_id String
   medicao    Medicao @relation(fields: [medicao_id], references: [id], onDelete: Cascade)

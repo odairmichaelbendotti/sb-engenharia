@@ -1,5 +1,5 @@
 import type { OrdemServicoUrgenciaValue } from "../entities/OrdemServico.js";
-import { fromMilesimos, quantidadeEfetiva, valorOrcadoItem } from "../medicao/medicao-calc.js";
+import { fromQtdInterna, quantidadeEfetiva, valorOrcadoItem } from "../medicao/medicao-calc.js";
 import { gruposPorEtapa } from "../medicao/planilha-medicao.js";
 import type { OrdemServicoDocumentData } from "../repositories/IOrdemServicoRepository.js";
 
@@ -210,10 +210,11 @@ export function formatEdificacao(
   return partes.length > 0 ? partes.join(" / ") : obra.identificacaoPatrimonial;
 }
 
-const qtdFormat = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+// A conta usa 5 casas; o documento mostra 2
+const qtdFormat = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function formatQtd(milesimos: number): string {
-  return qtdFormat.format(fromMilesimos(milesimos));
+  return qtdFormat.format(fromQtdInterna(milesimos));
 }
 
 function valorTabela(centavos: number): string {

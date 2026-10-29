@@ -2,6 +2,7 @@ import type {
   OrdemServicoStatusValue,
   PersistedOrdemServico,
 } from "../../../domain/entities/OrdemServico.js";
+import { itemComQtd } from "./quantidade-db.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import type {
   IOrdemServicoRepository,
@@ -151,7 +152,7 @@ async function aplicarDescontoTx(tx: Tx, id: string, desconto: number, valorEmpe
   if ((await tx.medicao.count({ where: { ordemServico_id: id, status: "FECHADA" } })) > 0) {
     throw new DomainError("Exclua as medições fechadas antes de definir o lote: os preços já medidos não mudam.");
   }
-  const { precos, valorOs } = aplicarDesconto(itens, desconto, os.regraDesconto);
+  const { precos, valorOs } = aplicarDesconto(itens.map(itemComQtd), desconto, os.regraDesconto);
   if (valorOs !== valorEmpenhos) {
     throw new DomainError("O orçamento da OS mudou durante a edição. Abra a OS de novo e salve.");
   }
@@ -597,7 +598,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
       return {
         ordemServico: withReais(ordemServico),
         temOrcamento: itens.length > 0,
-        itens,
+        itens: itens.map(itemComQtd),
         regraDesconto,
         empenhoDescricao: empenho.description,
         contrato: empenho.contrato,
@@ -618,7 +619,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
         where: { ordemServico_id: id },
         select: { quantidade: true, quantidadeSuprimida: true, precoUnitario: true, valorTotal: true },
       });
-      return itens.length === 0 ? null : itens.reduce((acc, item) => acc + valorOrcadoItem(item), 0);
+      return itens.length === 0 ? null : itens.reduce((acc, item) => acc + valorOrcadoItem(itemComQtd(item)), 0);
     } catch (error) {
       throw new DomainError("Error loading the budget of the ordem de serviço: " + error);
     }
@@ -639,7 +640,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
       return {
         precoBase: os.precoBase,
         regraDesconto: os.regraDesconto,
-        itens: os.itens,
+        itens: os.itens.map(itemComQtd),
         temMedicaoFechada: os._count.medicoes > 0,
       };
     } catch (error) {

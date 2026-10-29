@@ -1,9 +1,9 @@
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import {
-  INT_MAX,
+  QTD_MAX,
   precoComDesconto,
-  toMilesimos,
+  toQtdInterna,
   totalPorRegra,
   valorItem,
   type LinhaMedicaoInput,
@@ -121,11 +121,11 @@ export function parseOrcamentoItens(
       },
       ORDEM_SERVICO_ITEM_RULES,
     );
-    const quantidadeMil = toMilesimos(quantidade);
+    const quantidadeMil = toQtdInterna(quantidade);
     const informadoCent = Math.round(preco * 100);
     const aplicaDesconto = precoBase === "COM_BDI";
     const precoCent = aplicaDesconto ? precoComDesconto(informadoCent, desconto, regra) : informadoCent;
-    const quantidadeSuprimida = toMilesimos(suprimida);
+    const quantidadeSuprimida = toQtdInterna(suprimida);
     const totalCent = aplicaDesconto
       ? totalPorRegra(
           { quantidade: quantidadeMil, quantidadeSuprimida, precoUnitario: precoCent, precoReferencia: informadoCent },
@@ -176,8 +176,8 @@ export function parseMedicaoDados(body: Record<string, unknown>): MedicaoDadosIn
     const linha = (value ?? {}) as Record<string, unknown>;
     const quantidade = numero(linha.quantidade);
     if (!Number.isFinite(quantidade) || quantidade < 0) throw new DomainError("Invalid quantity in the medição");
-    const milesimos = toMilesimos(quantidade);
-    if (milesimos > INT_MAX) throw new DomainError("Invalid quantity in the medição");
+    const milesimos = toQtdInterna(quantidade);
+    if (milesimos > QTD_MAX) throw new DomainError("Invalid quantity in the medição");
     if (milesimos === 0) continue;
     linhas.push({ item_id: texto(linha.item_id), quantidade: milesimos });
   }

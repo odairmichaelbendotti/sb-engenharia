@@ -1,7 +1,7 @@
 import { Fragment, useState } from "react";
 import { AlertTriangle, CircleMinus } from "lucide-react";
 import { formatCurrency } from "../../utils/format-currency";
-import { formatQuantidade, parseQuantidade, sanitizeDecimalInput, toDecimalInput, valorItem } from "../../utils/decimal";
+import { arredondaQtd, formatQuantidade, parseQuantidade, sanitizeDecimalInput, toDecimalInput, valorItem } from "../../utils/decimal";
 import { cx } from "../../utils/cx";
 import { SearchInput } from "../../components/filters/SearchInput";
 import {
@@ -167,7 +167,7 @@ export function SupressoesDialog({ itens, onClose, onApply }: SupressoesDialogPr
                             </Td>
                             <Td className="hidden md:table-cell">
                               <span className={cx("block", s > 0 ? "text-text-primary" : "text-text-muted")}>
-                                {formatQuantidade(Math.max(0, Math.round((i.quantidade - s) * 1000) / 1000))} {i.unidade}
+                                {formatQuantidade(Math.max(0, arredondaQtd(i.quantidade - s)))} {i.unidade}
                               </span>
                               {s > 0 && !erro && (
                                 <span className="block text-[11px] text-danger-text tabular-nums">

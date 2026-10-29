@@ -5,8 +5,8 @@ import {
   computePanorama,
   divergenciaTotal,
   folgaValorTotal,
-  fromMilesimos,
-  toMilesimos,
+  fromQtdInterna,
+  toQtdInterna,
   validateMedicaoQuantidades,
   precoComDesconto,
   quantidadeEfetiva,
@@ -24,32 +24,41 @@ import {
 } from "./medicao-calc.js";
 
 // Reboco: 10 m² a R$ 50,00
-const reboco: ItemPlanilha = { id: "i-1", descricao: "Reboco", unidade: "m²", quantidade: 10_000, precoUnitario: 5000, valorTotal: null };
+const reboco: ItemPlanilha = { id: "i-1", descricao: "Reboco", unidade: "m²", quantidade: 1_000_000, precoUnitario: 5000, valorTotal: null };
 // Pintura: 3,333 m² a R$ 12,34 (valores que não fecham redondo)
-const pintura: ItemPlanilha = { id: "i-2", descricao: "Pintura", unidade: "m²", quantidade: 3333, precoUnitario: 1234, valorTotal: null };
+const pintura: ItemPlanilha = { id: "i-2", descricao: "Pintura", unidade: "m²", quantidade: 333_300, precoUnitario: 1234, valorTotal: null };
 
 const qtd = (entries: [string, number][] = []) => new Map(entries);
 
-describe("milésimos", () => {
+describe("quantidade com 5 casas", () => {
   it("converte sem o erro de ponto flutuante", () => {
-    expect(toMilesimos(0.1 + 0.2)).toBe(300);
-    expect(toMilesimos(3.5)).toBe(3500);
-    expect(toMilesimos(1.0005)).toBe(1001);
-    expect(fromMilesimos(3500)).toBe(3.5);
+    expect(toQtdInterna(0.1 + 0.2)).toBe(30_000);
+    expect(toQtdInterna(3.5)).toBe(350_000);
+    // Quantidades das planilhas com mais de 3 casas (OS02L5, OS-01-01)
+    expect(toQtdInterna(1.6245)).toBe(162_450);
+    expect(toQtdInterna(10.44736)).toBe(1_044_736);
+    expect(toQtdInterna(27.55375)).toBe(2_755_375);
+    // Mais de 5 casas é arredondado
+    expect(toQtdInterna(1.000005)).toBe(100_001);
+    expect(fromQtdInterna(350_000)).toBe(3.5);
+  });
+
+  it("a conta usa as 5 casas: 1,6245 m³ × 612,61 = 995,18 (truncado, como a planilha)", () => {
+    expect(valorItemTruncado(toQtdInterna(1.6245), 61_261)).toBe(99_518);
   });
 });
 
 describe("valorItem", () => {
   it("multiplica quantidade por preço e arredonda meio para cima", () => {
-    expect(valorItem(10_000, 5000)).toBe(50_000); // R$ 500,00
-    expect(valorItem(3333, 1234)).toBe(4113); // 3,333 × 12,34 = 41,12922
-    expect(valorItem(500, 1)).toBe(1); // 0,5 centavo sobe
-    expect(valorItem(499, 1)).toBe(0);
+    expect(valorItem(1_000_000, 5000)).toBe(50_000); // R$ 500,00
+    expect(valorItem(333_300, 1234)).toBe(4113); // 3,333 × 12,34 = 41,12922
+    expect(valorItem(50_000, 1)).toBe(1); // 0,5 centavo sobe
+    expect(valorItem(49_900, 1)).toBe(0);
   });
 
   it("não perde precisão com valores grandes", () => {
     // 2.000.000 un × R$ 20.000.000,00 (o produto em milésimos × centavos passa de 2^53)
-    expect(valorItem(2_000_000_000, 2_000_000_000)).toBe(4_000_000_000_000_000);
+    expect(valorItem(200_000_000_000, 2_000_000_000)).toBe(4_000_000_000_000_000);
   });
 });
 
@@ -57,26 +66,26 @@ describe("computePanorama", () => {
   it("calcula medido, saldo e conclusão", () => {
     const { itens, totais } = computePanorama({
       itens: [reboco, pintura],
-      medidoFechado: qtd([["i-1", 3000]]),
-      rascunho: qtd([["i-1", 7000]]),
+      medidoFechado: qtd([["i-1", 300_000]]),
+      rascunho: qtd([["i-1", 700_000]]),
     });
-    expect(itens[0]).toMatchObject({ medido: 3000, saldo: 7000, valorMedido: 15_000, valorSaldo: 35_000, completo: false });
+    expect(itens[0]).toMatchObject({ medido: 300_000, saldo: 700_000, valorMedido: 15_000, valorSaldo: 35_000, completo: false });
     expect(itens[0]!.excedeSaldo).toBe(false);
-    expect(itens[1]).toMatchObject({ medido: 0, saldo: 3333, completo: false });
+    expect(itens[1]).toMatchObject({ medido: 0, saldo: 333_300, completo: false });
     expect(totais.valorOrcado).toBe(50_000 + 4113);
     expect(totais.valorRascunho).toBe(35_000);
   });
 
   it("marca item concluído exatamente quando o saldo zera", () => {
-    const { itens } = computePanorama({ itens: [reboco], medidoFechado: qtd([["i-1", 10_000]]), rascunho: qtd() });
+    const { itens } = computePanorama({ itens: [reboco], medidoFechado: qtd([["i-1", 1_000_000]]), rascunho: qtd() });
     expect(itens[0]).toMatchObject({ saldo: 0, valorSaldo: 0, completo: true });
   });
 
   it("sinaliza rascunho acima do saldo", () => {
     const { itens } = computePanorama({
       itens: [reboco],
-      medidoFechado: qtd([["i-1", 8000]]),
-      rascunho: qtd([["i-1", 3000]]),
+      medidoFechado: qtd([["i-1", 800_000]]),
+      rascunho: qtd([["i-1", 300_000]]),
     });
     expect(itens[0]!.excedeSaldo).toBe(true);
   });
@@ -86,14 +95,14 @@ describe("computeLinhasMedicao", () => {
   it("monta anterior, esta, acumulado e saldo", () => {
     const { linhas, totais } = computeLinhasMedicao({
       itens: [reboco],
-      anterior: qtd([["i-1", 3000]]),
-      esta: qtd([["i-1", 2500]]),
+      anterior: qtd([["i-1", 300_000]]),
+      esta: qtd([["i-1", 250_000]]),
     });
     expect(linhas[0]).toMatchObject({
-      anterior: 3000,
-      esta: 2500,
-      acumulado: 5500,
-      saldo: 4500,
+      anterior: 300_000,
+      esta: 250_000,
+      acumulado: 550_000,
+      saldo: 450_000,
       valorAnterior: 15_000,
       valorEsta: 12_500,
       valorAcumulado: 27_500,
@@ -110,7 +119,7 @@ describe("computeLinhasMedicao", () => {
       const { linhas } = computeLinhasMedicao({
         itens: [pintura],
         anterior: qtd([["i-2", anterior]]),
-        esta: qtd([["i-2", 1111]]),
+        esta: qtd([["i-2", 111_100]]),
       });
       soma += linhas[0]!.valorEsta;
       anterior += 1111;
@@ -124,18 +133,18 @@ describe("total ajustado", () => {
   const truncado: ItemPlanilha = { ...pintura, valorTotal: 4112 };
 
   it("folga de meio centavo por unidade mais um centavo", () => {
-    expect(folgaValorTotal(1000)).toBe(2);
-    expect(folgaValorTotal(3333)).toBe(3);
-    expect(folgaValorTotal(100_000)).toBe(51);
+    expect(folgaValorTotal(100_000)).toBe(2);
+    expect(folgaValorTotal(333_300)).toBe(3);
+    expect(folgaValorTotal(10_000_000)).toBe(51);
   });
 
   it("vale como orçado e como acumulado do item medido por inteiro", () => {
     expect(valorOrcadoItem(truncado)).toBe(4112);
     expect(valorOrcadoItem(pintura)).toBe(4113);
-    expect(valorAcumuladoItem(truncado, 3333)).toBe(4112);
+    expect(valorAcumuladoItem(truncado, 333_300)).toBe(4112);
     // Parcial segue quantidade × preço, limitado ao total
-    expect(valorAcumuladoItem(truncado, 1111)).toBe(valorItem(1111, 1234));
-    expect(valorAcumuladoItem({ ...pintura, valorTotal: 1000 }, 1111)).toBe(1000);
+    expect(valorAcumuladoItem(truncado, 111_100)).toBe(valorItem(111_100, 1234));
+    expect(valorAcumuladoItem({ ...pintura, valorTotal: 1000 }, 111_100)).toBe(1000);
   });
 
   it("a soma das medições bate com o total ajustado, para menos e para mais", () => {
@@ -143,7 +152,7 @@ describe("total ajustado", () => {
       const item: ItemPlanilha = { ...pintura, valorTotal };
       let anterior = 0;
       let soma = 0;
-      for (const esta of [1111, 1111, 1111]) {
+      for (const esta of [111_100, 111_100, 111_100]) {
         const { linhas } = computeLinhasMedicao({
           itens: [item],
           anterior: qtd([["i-2", anterior]]),
@@ -160,7 +169,7 @@ describe("total ajustado", () => {
   it("o panorama zera o saldo em valor quando o item é medido por inteiro", () => {
     const { itens, totais } = computePanorama({
       itens: [truncado],
-      medidoFechado: qtd([["i-2", 3333]]),
+      medidoFechado: qtd([["i-2", 333_300]]),
       rascunho: qtd(),
     });
     expect(itens[0]).toMatchObject({ valorOrcado: 4112, valorMedido: 4112, valorSaldo: 0 });
@@ -169,39 +178,39 @@ describe("total ajustado", () => {
 });
 
 describe("validateMedicaoQuantidades", () => {
-  const base = { itens: [reboco, pintura], medidoFechado: qtd([["i-1", 3000]]) };
+  const base = { itens: [reboco, pintura], medidoFechado: qtd([["i-1", 300_000]]) };
 
   it("aceita quantidade até o saldo", () => {
-    expect(() => validateMedicaoQuantidades({ ...base, linhas: [{ item_id: "i-1", quantidade: 7000 }] })).not.toThrow();
+    expect(() => validateMedicaoQuantidades({ ...base, linhas: [{ item_id: "i-1", quantidade: 700_000 }] })).not.toThrow();
   });
 
   it("recusa quantidade acima do saldo, com o máximo na mensagem", () => {
-    expect(() => validateMedicaoQuantidades({ ...base, linhas: [{ item_id: "i-1", quantidade: 8000 }] })).toThrow(
-      /max 7 m²/,
+    expect(() => validateMedicaoQuantidades({ ...base, linhas: [{ item_id: "i-1", quantidade: 800_000 }] })).toThrow(
+      /max 7,00 m²/,
     );
   });
 
   it("recusa item concluído, item de fora, repetido e quantidade inválida", () => {
-    const concluido = { itens: [reboco], medidoFechado: qtd([["i-1", 10_000]]) };
-    expect(() => validateMedicaoQuantidades({ ...concluido, linhas: [{ item_id: "i-1", quantidade: 1 }] })).toThrow(
+    const concluido = { itens: [reboco], medidoFechado: qtd([["i-1", 1_000_000]]) };
+    expect(() => validateMedicaoQuantidades({ ...concluido, linhas: [{ item_id: "i-1", quantidade: 100 }] })).toThrow(
       /fully measured/,
     );
-    expect(() => validateMedicaoQuantidades({ ...base, linhas: [{ item_id: "x", quantidade: 1 }] })).toThrow(
+    expect(() => validateMedicaoQuantidades({ ...base, linhas: [{ item_id: "x", quantidade: 100 }] })).toThrow(
       /not in the budget/,
     );
     expect(() =>
       validateMedicaoQuantidades({
         ...base,
         linhas: [
-          { item_id: "i-2", quantidade: 1 },
-          { item_id: "i-2", quantidade: 1 },
+          { item_id: "i-2", quantidade: 100 },
+          { item_id: "i-2", quantidade: 100 },
         ],
       }),
     ).toThrow(/twice/);
     expect(() => validateMedicaoQuantidades({ ...base, linhas: [{ item_id: "i-2", quantidade: 0 }] })).toThrow(
       /Invalid quantity/,
     );
-    expect(() => validateMedicaoQuantidades({ ...base, linhas: [{ item_id: "i-2", quantidade: 1.5 }] })).toThrow(
+    expect(() => validateMedicaoQuantidades({ ...base, linhas: [{ item_id: "i-2", quantidade: 100.5 }] })).toThrow(
       /Invalid quantity/,
     );
   });
@@ -220,19 +229,19 @@ describe("validateOrcamentoChange", () => {
     precoReferencia: null,
     ...overrides,
   });
-  const medido = qtd([["i-1", 3000]]);
+  const medido = qtd([["i-1", 300_000]]);
   const run = (novos: OrcamentoItemInput[]) =>
     validateOrcamentoChange({ atuais: [reboco, pintura], novos, medidoFechado: medido });
 
   it("aceita incluir item e mexer à vontade no que não foi medido", () => {
     expect(() =>
       run([
-        input(reboco, { quantidade: 12_000, descricao: "Reboco interno" }),
+        input(reboco, { quantidade: 1_200_000, descricao: "Reboco interno" }),
         {
           codigo: "87529",
           descricao: "Chapisco",
           unidade: "m²",
-          quantidade: 5000,
+          quantidade: 500_000,
           quantidadeSuprimida: 0,
           precoUnitario: 800,
           valorTotal: null,
@@ -247,8 +256,8 @@ describe("validateOrcamentoChange", () => {
   });
 
   it("recusa reduzir abaixo do medido e mudar preço ou unidade de item medido", () => {
-    expect(() => run([input(reboco, { quantidade: 2999 })])).toThrow(/lower than what was already measured \(3 m²\)/);
-    expect(() => run([input(reboco, { quantidade: 3000 })])).not.toThrow();
+    expect(() => run([input(reboco, { quantidade: 299_900 })])).toThrow(/lower than what was already measured \(3,00 m²\)/);
+    expect(() => run([input(reboco, { quantidade: 300_000 })])).not.toThrow();
     expect(() => run([input(reboco, { precoUnitario: 5100 })])).toThrow(/preço unitário/);
     expect(() => run([input(reboco, { unidade: "m³" })])).toThrow(/unidade/);
   });
@@ -258,7 +267,7 @@ describe("validateOrcamentoChange", () => {
       codigo: null,
       descricao: "X",
       unidade: "un",
-      quantidade: 1000,
+      quantidade: 100_000,
       quantidadeSuprimida: 0,
       precoUnitario: 100,
       valorTotal: null,
@@ -330,18 +339,18 @@ describe("desconto e totais do orçamento", () => {
 
   it("com o desconto aplicado pelo sistema, o total com BDI soma o preço de referência", () => {
     const itens = [
-      { quantidade: 2000, precoReferencia: 1000, precoUnitario: precoComDesconto(1000, 17), valorTotal: null },
-      { quantidade: 3333, precoReferencia: 1234, precoUnitario: precoComDesconto(1234, 17), valorTotal: null },
+      { quantidade: 200_000, precoReferencia: 1000, precoUnitario: precoComDesconto(1000, 17), valorTotal: null },
+      { quantidade: 333_300, precoReferencia: 1234, precoUnitario: precoComDesconto(1234, 17), valorTotal: null },
     ];
-    // 2 × 10,00 + 3,333 × 12,34 = 20,00 + 41,13 / com desconto 2 × 8,30 + 3,333 × 10,24 = 16,60 + 34,13
+    // 2 × 10,00 + 3,333 × 12,34 = 20,00 + 41,12 (truncado, como a planilha) / com desconto 16,60 + 34,13
     expect(totaisOrcamento({ itens, precoBase: "COM_BDI", desconto: 17 })).toEqual({
-      totalComBdi: 6113,
+      totalComBdi: 6112,
       valorOs: 5073,
     });
   });
 
   it("com o preço já descontado, o total com BDI tira o desconto do valor da OS", () => {
-    const itens = [{ quantidade: 1000, precoReferencia: null, precoUnitario: 7520, valorTotal: 7519 }];
+    const itens = [{ quantidade: 100_000, precoReferencia: null, precoUnitario: 7520, valorTotal: 7519 }];
     // Total ajustado conta no valor da OS; 75,19 ÷ 0,752 = 99,99
     expect(totaisOrcamento({ itens, precoBase: "COM_BDI_E_DESCONTO", desconto: 24.8 })).toEqual({
       totalComBdi: 9999,
@@ -352,21 +361,21 @@ describe("desconto e totais do orçamento", () => {
   it("aplica outro desconto nos itens com preço de referência (OS antiga recebe o lote)", () => {
     const itens = [
       // Lançado só com BDI quando a OS estava sem lote (desconto 0)
-      { id: "a", quantidade: 2000, precoReferencia: 1000, precoUnitario: 1000, valorTotal: null },
-      { id: "b", quantidade: 3333, precoReferencia: 1234, precoUnitario: 1234, valorTotal: null },
+      { id: "a", quantidade: 200_000, precoReferencia: 1000, precoUnitario: 1000, valorTotal: null },
+      { id: "b", quantidade: 333_300, precoReferencia: 1234, precoUnitario: 1234, valorTotal: null },
       // Já com desconto: não muda, nem o total ajustado
-      { id: "c", quantidade: 1000, precoReferencia: null, precoUnitario: 7520, valorTotal: 7519 },
+      { id: "c", quantidade: 100_000, precoReferencia: null, precoUnitario: 7520, valorTotal: 7519 },
     ];
-    // Total da linha: 20,00 × 0,752 = 15,04; 3,333 × 12,34 × 0,752 = 30,9293 → 30,93; + 75,19
+    // Total da linha: 20,00 × 0,752 = 15,04; 3,333 × 12,34 = 41,12 (truncado) × 0,752 = 30,92; + 75,19
     expect(aplicarDesconto(itens, 24.8)).toEqual({
       precos: [
         { id: "a", precoUnitario: 752, valorTotal: null },
-        { id: "b", precoUnitario: 928, valorTotal: null },
+        { id: "b", precoUnitario: 928, valorTotal: 3092 },
       ],
-      valorOs: 12116,
+      valorOs: 12115,
     });
-    // Mesmo desconto: nada muda
-    expect(aplicarDesconto(itens, 0).precos).toEqual([]);
+    // Sem desconto o preço não muda; o total da linha fica o com BDI truncado (41,12, não 41,13)
+    expect(aplicarDesconto(itens, 0).precos).toEqual([{ id: "b", precoUnitario: 1234, valorTotal: 4112 }]);
     // SCOAM: 12,34 − TRUNCAR(3,06032) = 9,28; 3,333 × 9,28 = 30,93024 → total truncado 30,93 (igual ao arredondado)
     expect(aplicarDesconto(itens, 24.8, "SCOAM")).toEqual({
       precos: [
@@ -384,30 +393,30 @@ describe("desconto e totais do orçamento", () => {
     expect(precoComDesconto(77, 30.6, "SCOAM")).toBe(54);
     expect(precoComDesconto(77, 30.6, "SIMPLES")).toBe(53);
     // 235 × 16,77 = 3.940,95 exato: sem total ajustado
-    expect(totalPorRegra({ quantidade: 235_000, precoUnitario: 1677, precoReferencia: 2415 }, "SCOAM", 30.6)).toBeNull();
+    expect(totalPorRegra({ quantidade: 23_500_000, precoUnitario: 1677, precoReferencia: 2415 }, "SCOAM", 30.6)).toBeNull();
     // 21,5 × 26,67 = 573,405 → 573,40 (o arredondado seria 573,41)
-    expect(valorItemTruncado(21_500, 2667)).toBe(57_340);
-    expect(totalPorRegra({ quantidade: 21_500, precoUnitario: 2667, precoReferencia: 3842 }, "SCOAM", 30.6)).toBe(57_340);
+    expect(valorItemTruncado(2_150_000, 2667)).toBe(57_340);
+    expect(totalPorRegra({ quantidade: 2_150_000, precoUnitario: 2667, precoReferencia: 3842 }, "SCOAM", 30.6)).toBe(57_340);
     expect(
-      totalPorRegra({ quantidade: 21_500, quantidadeSuprimida: 500, precoUnitario: 2667, precoReferencia: 3842 }, "SCOAM", 30.6),
+      totalPorRegra({ quantidade: 2_150_000, quantidadeSuprimida: 50_000, precoUnitario: 2667, precoReferencia: 3842 }, "SCOAM", 30.6),
     ).toBeNull();
   });
 
   it("desconto simples sobre o total da linha, sem cortar o preço unitário antes (planilha da OS01L3)", () => {
     // 235 × 0,82 = 192,70 × 0,694 = 133,7338 → 133,73 (e não 235 × 0,56 = 131,60)
-    expect(totalLinhaComDesconto(235_000, 82, 30.6)).toBe(13_373);
+    expect(totalLinhaComDesconto(23_500_000, 82, 30.6)).toBe(13_373);
     expect(precoComDesconto(82, 30.6)).toBe(57);
-    expect(totalPorRegra({ quantidade: 235_000, precoUnitario: 57, precoReferencia: 82 }, "SIMPLES", 30.6)).toBe(13_373);
+    expect(totalPorRegra({ quantidade: 23_500_000, precoUnitario: 57, precoReferencia: 82 }, "SIMPLES", 30.6)).toBe(13_373);
     // 6.384,95 × 0,694 = 4.431,1553 → 4.431,16
-    expect(totalLinhaComDesconto(235_000, 2717, 30.6)).toBe(443_116);
+    expect(totalLinhaComDesconto(23_500_000, 2717, 30.6)).toBe(443_116);
     // 1 × 54,01 × 0,694 = 37,48: igual a quantidade × preço, sem total ajustado
-    expect(totalPorRegra({ quantidade: 1000, precoUnitario: 3748, precoReferencia: 5401 }, "SIMPLES", 30.6)).toBeNull();
+    expect(totalPorRegra({ quantidade: 100_000, precoUnitario: 3748, precoReferencia: 5401 }, "SIMPLES", 30.6)).toBeNull();
   });
 
   it("OS01L3 nova (total com BDI 11.303,70, lote de 30,6%): R$ 7.844,76, igual à planilha", () => {
     const planilha: [number, number][] = [
-      [1000, 5401], [1000, 25624], [235_000, 82], [235_000, 2717], [21_500, 1108], [21_500, 4076],
-      [23_000, 10978], [1000, 2749], [3000, 16743], [1000, 2052], [1000, 996], [4000, 5401],
+      [100_000, 5401], [100_000, 25624], [23_500_000, 82], [23_500_000, 2717], [2_150_000, 1108], [2_150_000, 4076],
+      [2_300_000, 10978], [100_000, 2749], [300_000, 16743], [100_000, 2052], [100_000, 996], [400_000, 5401],
     ];
     const itens = planilha.map(([quantidade, precoReferencia], i) => ({
       id: String(i), quantidade, precoReferencia, precoUnitario: precoReferencia, valorTotal: null,
@@ -419,8 +428,8 @@ describe("desconto e totais do orçamento", () => {
 
   it("OS01L3 antiga (lote de 30,6%): R$ 7.261,49 na regra simples e R$ 7.265,48 na SCOAM", () => {
     const planilha: [number, number][] = [
-      [1000, 5357], [1000, 25335], [235_000, 77], [235_000, 2415], [21_500, 1072], [21_500, 3842],
-      [23_000, 10744], [1000, 2811], [3000, 16681], [1000, 2016], [1000, 952], [4000, 5357],
+      [100_000, 5357], [100_000, 25335], [23_500_000, 77], [23_500_000, 2415], [2_150_000, 1072], [2_150_000, 3842],
+      [2_300_000, 10744], [100_000, 2811], [300_000, 16681], [100_000, 2016], [100_000, 952], [400_000, 5357],
     ];
     const itens = planilha.map(([quantidade, precoReferencia], i) => ({
       id: String(i), quantidade, precoReferencia, precoUnitario: precoReferencia, valorTotal: null,
@@ -433,40 +442,40 @@ describe("desconto e totais do orçamento", () => {
 
 describe("supressão", () => {
   // Reboco de 10 m² com 4 m² suprimidos: valem 6 m²
-  const suprimido: ItemPlanilha = { ...reboco, quantidadeSuprimida: 4000 };
+  const suprimido: ItemPlanilha = { ...reboco, quantidadeSuprimida: 400_000 };
   const inteiro: ItemPlanilha = { ...pintura, quantidadeSuprimida: pintura.quantidade };
 
   it("o orçado, o saldo e o valor saem da quantidade efetiva", () => {
-    expect(quantidadeEfetiva(suprimido)).toBe(6000);
+    expect(quantidadeEfetiva(suprimido)).toBe(600_000);
     expect(valorOrcadoItem(suprimido)).toBe(30_000);
-    const { itens, totais } = computePanorama({ itens: [suprimido, inteiro], medidoFechado: qtd([["i-1", 2000]]), rascunho: qtd() });
-    expect(itens[0]).toMatchObject({ orcado: 6000, suprimido: 4000, saldo: 4000, valorSaldo: 20_000, completo: false });
-    expect(itens[1]).toMatchObject({ orcado: 0, suprimido: 3333, valorOrcado: 0, saldo: 0, completo: true });
+    const { itens, totais } = computePanorama({ itens: [suprimido, inteiro], medidoFechado: qtd([["i-1", 200_000]]), rascunho: qtd() });
+    expect(itens[0]).toMatchObject({ orcado: 600_000, suprimido: 400_000, saldo: 400_000, valorSaldo: 20_000, completo: false });
+    expect(itens[1]).toMatchObject({ orcado: 0, suprimido: 333_300, valorOrcado: 0, saldo: 0, completo: true });
     expect(totais.valorOrcado).toBe(30_000);
   });
 
   it("a supressão ignora o total ajustado da quantidade cheia", () => {
-    const ajustado: ItemPlanilha = { ...pintura, valorTotal: 4112, quantidadeSuprimida: 333 };
-    expect(valorOrcadoItem(ajustado)).toBe(valorItem(3000, 1234));
-    expect(valorAcumuladoItem(ajustado, 3000)).toBe(valorItem(3000, 1234));
+    const ajustado: ItemPlanilha = { ...pintura, valorTotal: 4112, quantidadeSuprimida: 33_300 };
+    expect(valorOrcadoItem(ajustado)).toBe(valorItem(300_000, 1234));
+    expect(valorAcumuladoItem(ajustado, 300_000)).toBe(valorItem(300_000, 1234));
   });
 
   it("as linhas da medição levam o orçado efetivo e a supressão", () => {
-    const { linhas } = computeLinhasMedicao({ itens: [suprimido], anterior: qtd([["i-1", 2000]]), esta: qtd([["i-1", 4000]]) });
-    expect(linhas[0]).toMatchObject({ orcado: 6000, suprimido: 4000, acumulado: 6000, saldo: 0, valorSaldo: 0 });
+    const { linhas } = computeLinhasMedicao({ itens: [suprimido], anterior: qtd([["i-1", 200_000]]), esta: qtd([["i-1", 400_000]]) });
+    expect(linhas[0]).toMatchObject({ orcado: 600_000, suprimido: 400_000, acumulado: 600_000, saldo: 0, valorSaldo: 0 });
   });
 
   it("a medição não passa do saldo efetivo nem mede item suprimido por inteiro", () => {
     const base = { itens: [suprimido, inteiro], medidoFechado: qtd() };
-    expect(() => validateMedicaoQuantidades({ ...base, linhas: [{ item_id: "i-1", quantidade: 6000 }] })).not.toThrow();
-    expect(() => validateMedicaoQuantidades({ ...base, linhas: [{ item_id: "i-1", quantidade: 6001 }] })).toThrow(/max 6 m²/);
-    expect(() => validateMedicaoQuantidades({ ...base, linhas: [{ item_id: "i-2", quantidade: 1 }] })).toThrow(/suppressed/);
+    expect(() => validateMedicaoQuantidades({ ...base, linhas: [{ item_id: "i-1", quantidade: 600_000 }] })).not.toThrow();
+    expect(() => validateMedicaoQuantidades({ ...base, linhas: [{ item_id: "i-1", quantidade: 600_100 }] })).toThrow(/max 6,00 m²/);
+    expect(() => validateMedicaoQuantidades({ ...base, linhas: [{ item_id: "i-2", quantidade: 100 }] })).toThrow(/suppressed/);
   });
 
   it("o total com BDI e o novo desconto também saem da quantidade efetiva", () => {
     const comReferencia = { ...suprimido, precoReferencia: 6000 };
     expect(totaisOrcamento({ itens: [comReferencia], precoBase: "COM_BDI", desconto: 0 }).totalComBdi).toBe(36_000);
-    expect(aplicarDesconto([comReferencia], 25).valorOs).toBe(valorItem(6000, 4500));
+    expect(aplicarDesconto([comReferencia], 25).valorOs).toBe(valorItem(600_000, 4500));
   });
 
   describe("no orçamento", () => {
@@ -487,19 +496,19 @@ describe("supressão", () => {
       validateOrcamentoChange({ atuais: [reboco], novos: [item], medidoFechado: qtd([["i-1", medido]]) });
 
     it("aceita de zero até a quantidade inteira", () => {
-      expect(() => run(novo({ quantidadeSuprimida: 4000 }))).not.toThrow();
-      expect(() => run(novo({ quantidadeSuprimida: 10_000 }))).not.toThrow();
+      expect(() => run(novo({ quantidadeSuprimida: 400_000 }))).not.toThrow();
+      expect(() => run(novo({ quantidadeSuprimida: 1_000_000 }))).not.toThrow();
     });
 
     it("recusa supressão negativa, acima da quantidade ou com total ajustado", () => {
       expect(() => run(novo({ quantidadeSuprimida: -1 }))).toThrow(/quantidade suprimida/);
-      expect(() => run(novo({ quantidadeSuprimida: 10_001 }))).toThrow(/quantidade suprimida/);
-      expect(() => run(novo({ quantidadeSuprimida: 1000, valorTotal: 50_001 }))).toThrow(/suppressed item/);
+      expect(() => run(novo({ quantidadeSuprimida: 1_000_100 }))).toThrow(/quantidade suprimida/);
+      expect(() => run(novo({ quantidadeSuprimida: 100_000, valorTotal: 50_001 }))).toThrow(/suppressed item/);
     });
 
     it("não deixa a supressão alcançar o que já foi medido", () => {
-      expect(() => run(novo({ quantidadeSuprimida: 7000 }), 3000)).not.toThrow();
-      expect(() => run(novo({ quantidadeSuprimida: 7001 }), 3000)).toThrow(/already measured/);
+      expect(() => run(novo({ quantidadeSuprimida: 700_000 }), 300_000)).not.toThrow();
+      expect(() => run(novo({ quantidadeSuprimida: 700_100 }), 300_000)).toThrow(/already measured/);
     });
   });
 });
@@ -512,24 +521,23 @@ describe("divergência", () => {
 });
 
 describe("orçamento com um modo só", () => {
-  it("o total com BDI da regra SCOAM soma os totais truncados, como a planilha", () => {
-    // 21,5 × 38,42 = 826,03 (truncado) e 826,03 (arredondado: 826,030); 21,5 × 10,72 = 230,48
-    // 3,333 × 12,34 = 41,12922 → 41,12 truncado e 41,13 arredondado
-    const itens = [{ quantidade: 3333, precoReferencia: 1234, precoUnitario: 927, valorTotal: null }];
+  it("o total com BDI soma os totais das linhas truncados, como a planilha, nas duas regras", () => {
+    // 3,333 × 12,34 = 41,12922 → 41,12
+    const itens = [{ quantidade: 333_300, precoReferencia: 1234, precoUnitario: 927, valorTotal: null }];
     expect(totaisOrcamento({ itens, precoBase: "COM_BDI", desconto: 24.8, regra: "SCOAM" }).totalComBdi).toBe(4112);
-    expect(totaisOrcamento({ itens, precoBase: "COM_BDI", desconto: 24.8 }).totalComBdi).toBe(4113);
+    expect(totaisOrcamento({ itens, precoBase: "COM_BDI", desconto: 24.8 }).totalComBdi).toBe(4112);
   });
 
   it("mantém o total ajustado gravado enquanto o item não muda", () => {
-    const atual = { id: "i-3", quantidade: 27_554, quantidadeSuprimida: 0, precoUnitario: 5338, valorTotal: 147_081 };
+    const atual = { id: "i-3", quantidade: 2_755_400, quantidadeSuprimida: 0, precoUnitario: 5338, valorTotal: 147_081 };
     const novo: OrcamentoItemInput = {
       id: "i-3", codigo: "87777", descricao: "Emboço", etapa: null, unidade: "m²",
-      quantidade: 27_554, quantidadeSuprimida: 0, precoUnitario: 5338, valorTotal: 147_083, precoReferencia: 8554,
+      quantidade: 2_755_400, quantidadeSuprimida: 0, precoUnitario: 5338, valorTotal: 147_083, precoReferencia: 8554,
     };
     expect(manterTotaisAjustados([atual], [novo])[0]!.valorTotal).toBe(147_081);
     // Mudou a quantidade, a supressão ou o preço: vale o calculado pela regra
-    expect(manterTotaisAjustados([atual], [{ ...novo, quantidade: 28_000 }])[0]!.valorTotal).toBe(147_083);
-    expect(manterTotaisAjustados([atual], [{ ...novo, quantidadeSuprimida: 1000 }])[0]!.valorTotal).toBe(147_083);
+    expect(manterTotaisAjustados([atual], [{ ...novo, quantidade: 2_800_000 }])[0]!.valorTotal).toBe(147_083);
+    expect(manterTotaisAjustados([atual], [{ ...novo, quantidadeSuprimida: 100_000 }])[0]!.valorTotal).toBe(147_083);
     expect(manterTotaisAjustados([atual], [{ ...novo, id: undefined }])[0]!.valorTotal).toBe(147_083);
     expect(manterTotaisAjustados([{ ...atual, valorTotal: null }], [novo])[0]!.valorTotal).toBe(147_083);
   });

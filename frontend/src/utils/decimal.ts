@@ -1,6 +1,21 @@
 import type { RegraDesconto } from "../../types/medicao";
 
-// Números digitados com vírgula (pt-BR) e as contas de quantidade × preço das medições
+// Números digitados com vírgula (pt-BR) e as contas de quantidade × preço das medições.
+// Quantidade: a conta usa 5 casas (como as planilhas e o backend, QTD_ESCALA); a tela mostra 2.
+
+export const QTD_CASAS = 5;
+const QTD_ESCALA = 100_000;
+const QTD_ESCALA_N = 100_000n;
+
+/** Quantidade em unidade interna (inteiro com 5 casas), sem o resto do ponto flutuante. */
+export function qtdInterna(quantidade: number) {
+  return Math.round(Number((quantidade * QTD_ESCALA).toFixed(2)));
+}
+
+/** Quantidade arredondada nas 5 casas da conta. */
+export function arredondaQtd(quantidade: number) {
+  return qtdInterna(quantidade) / QTD_ESCALA;
+}
 
 /** Número digitado com vírgula ("24,8") → número */
 export function parseDecimal(value: string) {
@@ -12,34 +27,39 @@ export function toDecimalInput(value: number) {
 }
 
 /** Filtra a digitação: só dígitos e uma vírgula, com no máximo `casas` decimais. */
-export function sanitizeDecimalInput(text: string, casas = 3) {
+export function sanitizeDecimalInput(text: string, casas = QTD_CASAS) {
   const limpo = text.replace(/\./g, ",").replace(/[^\d,]/g, "");
   const [inteiro = "", ...resto] = limpo.split(",");
   if (resto.length === 0) return inteiro;
   return `${inteiro},${resto.join("").slice(0, casas)}`;
 }
 
-/** Quantidade digitada → número com até 3 casas; null se vazia ou inválida. */
+/** Quantidade digitada → número com até 5 casas; null se vazia ou inválida. */
 export function parseQuantidade(text: string): number | null {
   if (!text.trim()) return null;
   const valor = parseDecimal(text);
-  return Number.isFinite(valor) ? Math.round(valor * 1000) / 1000 : null;
+  return Number.isFinite(valor) ? arredondaQtd(valor) : null;
 }
 
-const quantidadeFormat = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+const quantidadeFormat = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-/** 3.5 → "3,50"; 3.125 → "3,125" (mesmo formato do PDF da medição) */
+/** Sempre 2 casas na tela (a conta usa 5): 3.5 → "3,50"; 10.44736 → "10,45" (igual ao PDF) */
 export function formatQuantidade(valor: number) {
   return quantidadeFormat.format(valor);
 }
 
 /**
  * Valor em reais de uma quantidade de um item, arredondado ao centavo como no backend
- * (espelha `valorItem` de backend/src/domain/medicao/medicao-calc.ts: milésimos × centavos).
+ * (espelha `valorItem` de backend/src/domain/medicao/medicao-calc.ts: quantidade interna × centavos).
  */
 export function valorItem(quantidade: number, precoUnitario: number) {
-  const produto = BigInt(Math.round(quantidade * 1000)) * BigInt(Math.round(precoUnitario * 100));
-  return Number((produto + 500n) / 1000n) / 100;
+  const produto = BigInt(qtdInterna(quantidade)) * BigInt(Math.round(precoUnitario * 100));
+  return Number((produto + QTD_ESCALA_N / 2n) / QTD_ESCALA_N) / 100;
+}
+
+/** Quantidade × preço truncado no centavo (espelha `valorItemTruncado` do backend). */
+function valorItemTruncado(quantidade: number, preco: number) {
+  return Number((BigInt(qtdInterna(quantidade)) * BigInt(Math.round(preco * 100))) / QTD_ESCALA_N) / 100;
 }
 
 /**
@@ -48,7 +68,7 @@ export function valorItem(quantidade: number, precoUnitario: number) {
  * de backend/src/domain/medicao/medicao-calc.ts.
  */
 export function folgaValorTotal(quantidade: number) {
-  return (Math.ceil(Math.round(quantidade * 1000) / 2000) + 1) / 100;
+  return (Math.ceil(qtdInterna(quantidade) / (2 * QTD_ESCALA)) + 1) / 100;
 }
 
 /**
@@ -61,18 +81,16 @@ export function valorAcumuladoItem(
   quantidade: number,
 ) {
   const calculado = valorItem(quantidade, item.precoUnitario);
-  const mil = Math.round(quantidade * 1000);
-  const orcadoMil = Math.round(item.orcado * 1000);
-  if (mil < orcadoMil) return Math.min(calculado, item.valorOrcado);
+  if (qtdInterna(quantidade) < qtdInterna(item.orcado)) return Math.min(calculado, item.valorOrcado);
   return Math.round((item.valorOrcado + calculado - valorItem(item.orcado, item.precoUnitario)) * 100) / 100;
 }
 
 /**
  * Quantidade que vale no orçamento: a contratada menos a suprimida (espelha `quantidadeEfetiva` do
- * backend). Conta em milésimos para não sobrar resto de ponto flutuante.
+ * backend). Conta na unidade interna para não sobrar resto de ponto flutuante.
  */
 export function quantidadeEfetiva(item: { quantidade: number; quantidadeSuprimida: number }) {
-  return (Math.round(item.quantidade * 1000) - Math.round(item.quantidadeSuprimida * 1000)) / 1000;
+  return (qtdInterna(item.quantidade) - qtdInterna(item.quantidadeSuprimida)) / QTD_ESCALA;
 }
 
 /**
@@ -90,9 +108,9 @@ export function precoComDesconto(preco: number, desconto: number, regra: RegraDe
 
 /**
  * Total com desconto do item lançado com BDI (espelha `totalPorRegra`/`totalLinhaComDesconto` do
- * backend). SIMPLES: quantidade × preço c/ BDI × (1 − desconto), arredondado só no fim (como a
- * planilha: 235 × 0,82 × 0,694 = 133,73). SCOAM: quantidade × preço com desconto, truncado. Item com
- * supressão não tem total ajustado: quantidade × preço com desconto, arredondado.
+ * backend). SIMPLES: total com BDI da linha (truncado) × (1 − desconto), arredondado no centavo (como
+ * a planilha: 235 × 0,82 = 192,70 × 0,694 = 133,73). SCOAM: quantidade × preço com desconto,
+ * truncado. Item com supressão não tem total ajustado: quantidade × preço com desconto, arredondado.
  */
 export function totalPorRegra(
   quantidade: number,
@@ -103,21 +121,18 @@ export function totalPorRegra(
 ) {
   const unitario = precoComDesconto(precoComBdi, desconto, regra);
   if (suprimida > 0) return valorItem(quantidade, unitario);
-  const milesimos = BigInt(Math.round(quantidade * 1000));
-  if (regra === "SCOAM") return Number((milesimos * BigInt(Math.round(unitario * 100))) / 1000n) / 100;
+  if (regra === "SCOAM") return valorItemTruncado(quantidade, unitario);
+  const totalComBdi = BigInt(Math.round(valorItemTruncado(quantidade, precoComBdi) * 100));
   const fator = 1_000_000n - BigInt(Math.round(desconto * 10_000));
-  const divisor = 1_000_000_000n;
-  return Number((milesimos * BigInt(Math.round(precoComBdi * 100)) * fator + divisor / 2n) / divisor) / 100;
+  return Number((totalComBdi * fator + 500_000n) / 1_000_000n) / 100;
 }
 
 /**
  * Total com BDI do item (espelha `totaisOrcamento` do backend): quantidade efetiva × preço com BDI,
- * truncado na regra SCOAM (como a planilha) e arredondado na simples.
+ * truncado no centavo, como a planilha.
  */
-export function totalComBdiItem(quantidade: number, precoComBdi: number, regra: RegraDesconto) {
-  if (regra !== "SCOAM") return valorItem(quantidade, precoComBdi);
-  const produto = BigInt(Math.round(quantidade * 1000)) * BigInt(Math.round(precoComBdi * 100));
-  return Number(produto / 1000n) / 100;
+export function totalComBdiItem(quantidade: number, precoComBdi: number) {
+  return valorItemTruncado(quantidade, precoComBdi);
 }
 
 /**

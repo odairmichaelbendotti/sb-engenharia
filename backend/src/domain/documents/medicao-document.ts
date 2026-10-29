@@ -1,4 +1,4 @@
-import { fromMilesimos } from "../medicao/medicao-calc.js";
+import { fromQtdInterna } from "../medicao/medicao-calc.js";
 import { calcularPlanilhaMedicao, gruposPorEtapa } from "../medicao/planilha-medicao.js";
 import type { MedicaoDocumentData } from "../repositories/IMedicaoRepository.js";
 import {
@@ -67,12 +67,13 @@ export type MedicaoDocumentModel = {
   local: string;
 };
 
-const qtdFormat = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+// A conta usa 5 casas; o documento mostra 2
+const qtdFormat = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const moedaSemSimbolo = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-/** Quantidade em milésimos → "3,50"; "3,125" quando há a terceira casa. */
+/** Quantidade interna → "3,50" (sempre 2 casas; 10,44736 → "10,45"). */
 export function formatQuantidade(milesimos: number): string {
-  return qtdFormat.format(fromMilesimos(milesimos));
+  return qtdFormat.format(fromQtdInterna(milesimos));
 }
 
 // Valores da tabela sem "R$": a coluna já diz que é em reais

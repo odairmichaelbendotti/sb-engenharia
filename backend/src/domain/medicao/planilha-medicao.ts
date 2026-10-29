@@ -1,5 +1,6 @@
 import {
   computeLinhasMedicao,
+  QTD_ESCALA,
   type ItemPlanilha,
   type LinhaMedicao,
   type QuantidadesPorItem,
@@ -10,12 +11,13 @@ import {
 export type ItemPlanilhaCompleto = ItemPlanilha & { ordem: number; codigo: string | null; etapa: string | null };
 
 /**
- * Planilha de uma medição, em unidades internas (milésimos e centavos). Na fechada é gravada
- * em Medicao.planilhaFechamento, para a reimpressão sair igual à assinada; no rascunho é
- * montada com o orçamento atual.
+ * Planilha de uma medição, em unidades internas (quantidade com 5 casas e centavos). Na fechada é
+ * gravada em Medicao.planilhaFechamento, para a reimpressão sair igual à assinada; no rascunho é
+ * montada com o orçamento atual. Versão 1 = quantidades em milésimos (gravadas até 2026-10-29),
+ * convertidas na leitura; versão 2 = quantidades na escala atual (QTD_ESCALA).
  */
 export type PlanilhaMedicao = {
-  versao: 1;
+  versao: 2;
   itens: {
     item_id: string;
     ordem: number;
@@ -50,7 +52,7 @@ export function buildPlanilhaMedicao({
   fiscais: PlanilhaMedicao["fiscais"];
 }): PlanilhaMedicao {
   return {
-    versao: 1,
+    versao: 2,
     itens: [...itens]
       .sort((a, b) => a.ordem - b.ordem)
       .map((item) => ({
@@ -88,12 +90,28 @@ export function gruposPorEtapa<T extends { etapa?: string | null }>(
   return grupos;
 }
 
+// Versão 1 gravava as quantidades em milésimos: × 100 leva à escala atual (5 casas)
+const FATOR_VERSAO_1 = QTD_ESCALA / 1000;
+
 /** Lê a planilha gravada no banco (JSON), recusando um formato desconhecido. */
 export function parsePlanilhaMedicao(json: unknown): PlanilhaMedicao | null {
   if (!json || typeof json !== "object") return null;
-  const planilha = json as Partial<PlanilhaMedicao>;
-  if (planilha.versao !== 1 || !Array.isArray(planilha.itens) || !planilha.fiscais) return null;
-  return planilha as PlanilhaMedicao;
+  const planilha = json as { versao?: unknown; itens?: unknown; fiscais?: unknown };
+  if (!Array.isArray(planilha.itens) || !planilha.fiscais) return null;
+  if (planilha.versao === 2) return planilha as PlanilhaMedicao;
+  if (planilha.versao !== 1) return null;
+  const antiga = planilha as Omit<PlanilhaMedicao, "versao"> & { versao: 1 };
+  return {
+    ...antiga,
+    versao: 2,
+    itens: antiga.itens.map((i) => ({
+      ...i,
+      orcado: i.orcado * FATOR_VERSAO_1,
+      ...(i.suprimido !== undefined ? { suprimido: i.suprimido * FATOR_VERSAO_1 } : {}),
+      anterior: i.anterior * FATOR_VERSAO_1,
+      esta: i.esta * FATOR_VERSAO_1,
+    })),
+  };
 }
 
 export type LinhaPlanilhaMedicao = LinhaMedicao & {
