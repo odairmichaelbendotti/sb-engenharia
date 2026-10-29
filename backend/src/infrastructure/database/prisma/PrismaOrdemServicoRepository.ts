@@ -88,13 +88,13 @@ const LIST_ITEM_INCLUDE = {
   lote: { select: LOTE_INFO_SELECT },
   fiscalTecnico: { select: FISCAL_INFO_SELECT },
   fiscalAdministrativo: { select: FISCAL_INFO_SELECT },
-  // Apontamentos da empresa ainda sem decisão (destaque na lista da fiscalização)
-  _count: { select: { contestacoes: { where: { status: "ABERTA" } } } },
+  // Apontamentos da empresa ainda sem decisão (destaque na lista da fiscalização) e itens do orçamento
+  _count: { select: { contestacoes: { where: { status: "ABERTA" } }, itens: true } },
 } as const;
 
-// Tira a contagem do Prisma da resposta e a expõe com nome próprio
-function withContestacoes<T extends { _count: { contestacoes: number } }>({ _count, ...row }: T) {
-  return { ...row, contestacoesAbertas: _count.contestacoes };
+// Tira as contagens do Prisma da resposta e as expõe com nome próprio
+function withContagens<T extends { _count: { contestacoes: number; itens: number } }>({ _count, ...row }: T) {
+  return { ...row, contestacoesAbertas: _count.contestacoes, temOrcamento: _count.itens > 0 };
 }
 
 // Valores monetários da OS são gravados em centavos; a API responde em reais
@@ -283,7 +283,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
       });
 
       return {
-        ...withContestacoes(withReais(newOrdemServico)),
+        ...withContagens(withReais(newOrdemServico)),
         empenhos: await vinculosFinanceiros(newOrdemServico.id, newOrdemServico.empenhos),
         valorExecutado: 0,
       };
@@ -372,7 +372,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
 
       return {
         ordensServico: ordensServico.map((os) => ({
-          ...withContestacoes(withReais(os)),
+          ...withContagens(withReais(os)),
           empenhos: withFinanceiro(os.id, mapVinculos(os.empenhos), totals),
           valorExecutado: (executadoCentavos.get(os.id) ?? 0) / 100,
         })),
@@ -505,7 +505,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
 
       const executado = await sumExecutadoPorOS([id]);
       return {
-        ...withContestacoes(withReais(updated)),
+        ...withContagens(withReais(updated)),
         empenhos: await vinculosFinanceiros(id, updated.empenhos),
         valorExecutado: (executado.get(id) ?? 0) / 100,
       };

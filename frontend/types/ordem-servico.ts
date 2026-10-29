@@ -119,6 +119,8 @@ export type OrdemServico = {
   cienteNome: string | null;
   // Apontamentos da empresa ainda sem decisão da fiscalização
   contestacoesAbertas: number;
+  // Orçamento lançado em itens (as OS antigas, de valor informado à mão, não têm)
+  temOrcamento: boolean;
   createdAt: Date;
   updatedAt: Date;
 };

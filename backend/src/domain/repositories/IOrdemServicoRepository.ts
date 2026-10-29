@@ -182,6 +182,8 @@ export type OrdemServicoListItem = PersistedOrdemServico & {
   valorExecutado: number;
   // Apontamentos da empresa ainda sem decisão da fiscalização
   contestacoesAbertas: number;
+  // Orçamento lançado em itens (as OS antigas, de valor informado à mão, não têm)
+  temOrcamento: boolean;
 };
 
 export type OrdemServicoStats = {

@@ -37,6 +37,7 @@ import { usePermission } from "../../hooks/usePermission";
 import { getBalance, getOrdemServicoBalance } from "./ordem-servico-balance";
 import { FinalizeOrdemServicoCallout } from "./FinalizeOrdemServico";
 import { CienciaPendenteAviso, TramitacaoSection } from "./TramitacaoSection";
+import { OrcamentoTag } from "./OrcamentoTag";
 import { OrcamentoMedicoesSection } from "./OrcamentoMedicoesSection";
 import { getFaseEmissao } from "./ordem-servico-ciencia";
 import { ordemServicoStatusDisplay } from "./ordem-servico-display";
@@ -527,6 +528,7 @@ export function OrdemServicoView({
           <StatusPill tone={status.tone} title={status.title}>
             {status.label}
           </StatusPill>
+          {ordemServico.temOrcamento && <OrcamentoTag ordemServicoId={ordemServico.id} temOrcamento />}
           <span className="truncate">
             {contrato.company.name} <span className="text-text-muted">·</span> {contrato.identificador}
           </span>
