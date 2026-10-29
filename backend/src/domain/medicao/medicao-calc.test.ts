@@ -11,6 +11,7 @@ import {
   precoComDesconto,
   quantidadeEfetiva,
   totaisOrcamento,
+  totalLinhaComDesconto,
   totalPorRegra,
   manterTotaisAjustados,
   valorItemTruncado,
@@ -315,11 +316,11 @@ describe("validateOrcamentoChange", () => {
 });
 
 describe("desconto e totais do orçamento", () => {
-  it("aplica o desconto truncando o centavo, sem erro de ponto flutuante", () => {
+  it("preço unitário com desconto simples arredondado no centavo, sem erro de ponto flutuante", () => {
     // R$ 10,00 com 17% = R$ 8,30 exatos
     expect(precoComDesconto(1000, 17)).toBe(830);
-    // R$ 12,34 com 24,8% = 9,27968 → R$ 9,27 (truncado, não arredondado)
-    expect(precoComDesconto(1234, 24.8)).toBe(927);
+    // R$ 12,34 com 24,8% = 9,27968 → R$ 9,28
+    expect(precoComDesconto(1234, 24.8)).toBe(928);
     // Desconto com casas: R$ 100,00 com 17,3456% = 82,6544 → R$ 82,65
     expect(precoComDesconto(10_000, 17.3456)).toBe(8265);
     expect(precoComDesconto(1234, 0)).toBe(1234);
@@ -356,13 +357,13 @@ describe("desconto e totais do orçamento", () => {
       // Já com desconto: não muda, nem o total ajustado
       { id: "c", quantidade: 1000, precoReferencia: null, precoUnitario: 7520, valorTotal: 7519 },
     ];
-    // 2 × 7,52 + 3,333 × 9,27 (truncado) + 75,19 = 15,04 + 30,90 + 75,19
+    // Total da linha: 20,00 × 0,752 = 15,04; 3,333 × 12,34 × 0,752 = 30,9293 → 30,93; + 75,19
     expect(aplicarDesconto(itens, 24.8)).toEqual({
       precos: [
         { id: "a", precoUnitario: 752, valorTotal: null },
-        { id: "b", precoUnitario: 927, valorTotal: null },
+        { id: "b", precoUnitario: 928, valorTotal: null },
       ],
-      valorOs: 12113,
+      valorOs: 12116,
     });
     // Mesmo desconto: nada muda
     expect(aplicarDesconto(itens, 0).precos).toEqual([]);
@@ -383,15 +384,40 @@ describe("desconto e totais do orçamento", () => {
     expect(precoComDesconto(77, 30.6, "SCOAM")).toBe(54);
     expect(precoComDesconto(77, 30.6, "SIMPLES")).toBe(53);
     // 235 × 16,77 = 3.940,95 exato: sem total ajustado
-    expect(totalPorRegra({ quantidade: 235_000, precoUnitario: 1677 }, "SCOAM")).toBeNull();
+    expect(totalPorRegra({ quantidade: 235_000, precoUnitario: 1677, precoReferencia: 2415 }, "SCOAM", 30.6)).toBeNull();
     // 21,5 × 26,67 = 573,405 → 573,40 (o arredondado seria 573,41)
     expect(valorItemTruncado(21_500, 2667)).toBe(57_340);
-    expect(totalPorRegra({ quantidade: 21_500, precoUnitario: 2667 }, "SCOAM")).toBe(57_340);
-    expect(totalPorRegra({ quantidade: 21_500, precoUnitario: 2667 }, "SIMPLES")).toBeNull();
-    expect(totalPorRegra({ quantidade: 21_500, quantidadeSuprimida: 500, precoUnitario: 2667 }, "SCOAM")).toBeNull();
+    expect(totalPorRegra({ quantidade: 21_500, precoUnitario: 2667, precoReferencia: 3842 }, "SCOAM", 30.6)).toBe(57_340);
+    expect(
+      totalPorRegra({ quantidade: 21_500, quantidadeSuprimida: 500, precoUnitario: 2667, precoReferencia: 3842 }, "SCOAM", 30.6),
+    ).toBeNull();
   });
 
-  it("OS01L3 (lote de 30,6%): R$ 7.260,01 na regra simples e R$ 7.265,48 na SCOAM", () => {
+  it("desconto simples sobre o total da linha, sem cortar o preço unitário antes (planilha da OS01L3)", () => {
+    // 235 × 0,82 = 192,70 × 0,694 = 133,7338 → 133,73 (e não 235 × 0,56 = 131,60)
+    expect(totalLinhaComDesconto(235_000, 82, 30.6)).toBe(13_373);
+    expect(precoComDesconto(82, 30.6)).toBe(57);
+    expect(totalPorRegra({ quantidade: 235_000, precoUnitario: 57, precoReferencia: 82 }, "SIMPLES", 30.6)).toBe(13_373);
+    // 6.384,95 × 0,694 = 4.431,1553 → 4.431,16
+    expect(totalLinhaComDesconto(235_000, 2717, 30.6)).toBe(443_116);
+    // 1 × 54,01 × 0,694 = 37,48: igual a quantidade × preço, sem total ajustado
+    expect(totalPorRegra({ quantidade: 1000, precoUnitario: 3748, precoReferencia: 5401 }, "SIMPLES", 30.6)).toBeNull();
+  });
+
+  it("OS01L3 nova (total com BDI 11.303,70, lote de 30,6%): R$ 7.844,76, igual à planilha", () => {
+    const planilha: [number, number][] = [
+      [1000, 5401], [1000, 25624], [235_000, 82], [235_000, 2717], [21_500, 1108], [21_500, 4076],
+      [23_000, 10978], [1000, 2749], [3000, 16743], [1000, 2052], [1000, 996], [4000, 5401],
+    ];
+    const itens = planilha.map(([quantidade, precoReferencia], i) => ({
+      id: String(i), quantidade, precoReferencia, precoUnitario: precoReferencia, valorTotal: null,
+    }));
+    const { valorOs } = aplicarDesconto(itens, 30.6, "SIMPLES");
+    expect(valorOs).toBe(784_476);
+    expect(totaisOrcamento({ itens, precoBase: "COM_BDI", desconto: 30.6 }).totalComBdi).toBe(1_130_370);
+  });
+
+  it("OS01L3 antiga (lote de 30,6%): R$ 7.261,49 na regra simples e R$ 7.265,48 na SCOAM", () => {
     const planilha: [number, number][] = [
       [1000, 5357], [1000, 25335], [235_000, 77], [235_000, 2415], [21_500, 1072], [21_500, 3842],
       [23_000, 10744], [1000, 2811], [3000, 16681], [1000, 2016], [1000, 952], [4000, 5357],
@@ -399,7 +425,8 @@ describe("desconto e totais do orçamento", () => {
     const itens = planilha.map(([quantidade, precoReferencia], i) => ({
       id: String(i), quantidade, precoReferencia, precoUnitario: precoReferencia, valorTotal: null,
     }));
-    expect(aplicarDesconto(itens, 30.6, "SIMPLES").valorOs).toBe(726_001);
+    // 10.463,25 × 0,694 = 7.261,4955: linha a linha, 7.261,49
+    expect(aplicarDesconto(itens, 30.6, "SIMPLES").valorOs).toBe(726_149);
     expect(aplicarDesconto(itens, 30.6, "SCOAM").valorOs).toBe(726_548);
   });
 });

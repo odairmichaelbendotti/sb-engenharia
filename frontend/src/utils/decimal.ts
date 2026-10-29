@@ -78,29 +78,36 @@ export function quantidadeEfetiva(item: { quantidade: number; quantidadeSuprimid
 /**
  * Preço com BDI menos o desconto (porcentagem), espelha `precoComDesconto` de
  * backend/src/domain/medicao/medicao-calc.ts (conta em inteiros, desconto com até 4 casas).
- * SIMPLES trunca o preço com desconto; SCOAM trunca o valor do desconto.
+ * SIMPLES arredonda o preço com desconto (só referência da medição parcial); SCOAM trunca o valor
+ * do desconto.
  */
 export function precoComDesconto(preco: number, desconto: number, regra: RegraDesconto = "SIMPLES") {
   const descontoMilionesimos = BigInt(Math.round(desconto * 10_000));
   const centavos = BigInt(Math.round(preco * 100));
   if (regra === "SCOAM") return Number(centavos - (centavos * descontoMilionesimos) / 1_000_000n) / 100;
-  return Number((centavos * (1_000_000n - descontoMilionesimos)) / 1_000_000n) / 100;
+  return Number((centavos * (1_000_000n - descontoMilionesimos) + 500_000n) / 1_000_000n) / 100;
 }
 
 /**
- * Total do item lançado só com BDI pela regra de desconto (espelha `totalPorRegra` do backend):
- * na SCOAM, quantidade × preço truncado no centavo; senão, arredondado. Item com supressão
- * não tem total ajustado, então vale o arredondado.
+ * Total com desconto do item lançado com BDI (espelha `totalPorRegra`/`totalLinhaComDesconto` do
+ * backend). SIMPLES: quantidade × preço c/ BDI × (1 − desconto), arredondado só no fim (como a
+ * planilha: 235 × 0,82 × 0,694 = 133,73). SCOAM: quantidade × preço com desconto, truncado. Item com
+ * supressão não tem total ajustado: quantidade × preço com desconto, arredondado.
  */
 export function totalPorRegra(
   quantidade: number,
-  precoUnitario: number,
+  precoComBdi: number,
+  desconto: number,
   regra: RegraDesconto,
   suprimida = 0,
 ) {
-  if (regra !== "SCOAM" || suprimida > 0) return valorItem(quantidade, precoUnitario);
-  const produto = BigInt(Math.round(quantidade * 1000)) * BigInt(Math.round(precoUnitario * 100));
-  return Number(produto / 1000n) / 100;
+  const unitario = precoComDesconto(precoComBdi, desconto, regra);
+  if (suprimida > 0) return valorItem(quantidade, unitario);
+  const milesimos = BigInt(Math.round(quantidade * 1000));
+  if (regra === "SCOAM") return Number((milesimos * BigInt(Math.round(unitario * 100))) / 1000n) / 100;
+  const fator = 1_000_000n - BigInt(Math.round(desconto * 10_000));
+  const divisor = 1_000_000_000n;
+  return Number((milesimos * BigInt(Math.round(precoComBdi * 100)) * fator + divisor / 2n) / divisor) / 100;
 }
 
 /**
@@ -126,12 +133,7 @@ export function valorOrcamentoComDesconto(
     const valor =
       item.precoReferencia === null
         ? item.valorTotal
-        : totalPorRegra(
-            quantidadeEfetiva(item),
-            precoComDesconto(item.precoReferencia, desconto, regra),
-            regra,
-            item.quantidadeSuprimida,
-          );
+        : totalPorRegra(quantidadeEfetiva(item), item.precoReferencia, desconto, regra, item.quantidadeSuprimida);
     return acc + Math.round(valor * 100);
   }, 0);
   return centavos / 100;
