@@ -1,3 +1,4 @@
+import { anexosDaOs, numeroRomano } from "./anexos-os.js";
 import type { OrdemServicoUrgenciaValue } from "../entities/OrdemServico.js";
 import { fromQtdInterna, quantidadeEfetiva, valorOrcadoItem } from "../medicao/medicao-calc.js";
 import { gruposPorEtapa } from "../medicao/planilha-medicao.js";
@@ -88,8 +89,14 @@ export type OrdemServicoDocumentModel = {
   inicio: { data: string; prazo: string };
   assinaturas: { empresa: string; cnpj: string; fiscalTecnico: string };
   local: string;
-  // Planilha orçamentária lançada no sistema (anexo I); nula quando a OS não tem orçamento
+  // Anexos escolhidos, numerados na ordem (I, II...); observação "" quando não há
+  anexos: { numero: string; titulo: string; observacao: string }[];
+  comentariosTecnicos: string[];
+  // Planilha orçamentária lançada no sistema; nula quando a OS não tem orçamento ou quando a
+  // planilha sintética não foi marcada entre os anexos
   planilha: OrcamentoDocumentPlanilha | null;
+  // Número do anexo da planilha sintética ("" quando não foi marcada)
+  planilhaAnexo: string;
 };
 
 export const URGENCIA_LABELS: Record<OrdemServicoUrgenciaValue, string> = {
@@ -312,6 +319,15 @@ export function buildOrdemServicoDocumentModel(data: OrdemServicoDocumentData): 
     prazoDias === null ? "" : `${prazoDias} (${numeroPorExtenso(prazoDias)}) dias corridos`;
   const emissao = formatDataExtensa(os.dataEmissao);
 
+  // OS anterior à escolha (null) leva os seis anexos padrão
+  const anexos = anexosDaOs(os.anexos).map((a, index) => ({
+    numero: numeroRomano(index + 1),
+    codigo: a.codigo,
+    titulo: a.titulo,
+    observacao: a.observacao ?? "",
+  }));
+  const sintetica = anexos.find((a) => a.codigo === "PLANILHA_SINTETICA");
+
   const objeto = `${data.empenhoDescricao.toLocaleUpperCase("pt-BR")} ${tenant.apelido.toLocaleUpperCase("pt-BR")}`;
 
   return {
@@ -367,6 +383,11 @@ export function buildOrdemServicoDocumentModel(data: OrdemServicoDocumentData): 
     inicio: { data: formatDataExtensa(os.dataInicio), prazo: prazoTexto },
     assinaturas: { empresa, cnpj, fiscalTecnico: data.fiscalTecnico?.nome ?? "" },
     local: `${tenant.city}${emissao ? `, ${emissao}` : ""}.`,
-    planilha: buildOrcamentoPlanilha({ itens: data.itens, regraDesconto: data.regraDesconto, bdi, desconto }),
+    anexos: anexos.map(({ numero, titulo, observacao }) => ({ numero, titulo, observacao })),
+    comentariosTecnicos: os.comentariosTecnicos,
+    planilha: sintetica
+      ? buildOrcamentoPlanilha({ itens: data.itens, regraDesconto: data.regraDesconto, bdi, desconto })
+      : null,
+    planilhaAnexo: sintetica?.numero ?? "",
   };
 }

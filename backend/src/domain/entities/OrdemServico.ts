@@ -1,3 +1,4 @@
+import type { AnexoOs } from "../documents/anexos-os.js";
 import { DomainError } from "../errors/DomainError.js";
 
 export type OrdemServicoStatusValue = "ATIVO" | "FINALIZADO" | "CANCELADO";
@@ -44,6 +45,9 @@ export type OrdemServicoType = {
   fiscalTecnico_id?: string | null | undefined;
   fiscalAdministrativo_id?: string | null | undefined;
   condicoesEspeciais?: string[] | undefined;
+  // Anexos já validados (parseAnexos); null = os seis padrão (OS anterior à escolha)
+  anexos?: AnexoOs[] | null | undefined;
+  comentariosTecnicos?: string[] | undefined;
 };
 
 export type PersistedOrdemServico = {
@@ -78,6 +82,8 @@ export type PersistedOrdemServico = {
   fiscalTecnico_id: string | null;
   fiscalAdministrativo_id: string | null;
   condicoesEspeciais: string[];
+  anexos: AnexoOs[] | null;
+  comentariosTecnicos: string[];
   // Ciência da empresa (ver domain/tramitacao/ciencia.ts); nulos nas OS anteriores à regra
   emitidaEm: Date | null;
   cienciaPrazoAte: Date | null;
@@ -123,6 +129,8 @@ export class OrdemServicoEntity {
   public readonly fiscalTecnico_id: string | null;
   public readonly fiscalAdministrativo_id: string | null;
   public readonly condicoesEspeciais: string[];
+  public readonly anexos: AnexoOs[] | null;
+  public readonly comentariosTecnicos: string[];
 
   constructor(props: OrdemServicoType) {
     // O número vazio é aceito aqui porque na criação ele só é gerado depois, no repository
@@ -198,6 +206,8 @@ export class OrdemServicoEntity {
     this.fiscalTecnico_id = props.fiscalTecnico_id || null;
     this.fiscalAdministrativo_id = props.fiscalAdministrativo_id || null;
     this.condicoesEspeciais = (props.condicoesEspeciais ?? []).map((c) => c.trim()).filter(Boolean);
+    this.anexos = props.anexos ?? null;
+    this.comentariosTecnicos = (props.comentariosTecnicos ?? []).map((c) => c.trim()).filter(Boolean);
   }
 
   /** Valor da OS = soma do que cada empenho destina a ela. */

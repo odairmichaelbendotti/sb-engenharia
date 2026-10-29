@@ -1,3 +1,4 @@
+import type { AnexoOs } from "../documents/anexos-os.js";
 import type { TramitacaoAutor } from "./IOrdemServicoTramitacaoRepository.js";
 import type { ItemPlanilha, PrecoBase, RegraDesconto } from "../medicao/medicao-calc.js";
 import type {
@@ -51,6 +52,9 @@ export type OrdemServicoDocumentFields = {
   fiscalTecnico_id: string | null;
   fiscalAdministrativo_id: string | null;
   condicoesEspeciais: string[];
+  // null = os seis anexos padrão (OS anterior à escolha)
+  anexos: AnexoOs[] | null;
+  comentariosTecnicos: string[];
 };
 
 // Emissão (ou reemissão) para a empresa: grava o prazo de ciência, o evento no histórico e

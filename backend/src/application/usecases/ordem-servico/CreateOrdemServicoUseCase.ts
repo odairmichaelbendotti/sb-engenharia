@@ -1,5 +1,6 @@
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
 import { OrdemServicoEntity, type OrdemServicoType } from "../../../domain/entities/OrdemServico.js";
+import { anexosPadrao } from "../../../domain/documents/anexos-os.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
 import type { IOrdemServicoRepository } from "../../../domain/repositories/IOrdemServicoRepository.js";
@@ -80,6 +81,9 @@ export class CreateOrdemServicoUseCase {
       fiscalTecnico_id: ordemServicoEntity.fiscalTecnico_id,
       fiscalAdministrativo_id: ordemServicoEntity.fiscalAdministrativo_id,
       condicoesEspeciais: ordemServicoEntity.condicoesEspeciais,
+      // Sem escolha enviada, a OS nova leva os seis anexos padrão
+      anexos: ordemServicoEntity.anexos ?? anexosPadrao(),
+      comentariosTecnicos: ordemServicoEntity.comentariosTecnicos,
     });
   }
 }

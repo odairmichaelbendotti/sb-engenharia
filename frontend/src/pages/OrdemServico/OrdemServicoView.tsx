@@ -1,3 +1,4 @@
+import { ANEXOS_PADRAO, numeroRomano } from "./anexos-os";
 import { lazy, Suspense, useState } from "react";
 import {
   ClipboardList,
@@ -223,9 +224,13 @@ function DocumentSection({ ordemServico }: { ordemServico: OrdemServico }) {
     fiscalAdministrativo,
     fiscalSetorial,
     condicoesEspeciais,
+    comentariosTecnicos,
     aguardandoEmissao,
     desconto,
   } = ordemServico;
+  // OS anterior à escolha (null) leva os seis anexos padrão
+  const anexos =
+    ordemServico.anexos ?? ANEXOS_PADRAO.map((a) => ({ codigo: a.codigo, titulo: a.titulo, observacao: null }));
   // O total com BDI da OS nova só existe depois do orçamento: não conta como campo em branco
   const incompleta =
     !setorRequisitante || !urgencia || !dataVistoria || (!totalComBdi && !aguardandoEmissao) || !fiscalTecnico;
@@ -269,6 +274,36 @@ function DocumentSection({ ordemServico }: { ordemServico: OrdemServico }) {
           <ul className="list-disc pl-5 space-y-0.5 text-sm text-text-primary">
             {condicoesEspeciais.map((condicao) => (
               <li key={condicao}>{condicao}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div>
+        <p className="text-xs text-text-muted mb-1">Anexos</p>
+        {anexos.length === 0 ? (
+          <p className="text-sm text-text-secondary">Nenhum anexo</p>
+        ) : (
+          <ol className="space-y-0.5 text-sm text-text-primary">
+            {anexos.map((anexo, index) => (
+              <li key={`${anexo.codigo ?? "outro"}-${index}`} className="flex gap-2">
+                <span className="w-7 shrink-0 font-mono text-[11px] font-semibold leading-5 text-text-secondary">
+                  {numeroRomano(index + 1)}
+                </span>
+                <span className="min-w-0">
+                  {anexo.titulo}
+                  {anexo.observacao && <span className="block text-xs text-text-muted">{anexo.observacao}</span>}
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+      {comentariosTecnicos.length > 0 && (
+        <div>
+          <p className="text-xs text-text-muted mb-1">Comentários técnicos</p>
+          <ul className="list-disc pl-5 space-y-0.5 text-sm text-text-primary">
+            {comentariosTecnicos.map((comentario, index) => (
+              <li key={index}>{comentario}</li>
             ))}
           </ul>
         </div>

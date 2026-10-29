@@ -330,6 +330,10 @@ model OrdemServico {
   fiscalAdministrativo_id String?
   fiscalAdministrativo    FiscalContrato?  @relation("FiscalAdministrativoOS", fields: [fiscalAdministrativo_id], references: [id], onDelete: SetNull)
   condicoesEspeciais  String[]             @default([])
+  // Anexos escolhidos ([{ codigo, titulo, observacao }], ver domain/documents/anexos-os.ts);
+  // nulo = OS anterior à escolha, que leva os seis anexos padrão
+  anexos              Json?
+  comentariosTecnicos String[]             @default([])
 
   // Ciência da empresa (horário do servidor). As OS anteriores a esta regra ficam
   // com a ciência dispensada e nunca travam a empresa

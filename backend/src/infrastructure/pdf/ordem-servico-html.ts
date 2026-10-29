@@ -7,16 +7,6 @@ import type {
 import { escapeHtml, renderLetterhead } from "./document-base-html.js";
 import { embeddedFontFaces, embeddedFooterFontFace } from "./fonts.js";
 
-const ANEXOS = [
-  "Planilha Orçamentária Sintética",
-  "Planilha Orçamentária Analítica",
-  "Cronograma Físico-Financeiro",
-  "Premissas Técnicas",
-  "Produtividade (SINAPI)",
-  "Observações Técnicas para Execução",
-];
-const ROMANOS = ["I", "II", "III", "IV", "V", "VI"];
-
 // Valor vazio (OS antiga) vira uma linha pontilhada, para preencher à mão se preciso
 function v(text: string): string {
   return text ? escapeHtml(text) : '<span class="blank"></span>';
@@ -265,8 +255,36 @@ function renderInicio(m: OrdemServicoDocumentModel): string {
 </section>`;
 }
 
+// Anexos escolhidos na OS (com a observação embaixo) e os comentários técnicos
+function renderAnexos(m: OrdemServicoDocumentModel): string {
+  const anexos = m.anexos
+    .map(
+      (a) =>
+        `<li><span class="rn">${escapeHtml(a.numero)}</span>${escapeHtml(a.titulo)}${
+          a.observacao ? `<span class="obs">${escapeHtml(a.observacao)}</span>` : ""
+        }</li>`,
+    )
+    .join("");
+  // Com observação o texto fica longo: uma coluna só
+  const umaColuna = m.anexos.some((a) => a.observacao);
+  const blocoAnexos = m.anexos.length
+    ? `
+<section class="annexes">
+  <span class="label">Anexos</span>
+  <ol${umaColuna ? ' class="single"' : ""}>${anexos}</ol>
+</section>`
+    : "";
+  const blocoComentarios = m.comentariosTecnicos.length
+    ? `
+<section class="annexes notes">
+  <span class="label">Comentários técnicos</span>
+  <ul class="list">${m.comentariosTecnicos.map((c) => `<li class="free">${escapeHtml(c)}</li>`).join("")}</ul>
+</section>`
+    : "";
+  return blocoAnexos + blocoComentarios;
+}
+
 function renderAssinaturas(m: OrdemServicoDocumentModel): string {
-  const anexos = ANEXOS.map((a, i) => `<li><span class="rn">${ROMANOS[i]}</span>${a}</li>`).join("");
   return `
 <section class="signatures">
   ${heading(8, "Aprovação e assinatura")}
@@ -276,10 +294,7 @@ function renderAssinaturas(m: OrdemServicoDocumentModel): string {
     <div class="sig"><span class="name">${v(m.assinaturas.fiscalTecnico)}</span><span class="role">Fiscal Técnico</span></div>
   </div>
 </section>
-<section class="annexes">
-  <span class="label">Anexos</span>
-  <ol>${anexos}</ol>
-</section>`;
+${renderAnexos(m)}`;
 }
 
 function renderLinhaOrcamento(l: OrcamentoDocumentLinha, comPrecoBdi: boolean): string {
@@ -296,7 +311,7 @@ ${comPrecoBdi ? `<td class="num">${escapeHtml(l.precoComBdi)}</td>` : ""}
 </tr>`;
 }
 
-// Anexo I: a planilha orçamentária lançada no sistema, em página própria
+// Anexo da planilha sintética: o orçamento lançado no sistema, em página própria
 function renderPlanilhaOrcamento(m: OrdemServicoDocumentModel, p: OrcamentoDocumentPlanilha): string {
   const colunas = p.comPrecoBdi ? 7 : 6;
   const etapa = (index: number) => {
@@ -306,7 +321,7 @@ function renderPlanilhaOrcamento(m: OrdemServicoDocumentModel, p: OrcamentoDocum
   };
   return `
 <section class="annex-sheet">
-  <p class="eyebrow">Anexo I &nbsp;·&nbsp; Ordem de Serviço ${escapeHtml(m.numero)}</p>
+  <p class="eyebrow">Anexo ${escapeHtml(m.planilhaAnexo)} &nbsp;·&nbsp; Ordem de Serviço ${escapeHtml(m.numero)}</p>
   <h2 class="annex-title">Planilha orçamentária sintética</h2>
   <table class="sheet">
     <colgroup>
@@ -497,6 +512,10 @@ h3 { display: flex; align-items: baseline; margin: 3.6mm 0 1.4mm; break-after: a
 .annexes ol { list-style: none; columns: 2; column-gap: 8mm; font-size: 9.2pt; }
 .annexes li { break-inside: avoid; line-height: 1.6; }
 .annexes .rn { display: inline-block; width: 7mm; font-family: Inter, Arial, sans-serif; font-size: 8pt; font-weight: 600; color: var(--ink); }
+.annexes ol.single { columns: 1; }
+.annexes .obs { display: block; padding-left: 7mm; font-size: 8.2pt; line-height: 1.4; color: var(--muted); margin-bottom: .8mm; }
+.annexes.notes { margin-top: 4mm; }
+.annexes.notes .list { font-size: 9.2pt; margin-top: 1mm; }
 
 /* Anexo I: planilha orçamentária em página própria; o cabeçalho se repete e a linha não quebra no meio */
 .annex-sheet { break-before: page; }
