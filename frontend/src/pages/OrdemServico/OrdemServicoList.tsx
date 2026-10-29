@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
+  Calculator,
   CheckCircle2,
   ClipboardList,
   Clock,
@@ -34,6 +35,8 @@ import {
   Th,
   Tr,
 } from "../../components/ui";
+import { OrcamentoTag } from "./OrcamentoTag";
+import { abrirOrcamento } from "./orcamento-link";
 import { FinalizeOrdemServicoDialog } from "./FinalizeOrdemServico";
 import { isQuitada } from "./ordem-servico-balance";
 import { ordemServicoStatusDisplay } from "./ordem-servico-display";
@@ -77,7 +80,7 @@ interface OrdemServicoListProps {
 }
 
 export function OrdemServicoList({ ordensServico, isLoading = false, onView, onEdit, onDelete, onAdd }: OrdemServicoListProps) {
-  const { canEditAdministrativo, canCreateOrdemServico, isEmpresaRestricted } = usePermission();
+  const { canEditAdministrativo, canCreateOrdemServico, canViewEngenharia, isEmpresaRestricted } = usePermission();
   const fetchOrdemServicoDocument = useOrdensServico((s) => s.fetchOrdemServicoDocument);
   const [page, setPage] = useState(1);
   const [finalizing, setFinalizing] = useState<OrdemServico | null>(null);
@@ -138,6 +141,7 @@ export function OrdemServicoList({ ordensServico, isLoading = false, onView, onE
                     {!os.obra && os.status === "ATIVO" && !isEmpresaRestricted && (
                       <span className="text-warning-text font-semibold">sem obra</span>
                     )}
+                    <OrcamentoTag ordemServicoId={os.id} temOrcamento={os.temOrcamento} />
                     {os.contestacoesAbertas > 0 && (
                       <span className="text-warning-text font-semibold">
                         {os.contestacoesAbertas} {os.contestacoesAbertas === 1 ? "apontamento" : "apontamentos"}
@@ -176,6 +180,12 @@ export function OrdemServicoList({ ordensServico, isLoading = false, onView, onE
                     items={[
                       { label: "Visualizar", icon: Eye, onClick: () => onView(os) },
                       { label: "Editar", icon: Edit2, onClick: () => onEdit(os), hidden: !canEditAdministrativo },
+                      {
+                        label: "Abrir orçamento",
+                        icon: Calculator,
+                        onClick: () => abrirOrcamento(os.id),
+                        hidden: !os.temOrcamento || !canViewEngenharia,
+                      },
                       { label: "Baixar PDF", icon: FileDown, onClick: () => void downloadPdf(os) },
                       {
                         label: "Finalizar OS",

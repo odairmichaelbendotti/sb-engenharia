@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, ArrowUpRight, Eye, FileDown, Ruler, Send } from "lucide-react";
-import { useNavigate } from "react-router";
+import { AlertTriangle, ArrowUpRight, Calculator, Eye, FileDown, Ruler, Send } from "lucide-react";
+import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import type { MedicaoResumo, PlanilhaOrcamento } from "../../../types/medicao";
 import { useMedicoes } from "../../store/medicoes";
@@ -24,6 +24,7 @@ import {
 } from "../../components/ui";
 import { EmptyNote } from "../../components/EntityViewer/ViewFrame";
 import { MedicaoLeituraModal } from "./MedicaoLeituraModal";
+import { orcamentoHref } from "./orcamento-link";
 import { medicaoFilename, medicaoStatusDisplay, medicaoTitulo } from "./medicao-display";
 
 interface OrcamentoMedicoesSectionProps {
@@ -153,6 +154,7 @@ export function OrcamentoMedicoesSection({ ordemServicoId, numero }: OrcamentoMe
         </EmptyNote>
       ) : (
         <>
+          <OrcamentoVinculado planilha={planilha} ordemServicoId={ordemServicoId} abreNaTela={temTela} />
           <MedicaoResumoBar planilha={planilha} />
           <MedicoesList planilha={planilha} editaNaTela={temTela} onOpen={abrir} onPdf={baixarPdf} />
         </>
@@ -173,6 +175,56 @@ export function OrcamentoMedicoesSection({ ordemServicoId, numero }: OrcamentoMe
         para dar ciência. Depois disso, mudar o valor do orçamento reemite a OS.
       </ConfirmDialog>
     </FormSection>
+  );
+}
+
+// Orçamento lançado em itens: totais e, para quem tem a tela Medições, o atalho em aba nova
+function OrcamentoVinculado({
+  planilha,
+  ordemServicoId,
+  abreNaTela,
+}: {
+  planilha: PlanilhaOrcamento;
+  ordemServicoId: string;
+  abreNaTela: boolean;
+}) {
+  const { totalComBdi, desconto, totais, itens } = planilha;
+  const conteudo = (
+    <>
+      <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-success-bg text-success-text shrink-0">
+        <Calculator size={16} aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-xs font-semibold text-success-text">Orçamento vinculado</span>
+        <span className="block text-[11px] text-text-muted tabular-nums">
+          {itens.length} {itens.length === 1 ? "item" : "itens"}
+          {totalComBdi !== null && <> · c/ BDI {formatCurrency(totalComBdi)}</>}
+          {desconto > 0 && <> · desconto {desconto.toLocaleString("pt-BR")}%</>}
+        </span>
+      </span>
+      <span className="text-right shrink-0">
+        <span className="block text-[11px] text-text-muted">Total c/ desconto</span>
+        <span className="block text-sm font-semibold text-text-primary tabular-nums">
+          {formatCurrency(totais.valorOrcado)}
+        </span>
+      </span>
+    </>
+  );
+  const classes = "flex items-center gap-3 rounded-lg border border-success-border px-3 py-2";
+
+  if (!abreNaTela) return <div className={classes}>{conteudo}</div>;
+
+  return (
+    <Link
+      to={orcamentoHref(ordemServicoId)}
+      target="_blank"
+      rel="noopener"
+      title="Abrir o orçamento em uma aba nova"
+      className={cx(classes, "cursor-pointer hover:bg-success-bg/60 transition-colors")}
+    >
+      {conteudo}
+      <ArrowUpRight size={14} className="text-text-muted shrink-0" aria-hidden />
+    </Link>
   );
 }
 
