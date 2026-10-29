@@ -297,9 +297,12 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
   // O valor da OS sai do orçamento (lançado depois, em Medições). Só a OS antiga sem orçamento
   // ainda tem o total com BDI digitado e o valor informado em cada empenho
   const temOrcamento = valorOrcamento !== undefined && valorOrcamento !== null;
+  // Orçamento do contrato inteiro: o valor da OS é o empenhado, informado em cada empenho, e pode
+  // ficar abaixo do orçamento até chegarem os próximos empenhos
+  const doContrato = temOrcamento && planilha?.escopoOrcamento === "CONTRATO";
   const valorPeloOrcamento = ordemServico === null || ordemServico.aguardandoEmissao || temOrcamento;
-  // Com orçamento e vários empenhos, o usuário reparte o valor entre eles
-  const valorPorEmpenho = !valorPeloOrcamento || (temOrcamento && vinculos.length > 1);
+  // Com orçamento e vários empenhos, o usuário reparte o valor entre eles (no do contrato, sempre)
+  const valorPorEmpenho = !valorPeloOrcamento || (temOrcamento && (vinculos.length > 1 || doContrato));
 
   // OS antiga: o usuário informa o total com BDI; o valor final aplica o desconto do lote
   const totalComBdi = parseCurrencyMask(form.totalComBdi);
@@ -350,7 +353,7 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
     // OS antiga: por padrão o empenho vai inteiro; com o total informado e um só empenho, vai o valor
     // final calculado. Com orçamento, um empenho só leva o valor dele; os demais começam zerados
     const valorPadrao = valorPeloOrcamento
-      ? vinculos.length === 1 && temOrcamento
+      ? vinculos.length === 1 && temOrcamento && !doContrato
         ? valorOrcamento
         : 0
       : vinculos.length === 1 && orcamento !== null
@@ -431,7 +434,11 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
     }
     if (temOrcamento) {
       const soma = empenhosPreenchidos.reduce((acc, v) => acc + valorDoVinculo(v), 0);
-      if (Math.round(soma * 100) !== Math.round(valorOrcamento * 100)) {
+      if (doContrato) {
+        if (Math.round(soma * 100) > Math.round(valorOrcamento * 100)) {
+          return `Os empenhos somam ${formatCurrency(soma)}; passam do orçamento do contrato (${formatCurrency(valorOrcamento)})`;
+        }
+      } else if (Math.round(soma * 100) !== Math.round(valorOrcamento * 100)) {
         return `Os empenhos somam ${formatCurrency(soma)}; precisam somar o valor do orçamento (${formatCurrency(valorOrcamento)})`;
       }
     }
@@ -639,7 +646,9 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
               {!valorPeloOrcamento
                 ? "Ao escolher o empenho, o valor já vem com todo o saldo livre dele (ou com o valor final calculado, se o total com BDI já foi informado). Diminua só se o empenho for dividido entre várias ordens de serviço."
                 : temOrcamento
-                  ? vinculos.length > 1
+                  ? doContrato
+                    ? `Orçamento do contrato (${formatCurrency(valorOrcamento)}): informe quanto de cada empenho vai para esta OS. O valor da OS é o empenhado e pode ficar abaixo do orçamento.`
+                    : vinculos.length > 1
                     ? `Reparta o valor do orçamento (${formatCurrency(valorOrcamento)}) entre os empenhos.`
                     : `O empenho leva o valor do orçamento (${formatCurrency(valorOrcamento)}).`
                   : "O valor da OS sai do orçamento: depois de criar, lance o orçamento em Medições e emita a OS para a empresa. Com mais de um empenho, a repartição é feita no orçamento."}
@@ -889,8 +898,9 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
       content: (
         <FormSection title="Financeiro" icon={DollarSign}>
           <p className="text-xs text-text-muted">
-            O valor da OS é a soma dos itens do orçamento, já com o desconto. Para mudá-lo, edite o orçamento em
-            Medições.
+            {doContrato
+              ? "O orçamento é o do contrato inteiro; o valor da OS é o empenhado (soma dos empenhos). Para mudar o orçamento, edite-o em Medições."
+              : "O valor da OS é a soma dos itens do orçamento, já com o desconto. Para mudá-lo, edite o orçamento em Medições."}
           </p>
           <div className="bg-surface-muted rounded-lg p-3 border border-border grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
@@ -906,9 +916,13 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
               </p>
             </div>
             <div>
-              <p className="text-xs text-text-muted">Valor da Ordem de Serviço</p>
+              <p className="text-xs text-text-muted">
+                {doContrato ? "Orçamento do contrato · empenhado" : "Valor da Ordem de Serviço"}
+              </p>
               <p className="text-sm font-semibold text-text-primary tabular-nums">
-                {formatCurrency(valorOrcamento ?? 0)}
+                {doContrato
+                  ? `${formatCurrency(valorOrcamento ?? 0)} · ${formatCurrency(valorTotal)}`
+                  : formatCurrency(valorOrcamento ?? 0)}
               </p>
             </div>
           </div>

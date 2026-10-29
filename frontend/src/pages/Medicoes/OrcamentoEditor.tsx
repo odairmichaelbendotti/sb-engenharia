@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, CircleMinus, ClipboardPaste, FolderPlus, Lock, Plus, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import type { OrcamentoItem, OrcamentoPayload, PlanilhaOrcamento } from "../../../types/medicao";
+import type { EscopoOrcamento, OrcamentoItem, OrcamentoPayload, PlanilhaOrcamento } from "../../../types/medicao";
 import { useMedicoes } from "../../store/medicoes";
 import { useUnsavedChangesGuard } from "../../hooks/useUnsavedChangesGuard";
 import { formatCurrency } from "../../utils/format-currency";
@@ -27,6 +27,7 @@ import {
   IconButton,
   InlineEdit,
   Input,
+  SegmentedControl,
 } from "../../components/ui";
 import { StickyFooter } from "./Workspace";
 import { matchesItemSearch } from "./medicao-progress";
@@ -99,8 +100,9 @@ interface OrcamentoEditorProps {
 }
 
 /**
- * Planilha orçamentária da OS em tela cheia: é a base de preço da OS (o valor dela é a soma dos
- * itens). O preço é sempre digitado com BDI e o sistema aplica o desconto da OS pela regra dela
+ * Planilha orçamentária da OS em tela cheia: é a base de preço da OS. No escopo da OS (parcela do
+ * contrato) o valor dela é a soma dos itens; no do contrato, o orçamento é o valor total e a OS vale
+ * o empenhado, informado por empenho e que pode ficar abaixo do orçamento. O preço é sempre digitado com BDI e o sistema aplica o desconto da OS pela regra dela
  * (simples ou SCOAM); a linha mostra o total com BDI e o total com desconto. Item medido trava preço
  * e unidade, não sai e tem quantidade mínima. Os campos só viram input ao clicar (InlineEdit).
  */
@@ -128,16 +130,22 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
   );
   // Regra gravada na OS: simples nas novas; as convertidas das planilhas SCOAM mantêm a delas
   const regraDesconto = planilha.regraDesconto;
-  // Quanto cada empenho destina à OS (máscara de moeda), quando ela tem mais de um
+  const [escopo, setEscopo] = useState<EscopoOrcamento>(planilha.escopoOrcamento);
+  const doContrato = escopo === "CONTRATO";
+  const contratoValor = ordemServico.contrato.valor;
+  // Quanto cada empenho destina à OS (máscara de moeda): repartida quando ela tem mais de um; no
+  // orçamento do contrato é o empenhado, informado sempre
   const [distribuicao, setDistribuicao] = useState<Record<string, string>>(() =>
     Object.fromEntries(empenhos.map((e) => [e.id, formatValueToCurrencyMask(e.valor)])),
   );
+  const informaEmpenhos = doContrato || empenhos.length > 1;
   const serialize = () =>
     JSON.stringify([
       linhas
         .filter(preenchida)
         .map((l) => [l.id ?? null, l.codigo, l.descricao, l.etapa, l.unidade, l.quantidade, l.suprimida, l.preco]),
-      empenhos.length > 1 ? distribuicao : null,
+      informaEmpenhos ? distribuicao : null,
+      escopo,
     ]);
   const [inicial] = useState(serialize);
   const [erro, setErro] = useState<Erro | null>(null);
@@ -205,7 +213,11 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
 
   const total = linhas.reduce((acc, l) => acc + totalLinha(l), 0);
   const totalComBdi = Math.round(linhas.reduce((acc, l) => acc + totalBdiLinha(l), 0) * 100) / 100;
-  const valorMuda = valorOs !== null && centavos(total) !== centavos(valorOs);
+  const somaDistribuida = empenhos.reduce((acc, e) => acc + parseCurrencyMask(distribuicao[e.id] ?? ""), 0);
+  // Valor que a OS passa a ter ao salvar: o orçamento no escopo da OS, o empenhado no do contrato
+  const valorOsNovo = doContrato ? somaDistribuida : total;
+  const valorMuda = valorOs !== null && centavos(valorOsNovo) !== centavos(valorOs);
+  const faltaEmpenhar = Math.max(0, total - somaDistribuida);
   const medidos = linhas.filter((l) => l.medido > 0).length;
   const comSupressao = linhas.filter((l) => preenchida(l) && l.suprimida > 0);
   // Quanto as supressões tiram: o total da quantidade cheia (pela regra) menos o da efetiva
@@ -216,7 +228,6 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
       totalCalculado(l),
     0,
   );
-  const somaDistribuida = empenhos.reduce((acc, e) => acc + parseCurrencyMask(distribuicao[e.id] ?? ""), 0);
   const visiveis = useMemo(
     () =>
       linhas
@@ -292,7 +303,30 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
       }
       if (!l.preco) return { key: l.key, campo: "preco", texto: `${pos}: informe o preço com BDI.` };
     }
-    if (empenhos.length > 1) {
+    if (doContrato) {
+      if (centavos(total) > centavos(contratoValor)) {
+        return {
+          key: null,
+          campo: null,
+          texto: `O orçamento (${formatCurrency(total)}) passa do valor do contrato (${formatCurrency(contratoValor)}).`,
+        };
+      }
+      const acima = empenhos.find((e) => parseCurrencyMask(distribuicao[e.id] ?? "") > e.saldoLivre + 1e-9);
+      if (acima) {
+        return {
+          key: null,
+          campo: "empenhos",
+          texto: `O empenho ${acima.numero} tem ${formatCurrency(acima.saldoLivre)} livres para esta OS.`,
+        };
+      }
+      if (centavos(somaDistribuida) > centavos(total)) {
+        return {
+          key: null,
+          campo: "empenhos",
+          texto: `O empenhado (${formatCurrency(somaDistribuida)}) passa do orçamento (${formatCurrency(total)}).`,
+        };
+      }
+    } else if (empenhos.length > 1) {
       if (centavos(somaDistribuida) !== centavos(total)) {
         return {
           key: null,
@@ -344,6 +378,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
     }
     const payload: OrcamentoPayload = {
       precoBase: "COM_BDI",
+      escopo,
       itens: linhas.filter(preenchida).map((l) => ({
         ...(l.id ? { id: l.id } : {}),
         codigo: l.codigo,
@@ -356,7 +391,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
         // O backend calcula o total pela regra e mantém o ajustado gravado do item que não mudou
         valorTotal: null,
       })),
-      ...(empenhos.length > 1
+      ...(informaEmpenhos
         ? {
             empenhos: empenhos.map((e) => ({
               empenho_id: e.id,
@@ -580,8 +615,28 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
 
   return (
     <>
-      <div className="flex flex-col lg:flex-row lg:items-center gap-2 mb-3">
-        <div className="flex flex-col sm:flex-row gap-2 lg:ml-auto lg:w-auto">
+      <div className="flex flex-col 2xl:flex-row 2xl:items-center gap-2 mb-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
+          <SegmentedControl<EscopoOrcamento>
+            label="O orçamento é"
+            value={escopo}
+            onChange={(value) => {
+              setEscopo(value);
+              if (erro?.key === null) setErro(null);
+            }}
+            disabled={!permissoes.editarOrcamento}
+            options={[
+              { value: "ORDEM_SERVICO", label: "Da Ordem de Serviço" },
+              { value: "CONTRATO", label: "Do contrato" },
+            ]}
+          />
+          <span className="text-[11px] text-text-muted">
+            {doContrato
+              ? `Valor total do contrato (${formatCurrency(contratoValor)}); a OS vale o que já foi empenhado.`
+              : "Parcela do contrato: o valor da OS é o total do orçamento."}
+          </span>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 2xl:ml-auto">
           <SearchInput value={busca} onChange={setBusca} placeholder="Buscar item por código ou descrição..." />
           <Button variant="secondary" size="sm" icon={ClipboardPaste} onClick={() => setColando("")}>
             Colar do Excel
@@ -683,18 +738,32 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
           </span>
         </div>
 
-        {empenhos.length > 1 && (
+        {informaEmpenhos && (
           <div className="border-t border-border pt-3 space-y-2">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-              <p className="text-xs font-semibold text-text-secondary">Valor por empenho</p>
-              <p
-                className={cx(
-                  "text-[11px] tabular-nums",
-                  centavos(somaDistribuida) === centavos(total) ? "text-text-muted" : "text-warning-text",
-                )}
-              >
-                Soma {formatCurrency(somaDistribuida)} de {formatCurrency(total)}
+              <p className="text-xs font-semibold text-text-secondary">
+                {doContrato ? "Empenhado nesta OS" : "Valor por empenho"}
               </p>
+              {doContrato ? (
+                <p
+                  className={cx(
+                    "text-[11px] tabular-nums",
+                    centavos(somaDistribuida) > centavos(total) ? "text-danger-text" : "text-text-muted",
+                  )}
+                >
+                  Empenhado {formatCurrency(somaDistribuida)} de {formatCurrency(total)} · falta empenhar{" "}
+                  {formatCurrency(faltaEmpenhar)}
+                </p>
+              ) : (
+                <p
+                  className={cx(
+                    "text-[11px] tabular-nums",
+                    centavos(somaDistribuida) === centavos(total) ? "text-text-muted" : "text-warning-text",
+                  )}
+                >
+                  Soma {formatCurrency(somaDistribuida)} de {formatCurrency(total)}
+                </p>
+              )}
             </div>
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
               {empenhos.map((e) => (
@@ -737,8 +806,16 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
               <p className="text-sm text-text-secondary">
                 <span className="tabular-nums">Total c/ BDI {formatCurrency(totalComBdi)}</span>
                 <span className="text-text-muted"> · </span>
-                Total c/ desconto (valor da OS){" "}
+                {doContrato ? "Orçamento do contrato" : "Total c/ desconto (valor da OS)"}{" "}
                 <span className="font-semibold text-text-primary tabular-nums">{formatCurrency(total)}</span>
+                {doContrato && (
+                  <span className="tabular-nums">
+                    <span className="text-text-muted"> · </span>
+                    empenhado {formatCurrency(somaDistribuida)}
+                    <span className="text-text-muted"> · </span>
+                    falta empenhar {formatCurrency(faltaEmpenhar)}
+                  </span>
+                )}
                 <span className="text-text-muted tabular-nums">
                   {" "}
                   · {linhas.filter(preenchida).length} itens{medidos > 0 ? ` · ${medidos} já medidos` : ""}
@@ -760,8 +837,10 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
                 >
                   {!valorMuda ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
                   {!valorMuda
-                    ? "Confere com o valor da OS"
-                    : `Ao salvar, o valor da OS passa de ${formatCurrency(valorOs)} para ${formatCurrency(total)}${
+                    ? doContrato
+                      ? "Confere com o empenhado da OS"
+                      : "Confere com o valor da OS"
+                    : `Ao salvar, o valor da OS${doContrato ? " (empenhado)" : ""} passa de ${formatCurrency(valorOs)} para ${formatCurrency(valorOsNovo)}${
                         permissoes.reemiteAoMudarValor ? " e a OS é reemitida para a empresa" : ""
                       }`}
                 </p>
@@ -829,8 +908,9 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
         onConfirm={handleEmitir}
         onCancel={() => setEmitindo(null)}
       >
-        A empresa passa a ver a OS, com o valor de {formatCurrency(valorOs ?? total)}, e tem 48 horas para dar
-        ciência. Depois disso, mudar o valor do orçamento reemite a OS.
+        {doContrato
+          ? `A empresa passa a ver a OS, com o orçamento do contrato de ${formatCurrency(total)} e ${formatCurrency(valorOs ?? somaDistribuida)} empenhados, e tem 48 horas para dar ciência. Depois disso, mudar o orçamento ou o empenhado reemite a OS.`
+          : `A empresa passa a ver a OS, com o valor de ${formatCurrency(valorOs ?? total)}, e tem 48 horas para dar ciência. Depois disso, mudar o valor do orçamento reemite a OS.`}
       </ConfirmDialog>
       {guard.dialog}
     </>

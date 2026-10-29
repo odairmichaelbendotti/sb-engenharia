@@ -10,6 +10,10 @@ export type PrecoBase = "COM_BDI" | "COM_BDI_E_DESCONTO";
 // SCOAM trunca o valor do desconto e o total do item (planilha SCOAM)
 export type RegraDesconto = "SIMPLES" | "SCOAM";
 
+// O que o orçamento representa: a parcela da OS (valor da OS = orçamento) ou o contrato inteiro
+// (o orçamento é o valor total e a OS vale o empenhado até aqui)
+export type EscopoOrcamento = "ORDEM_SERVICO" | "CONTRATO";
+
 // Por que não dá para lançar uma medição agora
 export type MotivoBloqueioMedicao = "SEM_PERMISSAO" | "OS_INATIVA" | "SEM_ORCAMENTO" | "RASCUNHO_ABERTO" | "SEM_SALDO";
 
@@ -92,19 +96,24 @@ export interface OrcamentoEmpenho {
 }
 
 export interface PlanilhaOrcamento {
-  ordemServico: MedicaoOsInfo;
+  // Com o valor do contrato: teto do orçamento do contrato
+  ordemServico: MedicaoOsInfo & { contrato: { valor: number } };
   // Como os preços foram informados e o desconto da OS (porcentagem, copiado do lote)
   precoBase: PrecoBase;
   regraDesconto: RegraDesconto;
   desconto: number;
+  escopoOrcamento: EscopoOrcamento;
   // Total com BDI do orçamento (nulo sem itens)
   totalComBdi: number | null;
   empenhos: OrcamentoEmpenho[];
   itens: OrcamentoItem[];
   totais: { valorOrcado: number; valorMedido: number; valorSaldo: number; valorRascunho: number };
-  // Valor da OS (soma dos empenhos) e a diferença da soma dos itens; nulos para quem não edita
+  // Valor da OS (soma dos empenhos) e a diferença da soma dos itens; nulos para quem não edita.
+  // No orçamento do contrato o valor da OS é o empenhado e não há divergência
   valorOs: number | null;
   divergencia: { diferenca: number } | null;
+  // Orçamento do contrato: orçado − empenhado (nulo no escopo da OS)
+  faltaEmpenhar: number | null;
   // notaFiscal: nota não cancelada que paga a medição (a medição com nota não reabre nem sai)
   medicoes: (MedicaoResumo & { podeReabrir: boolean; notaFiscal?: { id: string; numero: string } | null })[];
   // Sugestão de início da próxima medição (dia seguinte ao fim da última fechada)
@@ -174,8 +183,10 @@ export interface OrcamentoItemPayload {
 
 export interface OrcamentoPayload {
   precoBase: PrecoBase;
+  escopo: EscopoOrcamento;
   itens: OrcamentoItemPayload[];
-  // Quanto cada empenho destina à OS, quando ela tem mais de um (soma = valor do orçamento)
+  // Quanto cada empenho destina à OS: no escopo da OS, quando ela tem mais de um (soma = valor do
+  // orçamento); no do contrato, sempre (soma = empenhado, até o orçamento)
   empenhos?: { empenho_id: string; valor: number }[];
 }
 
@@ -189,8 +200,10 @@ export interface MedicaoPayload {
 // GET /medicao/painel — uma linha por OS na tela de medições (valores em reais)
 export interface PainelMedicaoItem extends MedicaoOsInfo {
   empenhos: { id: string; numero: string }[];
-  // Valor da OS (soma dos empenhos; salvar o orçamento acerta com a soma dos itens)
+  // Valor da OS (soma dos empenhos; salvar o orçamento acerta com a soma dos itens). No orçamento do
+  // contrato é o empenhado
   valorOs: number;
+  escopoOrcamento: EscopoOrcamento;
   itens: number;
   valorOrcado: number;
   // Só medições fechadas

@@ -7,7 +7,9 @@ import {
   folgaValorTotal,
   fromQtdInterna,
   toQtdInterna,
+  validateMedicaoNoEmpenhado,
   validateMedicaoQuantidades,
+  validateOrcamentoContrato,
   precoComDesconto,
   quantidadeEfetiva,
   totaisOrcamento,
@@ -554,6 +556,31 @@ describe("unidade de item medido", () => {
     expect(() => validateOrcamentoChange({ atuais: [atual], novos: [novo], medidoFechado })).not.toThrow();
     expect(() => validateOrcamentoChange({ atuais: [atual], novos: [{ ...novo, unidade: "m³" }], medidoFechado })).toThrow(
       /unidade of a measured item/,
+    );
+  });
+});
+
+describe("orçamento do contrato", () => {
+  // OS 010/BAFL/2026: contrato e orçamento de R$ 498.607,21, empenho de R$ 192.687,09
+  const contrato = { valorOrcado: 49_860_721, contratoValor: 49_860_721 };
+
+  it("aceita o empenhado abaixo do orçado e o orçado igual ao contrato", () => {
+    expect(() => validateOrcamentoContrato({ ...contrato, empenhado: 19_268_709 })).not.toThrow();
+    expect(() => validateOrcamentoContrato({ ...contrato, empenhado: 0 })).not.toThrow();
+    expect(() => validateOrcamentoContrato({ ...contrato, empenhado: 49_860_721 })).not.toThrow();
+  });
+
+  it("recusa o orçado acima do contrato e o empenhado acima do orçado", () => {
+    expect(() => validateOrcamentoContrato({ ...contrato, valorOrcado: 49_860_722, empenhado: 0 })).toThrow(
+      "O orçamento (R$ 498.607,22) passa do valor do contrato (R$ 498.607,21).",
+    );
+    expect(() => validateOrcamentoContrato({ ...contrato, empenhado: 49_860_722 })).toThrow(/passa do orçamento/);
+  });
+
+  it("só fecha a medição cujo acumulado cabe no empenhado", () => {
+    expect(() => validateMedicaoNoEmpenhado({ valorAcumulado: 19_268_709, empenhado: 19_268_709 })).not.toThrow();
+    expect(() => validateMedicaoNoEmpenhado({ valorAcumulado: 20_000_000, empenhado: 19_268_709 })).toThrow(
+      "A medição acumulada (R$ 200.000,00) passa do valor empenhado na OS (R$ 192.687,09). Falta empenhar R$ 7.312,91.",
     );
   });
 });

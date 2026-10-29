@@ -75,12 +75,14 @@ function renderSummary(m: OrdemServicoDocumentModel): string {
     <span class="sub">incluídos ${m.mobilizacao.dias} dias de mobilização</span>
   </div>
   <div class="card">
-    <span class="label">Valor total da OS</span>
+    <span class="label">${m.orcamento.empenho ? "Valor total (orçamento do contrato)" : "Valor total da OS"}</span>
     <span class="big">${v(m.orcamento.totalComBdiEDesconto)}</span>
     <span class="sub">${
-      m.orcamento.totalComBdi === ""
-        ? "valor registrado na OS"
-        : `com BDI${m.identificacao.lotes.some((l) => l.selecionado) ? " e desconto do lote" : ""}`
+      m.orcamento.empenho
+        ? `empenhado nesta OS: ${escapeHtml(m.orcamento.empenho.empenhado)}`
+        : m.orcamento.totalComBdi === ""
+          ? "valor registrado na OS"
+          : `com BDI${m.identificacao.lotes.some((l) => l.selecionado) ? " e desconto do lote" : ""}`
     }</span>
   </div>
   <div class="card">
@@ -177,7 +179,13 @@ function renderOrcamento(m: OrdemServicoDocumentModel): string {
     <thead><tr><th>Composição</th><th class="num">Valor</th></tr></thead>
     <tbody>
       ${linhas}
-      <tr class="total"><td>Valor total da OS${comDesconto && o.totalComBdi ? " <span>(com BDI e desconto)</span>" : ""}</td><td class="num">${v(o.totalComBdiEDesconto)}</td></tr>
+      <tr class="total"><td>${o.empenho ? "Valor total (orçamento do contrato)" : "Valor total da OS"}${comDesconto && o.totalComBdi ? " <span>(com BDI e desconto)</span>" : ""}</td><td class="num">${v(o.totalComBdiEDesconto)}</td></tr>
+      ${
+        o.empenho
+          ? `<tr><td>Empenhado nesta OS</td><td class="num">${escapeHtml(o.empenho.empenhado)}</td></tr>
+      <tr><td>A empenhar</td><td class="num">${escapeHtml(o.empenho.aEmpenhar)}</td></tr>`
+          : ""
+      }
     </tbody>
   </table>
   <p class="note">Data-base SINAPI: ${strong(o.dataBaseSinapi)}.</p>

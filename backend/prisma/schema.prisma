@@ -322,6 +322,9 @@ model OrdemServico {
   regraDesconto       RegraDesconto        @default(SIMPLES)
   // Desconto do lote copiado na criação, em porcentagem: editar o lote depois não muda a OS
   desconto            Float                @default(0)
+  // Escopo do orçamento: parcela da OS (valor da OS = orçamento) ou o contrato inteiro (o valor da
+  // OS é o empenhado, que pode ficar abaixo do orçamento até chegarem os próximos empenhos)
+  escopoOrcamento     EscopoOrcamento      @default(ORDEM_SERVICO)
   // Criada e ainda não emitida (sem orçamento): a empresa não vê
   aguardandoEmissao   Boolean              @default(false)
   fiscalSetorial      String?
@@ -513,6 +516,14 @@ enum RegraDesconto {
   SIMPLES
   // Planilha SCOAM: trunca o valor do desconto e o total do item
   SCOAM
+}
+
+// O que o orçamento da OS representa
+enum EscopoOrcamento {
+  // Parcela do contrato: o valor da OS é o total do orçamento e os empenhos somam esse valor
+  ORDEM_SERVICO
+  // O contrato inteiro: o orçamento é o valor total e a OS vale o que já foi empenhado
+  CONTRATO
 }
 
 // Item da planilha orçamentária da OS. O preço unitário é o que vale nas medições: com BDI e desconto

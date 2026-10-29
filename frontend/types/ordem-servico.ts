@@ -102,6 +102,8 @@ export type OrdemServico = {
   // Como os preços do orçamento foram informados e o desconto copiado do lote (porcentagem)
   precoBase: "COM_BDI" | "COM_BDI_E_DESCONTO";
   desconto: number;
+  // Orçamento da OS (valor da OS = orçamento) ou do contrato inteiro (valor da OS = empenhado)
+  escopoOrcamento: "ORDEM_SERVICO" | "CONTRATO";
   // Criada e ainda não emitida: o valor sai do orçamento e a empresa só vê depois da emissão
   aguardandoEmissao: boolean;
   fiscalSetorial: string | null;

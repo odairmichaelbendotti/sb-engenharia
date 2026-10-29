@@ -141,7 +141,11 @@ export function OrdemServicoList({ ordensServico, isLoading = false, onView, onE
                     {!os.obra && os.status === "ATIVO" && !isEmpresaRestricted && (
                       <span className="text-warning-text font-semibold">sem obra</span>
                     )}
-                    <OrcamentoTag ordemServicoId={os.id} temOrcamento={os.temOrcamento} />
+                    <OrcamentoTag
+                      ordemServicoId={os.id}
+                      temOrcamento={os.temOrcamento}
+                      doContrato={os.escopoOrcamento === "CONTRATO"}
+                    />
                     {os.contestacoesAbertas > 0 && (
                       <span className="text-warning-text font-semibold">
                         {os.contestacoesAbertas} {os.contestacoesAbertas === 1 ? "apontamento" : "apontamentos"}

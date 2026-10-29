@@ -31,7 +31,10 @@ export class ListPainelMedicoesUseCase {
       );
       const valorOs = os.valor;
       const podeEditarOs = editor && os.tenant_id === user.tenant_id && os.status === "ATIVO";
-      const divergencia = editor && resumo.itens > 0 ? divergenciaTotal(resumo.valorOrcado, valorOs) : null;
+      // No orçamento do contrato o valor da OS é o empenhado: ficar abaixo do orçado não é divergência
+      const doContrato = os.escopoOrcamento === "CONTRATO";
+      const divergencia =
+        editor && !doContrato && resumo.itens > 0 ? divergenciaTotal(resumo.valorOrcado, valorOs) : null;
       return {
         id: os.id,
         numero: os.numero,
@@ -47,6 +50,7 @@ export class ListPainelMedicoesUseCase {
         empresa: os.empresa,
         empenhos: os.empenhos,
         valorOs: reais(valorOs),
+        escopoOrcamento: os.escopoOrcamento,
         itens: resumo.itens,
         valorOrcado: reais(resumo.valorOrcado),
         valorMedido: reais(resumo.valorMedido),

@@ -187,7 +187,15 @@ export class UpdateOrdemServicoUseCase {
         valorEsperado = aplicarDesconto(orcamento.itens, loteNovo.desconto, orcamento.regraDesconto).valorOs;
       }
     }
-    if (valorEsperado !== null && vinculos.reduce((acc, v) => acc + v.valor, 0) !== valorEsperado) {
+    const somaVinculos = vinculos.reduce((acc, v) => acc + v.valor, 0);
+    // Orçamento do contrato: os empenhos são o empenhado, que pode ficar abaixo do orçamento
+    if (valorEsperado !== null && existing.escopoOrcamento === "CONTRATO") {
+      if (somaVinculos > valorEsperado) {
+        throw new DomainError(
+          `Os empenhos passam do orçamento do contrato lançado na OS (${(valorEsperado / 100).toFixed(2)}).`,
+        );
+      }
+    } else if (valorEsperado !== null && somaVinculos !== valorEsperado) {
       throw new DomainError(
         `Os empenhos precisam somar o valor do orçamento da OS (${(valorEsperado / 100).toFixed(2)}).`,
       );

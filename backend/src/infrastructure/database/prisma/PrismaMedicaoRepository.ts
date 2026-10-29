@@ -1,7 +1,9 @@
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import {
+  validateMedicaoNoEmpenhado,
   validateMedicaoQuantidades,
   validateOrcamentoChange,
+  type EscopoOrcamento,
   type OrcamentoItemInput,
   type PrecoBase,
   type RegraDesconto,
@@ -10,6 +12,7 @@ import { itemComQtd, medicaoComQtd } from "./quantidade-db.js";
 import { somarQuantidades } from "../../../domain/medicao/medicao-resumo.js";
 import {
   buildPlanilhaMedicao,
+  calcularPlanilhaMedicao,
   parsePlanilhaMedicao,
   type ItemPlanilhaCompleto,
 } from "../../../domain/medicao/planilha-medicao.js";
@@ -153,6 +156,7 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
           desconto: true,
           precoBase: true,
           regraDesconto: true,
+          escopoOrcamento: true,
           lote_id: true,
           aguardandoEmissao: true,
           emitidaEm: true,
@@ -173,6 +177,7 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
                   id: true,
                   identificador: true,
                   cor: true,
+                  valor: true,
                   company_id: true,
                   company: { select: { id: true, name: true } },
                   _count: { select: { lotes: true } },
@@ -264,6 +269,7 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
           dataInicio: true,
           dataPrevisaoTermino: true,
           valor: true,
+          escopoOrcamento: true,
           aguardandoEmissao: true,
           lote_id: true,
           obra: { select: { id: true, nome: true } },
@@ -326,6 +332,7 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
     ordemServico_id,
     precoBase,
     regraDesconto,
+    escopoOrcamento,
     itens,
     totalComBdi,
     empenhos,
@@ -334,6 +341,7 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
     ordemServico_id: string;
     precoBase: PrecoBase;
     regraDesconto: RegraDesconto;
+    escopoOrcamento: EscopoOrcamento;
     itens: OrcamentoItemInput[];
     totalComBdi: number;
     empenhos: { empenho_id: string; valor: number }[];
@@ -389,7 +397,8 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
           await tx.ordemServicoItem.createMany({ data: novos });
         }
 
-        // O valor da OS acompanha o orçamento: cada empenho recebe o que lhe cabe e a OS soma os vínculos
+        // Cada empenho recebe o que lhe cabe e a OS soma os vínculos: o orçamento no escopo da OS, o
+        // empenhado no do contrato
         for (const vinculo of empenhos) {
           await tx.ordemServicoEmpenho.update({
             where: { ordemServico_id_empenho_id: { ordemServico_id, empenho_id: vinculo.empenho_id } },
@@ -401,6 +410,7 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
           data: {
             precoBase,
             regraDesconto,
+            escopoOrcamento,
             totalComBdi,
             valor: empenhos.reduce((acc, v) => acc + v.valor, 0),
             ...(emissao ? colunasEmissao(emissao) : {}),
@@ -516,7 +526,12 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
 
         const os = await tx.ordemServico.findUniqueOrThrow({
           where: { id: atual.ordemServico_id },
-          select: { fiscalTecnico: { select: { nome: true } }, fiscalAdministrativo: { select: { nome: true } } },
+          select: {
+            valor: true,
+            escopoOrcamento: true,
+            fiscalTecnico: { select: { nome: true } },
+            fiscalAdministrativo: { select: { nome: true } },
+          },
         });
         const snapshot = buildPlanilhaMedicao({
           itens: planilha.itens,
@@ -527,6 +542,13 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
             administrativo: os.fiscalAdministrativo?.nome ?? null,
           },
         });
+        // Orçamento do contrato: o que passar do empenhado espera o próximo empenho
+        if (os.escopoOrcamento === "CONTRATO") {
+          validateMedicaoNoEmpenhado({
+            valorAcumulado: calcularPlanilhaMedicao(snapshot).totais.valorAcumulado,
+            empenhado: os.valor,
+          });
+        }
 
         await tx.medicao.update({
           where: { id: medicao_id },

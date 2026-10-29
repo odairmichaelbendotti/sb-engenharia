@@ -76,6 +76,8 @@ export type PersistedOrdemServico = {
   // Orçamento: como os preços foram informados e o desconto copiado do lote (porcentagem)
   precoBase: "COM_BDI" | "COM_BDI_E_DESCONTO";
   desconto: number;
+  // Orçamento da OS (valor da OS = orçamento) ou do contrato inteiro (valor da OS = empenhado)
+  escopoOrcamento: "ORDEM_SERVICO" | "CONTRATO";
   // Criada e ainda não emitida (sem orçamento): a empresa não vê
   aguardandoEmissao: boolean;
   fiscalSetorial: string | null;

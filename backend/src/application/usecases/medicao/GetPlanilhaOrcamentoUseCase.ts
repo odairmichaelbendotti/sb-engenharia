@@ -47,8 +47,10 @@ export class GetPlanilhaOrcamentoUseCase {
               ? "SEM_SALDO"
               : null;
 
-    // Valor da OS = soma dos empenhos; salvar o orçamento acerta os empenhos com a soma dos itens
+    // Valor da OS = soma dos empenhos; no escopo da OS, salvar o orçamento acerta os empenhos com a
+    // soma dos itens. No do contrato ele é o empenhado, que pode ficar abaixo do orçamento
     const valorOs = os.valor;
+    const doContrato = os.escopoOrcamento === "CONTRATO";
     const totais = totaisOrcamento({
       itens: planilha.itens,
       precoBase: os.precoBase,
@@ -69,7 +71,9 @@ export class GetPlanilhaOrcamentoUseCase {
         )
       : [];
     const divergencia =
-      editor && planilha.itens.length > 0 ? divergenciaTotal(panorama.totais.valorOrcado, valorOs) : null;
+      editor && !doContrato && planilha.itens.length > 0
+        ? divergenciaTotal(panorama.totais.valorOrcado, valorOs)
+        : null;
     const valores = valoresDasMedicoes(planilha);
     const ultimaFechada = fechadas.at(-1);
     // A nota fiscal que paga a medição é dado administrativo; a empresa não vê
@@ -98,7 +102,7 @@ export class GetPlanilhaOrcamentoUseCase {
         dataPrevisaoTermino: os.dataPrevisaoTermino,
         descricaoEmpenho: os.descricaoEmpenho,
         obra: os.obra,
-        contrato: os.contrato,
+        contrato: { ...os.contrato, valor: reais(os.contrato.valor) },
         empresa: os.empresa,
         aguardandoEmissao: os.aguardandoEmissao,
         // Aviso interno: a OS antiga sem lote ficou com desconto 0
@@ -108,6 +112,8 @@ export class GetPlanilhaOrcamentoUseCase {
       precoBase: os.precoBase,
       regraDesconto: os.regraDesconto,
       desconto: os.desconto,
+      // Orçamento da OS (parcela do contrato) ou do contrato inteiro
+      escopoOrcamento: os.escopoOrcamento,
       totalComBdi: planilha.itens.length > 0 ? reais(totais.totalComBdi) : null,
       empenhos,
       itens: planilha.itens.map((item, index) => {
@@ -143,6 +149,8 @@ export class GetPlanilhaOrcamentoUseCase {
       },
       // A comparação com o valor da OS só serve a quem lança o orçamento
       valorOs: editor ? reais(valorOs) : null,
+      // Orçamento do contrato: o que ainda falta empenhar (orçado − empenhado)
+      faltaEmpenhar: doContrato ? reais(Math.max(0, panorama.totais.valorOrcado - valorOs)) : null,
       divergencia: divergencia && { diferenca: reais(divergencia.diferenca) },
       medicoes,
       proximoPeriodoInicio,
