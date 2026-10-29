@@ -127,7 +127,11 @@ export function parseOrcamentoItens(
     const precoCent = aplicaDesconto ? precoComDesconto(informadoCent, desconto, regra) : informadoCent;
     const quantidadeSuprimida = toMilesimos(suprimida);
     const totalCent = aplicaDesconto
-      ? totalPorRegra({ quantidade: quantidadeMil, quantidadeSuprimida, precoUnitario: precoCent }, regra)
+      ? totalPorRegra(
+          { quantidade: quantidadeMil, quantidadeSuprimida, precoUnitario: precoCent, precoReferencia: informadoCent },
+          regra,
+          desconto,
+        )
       : total === null
         ? null
         : Math.round(total * 100);

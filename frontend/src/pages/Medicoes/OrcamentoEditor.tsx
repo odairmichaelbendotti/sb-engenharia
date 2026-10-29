@@ -170,10 +170,12 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
     const quantidade = parseQuantidade(l.quantidade);
     return quantidade === null ? null : Math.max(0, Math.round((quantidade - l.suprimida) * 1000) / 1000);
   };
-  // Quantidade × preço com desconto pela regra (a SCOAM trunca o total)
+  // Total com desconto da linha pela regra (simples: sobre o total da linha; SCOAM: truncado)
   const totalCalculado = (l: ItemForm) => {
     const quantidade = quantidadeValida(l);
-    return quantidade === null ? 0 : totalPorRegra(quantidade, precoEfetivo(l), regraDesconto, l.suprimida);
+    return quantidade === null
+      ? 0
+      : totalPorRegra(quantidade, parseCurrencyMask(l.preco), desconto, regraDesconto, l.suprimida);
   };
   // Total ajustado gravado continua enquanto o item não muda (espelha `manterTotaisAjustados`)
   const inalterado = (l: ItemForm) =>
@@ -208,7 +210,9 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
   // Quanto as supressões tiram: o total da quantidade cheia (pela regra) menos o da efetiva
   const valorSuprimido = comSupressao.reduce(
     (acc, l) =>
-      acc + totalPorRegra(parseQuantidade(l.quantidade) ?? 0, precoEfetivo(l), regraDesconto) - totalCalculado(l),
+      acc +
+      totalPorRegra(parseQuantidade(l.quantidade) ?? 0, parseCurrencyMask(l.preco), desconto, regraDesconto) -
+      totalCalculado(l),
     0,
   );
   const somaDistribuida = empenhos.reduce((acc, e) => acc + parseCurrencyMask(distribuicao[e.id] ?? ""), 0);

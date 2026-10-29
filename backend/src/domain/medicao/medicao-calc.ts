@@ -44,14 +44,26 @@ export const REGRAS_DESCONTO: readonly RegraDesconto[] = ["SIMPLES", "SCOAM"];
 
 /**
  * Preço com BDI menos o desconto (porcentagem), conta em BigInt, sem ponto flutuante.
- * SIMPLES: o preço com desconto é truncado no centavo (nunca passa do referencial).
+ * SIMPLES: preço × (1 − desconto) arredondado no centavo; é só o preço de referência da medição
+ * parcial, o total da linha sai de `totalLinhaComDesconto`.
  * SCOAM: o valor do desconto é truncado, como na planilha SCOAM (preço − TRUNCAR(preço × desconto)).
  */
 export function precoComDesconto(precoCent: number, desconto: number, regra: RegraDesconto = "SIMPLES"): number {
   const descontoMilionesimos = BigInt(Math.round(desconto * 10_000));
   const preco = BigInt(precoCent);
   if (regra === "SCOAM") return Number(preco - (preco * descontoMilionesimos) / BigInt(DESCONTO_ESCALA));
-  return Number((preco * (BigInt(DESCONTO_ESCALA) - descontoMilionesimos)) / BigInt(DESCONTO_ESCALA));
+  const escala = BigInt(DESCONTO_ESCALA);
+  return Number((preco * (escala - descontoMilionesimos) + escala / 2n) / escala);
+}
+
+/**
+ * Total da linha no desconto simples, como a planilha: quantidade × preço c/ BDI × (1 − desconto),
+ * arredondado só no fim (sem cortar o preço unitário antes). Ex.: 235 × 0,82 × 0,694 = 133,73.
+ */
+export function totalLinhaComDesconto(quantidadeMil: number, precoReferenciaCent: number, desconto: number): number {
+  const fator = BigInt(DESCONTO_ESCALA - Math.round(desconto * 10_000));
+  const divisor = BigInt(QTD_ESCALA) * BigInt(DESCONTO_ESCALA);
+  return Number((BigInt(quantidadeMil) * BigInt(precoReferenciaCent) * fator + divisor / 2n) / divisor);
 }
 
 /** Quantidade × preço truncado no centavo (o total do item na planilha SCOAM). */
@@ -60,17 +72,21 @@ export function valorItemTruncado(quantidadeMil: number, precoCent: number): num
 }
 
 /**
- * Total ajustado que a regra de desconto impõe ao item lançado só com BDI: na SCOAM, o total
- * truncado quando ele difere do arredondado; nulo = quantidade × preço. Item com supressão não tem
- * total ajustado.
+ * Total ajustado que a regra de desconto impõe ao item lançado só com BDI, quando difere de
+ * quantidade × preço unitário (nulo = igual): na SIMPLES, o total da linha com desconto
+ * (`totalLinhaComDesconto`); na SCOAM, o total truncado. Item com supressão não tem total ajustado.
  */
 export function totalPorRegra(
-  item: Pick<ItemPlanilha, "quantidade" | "quantidadeSuprimida" | "precoUnitario">,
+  item: Pick<ItemPlanilha, "quantidade" | "quantidadeSuprimida" | "precoUnitario"> & { precoReferencia: number },
   regra: RegraDesconto,
+  desconto: number,
 ): number | null {
-  if (regra !== "SCOAM" || (item.quantidadeSuprimida ?? 0) > 0) return null;
-  const truncado = valorItemTruncado(item.quantidade, item.precoUnitario);
-  return truncado === valorItem(item.quantidade, item.precoUnitario) ? null : truncado;
+  if ((item.quantidadeSuprimida ?? 0) > 0) return null;
+  const total =
+    regra === "SCOAM"
+      ? valorItemTruncado(item.quantidade, item.precoUnitario)
+      : totalLinhaComDesconto(item.quantidade, item.precoReferencia, desconto);
+  return total === valorItem(item.quantidade, item.precoUnitario) ? null : total;
 }
 
 // Item da planilha em unidades internas (milésimos e centavos)
@@ -528,7 +544,7 @@ export function aplicarDesconto(
       continue;
     }
     const precoUnitario = precoComDesconto(item.precoReferencia, desconto, regra);
-    const valorTotal = totalPorRegra({ ...item, precoUnitario }, regra);
+    const valorTotal = totalPorRegra({ ...item, precoUnitario, precoReferencia: item.precoReferencia }, regra, desconto);
     if (precoUnitario !== item.precoUnitario || valorTotal !== item.valorTotal) {
       precos.push({ id: item.id, precoUnitario, valorTotal });
     }

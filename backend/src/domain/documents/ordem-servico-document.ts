@@ -257,7 +257,7 @@ export function buildOrcamentoPlanilha(
   const regra =
     data.regraDesconto === "SCOAM"
       ? "valor do desconto e total do item truncados no centavo"
-      : "preço com desconto truncado no centavo";
+      : "desconto aplicado sobre o total de cada linha";
   const nota = comPrecoBdi
     ? `Preços com BDI de ${formatPercentual(data.bdi)}; o preço unitário recebe o desconto do lote de ${formatPercentual(data.desconto)} (${regra}).`
     : `Preços unitários com BDI de ${formatPercentual(data.bdi)} e desconto do lote de ${formatPercentual(data.desconto)}.`;
@@ -277,7 +277,7 @@ export function buildOrdemServicoDocumentModel(data: OrdemServicoDocumentData): 
   const desconto = os.desconto;
 
   // Com orçamento, o total com BDI sai dos itens e o valor final é a soma deles (preços com desconto,
-  // truncados item a item), igual ao valor da OS. OS antiga sem orçamento: total com BDI informado e
+  // calculados item a item), igual ao valor da OS. OS antiga sem orçamento: total com BDI informado e
   // final = total × (1 − desconto). Sem total com BDI, só o valor final já gravado
   const totalComBdi = os.totalComBdi;
   const valorFinal =
