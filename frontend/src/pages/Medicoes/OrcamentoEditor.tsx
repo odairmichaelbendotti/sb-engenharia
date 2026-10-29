@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, CircleMinus, ClipboardPaste, FolderPlus, Lock, Plus, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import type { OrcamentoItem, OrcamentoPayload, PlanilhaOrcamento, RegraDesconto } from "../../../types/medicao";
+import type { OrcamentoItem, OrcamentoPayload, PlanilhaOrcamento } from "../../../types/medicao";
 import { useMedicoes } from "../../store/medicoes";
 import { useUnsavedChangesGuard } from "../../hooks/useUnsavedChangesGuard";
 import { formatCurrency } from "../../utils/format-currency";
@@ -26,7 +26,6 @@ import {
   IconButton,
   InlineEdit,
   Input,
-  SegmentedControl,
 } from "../../components/ui";
 import { StickyFooter } from "./Workspace";
 import { matchesItemSearch } from "./medicao-progress";
@@ -59,11 +58,6 @@ type ItemForm = {
 type Campo = "codigo" | "descricao" | "unidade" | "quantidade" | "preco" | "empenhos";
 type Erro = { key: number | null; campo: Campo | null; texto: string };
 
-const REGRA_DESCONTO_OPTIONS: { value: RegraDesconto; label: string }[] = [
-  { value: "SIMPLES", label: "Desconto simples" },
-  { value: "SCOAM", label: "Desconto SCOAM" },
-];
-
 // Até lg a linha vira cartão; "Total c/ BDI" ganha coluna a partir de xl e "Medido" a partir de 2xl
 const COLS =
   "lg:grid-cols-[1.5rem_5.5rem_minmax(0,1fr)_4.5rem_6.5rem_8rem_7.5rem_2rem] xl:grid-cols-[1.5rem_6rem_minmax(0,1fr)_4.5rem_7rem_8.5rem_7.5rem_7.5rem_2rem] 2xl:grid-cols-[1.5rem_6rem_minmax(0,1fr)_4.5rem_7rem_8.5rem_7.5rem_7.5rem_7rem_2rem]";
@@ -91,10 +85,6 @@ function toForm(item: OrcamentoItem, key: number): ItemForm {
 }
 
 const preenchida = (l: ItemForm) => Boolean(l.id || l.descricao || l.unidade || l.quantidade || l.preco);
-
-function formatPercentual(valor: number) {
-  return `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 4 }).format(valor)}%`;
-}
 
 const centavos = (valor: number) => Math.round(valor * 100);
 
@@ -135,14 +125,14 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
   const [linhas, setLinhas] = useState<ItemForm[]>(() =>
     itens.length > 0 ? itens.map((item) => toForm(item, nextKey.current++)) : [novaLinha()],
   );
-  const [regraDesconto, setRegraDesconto] = useState<RegraDesconto>(planilha.regraDesconto);
+  // Regra gravada na OS: simples nas novas; as convertidas das planilhas SCOAM mantêm a delas
+  const regraDesconto = planilha.regraDesconto;
   // Quanto cada empenho destina à OS (máscara de moeda), quando ela tem mais de um
   const [distribuicao, setDistribuicao] = useState<Record<string, string>>(() =>
     Object.fromEntries(empenhos.map((e) => [e.id, formatValueToCurrencyMask(e.valor)])),
   );
   const serialize = () =>
     JSON.stringify([
-      regraDesconto,
       linhas
         .filter(preenchida)
         .map((l) => [l.id ?? null, l.codigo, l.descricao, l.etapa, l.unidade, l.quantidade, l.suprimida, l.preco]),
@@ -349,7 +339,6 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
     }
     const payload: OrcamentoPayload = {
       precoBase: "COM_BDI",
-      regraDesconto,
       itens: linhas.filter(preenchida).map((l) => ({
         ...(l.id ? { id: l.id } : {}),
         codigo: l.codigo,
@@ -587,22 +576,6 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
   return (
     <>
       <div className="flex flex-col lg:flex-row lg:items-center gap-2 mb-3">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <SegmentedControl
-            label="Como o desconto é aplicado"
-            options={REGRA_DESCONTO_OPTIONS}
-            value={regraDesconto}
-            onChange={setRegraDesconto}
-            disabled={!permissoes.trocarPrecoBase}
-          />
-          <span className="text-[11px] text-text-muted">
-            {!permissoes.trocarPrecoBase
-              ? `Preços com BDI e desconto de ${formatPercentual(desconto)}. Regra travada: já há medição fechada com estes preços.`
-              : regraDesconto === "SCOAM"
-                  ? `Desconto de ${formatPercentual(desconto)} em cada preço, truncando o valor do desconto e o total do item (planilha SCOAM).`
-                  : `Desconto de ${formatPercentual(desconto)} em cada preço, truncando o preço com desconto no centavo.`}
-          </span>
-        </div>
         <div className="flex flex-col sm:flex-row gap-2 lg:ml-auto lg:w-auto">
           <SearchInput value={busca} onChange={setBusca} placeholder="Buscar item por código ou descrição..." />
           <Button variant="secondary" size="sm" icon={ClipboardPaste} onClick={() => setColando("")}>
@@ -758,10 +731,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
             <>
               <p className="text-sm text-text-secondary">
                 <span className="tabular-nums">Total c/ BDI {formatCurrency(totalComBdi)}</span>
-                <span className="text-text-muted tabular-nums">
-                  {" "}
-                  · desconto {formatPercentual(desconto)} (−{formatCurrency(Math.round((totalComBdi - total) * 100) / 100)}) ·{" "}
-                </span>
+                <span className="text-text-muted"> · </span>
                 Total c/ desconto (valor da OS){" "}
                 <span className="font-semibold text-text-primary tabular-nums">{formatCurrency(total)}</span>
                 <span className="text-text-muted tabular-nums">
