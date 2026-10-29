@@ -174,7 +174,6 @@ export interface OrcamentoItemPayload {
 
 export interface OrcamentoPayload {
   precoBase: PrecoBase;
-  regraDesconto: RegraDesconto;
   itens: OrcamentoItemPayload[];
   // Quanto cada empenho destina à OS, quando ela tem mais de um (soma = valor do orçamento)
   empenhos?: { empenho_id: string; valor: number }[];

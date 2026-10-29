@@ -3,7 +3,6 @@ import { DomainError } from "../../../domain/errors/DomainError.js";
 import {
   INT_MAX,
   precoComDesconto,
-  REGRAS_DESCONTO,
   toMilesimos,
   totalPorRegra,
   valorItem,
@@ -88,12 +87,6 @@ function numero(value: unknown): number {
   if (typeof value === "number") return value;
   if (typeof value === "string" && value.trim() !== "") return Number(value);
   return NaN;
-}
-
-export function parseRegraDesconto(raw: unknown, atual: RegraDesconto): RegraDesconto {
-  if (raw === undefined || raw === null) return atual;
-  if (!REGRAS_DESCONTO.includes(raw as RegraDesconto)) throw new DomainError("regraDesconto is invalid");
-  return raw as RegraDesconto;
 }
 
 /**

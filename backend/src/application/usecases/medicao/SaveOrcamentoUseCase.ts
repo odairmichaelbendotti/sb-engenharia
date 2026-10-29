@@ -9,7 +9,6 @@ import {
   assertPodeEditar,
   loadOsComAcesso,
   parseOrcamentoItens,
-  parseRegraDesconto,
 } from "./medicao-access.js";
 
 type Distribuicao = { empenho_id: string; valor: number }[];
@@ -72,11 +71,9 @@ export class SaveOrcamentoUseCase {
 
     // Um modo só (2026-10-28): o preço digitado é sempre com BDI e o sistema aplica o desconto
     const precoBase: PrecoBase = "COM_BDI";
-    const regraDesconto = parseRegraDesconto(body.regraDesconto, os.regraDesconto);
-    // A regra muda os preços com desconto: com medição fechada, os preços medidos não mudam
-    if (regraDesconto !== os.regraDesconto && (await this.repository.hasMedicaoFechada(os.id))) {
-      throw new DomainError("The discount rule cannot change after a medição was closed");
-    }
+    // A regra não é escolhida na tela: OS nova usa o desconto simples; as convertidas das planilhas
+    // SCOAM ficam com a regra delas, que reproduz os preços gravados
+    const regraDesconto = os.regraDesconto;
     // Total ajustado já gravado (planilha antiga) continua enquanto o item não muda
     const atuais = (await this.repository.getPlanilhas([os.id])).get(os.id)?.itens ?? [];
     const itens = manterTotaisAjustados(
