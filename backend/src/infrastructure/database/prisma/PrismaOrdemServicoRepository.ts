@@ -573,15 +573,32 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
           fiscalTecnico: { select: { nome: true, ramal: true, email: true } },
           fiscalAdministrativo: { select: { nome: true, ramal: true, email: true } },
           tenant: { select: { city: true, apelido: true } },
-          _count: { select: { itens: true } },
+          itens: {
+            orderBy: { ordem: "asc" },
+            select: {
+              ordem: true,
+              codigo: true,
+              descricao: true,
+              etapa: true,
+              unidade: true,
+              quantidade: true,
+              quantidadeSuprimida: true,
+              precoUnitario: true,
+              valorTotal: true,
+              precoReferencia: true,
+            },
+          },
         },
       });
       if (!row) return null;
 
-      const { empenho, obra, lote, fiscalTecnico, fiscalAdministrativo, tenant, _count, ...ordemServico } = row;
+      const { empenho, obra, lote, fiscalTecnico, fiscalAdministrativo, tenant, itens, regraDesconto, ...ordemServico } =
+        row;
       return {
         ordemServico: withReais(ordemServico),
-        temOrcamento: _count.itens > 0,
+        temOrcamento: itens.length > 0,
+        itens,
+        regraDesconto,
         empenhoDescricao: empenho.description,
         contrato: empenho.contrato,
         obra,

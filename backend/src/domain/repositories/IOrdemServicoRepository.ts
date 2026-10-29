@@ -106,10 +106,24 @@ export type OrdemServicoContratoDados = {
 };
 
 // Tudo o que o PDF da OS precisa, já com os valores em reais
+export type OrdemServicoDocumentItem = Pick<ItemPlanilha, "quantidade" | "precoUnitario" | "valorTotal"> & {
+  quantidadeSuprimida: number;
+  precoReferencia: number | null;
+  ordem: number;
+  codigo: string | null;
+  descricao: string;
+  etapa: string | null;
+  unidade: string;
+};
+
 export type OrdemServicoDocumentData = {
   ordemServico: PersistedOrdemServico;
   // Se a OS tem orçamento (itens): aí o valor final é o valor da OS
   temOrcamento: boolean;
+  // Itens do orçamento na ordem da planilha (milésimos e centavos), para o anexo do PDF
+  itens: OrdemServicoDocumentItem[];
+  // Como o desconto foi aplicado nos preços (modo COM_BDI)
+  regraDesconto: RegraDesconto;
   empenhoDescricao: string;
   contrato: {
     identificador: string;

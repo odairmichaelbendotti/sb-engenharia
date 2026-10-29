@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calcularTermino } from "../entities/OrdemServico.js";
 import {
+  buildOrcamentoPlanilha,
   buildOrdemServicoDocumentModel,
   formatCnpj,
   formatDataExtensa,
@@ -17,6 +18,8 @@ function sampleData(
 ): OrdemServicoDocumentData {
   return {
     temOrcamento,
+    itens: [],
+    regraDesconto: "SIMPLES",
     ordemServico: {
       id: "os-1",
       numero: "OS 010/BAFL/2026-L4",
@@ -167,5 +170,48 @@ describe("buildOrdemServicoDocumentModel", () => {
     expect(model.identificacao.urgencias.some((u) => u.selecionado)).toBe(false);
     expect(model.identificacao.dataVistoria).toBe("");
     expect(model.dataEmissao).toBe("");
+  });
+});
+
+describe("planilha orçamentária do anexo", () => {
+  const item = (ordem: number, overrides: Partial<OrdemServicoDocumentData["itens"][number]> = {}) => ({
+    ordem,
+    codigo: `C${ordem}`,
+    descricao: `Serviço ${ordem}`,
+    etapa: null,
+    unidade: "m²",
+    quantidade: 10_000,
+    quantidadeSuprimida: 0,
+    precoUnitario: 1676,
+    valorTotal: null,
+    precoReferencia: 2415,
+    ...overrides,
+  });
+
+  it("sem orçamento não há anexo", () => {
+    expect(buildOrcamentoPlanilha({ itens: [], regraDesconto: "SIMPLES", bdi: 21.19, desconto: 30.6 })).toBeNull();
+    expect(buildOrdemServicoDocumentModel(sampleData()).planilha).toBeNull();
+  });
+
+  it("lista os itens com etapas, supressão, preço com BDI e o total da OS", () => {
+    const planilha = buildOrcamentoPlanilha({
+      itens: [
+        item(1, { etapa: "COBERTURA" }),
+        item(2, { etapa: "COBERTURA", quantidadeSuprimida: 4000 }),
+        item(3, { etapa: null, codigo: null, precoReferencia: null, precoUnitario: 2667, quantidade: 21_500, valorTotal: 57_340 }),
+      ],
+      regraDesconto: "SCOAM",
+      bdi: 21.19,
+      desconto: 30.6,
+    })!;
+    expect(planilha.comPrecoBdi).toBe(true);
+    expect(planilha.linhas[0]).toMatchObject({ item: "1", codigo: "C1", quantidade: "10,00", precoComBdi: "24,15", precoUnitario: "16,76", total: "167,60" });
+    // Suprimidos 4 de 10: vale 6
+    expect(planilha.linhas[1]).toMatchObject({ quantidade: "6,00", suprimido: "4,00", total: "100,56" });
+    // Total ajustado (truncado) e sem preço com BDI
+    expect(planilha.linhas[2]).toMatchObject({ codigo: "", quantidade: "21,50", precoComBdi: "", total: "573,40" });
+    expect(planilha.etapas).toEqual([{ titulo: "COBERTURA", inicio: 0, subtotal: "268,16" }]);
+    expect(planilha.total).toBe("841,56");
+    expect(planilha.nota).toContain("valor do desconto e total do item truncados");
   });
 });
