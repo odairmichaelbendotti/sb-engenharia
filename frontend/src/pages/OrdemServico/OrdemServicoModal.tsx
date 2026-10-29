@@ -243,7 +243,7 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
     planilha === undefined || planilha === null
       ? planilha
       : descontoNovo && !loteTravadoPorMedicao && lote
-        ? valorOrcamentoComDesconto(planilha.itens, lote.desconto)
+        ? valorOrcamentoComDesconto(planilha.itens, lote.desconto, planilha.regraDesconto)
         : planilha.totais.valorOrcado;
   const fiscaisTecnicos = (contratoDados?.fiscais ?? []).filter((f) => f.tipo === "TECNICO");
   const fiscaisAdministrativos = (contratoDados?.fiscais ?? []).filter((f) => f.tipo === "ADMINISTRATIVO");

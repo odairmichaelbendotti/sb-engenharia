@@ -180,7 +180,7 @@ export class UpdateOrdemServicoUseCase {
             "Exclua as medições fechadas antes de definir o lote: os preços já medidos não mudam.",
           );
         }
-        valorEsperado = aplicarDesconto(orcamento.itens, loteNovo.desconto).valorOs;
+        valorEsperado = aplicarDesconto(orcamento.itens, loteNovo.desconto, orcamento.regraDesconto).valorOs;
       }
     }
     if (valorEsperado !== null && vinculos.reduce((acc, v) => acc + v.valor, 0) !== valorEsperado) {

@@ -1,3 +1,5 @@
+import type { RegraDesconto } from "../../types/medicao";
+
 // Números digitados com vírgula (pt-BR) e as contas de quantidade × preço das medições
 
 /** Número digitado com vírgula ("24,8") → número */
@@ -74,12 +76,31 @@ export function quantidadeEfetiva(item: { quantidade: number; quantidadeSuprimid
 }
 
 /**
- * Preço com BDI menos o desconto (porcentagem), truncado no centavo (espelha `precoComDesconto` de
- * backend/src/domain/medicao/medicao-calc.ts: conta em inteiros, desconto com até 4 casas).
+ * Preço com BDI menos o desconto (porcentagem), espelha `precoComDesconto` de
+ * backend/src/domain/medicao/medicao-calc.ts (conta em inteiros, desconto com até 4 casas).
+ * SIMPLES trunca o preço com desconto; SCOAM trunca o valor do desconto.
  */
-export function precoComDesconto(preco: number, desconto: number) {
-  const fator = BigInt(1_000_000 - Math.round(desconto * 10_000));
-  return Number((BigInt(Math.round(preco * 100)) * fator) / 1_000_000n) / 100;
+export function precoComDesconto(preco: number, desconto: number, regra: RegraDesconto = "SIMPLES") {
+  const descontoMilionesimos = BigInt(Math.round(desconto * 10_000));
+  const centavos = BigInt(Math.round(preco * 100));
+  if (regra === "SCOAM") return Number(centavos - (centavos * descontoMilionesimos) / 1_000_000n) / 100;
+  return Number((centavos * (1_000_000n - descontoMilionesimos)) / 1_000_000n) / 100;
+}
+
+/**
+ * Total do item lançado só com BDI pela regra de desconto (espelha `totalPorRegra` do backend):
+ * na SCOAM, quantidade × preço truncado no centavo; senão, arredondado. Item com supressão
+ * não tem total ajustado, então vale o arredondado.
+ */
+export function totalPorRegra(
+  quantidade: number,
+  precoUnitario: number,
+  regra: RegraDesconto,
+  suprimida = 0,
+) {
+  if (regra !== "SCOAM" || suprimida > 0) return valorItem(quantidade, precoUnitario);
+  const produto = BigInt(Math.round(quantidade * 1000)) * BigInt(Math.round(precoUnitario * 100));
+  return Number(produto / 1000n) / 100;
 }
 
 /**
@@ -89,12 +110,18 @@ export function precoComDesconto(preco: number, desconto: number) {
 export function valorOrcamentoComDesconto(
   itens: readonly { quantidade: number; quantidadeSuprimida: number; precoReferencia: number | null; valorTotal: number }[],
   desconto: number,
+  regra: RegraDesconto,
 ) {
   const centavos = itens.reduce((acc, item) => {
     const valor =
       item.precoReferencia === null
         ? item.valorTotal
-        : valorItem(quantidadeEfetiva(item), precoComDesconto(item.precoReferencia, desconto));
+        : totalPorRegra(
+            quantidadeEfetiva(item),
+            precoComDesconto(item.precoReferencia, desconto, regra),
+            regra,
+            item.quantidadeSuprimida,
+          );
     return acc + Math.round(valor * 100);
   }, 0);
   return centavos / 100;

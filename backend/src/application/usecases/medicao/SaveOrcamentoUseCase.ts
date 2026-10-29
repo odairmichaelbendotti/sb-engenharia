@@ -5,7 +5,13 @@ import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRe
 import type { IMedicaoRepository, MedicaoOsContext } from "../../../domain/repositories/IMedicaoRepository.js";
 import { calcularPrazoCiencia, isCienciaDispensada } from "../../../domain/tramitacao/ciencia.js";
 import { autorDe } from "../ordem-servico-tramitacao/tramitacao-access.js";
-import { assertPodeEditar, loadOsComAcesso, parseOrcamentoItens, parsePrecoBase } from "./medicao-access.js";
+import {
+  assertPodeEditar,
+  loadOsComAcesso,
+  parseOrcamentoItens,
+  parsePrecoBase,
+  parseRegraDesconto,
+} from "./medicao-access.js";
 
 type Distribuicao = { empenho_id: string; valor: number }[];
 
@@ -66,10 +72,15 @@ export class SaveOrcamentoUseCase {
     assertPodeEditar(user, os);
 
     const precoBase = parsePrecoBase(body.precoBase, os.precoBase);
+    const regraDesconto = parseRegraDesconto(body.regraDesconto, os.regraDesconto);
     if (precoBase !== os.precoBase && (await this.repository.hasMedicaoFechada(os.id))) {
       throw new DomainError("The price mode cannot change after a medição was closed");
     }
-    const itens = parseOrcamentoItens(body.itens, { precoBase, desconto: os.desconto });
+    // A regra muda os preços com desconto: com medição fechada, os preços medidos não mudam
+    if (precoBase === "COM_BDI" && regraDesconto !== os.regraDesconto && (await this.repository.hasMedicaoFechada(os.id))) {
+      throw new DomainError("The discount rule cannot change after a medição was closed");
+    }
+    const itens = parseOrcamentoItens(body.itens, { precoBase, desconto: os.desconto, regra: regraDesconto });
     if (itens.length === 0) throw new DomainError("The budget must have at least one item");
 
     const { totalComBdi, valorOs } = totaisOrcamento({ itens, precoBase, desconto: os.desconto });
@@ -97,6 +108,7 @@ export class SaveOrcamentoUseCase {
     await this.repository.saveOrcamento({
       ordemServico_id: os.id,
       precoBase,
+      regraDesconto,
       itens,
       totalComBdi,
       empenhos,

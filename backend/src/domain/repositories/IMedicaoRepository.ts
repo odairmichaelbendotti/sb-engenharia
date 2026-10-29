@@ -1,5 +1,5 @@
 import type { OrdemServicoStatusValue } from "../entities/OrdemServico.js";
-import type { LinhaMedicaoInput, OrcamentoItemInput, PrecoBase } from "../medicao/medicao-calc.js";
+import type { LinhaMedicaoInput, OrcamentoItemInput, PrecoBase, RegraDesconto } from "../medicao/medicao-calc.js";
 import type { ItemPlanilhaCompleto, PlanilhaMedicao } from "../medicao/planilha-medicao.js";
 import type { OrdemServicoEmissao } from "./IOrdemServicoRepository.js";
 
@@ -22,6 +22,8 @@ export type MedicaoOsContext = {
   // Desconto copiado do lote na criação da OS (porcentagem) e como os preços foram informados
   desconto: number;
   precoBase: PrecoBase;
+  // Como o desconto é aplicado em cada preço no modo COM_BDI
+  regraDesconto: RegraDesconto;
   // Contrato com lotes e OS sem lote (OS antiga): o desconto da OS ficou 0
   semLote: boolean;
   // Emissão para a empresa (ver domain/tramitacao/ciencia.ts)
@@ -138,6 +140,7 @@ export interface IMedicaoRepository {
   saveOrcamento(params: {
     ordemServico_id: string;
     precoBase: PrecoBase;
+    regraDesconto: RegraDesconto;
     itens: OrcamentoItemInput[];
     totalComBdi: number;
     empenhos: { empenho_id: string; valor: number }[];
