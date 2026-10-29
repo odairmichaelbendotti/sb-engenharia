@@ -113,8 +113,9 @@ export class SaveOrcamentoUseCase {
     const { totalComBdi, valorOs } = totaisOrcamento({ itens, precoBase, desconto: os.desconto, regra: regraDesconto });
     const empenhos = distribuir(os, escopo, valorOs, body.empenhos);
 
-    // O que cada empenho destina precisa caber no saldo livre dele (sem contar esta OS)
-    for (const vinculo of empenhos) {
+    // O que cada empenho destina precisa caber no saldo livre dele (sem contar esta OS). A OS
+    // planejada não reserva saldo: a emissão confere
+    for (const vinculo of os.aguardandoEmissao ? [] : empenhos) {
       const saldo = Math.round((await this.empenhoRepository.getSaldoDisponivel(vinculo.empenho_id, os.id)) * 100);
       if (vinculo.valor > saldo) {
         const numero = os.empenhos.find((v) => v.empenho_id === vinculo.empenho_id)?.numero ?? "";

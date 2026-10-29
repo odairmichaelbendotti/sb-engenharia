@@ -15,9 +15,9 @@ export function ordemServicoStatusDisplay(os: OrdemServico): StatusDisplay {
   const fase = getFaseEmissao(os);
   if (fase === "AGUARDANDO_EMISSAO") {
     return {
-      label: "Aguardando orçamento",
+      label: "Planejada",
       tone: "closed",
-      title: "A empresa ainda não vê a OS: lance o orçamento e emita",
+      title: "Valor só estimado, fora do emitido; a empresa ainda não vê. Lance o orçamento e emita",
     };
   }
   if (fase === "CIENCIA_VENCIDA") {

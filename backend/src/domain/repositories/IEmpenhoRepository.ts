@@ -16,6 +16,8 @@ export type empenhosDTO = {
     };
     /** Soma do valor das ordens de serviço não canceladas vinculadas a este empenho. */
     valorComprometido: number;
+    /** Valor das OS planejadas (ainda não emitidas) neste empenho: não reserva o saldo. */
+    valorPlanejado: number;
     /** Valor do empenho - valorComprometido. */
     saldoDisponivel: number;
     /** Soma das notas fiscais não canceladas do empenho. */

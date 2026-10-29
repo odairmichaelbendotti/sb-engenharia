@@ -105,7 +105,9 @@ export function EmpenhoTable({ empenhos, isLoading = false, onView, onEdit, onDe
                     <span className={`text-[11px] ${empenho.saldoDisponivel < 0 ? "text-danger-text font-semibold" : "text-text-muted"}`}>
                       {empenho.saldoDisponivel < 0
                         ? "acima do empenho"
-                        : `${pct(empenho.valorComprometido, empenho.value)}% · ${formatCurrency(empenho.saldoDisponivel)} livre`}
+                        : `${pct(empenho.valorComprometido, empenho.value)}% · ${formatCurrency(empenho.saldoDisponivel)} livre${
+                            empenho.valorPlanejado > 0 ? ` · ${formatCurrency(empenho.valorPlanejado)} planejado` : ""
+                          }`}
                     </span>
                   </span>
                 </Td>

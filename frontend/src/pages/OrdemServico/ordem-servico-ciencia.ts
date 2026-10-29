@@ -16,7 +16,7 @@ export function getFaseEmissao(os: OrdemServico, now: Date = new Date()): FaseEm
 }
 
 export const FASE_LABEL: Record<FaseEmissao, string> = {
-  AGUARDANDO_EMISSAO: "Aguardando emissão",
+  AGUARDANDO_EMISSAO: "Planejada",
   DISPENSADA: "Ciência dispensada",
   AGUARDANDO_CIENCIA: "Aguardando ciência",
   CIENCIA_VENCIDA: "Ciência vencida",

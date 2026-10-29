@@ -3,10 +3,15 @@ import type { ScopeRef } from "../../components/filters/scope-options";
 import { medicaoTitulo } from "../OrdemServico/medicao-display";
 import { fracaoMedida, fracaoPrazo, ritmoMedicao, type Ritmo } from "./medicao-progress";
 
-export type PainelTab = "ATIVAS" | "SEM_ORCAMENTO" | "RASCUNHO" | "CONCLUIDAS" | "ENCERRADAS";
+export type PainelTab = "ATIVAS" | "PLANEJADAS" | "SEM_ORCAMENTO" | "RASCUNHO" | "CONCLUIDAS" | "ENCERRADAS";
 
 export const PAINEL_TABS: { id: PainelTab; label: string; title: string }[] = [
-  { id: "ATIVAS", label: "Ativas", title: "OS ativas: orçamento e medições abertos para lançamento" },
+  { id: "ATIVAS", label: "Ativas", title: "OS emitidas e ativas: orçamento e medições abertos para lançamento" },
+  {
+    id: "PLANEJADAS",
+    label: "Planejadas",
+    title: "OS ainda não emitidas: valor só planejado, fora dos totais; emita para medir",
+  },
   { id: "SEM_ORCAMENTO", label: "Sem orçamento", title: "OS ativas que ainda não têm orçamento lançado" },
   { id: "RASCUNHO", label: "Rascunho aberto", title: "OS com uma medição em rascunho, ainda fora do acumulado" },
   { id: "CONCLUIDAS", label: "Medição concluída", title: "Todos os itens do orçamento já foram medidos" },
@@ -14,7 +19,8 @@ export const PAINEL_TABS: { id: PainelTab; label: string; title: string }[] = [
 ];
 
 export function matchesPainelTab(item: PainelMedicaoItem, tab: PainelTab) {
-  if (tab === "ATIVAS") return item.status === "ATIVO";
+  if (tab === "ATIVAS") return item.status === "ATIVO" && !item.aguardandoEmissao;
+  if (tab === "PLANEJADAS") return item.status === "ATIVO" && item.aguardandoEmissao;
   if (tab === "SEM_ORCAMENTO") return item.status === "ATIVO" && item.itens === 0;
   if (tab === "RASCUNHO") return item.rascunho !== null;
   if (tab === "CONCLUIDAS") return item.completo;

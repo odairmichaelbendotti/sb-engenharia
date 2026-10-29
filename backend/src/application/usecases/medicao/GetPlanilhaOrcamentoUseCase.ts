@@ -9,7 +9,7 @@ import { loadOsComAcesso, podeEditar } from "./medicao-access.js";
 import { presentMedicaoResumo, qtd, reais, valoresDasMedicoes } from "./medicao-presenter.js";
 
 // Por que não dá para lançar uma medição agora (o frontend traduz)
-type MotivoBloqueio = "SEM_PERMISSAO" | "OS_INATIVA" | "SEM_ORCAMENTO" | "RASCUNHO_ABERTO" | "SEM_SALDO";
+type MotivoBloqueio = "SEM_PERMISSAO" | "OS_INATIVA" | "SEM_ORCAMENTO" | "RASCUNHO_ABERTO" | "SEM_SALDO" | "OS_PLANEJADA";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
@@ -41,7 +41,9 @@ export class GetPlanilhaOrcamentoUseCase {
         ? "OS_INATIVA"
         : planilha.itens.length === 0
           ? "SEM_ORCAMENTO"
-          : rascunho
+          : os.aguardandoEmissao && !rascunho
+            ? "OS_PLANEJADA"
+            : rascunho
             ? "RASCUNHO_ABERTO"
             : panorama.itens.every((i) => i.completo)
               ? "SEM_SALDO"

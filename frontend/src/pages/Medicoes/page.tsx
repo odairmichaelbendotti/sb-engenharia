@@ -73,9 +73,10 @@ export default function Medicoes() {
 
   const visible = useMemo(() => searched.filter((item) => matchesPainelTab(item, tab)), [searched, tab]);
 
-  // Totais das OS ativas que passam pelos filtros e pela busca
+  // Totais das OS ativas e emitidas que passam pelos filtros e pela busca (a planejada fica de fora)
   const summaryCells = useMemo<SummaryCell[]>(() => {
-    const ativas = searched.filter((item) => item.status === "ATIVO");
+    const ativas = searched.filter((item) => matchesPainelTab(item, "ATIVAS"));
+    const semOrcamentoAtivas = ativas.filter((item) => item.itens === 0).length;
     const orcado = ativas.reduce((acc, item) => acc + item.valorOrcado, 0);
     const medido = ativas.reduce((acc, item) => acc + item.valorMedido, 0);
     const rascunho = ativas.reduce((acc, item) => acc + (item.rascunho?.valor ?? 0), 0);
@@ -86,7 +87,7 @@ export default function Medicoes() {
         key: "orcado",
         label: "Orçado",
         value: formatCurrency(orcado),
-        hint: `${ativas.length - tabCounts.SEM_ORCAMENTO} de ${ativas.length} OS ativas com orçamento`,
+        hint: `${ativas.length - semOrcamentoAtivas} de ${ativas.length} OS ativas com orçamento`,
       },
       {
         key: "medido",

@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   ListChecks,
   Paperclip,
+  Calculator,
 } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
@@ -95,6 +96,9 @@ type FormState = {
   descricaoProblema: string;
   dataEmissao: string;
   totalComBdi: string;
+  // Estimativa da OS planejada: total com BDI (máscara) e de onde veio o número
+  estimativaComBdi: string;
+  estimativaReferencia: string;
   fiscalSetorial: string;
   fiscalTecnico_id: string;
   fiscalAdministrativo_id: string;
@@ -155,6 +159,9 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
     dataEmissao: ordemServico ? toDateInput(ordemServico.dataEmissao) : todayInput(),
     totalComBdi:
       ordemServico?.totalComBdi != null ? formatValueToCurrencyMask(ordemServico.totalComBdi) : "",
+    estimativaComBdi:
+      ordemServico?.estimativaComBdi != null ? formatValueToCurrencyMask(ordemServico.estimativaComBdi) : "",
+    estimativaReferencia: ordemServico?.estimativaReferencia ?? "",
     fiscalSetorial: ordemServico?.fiscalSetorial ?? "",
     fiscalTecnico_id: ordemServico?.fiscalTecnico_id ?? "",
     fiscalAdministrativo_id: ordemServico?.fiscalAdministrativo_id ?? "",
@@ -301,6 +308,14 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
   // ficar abaixo do orçamento até chegarem os próximos empenhos
   const doContrato = temOrcamento && planilha?.escopoOrcamento === "CONTRATO";
   const valorPeloOrcamento = ordemServico === null || ordemServico.aguardandoEmissao || temOrcamento;
+  // OS planejada (nova ou ainda não emitida): tem uma estimativa, não reserva o saldo dos empenhos
+  // (a emissão confere) e o valor dela fica fora do emitido
+  const planejada = ordemServico === null || ordemServico.aguardandoEmissao;
+  const estimativaComBdi = parseCurrencyMask(form.estimativaComBdi);
+  // Desconto que a OS terá: o copiado na criação (ou o do lote que a OS antiga recebe agora)
+  const descontoOs = ordemServico && !(descontoNovo && lote) ? ordemServico.desconto : (lote?.desconto ?? 0);
+  const estimativa =
+    contratoDados && estimativaComBdi > 0 ? calcularOrcamento(estimativaComBdi, contratoDados.bdi, descontoOs) : null;
   // Com orçamento e vários empenhos, o usuário reparte o valor entre eles (no do contrato, sempre)
   const valorPorEmpenho = !valorPeloOrcamento || (temOrcamento && (vinculos.length > 1 || doContrato));
 
@@ -428,7 +443,8 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
       const valor = valorDoVinculo(v);
       const numero = empenhos.find((e) => e.id === v.empenho_id)?.numero ?? "";
       if (!valorPeloOrcamento && valor <= 0) return `Informe o valor destinado do empenho ${numero}`;
-      if (Math.round(valor * 100) > Math.round(saldoLivre(v.empenho_id) * 100)) {
+      // A OS planejada não reserva saldo: a emissão confere
+      if (!planejada && Math.round(valor * 100) > Math.round(saldoLivre(v.empenho_id) * 100)) {
         return `O valor do empenho ${numero} excede o saldo livre dele (${formatCurrency(saldoLivre(v.empenho_id))})`;
       }
     }
@@ -488,6 +504,9 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
       prazoDias: prazoDiasNum,
       // Com orçamento o total com BDI sai dos itens; o backend ignora o enviado
       totalComBdi: !valorPeloOrcamento && totalComBdi > 0 ? totalComBdi : null,
+      // Só a OS planejada muda a estimativa (o backend ignora na emitida)
+      estimativaComBdi: planejada && estimativaComBdi > 0 ? estimativaComBdi : null,
+      estimativaReferencia: planejada ? form.estimativaReferencia.trim() || null : null,
       fiscalSetorial: form.fiscalSetorial,
       fiscalTecnico_id: form.fiscalTecnico_id || null,
       fiscalAdministrativo_id: form.fiscalAdministrativo_id || null,
@@ -509,7 +528,7 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
       } else {
         const created = await createOrdemServico(payload);
         toast.success(
-          `Ordem de serviço "${created.numero}" criada. Lance o orçamento em Medições e emita a OS para a empresa.`,
+          `OS planejada "${created.numero}" criada. Para que ela conte como emitida, lance o orçamento em Medições e emita a OS.`,
         );
       }
       await fetchOrdensServico();
@@ -651,7 +670,7 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
                     : vinculos.length > 1
                     ? `Reparta o valor do orçamento (${formatCurrency(valorOrcamento)}) entre os empenhos.`
                     : `O empenho leva o valor do orçamento (${formatCurrency(valorOrcamento)}).`
-                  : "O valor da OS sai do orçamento: depois de criar, lance o orçamento em Medições e emita a OS para a empresa. Com mais de um empenho, a repartição é feita no orçamento."}
+                  : "A OS nasce planejada: não reserva o saldo dos empenhos e fica fora do emitido. O valor sai do orçamento: lance-o em Medições e emita a OS. Com mais de um empenho, a repartição é feita no orçamento."}
             </p>
 
             {vinculos.map((vinculo) => {
@@ -902,6 +921,12 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
               ? "O orçamento é o do contrato inteiro; o valor da OS é o empenhado (soma dos empenhos). Para mudar o orçamento, edite-o em Medições."
               : "O valor da OS é a soma dos itens do orçamento, já com o desconto. Para mudá-lo, edite o orçamento em Medições."}
           </p>
+          {ordemServico?.valorEstimado != null && (
+            <p className="text-xs text-text-secondary">
+              Estimado {formatCurrency(ordemServico.valorEstimado)} · Orçado {formatCurrency(valorOrcamento ?? 0)}
+              {ordemServico.estimativaReferencia ? ` · ${ordemServico.estimativaReferencia}` : ""}
+            </p>
+          )}
           <div className="bg-surface-muted rounded-lg p-3 border border-border grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <p className="text-xs text-text-muted">Total com BDI</p>
@@ -930,7 +955,60 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
       ),
     },
         ]
-      : valorPeloOrcamento
+      : planejada
+        ? [
+    {
+      id: "estimativa",
+      label: "Estimativa",
+      icon: Calculator,
+      content: (
+        <FormSection title="Estimativa da OS planejada" icon={Calculator}>
+          <p className="text-xs text-text-muted">
+            Opcional. A estimativa mostra quanto a OS pode sair, mas não entra no emitido nem reserva o saldo dos
+            empenhos. Quando o orçamento for lançado, ele passa a valer e a estimativa fica como referência.
+          </p>
+          <Field
+            label="Total estimado com BDI (R$)"
+            hint={
+              contratoDados
+                ? `O valor estimado aplica o desconto do lote (${String(descontoOs).replace(".", ",")}%).`
+                : "Escolha o contrato para calcular o valor estimado."
+            }
+          >
+            <Input
+              prefix="R$"
+              name="estimativaComBdi"
+              inputMode="numeric"
+              value={form.estimativaComBdi}
+              onChange={(e) => setForm((prev) => ({ ...prev, estimativaComBdi: maskCurrency(e.target.value) }))}
+              placeholder="0,00"
+              className="sm:w-64"
+            />
+          </Field>
+          <Field label="Referência da estimativa" hint="De onde veio o número (ex.: orçamento preliminar, OS parecida).">
+            <Input
+              name="estimativaReferencia"
+              value={form.estimativaReferencia}
+              maxLength={200}
+              onChange={(e) => setForm((prev) => ({ ...prev, estimativaReferencia: e.target.value }))}
+            />
+          </Field>
+          {estimativa && (
+            <div className="bg-surface-muted rounded-lg p-4 border border-border flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs text-text-muted">Valor estimado da OS</p>
+                <p className="text-xs text-text-secondary">Total com BDI menos o desconto do lote</p>
+              </div>
+              <p className="text-lg font-semibold text-text-primary tabular-nums">
+                {formatCurrency(estimativa.valorFinal)}
+              </p>
+            </div>
+          )}
+        </FormSection>
+      ),
+    },
+          ]
+        : valorPeloOrcamento
         ? []
         : [
     {

@@ -109,6 +109,9 @@ export function MedicoesTable({ items, isLoading }: MedicoesTableProps) {
                     <span className="truncate" title={`${item.empresa.name} · ${item.contrato.identificador}`}>
                       {item.empresa.name} · {item.contrato.identificador}
                     </span>
+                    {item.aguardandoEmissao && item.status === "ATIVO" && (
+                      <span title="OS ainda não emitida: valor só planejado, fora dos totais">planejada</span>
+                    )}
                     {item.semLote && (
                       <span className="text-warning-text" title={SEM_LOTE_DICA}>
                         sem lote · desconto 0%
@@ -131,7 +134,15 @@ export function MedicoesTable({ items, isLoading }: MedicoesTableProps) {
                 </Td>
                 <Td className="hidden lg:table-cell">
                   {item.itens === 0 ? (
-                    <span className="text-text-muted">Sem orçamento</span>
+                    <span className="inline-flex flex-col">
+                      <span className="text-text-muted">Sem orçamento</span>
+                      {/* OS planejada com estimativa: o valor previsto, fora dos totais */}
+                      {item.aguardandoEmissao && item.valorPlanejado ? (
+                        <span className="text-[11px] text-text-muted tabular-nums">
+                          estimado {formatCurrency(item.valorPlanejado)}
+                        </span>
+                      ) : null}
+                    </span>
                   ) : (
                     <span className="inline-flex flex-col">
                       <span className="font-semibold text-text-primary tabular-nums">{formatCurrency(item.valorOrcado)}</span>

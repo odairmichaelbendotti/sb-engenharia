@@ -37,7 +37,7 @@ export function getOrdemServicoBalance(os: Pick<OrdemServico, "valor" | "valorEx
   return getBalance(os.valor, os.valorExecutado);
 }
 
-// OS ativa e totalmente paga: pronta para ser finalizada
-export function isQuitada(os: Pick<OrdemServico, "status" | "valor" | "valorExecutado">) {
-  return os.status === "ATIVO" && getOrdemServicoBalance(os).kind === "paid";
+// OS ativa, emitida e totalmente paga: pronta para ser finalizada
+export function isQuitada(os: Pick<OrdemServico, "status" | "valor" | "valorExecutado" | "aguardandoEmissao">) {
+  return os.status === "ATIVO" && !os.aguardandoEmissao && getOrdemServicoBalance(os).kind === "paid";
 }

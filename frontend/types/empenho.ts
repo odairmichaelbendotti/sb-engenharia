@@ -33,8 +33,10 @@ export type EmpenhoList = {
   updatedAt: Date;
   contrato_id: string;
   contrato: EmpenhoContrato;
-  /** Soma do valor das ordens de serviço não canceladas vinculadas a este empenho. */
+  /** Soma do valor das ordens de serviço emitidas e não canceladas vinculadas a este empenho. */
   valorComprometido: number;
+  /** OS planejadas (ainda não emitidas) neste empenho: não reservam o saldo. */
+  valorPlanejado: number;
   /** value - valorComprometido. */
   saldoDisponivel: number;
   /** Soma das notas fiscais não canceladas do empenho. */

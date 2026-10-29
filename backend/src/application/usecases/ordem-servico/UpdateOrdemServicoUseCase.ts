@@ -125,6 +125,13 @@ export class UpdateOrdemServicoUseCase {
       prazoDias: keep(data.prazoDias, existing.prazoDias),
       // Com orçamento o total com BDI sai dele; só a OS antiga sem orçamento ainda o recebe digitado
       totalComBdi: valorOrcamento === null ? keep(data.totalComBdi, existing.totalComBdi) : existing.totalComBdi,
+      // A estimativa só muda enquanto a OS é planejada; depois fica como histórico
+      estimativaComBdi: existing.aguardandoEmissao
+        ? keep(data.estimativaComBdi, existing.estimativaComBdi)
+        : existing.estimativaComBdi,
+      estimativaReferencia: existing.aguardandoEmissao
+        ? keep(data.estimativaReferencia, existing.estimativaReferencia)
+        : existing.estimativaReferencia,
       fiscalSetorial: keep(data.fiscalSetorial, existing.fiscalSetorial),
       fiscalTecnico_id: keep(data.fiscalTecnico_id, existing.fiscalTecnico_id),
       fiscalAdministrativo_id: keep(data.fiscalAdministrativo_id, existing.fiscalAdministrativo_id),
@@ -148,6 +155,8 @@ export class UpdateOrdemServicoUseCase {
       user,
       empenhos: ordemServicoEntity.empenhos,
       ordemServicoId,
+      // A OS planejada não reserva saldo: a emissão confere
+      reservaSaldo: !existing.aguardandoEmissao,
     });
     if (valorOrcamento === null && !existing.aguardandoEmissao && vinculos.some((v) => v.valor <= 0)) {
       // OS antiga, sem orçamento: o valor continua sendo o que cada empenho destina
@@ -245,6 +254,17 @@ export class UpdateOrdemServicoUseCase {
       prazoMobilizacaoDias: ordemServicoEntity.prazoMobilizacaoDias,
       prazoDias: ordemServicoEntity.prazoDias,
       totalComBdi,
+      ...(existing.aguardandoEmissao
+        ? {
+            estimativa: {
+              comBdi:
+                ordemServicoEntity.estimativaComBdi === null
+                  ? null
+                  : Math.round(ordemServicoEntity.estimativaComBdi * 100),
+              referencia: ordemServicoEntity.estimativaReferencia,
+            },
+          }
+        : {}),
       fiscalSetorial: ordemServicoEntity.fiscalSetorial,
       fiscalTecnico_id: ordemServicoEntity.fiscalTecnico_id,
       fiscalAdministrativo_id: ordemServicoEntity.fiscalAdministrativo_id,

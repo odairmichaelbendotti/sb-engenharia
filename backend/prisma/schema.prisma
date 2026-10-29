@@ -325,8 +325,13 @@ model OrdemServico {
   // Escopo do orçamento: parcela da OS (valor da OS = orçamento) ou o contrato inteiro (o valor da
   // OS é o empenhado, que pode ficar abaixo do orçamento até chegarem os próximos empenhos)
   escopoOrcamento     EscopoOrcamento      @default(ORDEM_SERVICO)
-  // Criada e ainda não emitida (sem orçamento): a empresa não vê
+  // Criada e ainda não emitida: OS planejada. A empresa não vê e o valor não entra no emitido
+  // (totais, comprometido e saldo livre do empenho); só vale quando é emitida com orçamento
   aguardandoEmissao   Boolean              @default(false)
+  // Estimativa da OS planejada: total com BDI digitado, em centavos (o desconto do lote é aplicado
+  // na leitura) e de onde veio o número. Fica como histórico depois do orçamento e da emissão
+  estimativaComBdi    Int?
+  estimativaReferencia String?
   fiscalSetorial      String?
   fiscalTecnico_id    String?
   fiscalTecnico       FiscalContrato?      @relation("FiscalTecnicoOS", fields: [fiscalTecnico_id], references: [id], onDelete: SetNull)

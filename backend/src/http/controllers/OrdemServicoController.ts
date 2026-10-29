@@ -65,6 +65,9 @@ function parseDocumentFields(body: Record<string, unknown>) {
     prazoMobilizacaoDias: optionalNumberField(body, "prazoMobilizacaoDias") ?? undefined,
     prazoDias: optionalNumberField(body, "prazoDias"),
     totalComBdi: optionalNumberField(body, "totalComBdi"),
+    // Estimativa da OS planejada (o use case ignora na OS já emitida)
+    estimativaComBdi: optionalNumberField(body, "estimativaComBdi"),
+    estimativaReferencia: optionalField(body, "estimativaReferencia"),
     fiscalSetorial: optionalField(body, "fiscalSetorial"),
     fiscalTecnico_id: optionalField(body, "fiscalTecnico_id"),
     fiscalAdministrativo_id: optionalField(body, "fiscalAdministrativo_id"),

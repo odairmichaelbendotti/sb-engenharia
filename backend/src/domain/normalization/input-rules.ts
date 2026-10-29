@@ -90,6 +90,7 @@ export const ORDEM_SERVICO_RULES: InputRules = {
   // Linha livre (posto, nome, ramal e e-mail): só a limpeza de espaços, sem forçar maiúsculas
   fiscalSetorial: cleanText,
   descricaoProblema: normalizeMultilineText,
+  estimativaReferencia: normalizeFreeText,
 };
 
 export const INVOICE_RULES: InputRules = {

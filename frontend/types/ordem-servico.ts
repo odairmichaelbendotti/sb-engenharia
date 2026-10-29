@@ -104,8 +104,16 @@ export type OrdemServico = {
   desconto: number;
   // Orçamento da OS (valor da OS = orçamento) ou do contrato inteiro (valor da OS = empenhado)
   escopoOrcamento: "ORDEM_SERVICO" | "CONTRATO";
-  // Criada e ainda não emitida: o valor sai do orçamento e a empresa só vê depois da emissão
+  // Criada e ainda não emitida: OS planejada. Tem só um valor estimado (fora do emitido) e a
+  // empresa só vê depois da emissão
   aguardandoEmissao: boolean;
+  // Estimativa da OS planejada: total com BDI digitado (reais) e de onde veio o número
+  estimativaComBdi: number | null;
+  estimativaReferencia: string | null;
+  // Só na planejada (nulos na emitida): a estimativa com o desconto do lote e o valor planejado
+  // (orçado com orçamento, senão a estimativa)
+  valorEstimado: number | null;
+  valorPlanejado: number | null;
   fiscalSetorial: string | null;
   fiscalTecnico_id: string | null;
   fiscalTecnico: OrdemServicoFiscal | null;
@@ -162,6 +170,9 @@ export type CreateOrdemServicoPayload = {
   prazoMobilizacaoDias: number;
   prazoDias: number | null;
   totalComBdi: number | null;
+  // Estimativa da OS planejada (o backend ignora na OS já emitida)
+  estimativaComBdi: number | null;
+  estimativaReferencia: string | null;
   fiscalSetorial: string;
   fiscalTecnico_id: string | null;
   fiscalAdministrativo_id: string | null;

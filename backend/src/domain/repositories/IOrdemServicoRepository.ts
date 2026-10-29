@@ -71,6 +71,8 @@ export type OrdemServicoPersistData = OrdemServicoDocumentFields & {
   emissao?: OrdemServicoEmissao | undefined;
   // Só na criação: a OS nasce aguardando o orçamento
   aguardandoEmissao?: boolean | undefined;
+  // Estimativa da OS planejada (total com BDI em centavos); ausente = mantém a atual
+  estimativa?: { comBdi: number | null; referencia: string | null } | undefined;
   // Desconto do lote copiado: na criação e quando a OS antiga recebe o lote na edição
   desconto?: number | undefined;
   // Na edição, com o desconto novo: os preços do orçamento lançado só com BDI recebem esse desconto
@@ -188,6 +190,10 @@ export type OrdemServicoListItem = PersistedOrdemServico & {
   contestacoesAbertas: number;
   // Orçamento lançado em itens (as OS antigas, de valor informado à mão, não têm)
   temOrcamento: boolean;
+  // OS planejada (ainda não emitida): a estimativa com o desconto do lote e o valor planejado
+  // (orçado com orçamento, senão a estimativa). Em reais; nulos na OS emitida
+  valorEstimado: number | null;
+  valorPlanejado: number | null;
 };
 
 export type OrdemServicoStats = {

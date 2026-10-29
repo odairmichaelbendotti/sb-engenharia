@@ -15,7 +15,7 @@ export type RegraDesconto = "SIMPLES" | "SCOAM";
 export type EscopoOrcamento = "ORDEM_SERVICO" | "CONTRATO";
 
 // Por que não dá para lançar uma medição agora
-export type MotivoBloqueioMedicao = "SEM_PERMISSAO" | "OS_INATIVA" | "SEM_ORCAMENTO" | "RASCUNHO_ABERTO" | "SEM_SALDO";
+export type MotivoBloqueioMedicao = "SEM_PERMISSAO" | "OS_INATIVA" | "SEM_ORCAMENTO" | "RASCUNHO_ABERTO" | "SEM_SALDO" | "OS_PLANEJADA";
 
 // Item da planilha orçamentária com o panorama (quantidades decimais, valores em reais)
 export interface OrcamentoItem {
@@ -203,6 +203,8 @@ export interface PainelMedicaoItem extends MedicaoOsInfo {
   // Valor da OS (soma dos empenhos; salvar o orçamento acerta com a soma dos itens). No orçamento do
   // contrato é o empenhado
   valorOs: number;
+  // OS planejada: orçado com orçamento, senão a estimativa (nulo na emitida); fora dos totais
+  valorPlanejado: number | null;
   escopoOrcamento: EscopoOrcamento;
   itens: number;
   valorOrcado: number;

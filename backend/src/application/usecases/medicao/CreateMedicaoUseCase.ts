@@ -12,6 +12,9 @@ export class CreateMedicaoUseCase {
     if (!ordemServicoId) throw new DomainError("Ordem de serviço is required");
     const os = await loadOsComAcesso(this.repository, ordemServicoId, user);
     assertPodeEditar(user, os);
+    if (os.aguardandoEmissao) {
+      throw new DomainError("Emita a OS antes de lançar medições: a OS planejada ainda não vale como emitida.");
+    }
     const id = await this.repository.createMedicao({
       ordemServico_id: os.id,
       dados: parseMedicaoDados(body),

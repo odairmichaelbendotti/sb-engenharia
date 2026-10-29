@@ -239,8 +239,17 @@ export function ContratoView({ id, ...frame }: ViewProps) {
                           {st.label}
                         </StatusPill>
                       </Td>
-                      <Td>{formatCurrency(os.valor)}</Td>
-                      <Td>{os.status === "ATIVO" ? formatCurrency(getOrdemServicoBalance(os).saldo) : "—"}</Td>
+                      {/* OS planejada: o valor planejado, sem saldo a liquidar (fica fora do emitido) */}
+                      <Td>
+                        {os.aguardandoEmissao && os.status === "ATIVO"
+                          ? `${formatCurrency(os.valorPlanejado ?? 0)} planejado`
+                          : formatCurrency(os.valor)}
+                      </Td>
+                      <Td>
+                        {os.status === "ATIVO" && !os.aguardandoEmissao
+                          ? formatCurrency(getOrdemServicoBalance(os).saldo)
+                          : "—"}
+                      </Td>
                     </Tr>
                   );
                 })}

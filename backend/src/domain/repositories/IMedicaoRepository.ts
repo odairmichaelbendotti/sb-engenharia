@@ -90,6 +90,9 @@ export type PainelOsRow = {
   valor: number;
   escopoOrcamento: EscopoOrcamento;
   aguardandoEmissao: boolean;
+  // Estimativa da OS planejada (total com BDI em centavos) e o desconto copiado do lote
+  estimativaComBdi: number | null;
+  desconto: number;
   // Contrato com lotes e OS sem lote (OS antiga): o desconto da OS ficou 0
   semLote: boolean;
   // Descrição do empenho principal: título da linha quando a OS ainda não tem obra

@@ -16,7 +16,8 @@ import type {
   ObraSummaryByTenant,
 } from "../../../domain/repositories/IObraRepository.js";
 import { prisma } from "../../prisma/prisma.js";
-import { osDaEmpresa } from "./os-escopo.js";
+import { osDaEmpresa, osEmitida } from "./os-escopo.js";
+import { isEmitida } from "../../../domain/ordem-servico/os-planejada.js";
 
 type InvoiceRow = { value: number; status: string; ordemServico_id: string | null };
 
@@ -51,6 +52,7 @@ const ORDEM_SERVICO_RESUMO_SELECT = {
   numero: true,
   valor: true,
   status: true,
+  aguardandoEmissao: true,
   dataInicio: true,
   dataPrevisaoTermino: true,
   empenhos: { orderBy: { createdAt: "asc" }, select: { empenho: { select: { id: true, numero: true } } } },
@@ -83,6 +85,7 @@ type OrdemServicoRow = {
   numero: string;
   valor: number;
   status: string;
+  aguardandoEmissao: boolean;
   dataInicio: Date | null;
   dataPrevisaoTermino: Date | null;
   empenhos: { empenho: { id: string; numero: string } }[];
@@ -109,6 +112,7 @@ function mapOrdemServicoResumo(os: OrdemServicoRow, invoices: InvoiceRow[]): Obr
     numero: os.numero,
     valor: os.valor / 100,
     status: os.status,
+    aguardandoEmissao: os.aguardandoEmissao,
     dataInicio: os.dataInicio,
     dataPrevisaoTermino: os.dataPrevisaoTermino,
     valorExecutado: sumActiveInvoicesCents(invoices, os.id) / 100,
@@ -117,8 +121,17 @@ function mapOrdemServicoResumo(os: OrdemServicoRow, invoices: InvoiceRow[]): Obr
   };
 }
 
-// Prazo e orçamento da obra saem das OS: considera as não canceladas (ou todas, se só houver canceladas)
-function resumoDasOS(ordensServico: { valor: number; status: string; dataInicio: Date | null; dataPrevisaoTermino: Date | null }[]) {
+// Prazo e orçamento da obra saem das OS: considera as não canceladas (ou todas, se só houver canceladas).
+// O valor soma só as emitidas: a OS planejada tem só um valor estimado
+function resumoDasOS(
+  ordensServico: {
+    valor: number;
+    status: string;
+    aguardandoEmissao: boolean;
+    dataInicio: Date | null;
+    dataPrevisaoTermino: Date | null;
+  }[],
+) {
   const ativas = ordensServico.filter((os) => os.status !== "CANCELADO");
   const base = ativas.length > 0 ? ativas : ordensServico;
   const inicios = base.map((os) => os.dataInicio?.getTime()).filter((t): t is number => t !== undefined);
@@ -126,7 +139,7 @@ function resumoDasOS(ordensServico: { valor: number; status: string; dataInicio:
   return {
     dataInicio: inicios.length ? new Date(Math.min(...inicios)) : null,
     dataPrevisaoTermino: terminos.length ? new Date(Math.max(...terminos)) : null,
-    valorCentavos: ativas.reduce((sum, os) => sum + os.valor, 0),
+    valorCentavos: ativas.filter(isEmitida).reduce((sum, os) => sum + os.valor, 0),
   };
 }
 
@@ -238,7 +251,9 @@ export class PrismaObraRepository implements IObraRepository {
         startAt: true,
         endAt: true,
         value: true,
-        vinculosOrdemServico: { select: { valor: true, ordemServico: { select: { status: true } } } },
+        vinculosOrdemServico: {
+          select: { valor: true, ordemServico: { select: { status: true, aguardandoEmissao: true } } },
+        },
       } as const;
 
       const found = await prisma.obra.findFirst({
@@ -301,7 +316,10 @@ export class PrismaObraRepository implements IObraRepository {
       const liquidadoCentavos = new Map(liquidadoPorEmpenho.map((row) => [row.empenho_id, row._sum.value ?? 0]));
 
       const resumoEmpenho = (e: EmpenhoRow) => {
-        const vinculosAtivos = e.vinculosOrdemServico.filter((v) => v.ordemServico.status !== "CANCELADO");
+        // Comprometido: só as OS emitidas e não canceladas (a planejada não reserva o saldo)
+        const vinculosAtivos = e.vinculosOrdemServico.filter(
+          (v) => v.ordemServico.status !== "CANCELADO" && isEmitida(v.ordemServico),
+        );
         return {
           id: e.id,
           numero: e.numero,
@@ -320,7 +338,7 @@ export class PrismaObraRepository implements IObraRepository {
       const valorNaObra = new Map<string, number>();
       for (const os of ordensServico) {
         for (const vinculo of os.empenhos) {
-          const destinado = os.status === "CANCELADO" ? 0 : vinculo.valor;
+          const destinado = os.status === "CANCELADO" || !isEmitida(os) ? 0 : vinculo.valor;
           valorNaObra.set(vinculo.empenho.id, (valorNaObra.get(vinculo.empenho.id) ?? 0) + destinado);
         }
       }
@@ -406,7 +424,7 @@ export class PrismaObraRepository implements IObraRepository {
         select: {
           tenant_id: true,
           status: true,
-          ordensServico: { select: { valor: true, status: true, dataInicio: true, dataPrevisaoTermino: true } },
+          ordensServico: { select: { valor: true, status: true, aguardandoEmissao: true, dataInicio: true, dataPrevisaoTermino: true } },
           invoices: { select: { value: true, status: true, ordemServico_id: true } },
         },
       });
@@ -435,7 +453,8 @@ export class PrismaObraRepository implements IObraRepository {
     try {
       // OS com obra financiadas (também) por este empenho — uma opção por OS
       const ordensServico = await prisma.ordemServico.findMany({
-        where: { tenant_id, obra_id: { not: null }, empenhos: { some: { empenho_id } } },
+        // A OS planejada ainda não recebe nota fiscal
+        where: { tenant_id, obra_id: { not: null }, empenhos: { some: { empenho_id } }, ...osEmitida },
         orderBy: [{ obra: { nome: "asc" } }, { createdAt: "asc" }],
         select: {
           id: true,
