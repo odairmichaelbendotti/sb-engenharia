@@ -40,6 +40,7 @@ const LAYOUT: Record<number, { cols: string; lastSpan: string }> = {
   3: { cols: "sm:grid-cols-3", lastSpan: "col-span-2 sm:col-span-1" },
   4: { cols: "md:grid-cols-4", lastSpan: "" },
   5: { cols: "md:grid-cols-5", lastSpan: "col-span-2 md:col-span-1" },
+  6: { cols: "sm:grid-cols-3 xl:grid-cols-6", lastSpan: "" },
 };
 
 /**

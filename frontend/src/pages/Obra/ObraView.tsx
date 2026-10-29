@@ -91,7 +91,11 @@ function OrdemServicoCard({ os, obra, onOpen }: { os: ObraOrdemServico; obra: Ob
     dataPrevisaoTermino: os.dataPrevisaoTermino,
     obra: { status: obra.status, dataConclusao: obra.dataConclusao ?? null },
   });
-  const status = OS_STATUS[os.status] ?? OS_STATUS.CANCELADO!;
+  // OS ainda não emitida: planejada (o valor fica fora do emitido da obra)
+  const status =
+    os.status === "ATIVO" && os.aguardandoEmissao
+      ? { label: "Planejada", tone: "closed" as const }
+      : (OS_STATUS[os.status] ?? OS_STATUS.CANCELADO!);
   const elapsed = Math.round((schedule.elapsedRatio ?? 0) * 100);
   const executado = percentOf(os.valorExecutado, os.valor);
   const showToday = schedule.kind !== "concluded" && schedule.kind !== "inactive";

@@ -41,6 +41,9 @@ export type OrdemServicoType = {
   prazoDias?: number | null | undefined;
   // Total com BDI em reais: informado só nas OS antigas; com orçamento ele sai dos itens
   totalComBdi?: number | null | undefined;
+  // OS planejada: total com BDI estimado (reais) e de onde veio o número
+  estimativaComBdi?: number | null | undefined;
+  estimativaReferencia?: string | null | undefined;
   fiscalSetorial?: string | null | undefined;
   fiscalTecnico_id?: string | null | undefined;
   fiscalAdministrativo_id?: string | null | undefined;
@@ -78,8 +81,11 @@ export type PersistedOrdemServico = {
   desconto: number;
   // Orçamento da OS (valor da OS = orçamento) ou do contrato inteiro (valor da OS = empenhado)
   escopoOrcamento: "ORDEM_SERVICO" | "CONTRATO";
-  // Criada e ainda não emitida (sem orçamento): a empresa não vê
+  // Criada e ainda não emitida: OS planejada (a empresa não vê; fora do emitido)
   aguardandoEmissao: boolean;
+  // Estimativa da OS planejada: total com BDI em reais e referência
+  estimativaComBdi: number | null;
+  estimativaReferencia: string | null;
   fiscalSetorial: string | null;
   fiscalTecnico_id: string | null;
   fiscalAdministrativo_id: string | null;
@@ -127,6 +133,8 @@ export class OrdemServicoEntity {
   public readonly prazoMobilizacaoDias: number;
   public readonly prazoDias: number | null;
   public readonly totalComBdi: number | null;
+  public readonly estimativaComBdi: number | null;
+  public readonly estimativaReferencia: string | null;
   public readonly fiscalSetorial: string | null;
   public readonly fiscalTecnico_id: string | null;
   public readonly fiscalAdministrativo_id: string | null;
@@ -189,6 +197,15 @@ export class OrdemServicoEntity {
       throw new DomainError("OrdemServico totalComBdi must be greater than 0");
     }
 
+    const estimativaComBdi = props.estimativaComBdi ?? null;
+    if (estimativaComBdi !== null && !(estimativaComBdi >= 0 && Number.isFinite(estimativaComBdi))) {
+      throw new DomainError("OrdemServico estimativaComBdi must be a valid amount");
+    }
+    const estimativaReferencia = props.estimativaReferencia?.trim() || null;
+    if (estimativaReferencia !== null && estimativaReferencia.length > 200) {
+      throw new DomainError("A referência da estimativa pode ter até 200 caracteres.");
+    }
+
     this.numero = props.numero;
     this.empenhos = props.empenhos;
     this.dataInicio = props.dataInicio;
@@ -204,6 +221,8 @@ export class OrdemServicoEntity {
     this.prazoMobilizacaoDias = prazoMobilizacaoDias;
     this.prazoDias = prazoDias;
     this.totalComBdi = totalComBdi;
+    this.estimativaComBdi = estimativaComBdi;
+    this.estimativaReferencia = estimativaReferencia;
     this.fiscalSetorial = props.fiscalSetorial?.trim() || null;
     this.fiscalTecnico_id = props.fiscalTecnico_id || null;
     this.fiscalAdministrativo_id = props.fiscalAdministrativo_id || null;

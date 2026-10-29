@@ -70,7 +70,8 @@ export type ObraBalance = {
 export function getObraBalance(
   obra: Pick<Obra, "status" | "dataConclusao" | "valor" | "valorExecutado" | "ordensServico">,
 ): ObraBalance {
-  const ordens = obra.ordensServico.filter((os) => os.status !== "CANCELADO");
+  // Só as OS emitidas: a planejada ainda não tem valor a liquidar
+  const ordens = obra.ordensServico.filter((os) => os.status !== "CANCELADO" && !os.aguardandoEmissao);
   const ativas = ordens.filter((os) => os.status === "ATIVO");
   const saldo = ativas.reduce((acc, os) => acc + getBalance(os.valor, os.valorExecutado).saldo, 0);
   const percent = obra.valor > 0 ? Math.round((obra.valorExecutado / obra.valor) * 100) : 0;

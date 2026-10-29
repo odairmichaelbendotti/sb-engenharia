@@ -578,7 +578,7 @@ export const ESCOPOS_ORCAMENTO: readonly EscopoOrcamento[] = ["ORDEM_SERVICO", "
 const moedaFormat = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 /** Centavos → "R$ 1.234,56" para as mensagens de erro */
-function formatCentavos(valor: number): string {
+export function formatCentavos(valor: number): string {
   return moedaFormat.format(valor / 100).replace(/\u00a0/g, " ");
 }
 

@@ -23,8 +23,9 @@ import { Prisma } from "../../../generated/prisma/client.js";
 import { prisma } from "../../prisma/prisma.js";
 import { anexosFromDb } from "../../../domain/documents/anexos-os.js";
 import { colunasEmissao, registrarEmissao } from "./tramitacao-tx.js";
-import { aplicarDesconto, valorOrcadoItem } from "../../../domain/medicao/medicao-calc.js";
-import { osDaEmpresa } from "./os-escopo.js";
+import { aplicarDesconto, formatCentavos, valorOrcadoItem } from "../../../domain/medicao/medicao-calc.js";
+import { valorEstimado, valorPlanejado } from "../../../domain/ordem-servico/os-planejada.js";
+import { osDaEmpresa, osEmitida } from "./os-escopo.js";
 
 // Primeira sequência da numeração das OS (as anteriores ao padrão ficam fora da contagem)
 const FIRST_SEQUENCIA = 10;
@@ -100,13 +101,56 @@ function withContagens<T extends { _count: { contestacoes: number; itens: number
 }
 
 // Linha da OS como a API devolve: valores (gravados em centavos) em reais e anexos lidos do JSON
-function fromDb<T extends { valor: number; totalComBdi: number | null; anexos: unknown }>(row: T) {
+function fromDb<
+  T extends { valor: number; totalComBdi: number | null; estimativaComBdi: number | null; anexos: unknown },
+>(row: T) {
   return {
     ...row,
     valor: row.valor / 100,
     totalComBdi: row.totalComBdi === null ? null : row.totalComBdi / 100,
+    estimativaComBdi: row.estimativaComBdi === null ? null : row.estimativaComBdi / 100,
     anexos: anexosFromDb(row.anexos),
   };
+}
+
+// Orçado (centavos) das OS com itens, para o valor planejado das que ainda não foram emitidas
+async function orcadoPorOs(ids: string[]): Promise<Map<string, number>> {
+  if (ids.length === 0) return new Map();
+  const itens = await prisma.ordemServicoItem.findMany({
+    where: { ordemServico_id: { in: ids } },
+    select: { ordemServico_id: true, quantidade: true, quantidadeSuprimida: true, precoUnitario: true, valorTotal: true },
+  });
+  const orcado = new Map<string, number>();
+  for (const item of itens) {
+    orcado.set(item.ordemServico_id, (orcado.get(item.ordemServico_id) ?? 0) + valorOrcadoItem(itemComQtd(item)));
+  }
+  return orcado;
+}
+
+type PlanejamentoRow = { id: string; aguardandoEmissao: boolean; estimativaComBdi: number | null; desconto: number };
+
+// Estimativa e valor planejado da OS planejada, em reais (nulos na emitida). Recebe a linha do banco
+function planejamento(os: PlanejamentoRow, orcado: Map<string, number>) {
+  if (!os.aguardandoEmissao) return { valorEstimado: null, valorPlanejado: null };
+  const estimado = valorEstimado(os.estimativaComBdi, os.desconto);
+  const planejado = valorPlanejado({
+    orcado: orcado.get(os.id) ?? null,
+    estimativaComBdi: os.estimativaComBdi,
+    desconto: os.desconto,
+  });
+  return { valorEstimado: estimado === null ? null : estimado / 100, valorPlanejado: planejado / 100 };
+}
+
+// Uma OS só (create/update), com a mesma regra da listagem
+async function planejamentoDe(os: PlanejamentoRow) {
+  return planejamento(os, os.aguardandoEmissao ? await orcadoPorOs([os.id]) : new Map());
+}
+
+// Colunas da estimativa: só quando o use case manda (OS planejada)
+function estimativaColumns(data: Pick<OrdemServicoPersistData, "estimativa">) {
+  return data.estimativa
+    ? { estimativaComBdi: data.estimativa.comBdi, estimativaReferencia: data.estimativa.referencia }
+    : {};
 }
 
 // Colunas do documento da OS, iguais na criação e na edição
@@ -132,6 +176,37 @@ function documentColumns(data: OrdemServicoDocumentFields) {
 }
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+/**
+ * A OS planejada não reserva saldo: na emissão, cada vínculo precisa caber no saldo livre do
+ * empenho (valor − OS emitidas e não canceladas). Os empenhos ficam travados até o fim da
+ * transação, para duas emissões ao mesmo tempo não passarem juntas do saldo.
+ */
+async function conferirSaldoNaEmissao(tx: Tx, id: string) {
+  const vinculos = await tx.ordemServicoEmpenho.findMany({
+    where: { ordemServico_id: id },
+    orderBy: { createdAt: "asc" },
+    select: { empenho_id: true, valor: true, empenho: { select: { numero: true, value: true } } },
+  });
+  if (vinculos.length === 0) return;
+  await tx.$queryRaw`SELECT id FROM "Empenho" WHERE id IN (${Prisma.join(vinculos.map((v) => v.empenho_id))}) FOR UPDATE`;
+  for (const vinculo of vinculos) {
+    const outras = await tx.ordemServicoEmpenho.aggregate({
+      where: {
+        empenho_id: vinculo.empenho_id,
+        ordemServico_id: { not: id },
+        ordemServico: { status: { not: "CANCELADO" }, ...osEmitida },
+      },
+      _sum: { valor: true },
+    });
+    const livre = vinculo.empenho.value - (outras._sum.valor ?? 0);
+    if (vinculo.valor > livre) {
+      throw new DomainError(
+        `O empenho ${vinculo.empenho.numero} tem ${formatCentavos(Math.max(0, livre))} livres; a OS precisa de ${formatCentavos(vinculo.valor)}.`,
+      );
+    }
+  }
+}
 
 const ORCAMENTO_ITEM_SELECT = {
   id: true,
@@ -213,7 +288,7 @@ async function sumExecutadoPorOS(ids: string[]): Promise<Map<string, number>> {
 type VinculoTotals = {
   // Chave "osId|empenhoId": notas não canceladas da OS lançadas naquele empenho (centavos)
   liquidado: Map<string, number>;
-  // Por empenho: soma do destinado a OS não canceladas (centavos)
+  // Por empenho: soma do destinado a OS emitidas e não canceladas (centavos); a planejada não reserva
   comprometido: Map<string, number>;
 };
 
@@ -227,7 +302,7 @@ async function loadVinculoTotals(osIds: string[], empenhoIds: string[]): Promise
     }),
     prisma.ordemServicoEmpenho.groupBy({
       by: ["empenho_id"],
-      where: { empenho_id: { in: empenhoIds }, ordemServico: { status: { not: "CANCELADO" } } },
+      where: { empenho_id: { in: empenhoIds }, ordemServico: { status: { not: "CANCELADO" }, ...osEmitida } },
       _sum: { valor: true },
     }),
   ]);
@@ -274,6 +349,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
             obra_id: data.obra_id,
             tenant_id: data.tenant_id,
             ...documentColumns(data),
+            ...estimativaColumns(data),
             desconto: data.desconto ?? 0,
             ...(data.emissao
               ? { emitidaEm: data.emissao.emitidaEm, cienciaPrazoAte: data.emissao.cienciaPrazoAte }
@@ -294,6 +370,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
         ...withContagens(fromDb(newOrdemServico)),
         empenhos: await vinculosFinanceiros(newOrdemServico.id, newOrdemServico.empenhos),
         valorExecutado: 0,
+        ...(await planejamentoDe(newOrdemServico)),
       };
     } catch (error: any) {
       if (error?.code === "P2002") {
@@ -357,7 +434,11 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
         prisma.ordemServico.count({ where: { ...tenantFilter, status: "ATIVO" } }),
         prisma.ordemServico.count({ where: { ...tenantFilter, status: "FINALIZADO" } }),
         prisma.ordemServico.count({ where: { ...tenantFilter, status: "CANCELADO" } }),
-        prisma.ordemServico.aggregate({ where: tenantFilter, _sum: { valor: true } }),
+        // Emitido: a OS planejada fica de fora
+        prisma.ordemServico.aggregate({
+          where: { ...tenantFilter, status: { not: "CANCELADO" }, ...osEmitida },
+          _sum: { valor: true },
+        }),
         // Executado vem direto das notas de cada OS (fonte da verdade)
         prisma.invoice.groupBy({
           by: ["ordemServico_id"],
@@ -377,12 +458,16 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
         ordensServico.map((os) => os.id),
         [...new Set(ordensServico.flatMap((os) => os.empenhos.map((v) => v.empenho.id)))],
       );
+      const orcado = await orcadoPorOs(
+        ordensServico.filter((os) => os.aguardandoEmissao && os._count.itens > 0).map((os) => os.id),
+      );
 
       return {
         ordensServico: ordensServico.map((os) => ({
           ...withContagens(fromDb(os)),
           empenhos: withFinanceiro(os.id, mapVinculos(os.empenhos), totals),
           valorExecutado: (executadoCentavos.get(os.id) ?? 0) / 100,
+          ...planejamento(os, orcado),
         })),
         stats: {
           total,
@@ -500,6 +585,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
             dataPrevisaoTermino: data.dataPrevisaoTermino,
             obra_id: data.obra_id,
             ...documentColumns(data),
+            ...estimativaColumns(data),
             ...(data.desconto !== undefined ? { desconto: data.desconto } : {}),
             // Reemissão: a ciência da versão anterior deixa de valer e o prazo recomeça
             ...(data.emissao ? colunasEmissao(data.emissao) : {}),
@@ -516,6 +602,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
         ...withContagens(fromDb(updated)),
         empenhos: await vinculosFinanceiros(id, updated.empenhos),
         valorExecutado: (executado.get(id) ?? 0) / 100,
+        ...(await planejamentoDe(updated)),
       };
     } catch (error) {
       if (error instanceof DomainError) throw error;
@@ -659,6 +746,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
   async emitir(id: string, emissao: OrdemServicoEmissao): Promise<void> {
     try {
       await prisma.$transaction(async (tx) => {
+        await conferirSaldoNaEmissao(tx, id);
         // Só a que ainda aguarda: duas emissões ao mesmo tempo não gravam dois eventos
         const { count } = await tx.ordemServico.updateMany({
           where: { id, aguardandoEmissao: true },

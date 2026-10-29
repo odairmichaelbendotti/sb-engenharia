@@ -5,6 +5,7 @@ import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRe
 
 // Valida os empenhos de uma OS: todos da organização do usuário, do mesmo contrato
 // e com saldo livre para o valor destinado. Devolve os valores em centavos.
+// A OS planejada não reserva saldo: o saldo dela é conferido na emissão.
 export class OrdemServicoEmpenhosValidator {
   constructor(private empenhoRepository: IEmpenhoRepository) {}
 
@@ -12,11 +13,14 @@ export class OrdemServicoEmpenhosValidator {
     user,
     empenhos,
     ordemServicoId,
+    reservaSaldo = true,
   }: {
     user: AuthenticatedUser;
     empenhos: OrdemServicoEmpenhoInput[];
     // Na edição, o que a própria OS já usa do empenho não conta como comprometido
     ordemServicoId?: string;
+    // false na OS planejada
+    reservaSaldo?: boolean;
   }): Promise<{ empenho_id: string; valor: number }[]> {
     let contratoId: string | null = null;
     const vinculos: { empenho_id: string; valor: number }[] = [];
@@ -34,8 +38,8 @@ export class OrdemServicoEmpenhosValidator {
 
       // Compara em centavos para não esbarrar em erro de ponto flutuante
       const valorCentavos = Math.round(vinculo.valor * 100);
-      const saldo = await this.empenhoRepository.getSaldoDisponivel(vinculo.empenho_id, ordemServicoId);
-      if (valorCentavos > Math.round(saldo * 100)) {
+      const saldo = reservaSaldo ? await this.empenhoRepository.getSaldoDisponivel(vinculo.empenho_id, ordemServicoId) : 0;
+      if (reservaSaldo && valorCentavos > Math.round(saldo * 100)) {
         throw new DomainError(
           `O valor destinado do empenho ${empenho.numero} (${vinculo.valor}) excede o saldo disponível dele (${saldo}).`,
         );

@@ -263,6 +263,9 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
   }
 
   // Primeiro problema, na ordem da planilha (a mensagem aponta o item)
+  // A OS planejada não reserva o saldo dos empenhos: a emissão confere
+  const reservaSaldo = !ordemServico.aguardandoEmissao;
+
   function validar(): Erro | null {
     const cheias = linhas.filter(preenchida);
     if (cheias.length === 0) {
@@ -311,7 +314,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
           texto: `O orçamento (${formatCurrency(total)}) passa do valor do contrato (${formatCurrency(contratoValor)}).`,
         };
       }
-      const acima = empenhos.find((e) => parseCurrencyMask(distribuicao[e.id] ?? "") > e.saldoLivre + 1e-9);
+      const acima = reservaSaldo && empenhos.find((e) => parseCurrencyMask(distribuicao[e.id] ?? "") > e.saldoLivre + 1e-9);
       if (acima) {
         return {
           key: null,
@@ -334,7 +337,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
           texto: `Os empenhos somam ${formatCurrency(somaDistribuida)}; precisam somar o valor do orçamento (${formatCurrency(total)}).`,
         };
       }
-      const acima = empenhos.find((e) => parseCurrencyMask(distribuicao[e.id] ?? "") > e.saldoLivre + 1e-9);
+      const acima = reservaSaldo && empenhos.find((e) => parseCurrencyMask(distribuicao[e.id] ?? "") > e.saldoLivre + 1e-9);
       if (acima) {
         return {
           key: null,
@@ -342,7 +345,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
           texto: `O empenho ${acima.numero} tem ${formatCurrency(acima.saldoLivre)} livres para esta OS.`,
         };
       }
-    } else if (empenhos[0] && total > empenhos[0].saldoLivre + 1e-9) {
+    } else if (reservaSaldo && empenhos[0] && total > empenhos[0].saldoLivre + 1e-9) {
       return {
         key: null,
         campo: null,
@@ -407,7 +410,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
         reemitida
           ? "Orçamento salvo e OS reemitida: a empresa precisa dar ciência de novo."
           : ordemServico.aguardandoEmissao
-            ? "Orçamento salvo. Confira e emita a OS para a empresa."
+            ? "Orçamento salvo na OS planejada. Para que ela conte como emitida, emita a OS (a emissão confere o saldo dos empenhos)."
             : "Orçamento salvo",
       );
       guard.allowNextNavigation();

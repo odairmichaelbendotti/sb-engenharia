@@ -103,7 +103,8 @@ export default function Obras() {
     const ordens = filteredObras
       .filter((o) => o.status !== "CANCELADA")
       .flatMap((o) => o.ordensServico)
-      .filter((os) => os.status !== "CANCELADO" && matchesScope(obraOsScopeRefs(os), activeScope));
+      // A OS planejada fica fora do emitido
+      .filter((os) => os.status !== "CANCELADO" && !os.aguardandoEmissao && matchesScope(obraOsScopeRefs(os), activeScope));
     const emitido = ordens.reduce((acc, os) => acc + os.valor, 0);
     const liquidado = ordens.reduce((acc, os) => acc + os.valorExecutado, 0);
     const saldo = ordens

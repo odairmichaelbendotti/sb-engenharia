@@ -50,13 +50,18 @@ export class CreateOrdemServicoUseCase {
       condicoesEspeciais: normalized.condicoesEspeciais?.map((c) => normalizeFreeText(c)),
       tenant_id: user.tenant_id,
     });
-    const vinculos = await this.empenhosValidator.validate({ user, empenhos: ordemServicoEntity.empenhos });
+    // A OS nasce planejada: não reserva o saldo dos empenhos até ser emitida
+    const vinculos = await this.empenhosValidator.validate({
+      user,
+      empenhos: ordemServicoEntity.empenhos,
+      reservaSaldo: false,
+    });
     await this.obraValidator.validate({ user, obraAnterior: null, obraNova: ordemServicoEntity.obra_id });
     const contrato = await this.documentValidator.validate({ user, ordemServico: ordemServicoEntity, isCreate: true });
 
     const lote = contrato.lotes.find((l) => l.id === ordemServicoEntity.lote_id);
-    // A OS nasce aguardando o orçamento, que dá o valor dela; só depois é emitida para a empresa
-    // (EmitirOrdemServicoUseCase). O desconto do lote fica copiado na OS
+    // A OS nasce planejada (aguardando o orçamento, que dá o valor dela, com uma estimativa opcional);
+    // só depois é emitida para a empresa (EmitirOrdemServicoUseCase). O desconto do lote fica copiado na OS
     return this.repository.create({
       aguardandoEmissao: true,
       desconto: lote?.desconto ?? 0,
@@ -77,6 +82,10 @@ export class CreateOrdemServicoUseCase {
       prazoDias: ordemServicoEntity.prazoDias,
       // O total com BDI sai do orçamento
       totalComBdi: null,
+      estimativa: {
+        comBdi: ordemServicoEntity.estimativaComBdi === null ? null : Math.round(ordemServicoEntity.estimativaComBdi * 100),
+        referencia: ordemServicoEntity.estimativaReferencia,
+      },
       fiscalSetorial: ordemServicoEntity.fiscalSetorial,
       fiscalTecnico_id: ordemServicoEntity.fiscalTecnico_id,
       fiscalAdministrativo_id: ordemServicoEntity.fiscalAdministrativo_id,

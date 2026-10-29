@@ -54,8 +54,12 @@ export function WorkspaceHeader({ planilha }: { planilha: PlanilhaOrcamento }) {
               {os.empresa.name} · {os.contrato.identificador}
             </span>
             {os.aguardandoEmissao && os.status === "ATIVO" && (
-              <StatusPill tone="closed" size="sm" title="A empresa ainda não vê a OS: lance o orçamento e emita">
-                Aguardando emissão
+              <StatusPill
+                tone="closed"
+                size="sm"
+                title="Valor só planejado, fora do emitido; a empresa ainda não vê. Lance o orçamento e emita"
+              >
+                Planejada
               </StatusPill>
             )}
             {os.semLote && (

@@ -1,7 +1,7 @@
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { cx } from "../../utils/cx";
 
-export type OrdemServicoTab = "ALL" | "ATIVO" | "QUITADA" | "FINALIZADO" | "CANCELADO" | "SEM_OBRA";
+export type OrdemServicoTab = "ALL" | "PLANEJADA" | "ATIVO" | "QUITADA" | "FINALIZADO" | "CANCELADO" | "SEM_OBRA";
 
 type TabCounts = Record<OrdemServicoTab, number>;
 
@@ -13,6 +13,7 @@ interface OrdemServicoStatusTabsProps {
 
 const TABS: { id: OrdemServicoTab; label: string; dotClass?: string }[] = [
   { id: "ALL", label: "Todas" },
+  { id: "PLANEJADA", label: "Planejadas", dotClass: "border border-neutral-500" },
   { id: "ATIVO", label: "Ativas", dotClass: "bg-neutral-800" },
   { id: "FINALIZADO", label: "Finalizadas", dotClass: "bg-primary-300" },
   { id: "CANCELADO", label: "Canceladas", dotClass: "bg-primary-300" },
@@ -57,6 +58,8 @@ export function OrdemServicoStatusTabs({ value, counts, onChange }: OrdemServico
             <span className={countClass(active)}>{counts[tab.id]}</span>
           </button>
         );
+        // "Planejadas" só aparece quando há OS ainda não emitida
+        if (tab.id === "PLANEJADA" && counts.PLANEJADA === 0) return [];
         // "Quitadas" fica logo depois de "Ativas" e só aparece quando há OS paga esperando finalização
         if (tab.id !== "ATIVO" || counts.QUITADA === 0) return [button];
         return [

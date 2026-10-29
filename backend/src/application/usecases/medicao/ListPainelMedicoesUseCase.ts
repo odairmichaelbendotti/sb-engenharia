@@ -1,3 +1,4 @@
+import { valorPlanejado } from "../../../domain/ordem-servico/os-planejada.js";
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import { divergenciaTotal } from "../../../domain/medicao/medicao-calc.js";
@@ -40,6 +41,16 @@ export class ListPainelMedicoesUseCase {
         numero: os.numero,
         status: os.status,
         aguardandoEmissao: os.aguardandoEmissao,
+        // OS planejada: orçado com orçamento, senão a estimativa (fora dos totais de emitido)
+        valorPlanejado: os.aguardandoEmissao
+          ? reais(
+              valorPlanejado({
+                orcado: resumo.itens > 0 ? resumo.valorOrcado : null,
+                estimativaComBdi: os.estimativaComBdi,
+                desconto: os.desconto,
+              }),
+            )
+          : null,
         // Aviso interno: a OS antiga sem lote ficou com desconto 0
         semLote: editor && os.semLote,
         dataInicio: os.dataInicio,

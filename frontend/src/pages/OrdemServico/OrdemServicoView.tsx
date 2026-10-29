@@ -1,3 +1,5 @@
+import { isPlanejada } from "./os-planejada";
+import { PlanejadoSection } from "./PlanejadoCell";
 import { ANEXOS_PADRAO, numeroRomano } from "./anexos-os";
 import { lazy, Suspense, useState } from "react";
 import {
@@ -411,14 +413,19 @@ function EmpenhosTable({ ordemServico }: { ordemServico: OrdemServico }) {
                 <Td>{formatCurrency(v.valor)}</Td>
                 <Td>{formatCurrency(v.liquidado)}</Td>
                 <Td>
-                  <span
-                    className={cx(
-                      "font-semibold",
-                      saldo.kind === "over" ? "text-danger-text" : saldo.saldo === 0 ? "text-success-text" : "text-text-primary",
-                    )}
-                  >
-                    {saldo.kind === "over" ? `+${formatCurrency(saldo.excesso)}` : formatCurrency(saldo.saldo)}
-                  </span>
+                  {/* OS planejada ainda não tem valor a liquidar: o destinado só vale depois da emissão */}
+                  {ordemServico.aguardandoEmissao ? (
+                    <span className="text-text-muted">—</span>
+                  ) : (
+                    <span
+                      className={cx(
+                        "font-semibold",
+                        saldo.kind === "over" ? "text-danger-text" : saldo.saldo === 0 ? "text-success-text" : "text-text-primary",
+                      )}
+                    >
+                      {saldo.kind === "over" ? `+${formatCurrency(saldo.excesso)}` : formatCurrency(saldo.saldo)}
+                    </span>
+                  )}
                 </Td>
               </Tr>
             );
@@ -595,7 +602,11 @@ export function OrdemServicoView({
       )}
 
       <section>
-        <BalanceSection ordemServico={ordemServico} canFinalize={canEditAdministrativo} />
+        {isPlanejada(ordemServico) ? (
+          <PlanejadoSection os={ordemServico} />
+        ) : (
+          <BalanceSection ordemServico={ordemServico} canFinalize={canEditAdministrativo} />
+        )}
       </section>
 
       <FormSection title="Vínculos" icon={Link2}>

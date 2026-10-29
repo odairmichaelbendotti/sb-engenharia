@@ -81,7 +81,11 @@ export function EmpenhoView({ id, ...frame }: ViewProps) {
         <StatTile
           label="Destinado a OS"
           value={formatCurrency(empenho.valorComprometido)}
-          hint={`${pct(empenho.valorComprometido, empenho.value)}% · ${ordensDoEmpenho.length} OS`}
+          hint={
+            empenho.valorPlanejado > 0
+              ? `${pct(empenho.valorComprometido, empenho.value)}% · planejado ${formatCurrency(empenho.valorPlanejado)} à parte`
+              : `${pct(empenho.valorComprometido, empenho.value)}% · ${ordensDoEmpenho.length} OS`
+          }
         />
         <StatTile
           label="Liquidado"

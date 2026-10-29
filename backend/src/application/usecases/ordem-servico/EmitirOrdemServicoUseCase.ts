@@ -5,9 +5,10 @@ import type { IOrdemServicoRepository } from "../../../domain/repositories/IOrde
 import { calcularPrazoCiencia } from "../../../domain/tramitacao/ciencia.js";
 import { autorDe } from "../ordem-servico-tramitacao/tramitacao-access.js";
 
-// Emite para a empresa a OS que aguardava o orçamento: a partir daqui ela vê a OS e tem o prazo de
-// ciência. Exige o orçamento lançado e os empenhos somando o valor dele (salvar o orçamento acerta);
-// no orçamento do contrato, basta haver algo empenhado, sem passar do orçamento
+// Emite para a empresa a OS planejada: a partir daqui ela vê a OS, tem o prazo de ciência e o valor
+// entra no emitido. Exige o orçamento lançado e os empenhos somando o valor dele (salvar o orçamento
+// acerta); no orçamento do contrato, basta haver algo empenhado, sem passar do orçamento. Como a
+// planejada não reserva saldo, o repository confere o saldo livre de cada empenho na transação
 export class EmitirOrdemServicoUseCase {
   constructor(private repository: IOrdemServicoRepository) {}
 

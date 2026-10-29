@@ -1,3 +1,4 @@
+import { isEmitida, isPlanejada } from "./os-planejada";
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router";
 import { useOrdensServico } from "../../store/ordensServico";
@@ -42,6 +43,9 @@ function matchesTab(os: OrdemServico, tab: OrdemServicoTab) {
   if (tab === "ALL") return true;
   if (tab === "SEM_OBRA") return isSemObra(os);
   if (tab === "QUITADA") return isQuitada(os);
+  if (tab === "PLANEJADA") return isPlanejada(os);
+  // "Ativas" são as emitidas: a planejada fica na aba própria
+  if (tab === "ATIVO") return os.status === "ATIVO" && isEmitida(os);
   return os.status === tab;
 }
 
@@ -131,7 +135,8 @@ export default function OrdensServico() {
   const tabCounts = useMemo(
     () => ({
       ALL: searchedOrdensServico.length,
-      ATIVO: searchedOrdensServico.filter((os) => os.status === "ATIVO").length,
+      PLANEJADA: searchedOrdensServico.filter(isPlanejada).length,
+      ATIVO: searchedOrdensServico.filter((os) => matchesTab(os, "ATIVO")).length,
       QUITADA: searchedOrdensServico.filter(isQuitada).length,
       FINALIZADO: searchedOrdensServico.filter((os) => os.status === "FINALIZADO").length,
       CANCELADO: searchedOrdensServico.filter((os) => os.status === "CANCELADO").length,
@@ -141,13 +146,20 @@ export default function OrdensServico() {
     [searchedOrdensServico, isEmpresaRestricted],
   );
 
-  // Se a aba "Sem obra" ou "Quitadas" some (pendências resolvidas), volta para "Todas"
+  // Se a aba "Sem obra", "Quitadas" ou "Planejadas" some (pendências resolvidas), volta para "Todas"
   const activeTab: OrdemServicoTab =
-    (tab === "SEM_OBRA" && tabCounts.SEM_OBRA === 0) || (tab === "QUITADA" && tabCounts.QUITADA === 0) ? "ALL" : tab;
+    (tab === "SEM_OBRA" && tabCounts.SEM_OBRA === 0) ||
+    (tab === "QUITADA" && tabCounts.QUITADA === 0) ||
+    (tab === "PLANEJADA" && tabCounts.PLANEJADA === 0)
+      ? "ALL"
+      : tab;
 
-  // Totais das OS que passam pelos filtros e pela busca
+  // Totais das OS que passam pelos filtros e pela busca. O emitido não conta as planejadas, que
+  // aparecem à parte no "Planejado"
   const summaryCells = useMemo<SummaryCell[]>(() => {
-    const validas = searchedOrdensServico.filter((os) => os.status !== "CANCELADO");
+    const validas = searchedOrdensServico.filter((os) => os.status !== "CANCELADO" && isEmitida(os));
+    const planejadas = searchedOrdensServico.filter(isPlanejada);
+    const planejado = planejadas.reduce((acc, os) => acc + (os.valorPlanejado ?? 0), 0);
     const ativas = validas.filter((os) => os.status === "ATIVO");
     const emitido = validas.reduce((acc, os) => acc + os.valor, 0);
     const liquidado = validas.reduce((acc, os) => acc + os.valorExecutado, 0);
@@ -170,6 +182,19 @@ export default function OrdensServico() {
         label: "Emitido em OS",
         value: formatCurrency(emitido),
         hint: `${validas.length} OS · ${ativas.length} ${ativas.length === 1 ? "ativa" : "ativas"}`,
+      },
+      {
+        key: "planejado",
+        label: "Planejado",
+        value: formatCurrency(planejado),
+        hint:
+          planejadas.length > 0
+            ? `${planejadas.length} OS ${planejadas.length === 1 ? "planejada" : "planejadas"} · fora do emitido`
+            : "nenhuma OS planejada",
+        tone: planejadas.length > 0 ? "default" : "muted",
+        onClick: () => setTab(tab === "PLANEJADA" ? "ALL" : "PLANEJADA"),
+        active: tab === "PLANEJADA" && planejadas.length > 0,
+        disabled: planejadas.length === 0,
       },
       { key: "liquidado", label: "Liquidado", value: formatCurrency(liquidado), hint: `${percent}% do emitido` },
       { key: "saldo", label: "A liquidar", value: formatCurrency(saldo), hint: "nas OS ativas", tone: "primary" },

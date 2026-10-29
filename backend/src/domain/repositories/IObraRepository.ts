@@ -30,6 +30,8 @@ export type ObraOrdemServicoResumo = {
   status: string;
   dataInicio: Date | null;
   dataPrevisaoTermino: Date | null;
+  // OS planejada (ainda não emitida): o valor dela não entra no da obra
+  aguardandoEmissao: boolean;
   // Soma das notas não canceladas lançadas nesta OS
   valorExecutado: number;
   empenhos: { empenho_id: string; numero: string }[];

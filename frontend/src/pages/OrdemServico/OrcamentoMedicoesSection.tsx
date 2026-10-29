@@ -136,8 +136,8 @@ export function OrcamentoMedicoesSection({ ordemServicoId, numero }: OrcamentoMe
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface-muted px-3 py-2">
           <p className="text-xs text-text-secondary">
             {itens.length === 0
-              ? "A OS aguarda o orçamento: o valor dela sai dos itens. Depois de lançá-lo, emita a OS para a empresa."
-              : `Orçamento lançado (${formatCurrency(planilha.totais.valorOrcado)}). A empresa só vê a OS depois da emissão.`}
+              ? "OS planejada: o valor dela fica fora do emitido até a emissão. Lance o orçamento e emita a OS para a empresa."
+              : `OS planejada com orçamento (${formatCurrency(planilha.totais.valorOrcado)}): emita para que ela conte como emitida e a empresa a veja.`}
           </p>
           {permissoes.emitir && (
             <Button size="sm" icon={Send} onClick={() => setEmitindo("confirmar")}>

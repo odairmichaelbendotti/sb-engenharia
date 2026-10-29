@@ -1,3 +1,5 @@
+import { isEmitida, valorEstimado } from "../../../domain/ordem-servico/os-planejada.js";
+import { osEmitida } from "./os-escopo.js";
 import type {
   empenhosDTO,
   EmpenhoSummaryByTenant,
@@ -79,9 +81,21 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
                 },
               },
             },
-            // Quanto deste empenho foi destinado a cada OS
+            // Quanto deste empenho foi destinado a cada OS (a planejada entra só no planejado)
             vinculosOrdemServico: {
-              select: { valor: true, ordemServico: { select: { status: true } } },
+              select: {
+                valor: true,
+                ordemServico: {
+                  select: {
+                    status: true,
+                    aguardandoEmissao: true,
+                    empenho_id: true,
+                    estimativaComBdi: true,
+                    desconto: true,
+                    empenhos: { select: { valor: true } },
+                  },
+                },
+              },
             },
           },
         }),
@@ -124,19 +138,40 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
               descricaoCurta: string;
               company: { id: string; name: string; cnpj: string };
             };
-            vinculosOrdemServico: { valor: number; ordemServico: { status: string } }[];
+            vinculosOrdemServico: {
+              valor: number;
+              ordemServico: {
+                status: string;
+                aguardandoEmissao: boolean;
+                empenho_id: string;
+                estimativaComBdi: number | null;
+                desconto: number;
+                empenhos: { valor: number }[];
+              };
+            }[];
           },
         ) => {
           const { vinculosOrdemServico, ...rest } = empenho;
-          const valorComprometidoCentavos = vinculosOrdemServico
-            .filter((vinculo) => vinculo.ordemServico.status !== "CANCELADO")
+          const ativos = vinculosOrdemServico.filter((vinculo) => vinculo.ordemServico.status !== "CANCELADO");
+          // Comprometido: só as OS emitidas; a planejada não reserva o saldo
+          const valorComprometidoCentavos = ativos
+            .filter((vinculo) => isEmitida(vinculo.ordemServico))
             .reduce((sum, vinculo) => sum + vinculo.valor, 0);
+          // Planejado: o vínculo da OS planejada; sem valor nos vínculos (ainda sem orçamento), a
+          // estimativa dela vai inteira para o empenho principal
+          const valorPlanejadoCentavos = ativos
+            .filter((vinculo) => !isEmitida(vinculo.ordemServico))
+            .reduce((sum, { valor, ordemServico: os }) => {
+              if (os.empenhos.some((v) => v.valor > 0)) return sum + valor;
+              return os.empenho_id === empenho.id ? sum + (valorEstimado(os.estimativaComBdi, os.desconto) ?? 0) : sum;
+            }, 0);
 
           return {
             ...rest,
             value: Number(empenho.value) / 100,
             totalPaid: Number(empenho.totalPaid) / 100,
             valorComprometido: valorComprometidoCentavos / 100,
+            valorPlanejado: valorPlanejadoCentavos / 100,
             saldoDisponivel: (Number(empenho.value) - valorComprometidoCentavos) / 100,
             valorLiquidado: (liquidadoCentavos.get(empenho.id) ?? 0) / 100,
             saldoALiquidar: (Number(empenho.value) - (liquidadoCentavos.get(empenho.id) ?? 0)) / 100,
@@ -272,12 +307,14 @@ export class PrismaEmpenhoRepository implements IEmpenhoRepository {
         throw new DomainError("Empenho not found");
       }
 
-      // Soma do que já foi destinado a OS não canceladas (exceto a OS em edição)
+      // Soma do que já foi destinado a OS emitidas e não canceladas (exceto a OS em edição);
+      // a OS planejada não reserva saldo
       const agg = await prisma.ordemServicoEmpenho.aggregate({
         where: {
           empenho_id: empenhoId,
           ordemServico: {
             status: { not: "CANCELADO" },
+            ...osEmitida,
             ...(excludeOrdemServicoId ? { id: { not: excludeOrdemServicoId } } : {}),
           },
         },

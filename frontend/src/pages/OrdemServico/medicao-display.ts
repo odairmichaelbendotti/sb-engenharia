@@ -15,6 +15,7 @@ export const MOTIVO_BLOQUEIO_LABEL: Record<MotivoBloqueioMedicao, string> = {
   SEM_ORCAMENTO: "Lance o orçamento antes de medir",
   RASCUNHO_ABERTO: "Já existe uma medição em rascunho",
   SEM_SALDO: "Todos os itens do orçamento já foram medidos",
+  OS_PLANEJADA: "A OS ainda é planejada: emita-a antes de medir",
 };
 
 export function medicaoTitulo(numero: number) {

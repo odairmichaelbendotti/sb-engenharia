@@ -19,6 +19,8 @@ export type ObraOrdemServico = {
   numero: string;
   valor: number;
   status: string;
+  // OS planejada (ainda não emitida): o valor dela não entra no da obra
+  aguardandoEmissao: boolean;
   dataInicio: string | null;
   dataPrevisaoTermino: string | null;
   valorExecutado: number;

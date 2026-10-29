@@ -271,6 +271,8 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
           valor: true,
           escopoOrcamento: true,
           aguardandoEmissao: true,
+          estimativaComBdi: true,
+          desconto: true,
           lote_id: true,
           obra: { select: { id: true, nome: true } },
           empenhos: { orderBy: { createdAt: "asc" }, select: { empenho: { select: { id: true, numero: true } } } },

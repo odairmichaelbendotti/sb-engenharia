@@ -1,3 +1,4 @@
+import { isEmitida } from "../../../domain/ordem-servico/os-planejada.js";
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import { DomainAccessPolicy } from "../../../domain/polices/DomainAccessPolicy.js";
@@ -33,10 +34,10 @@ export class GetObraDetailUseCase {
     return { ...detail, execucaoFisica };
   }
 
-  // Avanço físico pelas medições fechadas das OS não canceladas que têm orçamento (valores em reais).
-  // A empresa também vê: as medições fechadas já são dela
-  private async execucaoFisica(ordensServico: { id: string; status: string }[]) {
-    const ids = ordensServico.filter((os) => os.status !== "CANCELADO").map((os) => os.id);
+  // Avanço físico pelas medições fechadas das OS emitidas e não canceladas que têm orçamento (valores
+  // em reais; a planejada fica de fora). A empresa também vê: as medições fechadas já são dela
+  private async execucaoFisica(ordensServico: { id: string; status: string; aguardandoEmissao: boolean }[]) {
+    const ids = ordensServico.filter((os) => os.status !== "CANCELADO" && isEmitida(os)).map((os) => os.id);
     const planilhas = await this.medicaoRepository.getPlanilhas(ids);
     let valorOrcado = 0;
     let valorMedido = 0;

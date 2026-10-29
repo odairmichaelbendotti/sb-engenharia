@@ -1,3 +1,5 @@
+import { isPlanejada } from "./os-planejada";
+import { PlanejadoCell } from "./PlanejadoCell";
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -171,12 +173,16 @@ export function OrdemServicoList({ ordensServico, isLoading = false, onView, onE
                   )}
                 </Td>
                 <Td className="hidden sm:table-cell">
-                  <BalanceCell
-                    valor={os.valor}
-                    liquidado={os.valorExecutado}
-                    paidLabel="Quitada"
-                    inactive={os.status === "CANCELADO"}
-                  />
+                  {isPlanejada(os) ? (
+                    <PlanejadoCell os={os} />
+                  ) : (
+                    <BalanceCell
+                      valor={os.valor}
+                      liquidado={os.valorExecutado}
+                      paidLabel="Quitada"
+                      inactive={os.status === "CANCELADO"}
+                    />
+                  )}
                 </Td>
                 <Td actions>
                   <ActionMenu
