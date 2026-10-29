@@ -2,7 +2,6 @@ import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
 import {
   INT_MAX,
-  PRECO_BASES,
   precoComDesconto,
   REGRAS_DESCONTO,
   toMilesimos,
@@ -95,12 +94,6 @@ export function parseRegraDesconto(raw: unknown, atual: RegraDesconto): RegraDes
   if (raw === undefined || raw === null) return atual;
   if (!REGRAS_DESCONTO.includes(raw as RegraDesconto)) throw new DomainError("regraDesconto is invalid");
   return raw as RegraDesconto;
-}
-
-export function parsePrecoBase(raw: unknown, atual: PrecoBase): PrecoBase {
-  if (raw === undefined || raw === null) return atual;
-  if (!PRECO_BASES.includes(raw as PrecoBase)) throw new DomainError("precoBase is invalid");
-  return raw as PrecoBase;
 }
 
 /**

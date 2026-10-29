@@ -1,4 +1,5 @@
 import { DomainError } from "../errors/DomainError.js";
+import { normalizeUnidade } from "../normalization/text-normalizers.js";
 
 // Quantidades são gravadas em milésimos da unidade (3,5 m² = 3500), como o dinheiro em centavos:
 // a comparação "medido = orçado" fica exata
@@ -393,10 +394,6 @@ export function validateOrcamentoChange({
       if (!Number.isInteger(novo.precoReferencia) || novo.precoReferencia < 0 || novo.precoReferencia > INT_MAX) {
         throw new DomainError(`${pos}: preço unitário is invalid`);
       }
-      // Aplicando o desconto, o total é o calculado ou, na regra SCOAM, o truncado
-      if (novo.valorTotal !== null && novo.valorTotal !== valorItemTruncado(novo.quantidade, novo.precoUnitario)) {
-        throw new DomainError(`${pos}: valor total can only be adjusted with discounted prices`);
-      }
     }
     if (novo.valorTotal !== null) {
       if (!Number.isInteger(novo.valorTotal) || novo.valorTotal < 0 || novo.valorTotal > INT_MAX) {
@@ -437,7 +434,8 @@ export function validateOrcamentoChange({
     if (valorAcumuladoItem(novo, medido) !== valorAcumuladoItem(atual, medido)) {
       throw new DomainError(`${pos}: valor total would change the value already measured`);
     }
-    if (novo.unidade !== atual.unidade) {
+    // Compara padronizado: item gravado antes da padronização ("M²") não conta como troca
+    if (normalizeUnidade(novo.unidade) !== normalizeUnidade(atual.unidade)) {
       throw new DomainError(`${pos}: unidade of a measured item cannot change`);
     }
   });
@@ -450,14 +448,41 @@ export function validateOrcamentoChange({
 }
 
 /**
+ * Total ajustado já gravado (ex.: planilha com quantidade de mais de 3 casas) continua valendo
+ * enquanto o item não muda de quantidade, supressão nem preço; o que vier calculado pela regra
+ * de desconto só vale para item novo ou alterado.
+ */
+export function manterTotaisAjustados<T extends OrcamentoItemInput>(
+  atuais: readonly Pick<ItemPlanilha, "id" | "quantidade" | "quantidadeSuprimida" | "precoUnitario" | "valorTotal">[],
+  novos: readonly T[],
+): T[] {
+  const porId = new Map(atuais.map((i) => [i.id, i]));
+  return novos.map((novo) => {
+    const atual = novo.id === undefined ? undefined : porId.get(novo.id);
+    if (
+      !atual ||
+      atual.valorTotal === null ||
+      atual.quantidade !== novo.quantidade ||
+      (atual.quantidadeSuprimida ?? 0) !== novo.quantidadeSuprimida ||
+      atual.precoUnitario !== novo.precoUnitario
+    ) {
+      return novo;
+    }
+    return { ...novo, valorTotal: atual.valorTotal };
+  });
+}
+
+/**
  * Totais do orçamento em centavos. O valor da OS é a soma dos itens (preços com desconto). O total
- * com BDI é a soma pelo preço de referência quando o sistema aplicou o desconto; com os preços já
- * descontados, é o valor da OS sem o desconto (arredondado).
+ * com BDI é a soma pelo preço de referência quando o sistema aplicou o desconto (truncada item a item
+ * na regra SCOAM, como a planilha); com os preços já descontados (OS antigas), é o valor da OS sem o
+ * desconto (arredondado).
  */
 export function totaisOrcamento({
   itens,
   precoBase,
   desconto,
+  regra = "SIMPLES",
 }: {
   itens: readonly Pick<
     ItemPlanilha,
@@ -465,11 +490,13 @@ export function totaisOrcamento({
   >[];
   precoBase: PrecoBase;
   desconto: number;
+  regra?: RegraDesconto;
 }): { totalComBdi: number; valorOs: number } {
   const valorOs = itens.reduce((acc, item) => acc + valorOrcadoItem(item), 0);
   if (precoBase === "COM_BDI") {
+    const totalItem = regra === "SCOAM" ? valorItemTruncado : valorItem;
     const totalComBdi = itens.reduce(
-      (acc, item) => acc + valorItem(quantidadeEfetiva(item), item.precoReferencia ?? item.precoUnitario),
+      (acc, item) => acc + totalItem(quantidadeEfetiva(item), item.precoReferencia ?? item.precoUnitario),
       0,
     );
     return { totalComBdi, valorOs };

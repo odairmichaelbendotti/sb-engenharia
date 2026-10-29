@@ -49,7 +49,12 @@ export class GetPlanilhaOrcamentoUseCase {
 
     // Valor da OS = soma dos empenhos; salvar o orçamento acerta os empenhos com a soma dos itens
     const valorOs = os.valor;
-    const totais = totaisOrcamento({ itens: planilha.itens, precoBase: os.precoBase, desconto: os.desconto });
+    const totais = totaisOrcamento({
+      itens: planilha.itens,
+      precoBase: os.precoBase,
+      desconto: os.desconto,
+      regra: os.regraDesconto,
+    });
     const temFechada = fechadas.length > 0;
     const emiteOs = editor && new DomainAccessPolicy().canDo(user.role, "createOrdemServico");
     // Para distribuir o valor entre os empenhos: o saldo livre de cada um sem contar esta OS
