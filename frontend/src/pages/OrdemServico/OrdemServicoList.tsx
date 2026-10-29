@@ -13,6 +13,7 @@ import {
   Loader2,
   PauseCircle,
   Plus,
+  Send,
   Trash2,
   type LucideIcon,
 } from "lucide-react";
@@ -40,6 +41,7 @@ import {
 import { OrcamentoTag } from "./OrcamentoTag";
 import { abrirOrcamento } from "./orcamento-link";
 import { FinalizeOrdemServicoDialog } from "./FinalizeOrdemServico";
+import { EmitirOrdemServicoDialog } from "./EmitirOrdemServicoDialog";
 import { isQuitada } from "./ordem-servico-balance";
 import { ordemServicoStatusDisplay } from "./ordem-servico-display";
 import { getOrdemServicoSchedule, type OrdemServicoSchedule, type ScheduleKind, type ScheduleTone } from "./ordem-servico-schedule";
@@ -86,6 +88,7 @@ export function OrdemServicoList({ ordensServico, isLoading = false, onView, onE
   const fetchOrdemServicoDocument = useOrdensServico((s) => s.fetchOrdemServicoDocument);
   const [page, setPage] = useState(1);
   const [finalizing, setFinalizing] = useState<OrdemServico | null>(null);
+  const [emitindo, setEmitindo] = useState<OrdemServico | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(ordensServico.length / ITEMS_PER_PAGE));
   const currentPage = Math.min(page, totalPages);
@@ -190,6 +193,13 @@ export function OrdemServicoList({ ordensServico, isLoading = false, onView, onE
                     items={[
                       { label: "Visualizar", icon: Eye, onClick: () => onView(os) },
                       { label: "Editar", icon: Edit2, onClick: () => onEdit(os), hidden: !canEditAdministrativo },
+                      // Atalho da OS planejada com orçamento: emitir sem abrir o orçamento
+                      {
+                        label: "Emitir OS",
+                        icon: Send,
+                        onClick: () => setEmitindo(os),
+                        hidden: !canCreateOrdemServico || !isPlanejada(os) || !os.temOrcamento,
+                      },
                       {
                         label: "Abrir orçamento",
                         icon: Calculator,
@@ -249,6 +259,7 @@ export function OrdemServicoList({ ordensServico, isLoading = false, onView, onE
       />
 
       {finalizing && <FinalizeOrdemServicoDialog ordemServico={finalizing} open onClose={() => setFinalizing(null)} />}
+      {emitindo && <EmitirOrdemServicoDialog ordemServico={emitindo} onClose={() => setEmitindo(null)} />}
     </div>
   );
 }

@@ -14,8 +14,9 @@ export type ActionMenuItem = {
   hidden?: boolean;
 };
 
-const MENU_WIDTH = 184;
-const ITEM_HEIGHT = 34;
+// Menu compacto, igual em todas as listas: texto 12px, linha de 28px, ícone 13px
+const MENU_WIDTH = 168;
+const ITEM_HEIGHT = 28;
 
 interface ActionMenuProps {
   items: ActionMenuItem[];
@@ -41,7 +42,7 @@ export function ActionMenu({ items, label = "Ações" }: ActionMenuProps) {
     if (open) return setPosition(null);
     const rect = buttonRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const height = visible.length * ITEM_HEIGHT + (danger.length && regular.length ? 9 : 0) + 12;
+    const height = visible.length * ITEM_HEIGHT + (danger.length && regular.length ? 9 : 0) + 8;
     const right = Math.max(8, window.innerWidth - rect.right);
     setPosition(
       rect.bottom + height + 8 > window.innerHeight
@@ -108,14 +109,14 @@ export function ActionMenu({ items, label = "Ações" }: ActionMenuProps) {
         run(item);
       }}
       className={cx(
-        "w-full flex items-center gap-2.5 h-8 px-2.5 rounded-md text-sm text-left cursor-pointer transition-colors",
+        "w-full flex items-center gap-2 h-7 px-2 rounded-md text-xs font-medium text-left cursor-pointer transition-colors",
         "focus-visible:outline-none",
         item.danger
           ? "text-danger-text hover:bg-danger-bg focus-visible:bg-danger-bg"
           : "text-text-primary hover:bg-surface-muted focus-visible:bg-surface-muted",
       )}
     >
-      <item.icon size={14} className="shrink-0" />
+      <item.icon size={13} className="shrink-0" />
       {item.label}
     </button>
   );
@@ -144,10 +145,10 @@ export function ActionMenu({ items, label = "Ações" }: ActionMenuProps) {
             onKeyDown={onMenuKeyDown}
             onClick={(e) => e.stopPropagation()}
             style={{ ...position, width: MENU_WIDTH }}
-            className="fixed z-1400 rounded-xl border border-border bg-surface shadow-lg p-1.5 animate-row-in"
+            className="fixed z-1400 rounded-lg border border-border bg-surface shadow-lg p-1 animate-row-in"
           >
             {regular.map(renderItem)}
-            {regular.length > 0 && danger.length > 0 && <div className="my-1 mx-1.5 border-t border-border" />}
+            {regular.length > 0 && danger.length > 0 && <div className="my-1 mx-1 border-t border-border" />}
             {danger.map(renderItem)}
           </div>,
           document.body,
