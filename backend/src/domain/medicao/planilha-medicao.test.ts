@@ -7,7 +7,7 @@ const pintura = {
   codigo: null,
   descricao: "Pintura",
   unidade: "m²",
-  quantidade: 3333,
+  quantidade: 333_300,
   precoUnitario: 1234,
   valorTotal: 4112,
 };
@@ -17,7 +17,7 @@ describe("planilha da medição", () => {
     const planilha = buildPlanilhaMedicao({
       itens: [pintura],
       anterior: new Map(),
-      esta: new Map([["i-1", 3333]]),
+      esta: new Map([["i-1", 333_300]]),
       fiscais: { tecnico: null, administrativo: null },
     });
     expect(planilha.itens[0]!.valorTotal).toBe(4112);
@@ -26,16 +26,16 @@ describe("planilha da medição", () => {
 
   it("guarda a supressão no snapshot; o antigo, sem ela, vale a quantidade inteira", () => {
     const planilha = buildPlanilhaMedicao({
-      itens: [{ ...pintura, valorTotal: null, quantidadeSuprimida: 1333 }],
+      itens: [{ ...pintura, valorTotal: null, quantidadeSuprimida: 133_300 }],
       anterior: new Map(),
       esta: new Map(),
       fiscais: { tecnico: null, administrativo: null },
     });
-    expect(planilha.itens[0]).toMatchObject({ orcado: 3333, suprimido: 1333 });
-    expect(calcularPlanilhaMedicao(planilha).linhas[0]).toMatchObject({ orcado: 2000, suprimido: 1333, valorOrcado: 2468 });
+    expect(planilha.itens[0]).toMatchObject({ orcado: 333_300, suprimido: 133_300 });
+    expect(calcularPlanilhaMedicao(planilha).linhas[0]).toMatchObject({ orcado: 200_000, suprimido: 133_300, valorOrcado: 2468 });
   });
 
-  it("lê snapshot antigo, sem o total ajustado, como quantidade × preço", () => {
+  it("lê snapshot antigo (versão 1, em milésimos), sem o total ajustado, como quantidade × preço", () => {
     const antigo = parsePlanilhaMedicao({
       versao: 1,
       itens: [
@@ -43,6 +43,9 @@ describe("planilha da medição", () => {
       ],
       fiscais: { tecnico: null, administrativo: null },
     });
+    // 3,333 m² convertidos para a escala de 5 casas
+    expect(antigo!.versao).toBe(2);
+    expect(antigo!.itens[0]).toMatchObject({ orcado: 333_300, esta: 333_300, anterior: 0 });
     expect(calcularPlanilhaMedicao(antigo!).totais).toMatchObject({ valorOrcado: 4113, valorEsta: 4113 });
   });
 });

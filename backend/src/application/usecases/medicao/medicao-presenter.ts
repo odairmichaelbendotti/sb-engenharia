@@ -1,10 +1,10 @@
-import { computeLinhasMedicao, fromMilesimos, type TotaisMedicao } from "../../../domain/medicao/medicao-calc.js";
+import { computeLinhasMedicao, fromQtdInterna, type TotaisMedicao } from "../../../domain/medicao/medicao-calc.js";
 import type { LinhaPlanilhaMedicao } from "../../../domain/medicao/planilha-medicao.js";
 import type { MedicaoResumo, PlanilhaOs } from "../../../domain/repositories/IMedicaoRepository.js";
 
 // A API fala em reais e em quantidades decimais; o domínio, em centavos e milésimos
 export const reais = (centavos: number) => centavos / 100;
-export const qtd = fromMilesimos;
+export const qtd = fromQtdInterna;
 
 /** Valor (centavos) de cada medição, com os preços atuais; a ordem por número dá o acumulado anterior. */
 export function valoresDasMedicoes(planilha: PlanilhaOs): Map<string, number> {

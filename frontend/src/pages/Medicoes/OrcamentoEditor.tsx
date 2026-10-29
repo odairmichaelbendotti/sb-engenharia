@@ -7,6 +7,7 @@ import { useUnsavedChangesGuard } from "../../hooks/useUnsavedChangesGuard";
 import { formatCurrency } from "../../utils/format-currency";
 import { formatValueToCurrencyMask, maskCurrency, parseCurrencyMask } from "../../utils/masks";
 import {
+  arredondaQtd,
   formatQuantidade,
   parseQuantidade,
   precoComDesconto,
@@ -168,7 +169,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
   // Quantidade que vale: a contratada menos a suprimida
   const quantidadeValida = (l: ItemForm) => {
     const quantidade = parseQuantidade(l.quantidade);
-    return quantidade === null ? null : Math.max(0, Math.round((quantidade - l.suprimida) * 1000) / 1000);
+    return quantidade === null ? null : Math.max(0, arredondaQtd(quantidade - l.suprimida));
   };
   // Total com desconto da linha pela regra (simples: sobre o total da linha; SCOAM: truncado)
   const totalCalculado = (l: ItemForm) => {
@@ -189,7 +190,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
   // Total com BDI da linha (quantidade efetiva × preço com BDI; truncado na SCOAM)
   const totalBdiLinha = (l: ItemForm) => {
     const quantidade = quantidadeValida(l);
-    return quantidade === null ? 0 : totalComBdiItem(quantidade, parseCurrencyMask(l.preco), regraDesconto);
+    return quantidade === null ? 0 : totalComBdiItem(quantidade, parseCurrencyMask(l.preco));
   };
 
   const update = (key: number, patch: Partial<ItemForm>) => {

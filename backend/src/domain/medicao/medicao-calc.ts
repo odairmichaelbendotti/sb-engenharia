@@ -1,29 +1,34 @@
 import { DomainError } from "../errors/DomainError.js";
 import { normalizeUnidade } from "../normalization/text-normalizers.js";
 
-// Quantidades são gravadas em milésimos da unidade (3,5 m² = 3500), como o dinheiro em centavos:
-// a comparação "medido = orçado" fica exata
-export const QTD_ESCALA = 1000;
-// Maior valor de uma coluna Int do Postgres
+// Quantidades são gravadas em cem-milésimos da unidade (3,5 m² = 350000; 10,44736 kg = 1044736),
+// como o dinheiro em centavos: a conta usa 5 casas, como as planilhas, e "medido = orçado" fica exato.
+// A tela mostra 2 casas
+export const QTD_ESCALA = 100_000;
+export const QTD_CASAS = 5;
+// Maior valor de uma coluna Int do Postgres (centavos)
 export const INT_MAX = 2_147_483_647;
+// Maior quantidade interna aceita (coluna BIGINT; fica longe do limite seguro do JS)
+export const QTD_MAX = 100_000_000_000_000;
 export const DESCRICAO_ITEM_MAX = 500;
 export const ETAPA_MAX = 120;
 export const UNIDADE_MAX = 20;
 export const CODIGO_ITEM_MAX = 40;
 export const ORCAMENTO_ITENS_MAX = 500;
 
-/** Quantidade decimal da API → milésimos. Mais de 3 casas é arredondado. */
-export function toMilesimos(quantidade: number): number {
-  return Math.round(quantidade * QTD_ESCALA);
+/** Quantidade decimal da API → unidade interna (5 casas). Mais casas são arredondadas. */
+export function toQtdInterna(quantidade: number): number {
+  // toFixed evita o resto do ponto flutuante (1,6245 × 100000 = 162449,99...)
+  return Math.round(Number((quantidade * QTD_ESCALA).toFixed(2)));
 }
 
-export function fromMilesimos(milesimos: number): number {
-  return milesimos / QTD_ESCALA;
+export function fromQtdInterna(quantidade: number): number {
+  return quantidade / QTD_ESCALA;
 }
 
 /**
  * Valor de uma quantidade de um item, em centavos, arredondado meio para cima.
- * Feito em BigInt: milésimos × centavos passa de 2^53 com valores grandes.
+ * Feito em BigInt: quantidade interna × centavos passa de 2^53 com valores grandes.
  */
 export function valorItem(quantidadeMil: number, precoCent: number): number {
   const produto = BigInt(quantidadeMil) * BigInt(precoCent);
@@ -57,13 +62,15 @@ export function precoComDesconto(precoCent: number, desconto: number, regra: Reg
 }
 
 /**
- * Total da linha no desconto simples, como a planilha: quantidade × preço c/ BDI × (1 − desconto),
- * arredondado só no fim (sem cortar o preço unitário antes). Ex.: 235 × 0,82 × 0,694 = 133,73.
+ * Total da linha no desconto simples, como a planilha: o total com BDI da linha (quantidade × preço
+ * c/ BDI, truncado no centavo) × (1 − desconto), arredondado no centavo; o preço unitário com
+ * desconto não é cortado antes. Ex.: 235 × 0,82 = 192,70 × 0,694 = 133,73.
  */
-export function totalLinhaComDesconto(quantidadeMil: number, precoReferenciaCent: number, desconto: number): number {
+export function totalLinhaComDesconto(quantidade: number, precoReferenciaCent: number, desconto: number): number {
+  const totalComBdi = BigInt(valorItemTruncado(quantidade, precoReferenciaCent));
   const fator = BigInt(DESCONTO_ESCALA - Math.round(desconto * 10_000));
-  const divisor = BigInt(QTD_ESCALA) * BigInt(DESCONTO_ESCALA);
-  return Number((BigInt(quantidadeMil) * BigInt(precoReferenciaCent) * fator + divisor / 2n) / divisor);
+  const escala = BigInt(DESCONTO_ESCALA);
+  return Number((totalComBdi * fator + escala / 2n) / escala);
 }
 
 /** Quantidade × preço truncado no centavo (o total do item na planilha SCOAM). */
@@ -296,8 +303,10 @@ export function computeLinhasMedicao({
 
 export type LinhaMedicaoInput = { item_id: string; quantidade: number };
 
-function formatQtd(milesimos: number, unidade: string): string {
-  const texto = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 }).format(fromMilesimos(milesimos));
+function formatQtd(quantidade: number, unidade: string): string {
+  const texto = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+    fromQtdInterna(quantidade),
+  );
   return `${texto} ${unidade}`;
 }
 
@@ -321,7 +330,7 @@ export function validateMedicaoQuantidades({
     if (!item) throw new DomainError("Medição has an item that is not in the budget");
     if (vistos.has(item.id)) throw new DomainError(`Item "${item.descricao}" appears twice in the medição`);
     vistos.add(item.id);
-    if (!Number.isInteger(linha.quantidade) || linha.quantidade <= 0 || linha.quantidade > INT_MAX) {
+    if (!Number.isInteger(linha.quantidade) || linha.quantidade <= 0 || linha.quantidade > QTD_MAX) {
       throw new DomainError(`Invalid quantity for item "${item.descricao}"`);
     }
     const efetiva = quantidadeEfetiva(item);
@@ -393,7 +402,7 @@ export function validateOrcamentoChange({
     if (novo.codigo && novo.codigo.length > CODIGO_ITEM_MAX) {
       throw new DomainError(`${pos}: código must have at most ${CODIGO_ITEM_MAX} characters`);
     }
-    if (!Number.isInteger(novo.quantidade) || novo.quantidade <= 0 || novo.quantidade > INT_MAX) {
+    if (!Number.isInteger(novo.quantidade) || novo.quantidade <= 0 || novo.quantidade > QTD_MAX) {
       throw new DomainError(`${pos}: quantidade must be greater than zero`);
     }
     if (
@@ -490,9 +499,9 @@ export function manterTotaisAjustados<T extends OrcamentoItemInput>(
 
 /**
  * Totais do orçamento em centavos. O valor da OS é a soma dos itens (preços com desconto). O total
- * com BDI é a soma pelo preço de referência quando o sistema aplicou o desconto (truncada item a item
- * na regra SCOAM, como a planilha); com os preços já descontados (OS antigas), é o valor da OS sem o
- * desconto (arredondado).
+ * com BDI é a soma pelo preço de referência quando o sistema aplicou o desconto (truncada item a item,
+ * como a planilha); com os preços já descontados (OS antigas), é o valor da OS sem o desconto
+ * (arredondado).
  */
 export function totaisOrcamento({
   itens,
@@ -510,9 +519,8 @@ export function totaisOrcamento({
 }): { totalComBdi: number; valorOs: number } {
   const valorOs = itens.reduce((acc, item) => acc + valorOrcadoItem(item), 0);
   if (precoBase === "COM_BDI") {
-    const totalItem = regra === "SCOAM" ? valorItemTruncado : valorItem;
     const totalComBdi = itens.reduce(
-      (acc, item) => acc + totalItem(quantidadeEfetiva(item), item.precoReferencia ?? item.precoUnitario),
+      (acc, item) => acc + valorItemTruncado(quantidadeEfetiva(item), item.precoReferencia ?? item.precoUnitario),
       0,
     );
     return { totalComBdi, valorOs };

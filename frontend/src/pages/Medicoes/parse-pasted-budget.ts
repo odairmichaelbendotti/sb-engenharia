@@ -1,4 +1,4 @@
-import { folgaValorTotal, valorItem } from "../../utils/decimal";
+import { arredondaQtd, folgaValorTotal, valorItem } from "../../utils/decimal";
 import { formatCurrency } from "../../utils/format-currency";
 import { normalizeCode, normalizeFreeText, normalizeUnidade } from "../../utils/normalization/text-normalizers";
 
@@ -103,7 +103,7 @@ function parseLine(cells: string[], linha: number, texto: string, etapa: string)
                 : null;
 
   if (erro) return { linha, item: null, etapa: null, erro, texto };
-  const qtd = Math.round(quantidade! * 1000) / 1000;
+  const qtd = arredondaQtd(quantidade!);
   const precoUnitario = Math.round(preco! * 100) / 100;
   // Coluna do total: o que não for número é ignorado
   const totalColado = col.total ? parsePastedNumber(col.total) : null;

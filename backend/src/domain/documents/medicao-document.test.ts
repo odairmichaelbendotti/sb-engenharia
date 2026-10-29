@@ -6,8 +6,8 @@ import type { MedicaoDocumentData, MedicaoResumo } from "../repositories/IMedica
 const dia = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
 const itens = [
-  { id: "i-1", ordem: 1, codigo: "87529", descricao: "Reboco", unidade: "m²", quantidade: 10_000, precoUnitario: 5000, valorTotal: null },
-  { id: "i-2", ordem: 2, codigo: null, descricao: "Pintura", unidade: "m²", quantidade: 20_000, precoUnitario: 1500, valorTotal: null },
+  { id: "i-1", ordem: 1, codigo: "87529", descricao: "Reboco", unidade: "m²", quantidade: 1_000_000, precoUnitario: 5000, valorTotal: null },
+  { id: "i-2", ordem: 2, codigo: null, descricao: "Pintura", unidade: "m²", quantidade: 2_000_000, precoUnitario: 1500, valorTotal: null },
 ];
 
 function sampleData(medicao: Partial<MedicaoResumo> = {}): MedicaoDocumentData {
@@ -32,8 +32,8 @@ function sampleData(medicao: Partial<MedicaoResumo> = {}): MedicaoDocumentData {
     },
     planilha: buildPlanilhaMedicao({
       itens,
-      anterior: new Map([["i-1", 3000]]),
-      esta: new Map([["i-1", 7000]]),
+      anterior: new Map([["i-1", 300_000]]),
+      esta: new Map([["i-1", 700_000]]),
       fiscais: { tecnico: "1º SGT FLORIANO", administrativo: null },
     }),
     ordemServico: { id: "os-1", numero: "OS 010/BAFL/2026-L4", tenant_id: "t-1", descricao: null },
@@ -50,10 +50,11 @@ function sampleData(medicao: Partial<MedicaoResumo> = {}): MedicaoDocumentData {
 }
 
 describe("formatQuantidade", () => {
-  it("mostra duas casas e a terceira só quando existe", () => {
-    expect(formatQuantidade(3500)).toBe("3,50");
-    expect(formatQuantidade(3125)).toBe("3,125");
-    expect(formatQuantidade(1_234_000)).toBe("1.234,00");
+  it("mostra sempre duas casas (a conta usa 5)", () => {
+    expect(formatQuantidade(350_000)).toBe("3,50");
+    expect(formatQuantidade(312_500)).toBe("3,13");
+    expect(formatQuantidade(1_044_736)).toBe("10,45");
+    expect(formatQuantidade(123_400_000)).toBe("1.234,00");
   });
 });
 
@@ -111,8 +112,8 @@ describe("supressão no boletim", () => {
     const data = sampleData();
     data.planilha = buildPlanilhaMedicao({
       itens: itens.map((i, index) => ({ ...i, quantidadeSuprimida: index === 0 ? 0 : i.quantidade })),
-      anterior: new Map([["i-1", 3000]]),
-      esta: new Map([["i-1", 7000]]),
+      anterior: new Map([["i-1", 300_000]]),
+      esta: new Map([["i-1", 700_000]]),
       fiscais: { tecnico: null, administrativo: null },
     });
     const m = buildMedicaoDocumentModel(data, dia("2026-10-24"));
@@ -129,8 +130,8 @@ describe("etapas no boletim", () => {
     const data = sampleData();
     data.planilha = buildPlanilhaMedicao({
       itens: itens.map((i, index) => ({ ...i, etapa: index === 0 ? "Revestimento" : "Pintura" })),
-      anterior: new Map([["i-1", 3000]]),
-      esta: new Map([["i-1", 7000]]),
+      anterior: new Map([["i-1", 300_000]]),
+      esta: new Map([["i-1", 700_000]]),
       fiscais: { tecnico: null, administrativo: null },
     });
     // Reboco: 10 m² a R$ 50,00, medido por inteiro (350,00 nesta); pintura: 20 m² a R$ 15,00, nada medido
