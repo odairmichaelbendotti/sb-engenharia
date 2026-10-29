@@ -104,6 +104,16 @@ export function totalPorRegra(
 }
 
 /**
+ * Total com BDI do item (espelha `totaisOrcamento` do backend): quantidade efetiva × preço com BDI,
+ * truncado na regra SCOAM (como a planilha) e arredondado na simples.
+ */
+export function totalComBdiItem(quantidade: number, precoComBdi: number, regra: RegraDesconto) {
+  if (regra !== "SCOAM") return valorItem(quantidade, precoComBdi);
+  const produto = BigInt(Math.round(quantidade * 1000)) * BigInt(Math.round(precoComBdi * 100));
+  return Number(produto / 1000n) / 100;
+}
+
+/**
  * Valor do orçamento em reais com outro desconto (espelha `aplicarDesconto` do backend): o item com
  * preço de referência (lançado só com BDI) recebe o desconto; os demais valem o total que já têm.
  */

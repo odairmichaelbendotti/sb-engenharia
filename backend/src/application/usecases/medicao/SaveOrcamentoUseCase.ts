@@ -1,6 +1,6 @@
 import type { AuthenticatedUser } from "../../../@types/AuthenticatedUser.js";
 import { DomainError } from "../../../domain/errors/DomainError.js";
-import { totaisOrcamento } from "../../../domain/medicao/medicao-calc.js";
+import { manterTotaisAjustados, totaisOrcamento, type PrecoBase } from "../../../domain/medicao/medicao-calc.js";
 import type { IEmpenhoRepository } from "../../../domain/repositories/IEmpenhoRepository.js";
 import type { IMedicaoRepository, MedicaoOsContext } from "../../../domain/repositories/IMedicaoRepository.js";
 import { calcularPrazoCiencia, isCienciaDispensada } from "../../../domain/tramitacao/ciencia.js";
@@ -9,7 +9,6 @@ import {
   assertPodeEditar,
   loadOsComAcesso,
   parseOrcamentoItens,
-  parsePrecoBase,
   parseRegraDesconto,
 } from "./medicao-access.js";
 
@@ -71,19 +70,22 @@ export class SaveOrcamentoUseCase {
     const os = await loadOsComAcesso(this.repository, ordemServicoId, user);
     assertPodeEditar(user, os);
 
-    const precoBase = parsePrecoBase(body.precoBase, os.precoBase);
+    // Um modo só (2026-10-28): o preço digitado é sempre com BDI e o sistema aplica o desconto
+    const precoBase: PrecoBase = "COM_BDI";
     const regraDesconto = parseRegraDesconto(body.regraDesconto, os.regraDesconto);
-    if (precoBase !== os.precoBase && (await this.repository.hasMedicaoFechada(os.id))) {
-      throw new DomainError("The price mode cannot change after a medição was closed");
-    }
     // A regra muda os preços com desconto: com medição fechada, os preços medidos não mudam
-    if (precoBase === "COM_BDI" && regraDesconto !== os.regraDesconto && (await this.repository.hasMedicaoFechada(os.id))) {
+    if (regraDesconto !== os.regraDesconto && (await this.repository.hasMedicaoFechada(os.id))) {
       throw new DomainError("The discount rule cannot change after a medição was closed");
     }
-    const itens = parseOrcamentoItens(body.itens, { precoBase, desconto: os.desconto, regra: regraDesconto });
+    // Total ajustado já gravado (planilha antiga) continua enquanto o item não muda
+    const atuais = (await this.repository.getPlanilhas([os.id])).get(os.id)?.itens ?? [];
+    const itens = manterTotaisAjustados(
+      atuais,
+      parseOrcamentoItens(body.itens, { precoBase, desconto: os.desconto, regra: regraDesconto }),
+    );
     if (itens.length === 0) throw new DomainError("The budget must have at least one item");
 
-    const { totalComBdi, valorOs } = totaisOrcamento({ itens, precoBase, desconto: os.desconto });
+    const { totalComBdi, valorOs } = totaisOrcamento({ itens, precoBase, desconto: os.desconto, regra: regraDesconto });
     const empenhos = distribuir(os, valorOs, body.empenhos);
 
     // O que cada empenho destina precisa caber no saldo livre dele (sem contar esta OS)

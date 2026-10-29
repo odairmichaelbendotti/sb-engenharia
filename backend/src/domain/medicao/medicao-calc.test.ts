@@ -12,6 +12,7 @@ import {
   quantidadeEfetiva,
   totaisOrcamento,
   totalPorRegra,
+  manterTotaisAjustados,
   valorItemTruncado,
   validateOrcamentoChange,
   valorAcumuladoItem,
@@ -288,12 +289,12 @@ describe("validateOrcamentoChange", () => {
     expect(() => run([input(reboco, { valorTotal: 49_999 }), input(pintura)])).not.toThrow();
   });
 
-  it("com o desconto aplicado pelo sistema, só aceita o total truncado da regra SCOAM", () => {
+  it("com o desconto aplicado pelo sistema, o total ajustado também fica dentro da folga", () => {
     expect(() => run([input(reboco), input(pintura, { precoReferencia: 1500 })])).not.toThrow();
-    // 3,333 × 12,34 = 41,12922: truncado 41,12
+    // 3,333 × 12,34 = 41,12922: truncado 41,12 (SCOAM) ou total de planilha antiga
     expect(() => run([input(reboco), input(pintura, { precoReferencia: 1500, valorTotal: 4112 })])).not.toThrow();
-    expect(() => run([input(reboco), input(pintura, { precoReferencia: 1500, valorTotal: 4111 })])).toThrow(
-      /discounted prices/,
+    expect(() => run([input(reboco), input(pintura, { precoReferencia: 1500, valorTotal: 4100 })])).toThrow(
+      /too far/,
     );
     expect(() => run([input(reboco), input(pintura, { precoReferencia: -1 })])).toThrow(/preço unitário is invalid/);
   });
@@ -480,5 +481,44 @@ describe("divergência", () => {
   it("aponta só quando há diferença", () => {
     expect(divergenciaTotal(1000, 1000)).toBeNull();
     expect(divergenciaTotal(1000, 1200)).toEqual({ diferenca: -200 });
+  });
+});
+
+describe("orçamento com um modo só", () => {
+  it("o total com BDI da regra SCOAM soma os totais truncados, como a planilha", () => {
+    // 21,5 × 38,42 = 826,03 (truncado) e 826,03 (arredondado: 826,030); 21,5 × 10,72 = 230,48
+    // 3,333 × 12,34 = 41,12922 → 41,12 truncado e 41,13 arredondado
+    const itens = [{ quantidade: 3333, precoReferencia: 1234, precoUnitario: 927, valorTotal: null }];
+    expect(totaisOrcamento({ itens, precoBase: "COM_BDI", desconto: 24.8, regra: "SCOAM" }).totalComBdi).toBe(4112);
+    expect(totaisOrcamento({ itens, precoBase: "COM_BDI", desconto: 24.8 }).totalComBdi).toBe(4113);
+  });
+
+  it("mantém o total ajustado gravado enquanto o item não muda", () => {
+    const atual = { id: "i-3", quantidade: 27_554, quantidadeSuprimida: 0, precoUnitario: 5338, valorTotal: 147_081 };
+    const novo: OrcamentoItemInput = {
+      id: "i-3", codigo: "87777", descricao: "Emboço", etapa: null, unidade: "m²",
+      quantidade: 27_554, quantidadeSuprimida: 0, precoUnitario: 5338, valorTotal: 147_083, precoReferencia: 8554,
+    };
+    expect(manterTotaisAjustados([atual], [novo])[0]!.valorTotal).toBe(147_081);
+    // Mudou a quantidade, a supressão ou o preço: vale o calculado pela regra
+    expect(manterTotaisAjustados([atual], [{ ...novo, quantidade: 28_000 }])[0]!.valorTotal).toBe(147_083);
+    expect(manterTotaisAjustados([atual], [{ ...novo, quantidadeSuprimida: 1000 }])[0]!.valorTotal).toBe(147_083);
+    expect(manterTotaisAjustados([atual], [{ ...novo, id: undefined }])[0]!.valorTotal).toBe(147_083);
+    expect(manterTotaisAjustados([{ ...atual, valorTotal: null }], [novo])[0]!.valorTotal).toBe(147_083);
+  });
+});
+
+describe("unidade de item medido", () => {
+  it("unidade gravada fora do padrão (\"M²\") não conta como troca", () => {
+    const atual: ItemPlanilha = { ...reboco, unidade: "M²" };
+    const novo: OrcamentoItemInput = {
+      id: reboco.id, codigo: null, descricao: reboco.descricao, etapa: null, unidade: "m²",
+      quantidade: reboco.quantidade, quantidadeSuprimida: 0, precoUnitario: reboco.precoUnitario, valorTotal: null, precoReferencia: null,
+    };
+    const medidoFechado = new Map([[reboco.id, 1000]]);
+    expect(() => validateOrcamentoChange({ atuais: [atual], novos: [novo], medidoFechado })).not.toThrow();
+    expect(() => validateOrcamentoChange({ atuais: [atual], novos: [{ ...novo, unidade: "m³" }], medidoFechado })).toThrow(
+      /unidade of a measured item/,
+    );
   });
 });

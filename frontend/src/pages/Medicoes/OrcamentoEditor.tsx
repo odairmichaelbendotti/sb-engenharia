@@ -1,20 +1,19 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, CircleMinus, ClipboardPaste, FolderPlus, Lock, Plus, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import type { OrcamentoItem, OrcamentoPayload, PlanilhaOrcamento, PrecoBase, RegraDesconto } from "../../../types/medicao";
+import type { OrcamentoItem, OrcamentoPayload, PlanilhaOrcamento, RegraDesconto } from "../../../types/medicao";
 import { useMedicoes } from "../../store/medicoes";
 import { useUnsavedChangesGuard } from "../../hooks/useUnsavedChangesGuard";
 import { formatCurrency } from "../../utils/format-currency";
 import { formatValueToCurrencyMask, maskCurrency, parseCurrencyMask } from "../../utils/masks";
 import {
-  folgaValorTotal,
   formatQuantidade,
   parseQuantidade,
   precoComDesconto,
   sanitizeDecimalInput,
   toDecimalInput,
+  totalComBdiItem,
   totalPorRegra,
-  valorItem,
 } from "../../utils/decimal";
 import { ORDEM_SERVICO_ITEM_FIELD_RULES } from "../../utils/normalization/form-rules";
 import { normalizeFreeText } from "../../utils/normalization/text-normalizers";
@@ -45,33 +44,29 @@ type ItemForm = {
   etapa: string;
   unidade: string;
   quantidade: string;
-  // Como informado: com BDI (o sistema aplica o desconto) ou já com desconto, conforme o modo
+  // Preço com BDI (o sistema aplica o desconto da OS pela regra dela)
   preco: string;
-  // Total ajustado (máscara de moeda) para bater com a planilha de referência; null = qtd × preço.
-  // Só no modo com desconto
+  // Total ajustado já gravado (planilha antiga ou truncado da SCOAM; máscara de moeda); vale enquanto
+  // quantidade, supressão e preço ficam como em `original`. null = calculado pela regra
   total: string | null;
+  original: { quantidade: string; preco: string; suprimida: number } | null;
   // Soma das medições fechadas: trava preço e unidade e é o mínimo da quantidade efetiva
   medido: number;
   // Supressão (decimal): parte da quantidade que sai do contrato; 0 = nenhuma
   suprimida: number;
 };
 
-type Campo = "codigo" | "descricao" | "unidade" | "quantidade" | "preco" | "total" | "empenhos";
+type Campo = "codigo" | "descricao" | "unidade" | "quantidade" | "preco" | "empenhos";
 type Erro = { key: number | null; campo: Campo | null; texto: string };
-
-const PRECO_BASE_OPTIONS: { value: PrecoBase; label: string }[] = [
-  { value: "COM_BDI", label: "Preços com BDI" },
-  { value: "COM_BDI_E_DESCONTO", label: "Preços com BDI e desconto" },
-];
 
 const REGRA_DESCONTO_OPTIONS: { value: RegraDesconto; label: string }[] = [
   { value: "SIMPLES", label: "Desconto simples" },
   { value: "SCOAM", label: "Desconto SCOAM" },
 ];
 
-// Até lg a linha vira cartão; a coluna "Medido" só cabe a partir de xl
+// Até lg a linha vira cartão; "Total c/ BDI" ganha coluna a partir de xl e "Medido" a partir de 2xl
 const COLS =
-  "lg:grid-cols-[1.5rem_5.5rem_minmax(0,1fr)_4.5rem_6.5rem_8rem_7rem_2rem] xl:grid-cols-[1.5rem_6rem_minmax(0,1fr)_4.5rem_7rem_8.5rem_7.5rem_7rem_2rem]";
+  "lg:grid-cols-[1.5rem_5.5rem_minmax(0,1fr)_4.5rem_6.5rem_8rem_7.5rem_2rem] xl:grid-cols-[1.5rem_6rem_minmax(0,1fr)_4.5rem_7rem_8.5rem_7.5rem_7.5rem_2rem] 2xl:grid-cols-[1.5rem_6rem_minmax(0,1fr)_4.5rem_7rem_8.5rem_7.5rem_7.5rem_7rem_2rem]";
 
 function toForm(item: OrcamentoItem, key: number): ItemForm {
   return {
@@ -82,20 +77,20 @@ function toForm(item: OrcamentoItem, key: number): ItemForm {
     etapa: item.etapa ?? "",
     unidade: item.unidade,
     quantidade: toDecimalInput(item.quantidade),
-    // No modo com BDI o campo mostra o preço informado (referência); o que vale sai dele com o desconto
+    // O campo mostra o preço com BDI (referência); o que vale sai dele com o desconto
     preco: formatValueToCurrencyMask(item.precoReferencia ?? item.precoUnitario),
     total: item.totalAjustado ? formatValueToCurrencyMask(item.valorTotal) : null,
+    original: {
+      quantidade: toDecimalInput(item.quantidade),
+      preco: formatValueToCurrencyMask(item.precoReferencia ?? item.precoUnitario),
+      suprimida: item.quantidadeSuprimida,
+    },
     medido: item.medido,
     suprimida: item.quantidadeSuprimida,
   };
 }
 
 const preenchida = (l: ItemForm) => Boolean(l.id || l.descricao || l.unidade || l.quantidade || l.preco);
-
-// Diferença em reais, com sinal ("+R$ 0,01")
-function formatDiferenca(valor: number) {
-  return `${valor > 0 ? "+" : "−"}${formatCurrency(Math.abs(valor))}`;
-}
 
 function formatPercentual(valor: number) {
   return `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 4 }).format(valor)}%`;
@@ -114,10 +109,9 @@ interface OrcamentoEditorProps {
 
 /**
  * Planilha orçamentária da OS em tela cheia: é a base de preço da OS (o valor dela é a soma dos
- * itens). Os preços podem vir só com BDI (o sistema aplica o desconto da OS, truncando o centavo)
- * ou já com desconto. Item medido trava preço e unidade, não sai e tem quantidade mínima. No modo
- * com desconto o total pode ser ajustado à planilha de referência, dentro da folga do backend; item
- * medido por inteiro trava o total. Os campos só viram input ao clicar (InlineEdit).
+ * itens). O preço é sempre digitado com BDI e o sistema aplica o desconto da OS pela regra dela
+ * (simples ou SCOAM); a linha mostra o total com BDI e o total com desconto. Item medido trava preço
+ * e unidade, não sai e tem quantidade mínima. Os campos só viram input ao clicar (InlineEdit).
  */
 export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
   const { itens, valorOs, ordemServico, desconto, empenhos, permissoes } = planilha;
@@ -133,6 +127,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
     quantidade: "",
     preco: "",
     total: null,
+    original: null,
     medido: 0,
     suprimida: 0,
     ...patch,
@@ -140,7 +135,6 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
   const [linhas, setLinhas] = useState<ItemForm[]>(() =>
     itens.length > 0 ? itens.map((item) => toForm(item, nextKey.current++)) : [novaLinha()],
   );
-  const [precoBase, setPrecoBase] = useState<PrecoBase>(planilha.precoBase);
   const [regraDesconto, setRegraDesconto] = useState<RegraDesconto>(planilha.regraDesconto);
   // Quanto cada empenho destina à OS (máscara de moeda), quando ela tem mais de um
   const [distribuicao, setDistribuicao] = useState<Record<string, string>>(() =>
@@ -148,11 +142,10 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
   );
   const serialize = () =>
     JSON.stringify([
-      precoBase,
       regraDesconto,
       linhas
         .filter(preenchida)
-        .map((l) => [l.id ?? null, l.codigo, l.descricao, l.etapa, l.unidade, l.quantidade, l.suprimida, l.preco, l.total]),
+        .map((l) => [l.id ?? null, l.codigo, l.descricao, l.etapa, l.unidade, l.quantidade, l.suprimida, l.preco]),
       empenhos.length > 1 ? distribuicao : null,
     ]);
   const [inicial] = useState(serialize);
@@ -166,7 +159,6 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
 
   const dirty = serialize() !== inicial;
   const guard = useUnsavedChangesGuard(dirty);
-  const aplicaDesconto = precoBase === "COM_BDI";
 
   // Ctrl+V fora de um campo: se o texto tem colunas (tabulação), abre a prévia da colagem
   useEffect(() => {
@@ -181,28 +173,32 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
     return () => document.removeEventListener("paste", onPaste);
   }, [colando]);
 
-  // Preço que vale nas medições: o informado, com o desconto da OS no modo com BDI
-  const precoEfetivo = (l: ItemForm) => {
-    const informado = parseCurrencyMask(l.preco);
-    return aplicaDesconto ? precoComDesconto(informado, desconto, regraDesconto) : informado;
-  };
+  // Preço que vale nas medições: o com BDI, com o desconto da OS pela regra dela
+  const precoEfetivo = (l: ItemForm) => precoComDesconto(parseCurrencyMask(l.preco), desconto, regraDesconto);
   // Quantidade que vale: a contratada menos a suprimida
   const quantidadeValida = (l: ItemForm) => {
     const quantidade = parseQuantidade(l.quantidade);
     return quantidade === null ? null : Math.max(0, Math.round((quantidade - l.suprimida) * 1000) / 1000);
   };
-  // Quantidade × preço que vale, sem o ajuste
+  // Quantidade × preço com desconto pela regra (a SCOAM trunca o total)
   const totalCalculado = (l: ItemForm) => {
     const quantidade = quantidadeValida(l);
-    if (quantidade === null) return 0;
-    // No modo com BDI o total segue a regra de desconto (a SCOAM trunca o total)
-    return aplicaDesconto
-      ? totalPorRegra(quantidade, precoEfetivo(l), regraDesconto, l.suprimida)
-      : valorItem(quantidade, precoEfetivo(l));
+    return quantidade === null ? 0 : totalPorRegra(quantidade, precoEfetivo(l), regraDesconto, l.suprimida);
   };
-  // Com supressão, o total ajustado (da quantidade cheia) deixa de valer
+  // Total ajustado gravado continua enquanto o item não muda (espelha `manterTotaisAjustados`)
+  const inalterado = (l: ItemForm) =>
+    l.original !== null &&
+    l.original.quantidade === l.quantidade &&
+    l.original.preco === l.preco &&
+    l.original.suprimida === l.suprimida;
+  // Total com desconto da linha
   const totalLinha = (l: ItemForm) =>
-    l.total === null || aplicaDesconto || l.suprimida > 0 ? totalCalculado(l) : parseCurrencyMask(l.total);
+    l.total !== null && inalterado(l) ? parseCurrencyMask(l.total) : totalCalculado(l);
+  // Total com BDI da linha (quantidade efetiva × preço com BDI; truncado na SCOAM)
+  const totalBdiLinha = (l: ItemForm) => {
+    const quantidade = quantidadeValida(l);
+    return quantidade === null ? 0 : totalComBdiItem(quantidade, parseCurrencyMask(l.preco), regraDesconto);
+  };
 
   const update = (key: number, patch: Partial<ItemForm>) => {
     setLinhas((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
@@ -214,28 +210,15 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
     setLinhas((prev) => prev.map((l) => (l.key === key && normalize ? { ...l, [campo]: normalize(l[campo]) } : l)));
   };
 
-  function trocarPrecoBase(novo: PrecoBase) {
-    setPrecoBase(novo);
-    // O total ajustado é da planilha com desconto: aplicando o desconto, o total é sempre o calculado
-    if (novo === "COM_BDI") setLinhas((prev) => prev.map((l) => (l.total === null ? l : { ...l, total: null })));
-    setErro(null);
-  }
-
   const total = linhas.reduce((acc, l) => acc + totalLinha(l), 0);
-  // Total com BDI: pelo preço informado no modo com BDI; sem o desconto, no modo já descontado
-  const totalComBdi = aplicaDesconto
-    ? linhas.reduce((acc, l) => {
-        const quantidade = quantidadeValida(l);
-        return acc + (quantidade === null ? 0 : valorItem(quantidade, parseCurrencyMask(l.preco)));
-      }, 0)
-    : desconto < 100
-      ? Math.round((total / (1 - desconto / 100)) * 100) / 100
-      : total;
+  const totalComBdi = Math.round(linhas.reduce((acc, l) => acc + totalBdiLinha(l), 0) * 100) / 100;
   const valorMuda = valorOs !== null && centavos(total) !== centavos(valorOs);
   const medidos = linhas.filter((l) => l.medido > 0).length;
   const comSupressao = linhas.filter((l) => preenchida(l) && l.suprimida > 0);
+  // Quanto as supressões tiram: o total da quantidade cheia (pela regra) menos o da efetiva
   const valorSuprimido = comSupressao.reduce(
-    (acc, l) => acc + valorItem(parseQuantidade(l.quantidade) ?? 0, precoEfetivo(l)) - totalCalculado(l),
+    (acc, l) =>
+      acc + totalPorRegra(parseQuantidade(l.quantidade) ?? 0, precoEfetivo(l), regraDesconto) - totalCalculado(l),
     0,
   );
   const somaDistribuida = empenhos.reduce((acc, e) => acc + parseCurrencyMask(distribuicao[e.id] ?? ""), 0);
@@ -312,18 +295,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
           texto: `${pos}: com a supressão de ${formatQuantidade(l.suprimida)} ${l.unidade}, sobra menos do que já foi medido (${formatQuantidade(l.medido)}).`,
         };
       }
-      if (!l.preco) return { key: l.key, campo: "preco", texto: `${pos}: informe o preço unitário.` };
-      if (l.total !== null && !aplicaDesconto && l.suprimida === 0) {
-        if (!l.total) return { key: l.key, campo: "total", texto: `${pos}: informe o total ou use o calculado.` };
-        const folga = folgaValorTotal(quantidade);
-        if (Math.abs(parseCurrencyMask(l.total) - totalCalculado(l)) > folga + 1e-9) {
-          return {
-            key: l.key,
-            campo: "total",
-            texto: `${pos}: o total ajustado pode diferir de quantidade × preço (${formatCurrency(totalCalculado(l))}) em até ${formatCurrency(folga)}. Confira os valores.`,
-          };
-        }
-      }
+      if (!l.preco) return { key: l.key, campo: "preco", texto: `${pos}: informe o preço com BDI.` };
     }
     if (empenhos.length > 1) {
       if (centavos(somaDistribuida) !== centavos(total)) {
@@ -376,7 +348,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
       return;
     }
     const payload: OrcamentoPayload = {
-      precoBase,
+      precoBase: "COM_BDI",
       regraDesconto,
       itens: linhas.filter(preenchida).map((l) => ({
         ...(l.id ? { id: l.id } : {}),
@@ -387,7 +359,8 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
         quantidade: parseQuantidade(l.quantidade) ?? 0,
         quantidadeSuprimida: l.suprimida,
         precoUnitario: parseCurrencyMask(l.preco),
-        valorTotal: l.total === null || aplicaDesconto || l.suprimida > 0 ? null : parseCurrencyMask(l.total),
+        // O backend calcula o total pela regra e mantém o ajustado gravado do item que não mudou
+        valorTotal: null,
       })),
       ...(empenhos.length > 1
         ? {
@@ -439,8 +412,6 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
         unidade: item.unidade,
         quantidade: toDecimalInput(item.quantidade),
         preco: formatValueToCurrencyMask(item.precoUnitario),
-        // Aplicando o desconto, o total da planilha (com BDI) não vale para o item
-        total: item.valorTotal === null || aplicaDesconto ? null : formatValueToCurrencyMask(item.valorTotal),
       }),
     );
     setLinhas((prev) => {
@@ -454,13 +425,13 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
     toast.success(`${novos.length} ${novos.length === 1 ? "item incluído" : "itens incluídos"} na planilha. Confira e salve.`);
   }
 
-  // Supressões aplicadas pelo diálogo; o item suprimido perde o total ajustado
+  // Supressões aplicadas pelo diálogo (mudar a supressão já desfaz o total ajustado da linha)
   function aplicarSupressoes(supressoes: Map<number, number>) {
     setLinhas((prev) =>
       prev.map((l) => {
         const suprimida = supressoes.get(l.key);
         if (suprimida === undefined || suprimida === l.suprimida) return l;
-        return { ...l, suprimida, total: suprimida > 0 ? null : l.total };
+        return { ...l, suprimida };
       }),
     );
     setErro(null);
@@ -472,12 +443,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
   // Linha de um item (cartão até lg, grade a partir dele)
   const renderLinha = ({ l, index }: { l: ItemForm; index: number }) => {
     const medido = l.medido > 0;
-    // Medido por inteiro: a última medição já usou o total, que não muda mais
-    const totalTravado = medido && l.medido >= (quantidadeValida(l) ?? 0);
     const suprimido = l.suprimida > 0;
-    const ajustado = l.total !== null && !aplicaDesconto && !suprimido;
-    const calculadoMask = formatValueToCurrencyMask(totalCalculado(l));
-    const diferencaTotal = ajustado ? Math.round((totalLinha(l) - totalCalculado(l)) * 100) / 100 : 0;
     return (
       <div key={l.key} className="rounded-lg border border-border p-2.5 lg:border-0 lg:p-0">
         <div className={cx("grid grid-cols-2 sm:grid-cols-4 gap-2 items-start", COLS)}>
@@ -542,7 +508,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
             <InlineEdit
               size="sm"
               align="right"
-              aria-label={`Preço unitário ${aplicaDesconto ? "com BDI " : ""}do item ${index + 1}`}
+              aria-label={`Preço com BDI do item ${index + 1}`}
               inputMode="numeric"
               prefix="R$"
               placeholder="0,00"
@@ -553,44 +519,37 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
               onChange={(e) => update(l.key, { preco: maskCurrency(e.target.value) })}
               onRevert={(preco) => update(l.key, { preco })}
             />
-            {aplicaDesconto && l.preco && (
+            {l.preco && (
               <p
                 className="mt-0.5 pr-2.5 text-right text-[11px] text-text-muted tabular-nums truncate"
-                title="Preço que vale nas medições: com o desconto da OS, truncado no centavo"
+                title="Preço que vale nas medições: com o desconto da OS"
               >
                 c/ desc. {formatCurrency(precoEfetivo(l))}
               </p>
             )}
           </div>
-          {aplicaDesconto ? (
-            <span className="flex h-8 items-center justify-end px-2.5 text-xs font-semibold text-text-primary tabular-nums truncate">
+          <span
+            className="hidden xl:flex h-8 items-center justify-end px-2.5 text-xs text-text-secondary tabular-nums truncate"
+            title="Total com BDI"
+          >
+            {formatCurrency(totalBdiLinha(l))}
+          </span>
+          <div className="min-w-0">
+            <span
+              className="flex h-8 items-center justify-end px-2.5 text-xs font-semibold text-text-primary tabular-nums truncate"
+              title="Total com desconto"
+            >
               {formatCurrency(totalLinha(l))}
             </span>
-          ) : (
-            <InlineEdit
-              size="sm"
-              align="right"
-              aria-label={`Total ajustado do item ${index + 1}`}
-              inputMode="numeric"
-              placeholder="0,00"
-              value={l.total ?? calculadoMask}
-              display={<span className="font-semibold">{formatCurrency(totalLinha(l))}</span>}
-              disabled={totalTravado || suprimido}
-              title={
-                suprimido
-                  ? "Item com supressão: vale a quantidade restante × preço"
-                  : totalTravado
-                    ? "Item medido por inteiro: o total não muda mais"
-                    : "Ajustar o total para bater com a planilha de referência"
-              }
-              invalid={invalido(l, "total")}
-              onChange={(e) => update(l.key, { total: maskCurrency(e.target.value) })}
-              onRevert={(anterior) => update(l.key, { total: anterior === calculadoMask ? null : anterior })}
-            />
-          )}
+            {l.preco && (
+              <p className="xl:hidden mt-0.5 pr-2.5 text-right text-[11px] text-text-muted tabular-nums truncate">
+                c/ BDI {formatCurrency(totalBdiLinha(l))}
+              </p>
+            )}
+          </div>
           <span
             className={cx(
-              "hidden xl:flex h-8 items-center justify-end text-xs tabular-nums truncate",
+              "hidden 2xl:flex h-8 items-center justify-end text-xs tabular-nums truncate",
               medido ? "text-text-secondary" : "text-text-muted",
             )}
             title={medido ? `${formatQuantidade(l.medido)} ${l.unidade} medidos em medições fechadas` : undefined}
@@ -621,24 +580,6 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
             vale {formatQuantidade(quantidadeValida(l) ?? 0)} {l.unidade}
           </p>
         )}
-        {ajustado && (
-          <p className="mt-1 lg:pl-8 flex flex-wrap items-center gap-x-1 text-[11px] text-text-muted tabular-nums">
-            Total ajustado à planilha: calculado {formatCurrency(totalCalculado(l))}
-            {diferencaTotal !== 0 && ` (${formatDiferenca(diferencaTotal)})`}
-            {!totalTravado && (
-              <>
-                {" · "}
-                <button
-                  type="button"
-                  className="font-semibold text-text-secondary underline-offset-2 hover:underline cursor-pointer"
-                  onClick={() => update(l.key, { total: null })}
-                >
-                  Usar o calculado
-                </button>
-              </>
-            )}
-          </p>
-        )}
       </div>
     );
   };
@@ -648,27 +589,16 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
       <div className="flex flex-col lg:flex-row lg:items-center gap-2 mb-3">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <SegmentedControl
-            label="Como os preços foram informados"
-            options={PRECO_BASE_OPTIONS}
-            value={precoBase}
-            onChange={trocarPrecoBase}
+            label="Como o desconto é aplicado"
+            options={REGRA_DESCONTO_OPTIONS}
+            value={regraDesconto}
+            onChange={setRegraDesconto}
             disabled={!permissoes.trocarPrecoBase}
           />
-          {aplicaDesconto && (
-            <SegmentedControl
-              label="Como o desconto é aplicado"
-              options={REGRA_DESCONTO_OPTIONS}
-              value={regraDesconto}
-              onChange={setRegraDesconto}
-              disabled={!permissoes.trocarPrecoBase}
-            />
-          )}
           <span className="text-[11px] text-text-muted">
             {!permissoes.trocarPrecoBase
-              ? "Modo travado: já há medição fechada com estes preços."
-              : !aplicaDesconto
-                ? "Os preços já valem como informados."
-                : regraDesconto === "SCOAM"
+              ? `Preços com BDI e desconto de ${formatPercentual(desconto)}. Regra travada: já há medição fechada com estes preços.`
+              : regraDesconto === "SCOAM"
                   ? `Desconto de ${formatPercentual(desconto)} em cada preço, truncando o valor do desconto e o total do item (planilha SCOAM).`
                   : `Desconto de ${formatPercentual(desconto)} em cada preço, truncando o preço com desconto no centavo.`}
           </span>
@@ -702,9 +632,10 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
           <span>Descrição do serviço</span>
           <span>Un</span>
           <span className="text-right">Quantidade</span>
-          <span className="text-right">{aplicaDesconto ? "Preço c/ BDI" : "Preço unit."}</span>
-          <span className="text-right">Total</span>
-          <span className="hidden xl:block text-right">Medido</span>
+          <span className="text-right">Preço c/ BDI</span>
+          <span className="hidden xl:block text-right">Total c/ BDI</span>
+          <span className="text-right">Total c/ desc.</span>
+          <span className="hidden 2xl:block text-right">Medido</span>
           <span />
         </div>
 
@@ -826,11 +757,16 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
           ) : (
             <>
               <p className="text-sm text-text-secondary">
-                Valor da OS <span className="font-semibold text-text-primary tabular-nums">{formatCurrency(total)}</span>
+                <span className="tabular-nums">Total c/ BDI {formatCurrency(totalComBdi)}</span>
                 <span className="text-text-muted tabular-nums">
                   {" "}
-                  · com BDI {formatCurrency(totalComBdi)} · desconto {formatPercentual(desconto)} ·{" "}
-                  {linhas.filter(preenchida).length} itens{medidos > 0 ? ` · ${medidos} já medidos` : ""}
+                  · desconto {formatPercentual(desconto)} (−{formatCurrency(Math.round((totalComBdi - total) * 100) / 100)}) ·{" "}
+                </span>
+                Total c/ desconto (valor da OS){" "}
+                <span className="font-semibold text-text-primary tabular-nums">{formatCurrency(total)}</span>
+                <span className="text-text-muted tabular-nums">
+                  {" "}
+                  · {linhas.filter(preenchida).length} itens{medidos > 0 ? ` · ${medidos} já medidos` : ""}
                 </span>
                 {comSupressao.length > 0 && (
                   <span className="text-danger-text tabular-nums">
@@ -875,7 +811,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
         <PasteOrcamentoDialog
           initialText={colando}
           temMedidos={medidos > 0}
-          comDesconto={!aplicaDesconto}
+          comDesconto={false}
           limite={{
             append: ORCAMENTO_ITENS_MAX - linhas.filter(preenchida).length,
             replace: ORCAMENTO_ITENS_MAX - medidos,
