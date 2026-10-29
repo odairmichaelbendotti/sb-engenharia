@@ -37,13 +37,39 @@ export const PRECO_BASES: readonly PrecoBase[] = ["COM_BDI", "COM_BDI_E_DESCONTO
 // Desconto em porcentagem com até 4 casas, levado a milionésimos para a conta ser em inteiros
 const DESCONTO_ESCALA = 1_000_000;
 
+// Como o desconto é aplicado em cada preço no modo COM_BDI (OrdemServico.regraDesconto)
+export type RegraDesconto = "SIMPLES" | "SCOAM";
+export const REGRAS_DESCONTO: readonly RegraDesconto[] = ["SIMPLES", "SCOAM"];
+
 /**
- * Preço com BDI menos o desconto (porcentagem), truncado no centavo, como nas planilhas de
- * licitação: o preço com desconto nunca passa do referencial. Conta em BigInt, sem ponto flutuante.
+ * Preço com BDI menos o desconto (porcentagem), conta em BigInt, sem ponto flutuante.
+ * SIMPLES: o preço com desconto é truncado no centavo (nunca passa do referencial).
+ * SCOAM: o valor do desconto é truncado, como na planilha SCOAM (preço − TRUNCAR(preço × desconto)).
  */
-export function precoComDesconto(precoCent: number, desconto: number): number {
-  const fator = BigInt(DESCONTO_ESCALA - Math.round(desconto * 10_000));
-  return Number((BigInt(precoCent) * fator) / BigInt(DESCONTO_ESCALA));
+export function precoComDesconto(precoCent: number, desconto: number, regra: RegraDesconto = "SIMPLES"): number {
+  const descontoMilionesimos = BigInt(Math.round(desconto * 10_000));
+  const preco = BigInt(precoCent);
+  if (regra === "SCOAM") return Number(preco - (preco * descontoMilionesimos) / BigInt(DESCONTO_ESCALA));
+  return Number((preco * (BigInt(DESCONTO_ESCALA) - descontoMilionesimos)) / BigInt(DESCONTO_ESCALA));
+}
+
+/** Quantidade × preço truncado no centavo (o total do item na planilha SCOAM). */
+export function valorItemTruncado(quantidadeMil: number, precoCent: number): number {
+  return Number((BigInt(quantidadeMil) * BigInt(precoCent)) / BigInt(QTD_ESCALA));
+}
+
+/**
+ * Total ajustado que a regra de desconto impõe ao item lançado só com BDI: na SCOAM, o total
+ * truncado quando ele difere do arredondado; nulo = quantidade × preço. Item com supressão não tem
+ * total ajustado.
+ */
+export function totalPorRegra(
+  item: Pick<ItemPlanilha, "quantidade" | "quantidadeSuprimida" | "precoUnitario">,
+  regra: RegraDesconto,
+): number | null {
+  if (regra !== "SCOAM" || (item.quantidadeSuprimida ?? 0) > 0) return null;
+  const truncado = valorItemTruncado(item.quantidade, item.precoUnitario);
+  return truncado === valorItem(item.quantidade, item.precoUnitario) ? null : truncado;
 }
 
 // Item da planilha em unidades internas (milésimos e centavos)
@@ -306,7 +332,7 @@ export type OrcamentoItemInput = {
   quantidadeSuprimida: number;
   // Preço que vale (no modo COM_BDI, já calculado com o desconto)
   precoUnitario: number;
-  // Total ajustado; nulo = quantidade × preço. Só no modo COM_BDI_E_DESCONTO
+  // Total ajustado; nulo = quantidade × preço. No modo COM_BDI, só o truncado da regra SCOAM
   valorTotal: number | null;
   // Preço com BDI digitado (modo COM_BDI); nulo no modo com desconto
   precoReferencia: number | null;
@@ -367,8 +393,10 @@ export function validateOrcamentoChange({
       if (!Number.isInteger(novo.precoReferencia) || novo.precoReferencia < 0 || novo.precoReferencia > INT_MAX) {
         throw new DomainError(`${pos}: preço unitário is invalid`);
       }
-      // O total ajustado é da planilha com desconto; aplicando o desconto, o total é sempre calculado
-      if (novo.valorTotal !== null) throw new DomainError(`${pos}: valor total can only be adjusted with discounted prices`);
+      // Aplicando o desconto, o total é o calculado ou, na regra SCOAM, o truncado
+      if (novo.valorTotal !== null && novo.valorTotal !== valorItemTruncado(novo.quantidade, novo.precoUnitario)) {
+        throw new DomainError(`${pos}: valor total can only be adjusted with discounted prices`);
+      }
     }
     if (novo.valorTotal !== null) {
       if (!Number.isInteger(novo.valorTotal) || novo.valorTotal < 0 || novo.valorTotal > INT_MAX) {
@@ -457,22 +485,27 @@ type ItemComReferencia = Pick<
 
 /**
  * Preços do orçamento com outro desconto (ex.: a OS antiga recebeu o lote): o item com preço de
- * referência (modo COM_BDI) recebe o desconto de novo; os demais ficam como estão. Devolve os
- * preços que mudaram e o novo valor da OS (centavos).
+ * referência (modo COM_BDI) recebe o desconto de novo pela regra da OS; os demais ficam como estão.
+ * Devolve os preços (e totais ajustados) que mudaram e o novo valor da OS (centavos).
  */
 export function aplicarDesconto(
   itens: readonly ItemComReferencia[],
   desconto: number,
-): { precos: { id: string; precoUnitario: number }[]; valorOs: number } {
-  const precos: { id: string; precoUnitario: number }[] = [];
+  regra: RegraDesconto = "SIMPLES",
+): { precos: { id: string; precoUnitario: number; valorTotal: number | null }[]; valorOs: number } {
+  const precos: { id: string; precoUnitario: number; valorTotal: number | null }[] = [];
   let valorOs = 0;
   for (const item of itens) {
-    const precoUnitario =
-      item.precoReferencia === null || item.precoReferencia === undefined
-        ? item.precoUnitario
-        : precoComDesconto(item.precoReferencia, desconto);
-    if (precoUnitario !== item.precoUnitario) precos.push({ id: item.id, precoUnitario });
-    valorOs += valorOrcadoItem({ ...item, precoUnitario });
+    if (item.precoReferencia === null || item.precoReferencia === undefined) {
+      valorOs += valorOrcadoItem(item);
+      continue;
+    }
+    const precoUnitario = precoComDesconto(item.precoReferencia, desconto, regra);
+    const valorTotal = totalPorRegra({ ...item, precoUnitario }, regra);
+    if (precoUnitario !== item.precoUnitario || valorTotal !== item.valorTotal) {
+      precos.push({ id: item.id, precoUnitario, valorTotal });
+    }
+    valorOs += valorOrcadoItem({ ...item, precoUnitario, valorTotal });
   }
   return { precos, valorOs };
 }

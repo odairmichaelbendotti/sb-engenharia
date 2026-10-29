@@ -6,6 +6,10 @@ export type MedicaoStatus = "RASCUNHO" | "FECHADA";
 // truncando o centavo) ou já com BDI e desconto
 export type PrecoBase = "COM_BDI" | "COM_BDI_E_DESCONTO";
 
+// Como o desconto é aplicado em cada preço no modo COM_BDI: SIMPLES trunca o preço com desconto;
+// SCOAM trunca o valor do desconto e o total do item (planilha SCOAM)
+export type RegraDesconto = "SIMPLES" | "SCOAM";
+
 // Por que não dá para lançar uma medição agora
 export type MotivoBloqueioMedicao = "SEM_PERMISSAO" | "OS_INATIVA" | "SEM_ORCAMENTO" | "RASCUNHO_ABERTO" | "SEM_SALDO";
 
@@ -91,6 +95,7 @@ export interface PlanilhaOrcamento {
   ordemServico: MedicaoOsInfo;
   // Como os preços foram informados e o desconto da OS (porcentagem, copiado do lote)
   precoBase: PrecoBase;
+  regraDesconto: RegraDesconto;
   desconto: number;
   // Total com BDI do orçamento (nulo sem itens)
   totalComBdi: number | null;
@@ -163,12 +168,13 @@ export interface OrcamentoItemPayload {
   quantidadeSuprimida: number;
   // Como informado: com BDI (modo COM_BDI) ou com BDI e desconto
   precoUnitario: number;
-  // Total ajustado; null = quantidade × preço. Só no modo com desconto
+  // Total ajustado; null = quantidade × preço. Só no modo com desconto (no modo com BDI o backend calcula)
   valorTotal: number | null;
 }
 
 export interface OrcamentoPayload {
   precoBase: PrecoBase;
+  regraDesconto: RegraDesconto;
   itens: OrcamentoItemPayload[];
   // Quanto cada empenho destina à OS, quando ela tem mais de um (soma = valor do orçamento)
   empenhos?: { empenho_id: string; valor: number }[];

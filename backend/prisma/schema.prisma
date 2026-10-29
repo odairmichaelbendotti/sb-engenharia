@@ -318,6 +318,8 @@ model OrdemServico {
   totalComBdi         Int?
   // Como os preços do orçamento foram informados (o sistema aplica o desconto em COM_BDI)
   precoBase           OrcamentoPrecoBase   @default(COM_BDI)
+  // Como o desconto é aplicado em cada preço no modo COM_BDI
+  regraDesconto       RegraDesconto        @default(SIMPLES)
   // Desconto do lote copiado na criação, em porcentagem: editar o lote depois não muda a OS
   desconto            Float                @default(0)
   // Criada e ainda não emitida (sem orçamento): a empresa não vê
@@ -500,6 +502,13 @@ enum OrcamentoPrecoBase {
   // Só com BDI: o sistema aplica o desconto da OS, truncando o centavo
   COM_BDI
   COM_BDI_E_DESCONTO
+}
+
+enum RegraDesconto {
+  // Preço com desconto truncado no centavo; total = quantidade × preço
+  SIMPLES
+  // Planilha SCOAM: trunca o valor do desconto e o total do item
+  SCOAM
 }
 
 // Item da planilha orçamentária da OS. O preço unitário é o que vale nas medições: com BDI e desconto

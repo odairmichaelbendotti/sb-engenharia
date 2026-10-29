@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, CircleMinus, ClipboardPaste, FolderPlus, Lock, Plus, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import type { OrcamentoItem, OrcamentoPayload, PlanilhaOrcamento, PrecoBase } from "../../../types/medicao";
+import type { OrcamentoItem, OrcamentoPayload, PlanilhaOrcamento, PrecoBase, RegraDesconto } from "../../../types/medicao";
 import { useMedicoes } from "../../store/medicoes";
 import { useUnsavedChangesGuard } from "../../hooks/useUnsavedChangesGuard";
 import { formatCurrency } from "../../utils/format-currency";
@@ -13,6 +13,7 @@ import {
   precoComDesconto,
   sanitizeDecimalInput,
   toDecimalInput,
+  totalPorRegra,
   valorItem,
 } from "../../utils/decimal";
 import { ORDEM_SERVICO_ITEM_FIELD_RULES } from "../../utils/normalization/form-rules";
@@ -61,6 +62,11 @@ type Erro = { key: number | null; campo: Campo | null; texto: string };
 const PRECO_BASE_OPTIONS: { value: PrecoBase; label: string }[] = [
   { value: "COM_BDI", label: "Preços com BDI" },
   { value: "COM_BDI_E_DESCONTO", label: "Preços com BDI e desconto" },
+];
+
+const REGRA_DESCONTO_OPTIONS: { value: RegraDesconto; label: string }[] = [
+  { value: "SIMPLES", label: "Desconto simples" },
+  { value: "SCOAM", label: "Desconto SCOAM" },
 ];
 
 // Até lg a linha vira cartão; a coluna "Medido" só cabe a partir de xl
@@ -135,6 +141,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
     itens.length > 0 ? itens.map((item) => toForm(item, nextKey.current++)) : [novaLinha()],
   );
   const [precoBase, setPrecoBase] = useState<PrecoBase>(planilha.precoBase);
+  const [regraDesconto, setRegraDesconto] = useState<RegraDesconto>(planilha.regraDesconto);
   // Quanto cada empenho destina à OS (máscara de moeda), quando ela tem mais de um
   const [distribuicao, setDistribuicao] = useState<Record<string, string>>(() =>
     Object.fromEntries(empenhos.map((e) => [e.id, formatValueToCurrencyMask(e.valor)])),
@@ -142,6 +149,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
   const serialize = () =>
     JSON.stringify([
       precoBase,
+      regraDesconto,
       linhas
         .filter(preenchida)
         .map((l) => [l.id ?? null, l.codigo, l.descricao, l.etapa, l.unidade, l.quantidade, l.suprimida, l.preco, l.total]),
@@ -176,7 +184,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
   // Preço que vale nas medições: o informado, com o desconto da OS no modo com BDI
   const precoEfetivo = (l: ItemForm) => {
     const informado = parseCurrencyMask(l.preco);
-    return aplicaDesconto ? precoComDesconto(informado, desconto) : informado;
+    return aplicaDesconto ? precoComDesconto(informado, desconto, regraDesconto) : informado;
   };
   // Quantidade que vale: a contratada menos a suprimida
   const quantidadeValida = (l: ItemForm) => {
@@ -186,7 +194,11 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
   // Quantidade × preço que vale, sem o ajuste
   const totalCalculado = (l: ItemForm) => {
     const quantidade = quantidadeValida(l);
-    return quantidade === null ? 0 : valorItem(quantidade, precoEfetivo(l));
+    if (quantidade === null) return 0;
+    // No modo com BDI o total segue a regra de desconto (a SCOAM trunca o total)
+    return aplicaDesconto
+      ? totalPorRegra(quantidade, precoEfetivo(l), regraDesconto, l.suprimida)
+      : valorItem(quantidade, precoEfetivo(l));
   };
   // Com supressão, o total ajustado (da quantidade cheia) deixa de valer
   const totalLinha = (l: ItemForm) =>
@@ -365,6 +377,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
     }
     const payload: OrcamentoPayload = {
       precoBase,
+      regraDesconto,
       itens: linhas.filter(preenchida).map((l) => ({
         ...(l.id ? { id: l.id } : {}),
         codigo: l.codigo,
@@ -641,12 +654,23 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
             onChange={trocarPrecoBase}
             disabled={!permissoes.trocarPrecoBase}
           />
+          {aplicaDesconto && (
+            <SegmentedControl
+              label="Como o desconto é aplicado"
+              options={REGRA_DESCONTO_OPTIONS}
+              value={regraDesconto}
+              onChange={setRegraDesconto}
+              disabled={!permissoes.trocarPrecoBase}
+            />
+          )}
           <span className="text-[11px] text-text-muted">
             {!permissoes.trocarPrecoBase
               ? "Modo travado: já há medição fechada com estes preços."
-              : aplicaDesconto
-                ? `O sistema aplica o desconto de ${formatPercentual(desconto)} da OS em cada preço (truncado no centavo).`
-                : "Os preços já valem como informados."}
+              : !aplicaDesconto
+                ? "Os preços já valem como informados."
+                : regraDesconto === "SCOAM"
+                  ? `Desconto de ${formatPercentual(desconto)} em cada preço, truncando o valor do desconto e o total do item (planilha SCOAM).`
+                  : `Desconto de ${formatPercentual(desconto)} em cada preço, truncando o preço com desconto no centavo.`}
           </span>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 lg:ml-auto lg:w-auto">

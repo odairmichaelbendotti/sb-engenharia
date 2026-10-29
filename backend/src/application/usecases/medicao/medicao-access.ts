@@ -4,11 +4,14 @@ import {
   INT_MAX,
   PRECO_BASES,
   precoComDesconto,
+  REGRAS_DESCONTO,
   toMilesimos,
+  totalPorRegra,
   valorItem,
   type LinhaMedicaoInput,
   type OrcamentoItemInput,
   type PrecoBase,
+  type RegraDesconto,
 } from "../../../domain/medicao/medicao-calc.js";
 import {
   MEDICAO_RULES,
@@ -88,6 +91,12 @@ function numero(value: unknown): number {
   return NaN;
 }
 
+export function parseRegraDesconto(raw: unknown, atual: RegraDesconto): RegraDesconto {
+  if (raw === undefined || raw === null) return atual;
+  if (!REGRAS_DESCONTO.includes(raw as RegraDesconto)) throw new DomainError("regraDesconto is invalid");
+  return raw as RegraDesconto;
+}
+
 export function parsePrecoBase(raw: unknown, atual: PrecoBase): PrecoBase {
   if (raw === undefined || raw === null) return atual;
   if (!PRECO_BASES.includes(raw as PrecoBase)) throw new DomainError("precoBase is invalid");
@@ -97,11 +106,12 @@ export function parsePrecoBase(raw: unknown, atual: PrecoBase): PrecoBase {
 /**
  * Planilha enviada pela API: quantidade e quantidade suprimida (opcional) decimais, preço unitário
  * (como informado) e total ajustado (opcional) em reais. No modo COM_BDI o preço informado vira a referência e o preço que vale
- * recebe o desconto da OS. Total igual a quantidade × preço é gravado como nulo (sem ajuste).
+ * recebe o desconto da OS pela regra dela; o total é o calculado ou, na SCOAM, o truncado (o enviado
+ * é ignorado). Total igual a quantidade × preço é gravado como nulo (sem ajuste).
  */
 export function parseOrcamentoItens(
   raw: unknown,
-  { precoBase, desconto }: { precoBase: PrecoBase; desconto: number },
+  { precoBase, desconto, regra }: { precoBase: PrecoBase; desconto: number; regra: RegraDesconto },
 ): OrcamentoItemInput[] {
   if (!Array.isArray(raw)) throw new DomainError("Itens must be a list");
   return raw.map((value, index) => {
@@ -128,8 +138,13 @@ export function parseOrcamentoItens(
     const quantidadeMil = toMilesimos(quantidade);
     const informadoCent = Math.round(preco * 100);
     const aplicaDesconto = precoBase === "COM_BDI";
-    const precoCent = aplicaDesconto ? precoComDesconto(informadoCent, desconto) : informadoCent;
-    const totalCent = total === null ? null : Math.round(total * 100);
+    const precoCent = aplicaDesconto ? precoComDesconto(informadoCent, desconto, regra) : informadoCent;
+    const quantidadeSuprimida = toMilesimos(suprimida);
+    const totalCent = aplicaDesconto
+      ? totalPorRegra({ quantidade: quantidadeMil, quantidadeSuprimida, precoUnitario: precoCent }, regra)
+      : total === null
+        ? null
+        : Math.round(total * 100);
     return {
       id: typeof item.id === "string" && item.id ? item.id : undefined,
       codigo: normalized.codigo || null,
@@ -137,7 +152,7 @@ export function parseOrcamentoItens(
       etapa: normalized.etapa || null,
       unidade: normalized.unidade,
       quantidade: quantidadeMil,
-      quantidadeSuprimida: toMilesimos(suprimida),
+      quantidadeSuprimida,
       precoUnitario: precoCent,
       valorTotal: totalCent === valorItem(quantidadeMil, precoCent) ? null : totalCent,
       precoReferencia: aplicaDesconto ? informadoCent : null,

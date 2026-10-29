@@ -142,20 +142,23 @@ const ORCAMENTO_ITEM_SELECT = {
  */
 async function aplicarDescontoTx(tx: Tx, id: string, desconto: number, valorEmpenhos: number) {
   await tx.$queryRaw`SELECT "id" FROM "OrdemServico" WHERE "id" = ${id} FOR UPDATE`;
-  const os = await tx.ordemServico.findUniqueOrThrow({ where: { id }, select: { precoBase: true } });
+  const os = await tx.ordemServico.findUniqueOrThrow({
+    where: { id },
+    select: { precoBase: true, regraDesconto: true },
+  });
   const itens = await tx.ordemServicoItem.findMany({ where: { ordemServico_id: id }, select: ORCAMENTO_ITEM_SELECT });
   if (os.precoBase !== "COM_BDI" || itens.length === 0) return;
   if ((await tx.medicao.count({ where: { ordemServico_id: id, status: "FECHADA" } })) > 0) {
     throw new DomainError("Exclua as medições fechadas antes de definir o lote: os preços já medidos não mudam.");
   }
-  const { precos, valorOs } = aplicarDesconto(itens, desconto);
+  const { precos, valorOs } = aplicarDesconto(itens, desconto, os.regraDesconto);
   if (valorOs !== valorEmpenhos) {
     throw new DomainError("O orçamento da OS mudou durante a edição. Abra a OS de novo e salve.");
   }
   for (const preco of precos) {
     await tx.ordemServicoItem.update({
       where: { id: preco.id },
-      data: { precoUnitario: preco.precoUnitario, updatedAt: new Date() },
+      data: { precoUnitario: preco.precoUnitario, valorTotal: preco.valorTotal, updatedAt: new Date() },
     });
   }
 }
@@ -610,12 +613,18 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
         where: { id },
         select: {
           precoBase: true,
+          regraDesconto: true,
           itens: { select: ORCAMENTO_ITEM_SELECT },
           _count: { select: { medicoes: { where: { status: "FECHADA" } } } },
         },
       });
       if (!os || os.itens.length === 0) return null;
-      return { precoBase: os.precoBase, itens: os.itens, temMedicaoFechada: os._count.medicoes > 0 };
+      return {
+        precoBase: os.precoBase,
+        regraDesconto: os.regraDesconto,
+        itens: os.itens,
+        temMedicaoFechada: os._count.medicoes > 0,
+      };
     } catch (error) {
       throw new DomainError("Error loading the budget of the ordem de serviço: " + error);
     }

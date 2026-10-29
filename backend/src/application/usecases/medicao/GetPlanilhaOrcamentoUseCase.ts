@@ -101,6 +101,7 @@ export class GetPlanilhaOrcamentoUseCase {
       },
       // Como os preços foram informados e o desconto da OS (porcentagem)
       precoBase: os.precoBase,
+      regraDesconto: os.regraDesconto,
       desconto: os.desconto,
       totalComBdi: planilha.itens.length > 0 ? reais(totais.totalComBdi) : null,
       empenhos,

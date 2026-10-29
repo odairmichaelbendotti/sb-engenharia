@@ -4,6 +4,7 @@ import {
   validateOrcamentoChange,
   type OrcamentoItemInput,
   type PrecoBase,
+  type RegraDesconto,
 } from "../../../domain/medicao/medicao-calc.js";
 import { somarQuantidades } from "../../../domain/medicao/medicao-resumo.js";
 import {
@@ -150,6 +151,7 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
           valor: true,
           desconto: true,
           precoBase: true,
+          regraDesconto: true,
           lote_id: true,
           aguardandoEmissao: true,
           emitidaEm: true,
@@ -322,6 +324,7 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
   async saveOrcamento({
     ordemServico_id,
     precoBase,
+    regraDesconto,
     itens,
     totalComBdi,
     empenhos,
@@ -329,6 +332,7 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
   }: {
     ordemServico_id: string;
     precoBase: PrecoBase;
+    regraDesconto: RegraDesconto;
     itens: OrcamentoItemInput[];
     totalComBdi: number;
     empenhos: { empenho_id: string; valor: number }[];
@@ -395,6 +399,7 @@ export class PrismaMedicaoRepository implements IMedicaoRepository {
           where: { id: ordemServico_id },
           data: {
             precoBase,
+            regraDesconto,
             totalComBdi,
             valor: empenhos.reduce((acc, v) => acc + v.valor, 0),
             ...(emissao ? colunasEmissao(emissao) : {}),

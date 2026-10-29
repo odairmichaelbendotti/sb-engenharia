@@ -1,5 +1,5 @@
 import type { TramitacaoAutor } from "./IOrdemServicoTramitacaoRepository.js";
-import type { ItemPlanilha, PrecoBase } from "../medicao/medicao-calc.js";
+import type { ItemPlanilha, PrecoBase, RegraDesconto } from "../medicao/medicao-calc.js";
 import type {
   OrdemServicoStatusValue,
   OrdemServicoUrgenciaValue,
@@ -196,6 +196,7 @@ export type OrdemServicoOption = {
 // Orçamento da OS para refazer os preços com outro desconto (centavos e milésimos)
 export type OrdemServicoOrcamento = {
   precoBase: PrecoBase;
+  regraDesconto: RegraDesconto;
   itens: Pick<
     ItemPlanilha,
     "id" | "quantidade" | "quantidadeSuprimida" | "precoUnitario" | "valorTotal" | "precoReferencia"
