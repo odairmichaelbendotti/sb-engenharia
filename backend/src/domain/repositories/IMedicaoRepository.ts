@@ -1,5 +1,11 @@
 import type { OrdemServicoStatusValue } from "../entities/OrdemServico.js";
-import type { LinhaMedicaoInput, OrcamentoItemInput, PrecoBase, RegraDesconto } from "../medicao/medicao-calc.js";
+import type {
+  EscopoOrcamento,
+  LinhaMedicaoInput,
+  OrcamentoItemInput,
+  PrecoBase,
+  RegraDesconto,
+} from "../medicao/medicao-calc.js";
 import type { ItemPlanilhaCompleto, PlanilhaMedicao } from "../medicao/planilha-medicao.js";
 import type { OrdemServicoEmissao } from "./IOrdemServicoRepository.js";
 
@@ -24,6 +30,8 @@ export type MedicaoOsContext = {
   precoBase: PrecoBase;
   // Como o desconto é aplicado em cada preço no modo COM_BDI
   regraDesconto: RegraDesconto;
+  // Orçamento da OS (valor da OS = orçamento) ou do contrato inteiro (valor da OS = empenhado)
+  escopoOrcamento: EscopoOrcamento;
   // Contrato com lotes e OS sem lote (OS antiga): o desconto da OS ficou 0
   semLote: boolean;
   // Emissão para a empresa (ver domain/tramitacao/ciencia.ts)
@@ -38,7 +46,8 @@ export type MedicaoOsContext = {
   // Identificação para as telas: obra, descrição do empenho principal, contrato e empresa
   descricaoEmpenho: string;
   obra: { id: string; nome: string } | null;
-  contrato: { id: string; identificador: string; cor: string };
+  // Valor do contrato em centavos: teto do orçamento do contrato
+  contrato: { id: string; identificador: string; cor: string; valor: number };
   empresa: { id: string; name: string };
 };
 
@@ -79,6 +88,7 @@ export type PainelOsRow = {
   dataInicio: Date | null;
   dataPrevisaoTermino: Date | null;
   valor: number;
+  escopoOrcamento: EscopoOrcamento;
   aguardandoEmissao: boolean;
   // Contrato com lotes e OS sem lote (OS antiga): o desconto da OS ficou 0
   semLote: boolean;
@@ -134,13 +144,15 @@ export interface IMedicaoRepository {
 
   /**
    * Grava a planilha inteira (mantém os itens com id, cria os novos e exclui os que faltam) e, na
-   * mesma transação, o modo de preço, o total com BDI e o valor de cada empenho (o valor da OS
-   * passa a ser a soma dos itens). Com `emissao`, reemite a OS para a empresa.
+   * mesma transação, o modo de preço, o escopo, o total com BDI e o valor de cada empenho (o valor
+   * da OS passa a ser a soma deles: o orçamento no escopo da OS, o empenhado no do contrato). Com
+   * `emissao`, reemite a OS para a empresa.
    */
   saveOrcamento(params: {
     ordemServico_id: string;
     precoBase: PrecoBase;
     regraDesconto: RegraDesconto;
+    escopoOrcamento: EscopoOrcamento;
     itens: OrcamentoItemInput[];
     totalComBdi: number;
     empenhos: { empenho_id: string; valor: number }[];
@@ -151,7 +163,10 @@ export interface IMedicaoRepository {
   createMedicao(params: { ordemServico_id: string; dados: MedicaoDadosInput; autor: MedicaoAutor }): Promise<string>;
   updateMedicao(params: { medicao_id: string; dados: MedicaoDadosInput }): Promise<void>;
   deleteMedicao(medicao_id: string): Promise<void>;
-  /** Fecha o rascunho, congelando a planilha com os fiscais da OS. */
+  /**
+   * Fecha o rascunho, congelando a planilha com os fiscais da OS. No orçamento do contrato, o
+   * acumulado medido precisa caber no empenhado da OS.
+   */
   fecharMedicao(params: { medicao_id: string; autor: MedicaoAutor; now: Date }): Promise<void>;
   /** Volta a última medição fechada para rascunho. */
   reabrirMedicao(params: { medicao_id: string; autor: MedicaoAutor; now: Date }): Promise<void>;

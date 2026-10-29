@@ -569,3 +569,53 @@ export function divergenciaTotal(somaItens: number, valorOs: number): { diferenc
   const diferenca = somaItens - valorOs;
   return diferenca === 0 ? null : { diferenca };
 }
+
+// O que o orçamento da OS representa: a parcela da OS (valor da OS = orçamento) ou o contrato
+// inteiro (o valor da OS é o empenhado, que pode ficar abaixo do orçamento)
+export type EscopoOrcamento = "ORDEM_SERVICO" | "CONTRATO";
+export const ESCOPOS_ORCAMENTO: readonly EscopoOrcamento[] = ["ORDEM_SERVICO", "CONTRATO"];
+
+const moedaFormat = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+
+/** Centavos → "R$ 1.234,56" para as mensagens de erro */
+function formatCentavos(valor: number): string {
+  return moedaFormat.format(valor / 100).replace(/\u00a0/g, " ");
+}
+
+/**
+ * Orçamento do contrato: o orçado não passa do valor do contrato e o empenhado (soma dos empenhos
+ * da OS) não passa do orçado. Lança DomainError com o primeiro problema.
+ */
+export function validateOrcamentoContrato({
+  valorOrcado,
+  empenhado,
+  contratoValor,
+}: {
+  valorOrcado: number;
+  empenhado: number;
+  contratoValor: number;
+}): void {
+  if (valorOrcado > contratoValor) {
+    throw new DomainError(
+      `O orçamento (${formatCentavos(valorOrcado)}) passa do valor do contrato (${formatCentavos(contratoValor)}).`,
+    );
+  }
+  if (empenhado > valorOrcado) {
+    throw new DomainError(
+      `O valor empenhado na OS (${formatCentavos(empenhado)}) passa do orçamento (${formatCentavos(valorOrcado)}).`,
+    );
+  }
+}
+
+/**
+ * Orçamento do contrato: a medição só fecha se o acumulado medido (fechadas + esta) couber no que
+ * já foi empenhado na OS; o resto espera o próximo empenho.
+ */
+export function validateMedicaoNoEmpenhado({ valorAcumulado, empenhado }: { valorAcumulado: number; empenhado: number }): void {
+  if (valorAcumulado > empenhado) {
+    throw new DomainError(
+      `A medição acumulada (${formatCentavos(valorAcumulado)}) passa do valor empenhado na OS (${formatCentavos(empenhado)}). ` +
+        `Falta empenhar ${formatCentavos(valorAcumulado - empenhado)}.`,
+    );
+  }
+}

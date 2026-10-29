@@ -188,22 +188,33 @@ function OrcamentoVinculado({
   ordemServicoId: string;
   abreNaTela: boolean;
 }) {
-  const { totalComBdi, desconto, totais, itens } = planilha;
+  const { totalComBdi, desconto, totais, itens, escopoOrcamento, valorOs, faltaEmpenhar } = planilha;
+  const doContrato = escopoOrcamento === "CONTRATO";
   const conteudo = (
     <>
       <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-success-bg text-success-text shrink-0">
         <Calculator size={16} aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-xs font-semibold text-success-text">Orçamento vinculado</span>
+        <span className="block text-xs font-semibold text-success-text">
+          {doContrato ? "Orçamento do contrato vinculado" : "Orçamento vinculado"}
+        </span>
         <span className="block text-[11px] text-text-muted tabular-nums">
           {itens.length} {itens.length === 1 ? "item" : "itens"}
           {totalComBdi !== null && <> · c/ BDI {formatCurrency(totalComBdi)}</>}
           {desconto > 0 && <> · desconto {desconto.toLocaleString("pt-BR")}%</>}
+          {/* O valor da OS é o empenhado; o restante espera os próximos empenhos */}
+          {doContrato && valorOs !== null && (
+            <>
+              {" "}
+              · empenhado {formatCurrency(valorOs)}
+              {faltaEmpenhar !== null && faltaEmpenhar > 0 && <> · falta empenhar {formatCurrency(faltaEmpenhar)}</>}
+            </>
+          )}
         </span>
       </span>
       <span className="text-right shrink-0">
-        <span className="block text-[11px] text-text-muted">Total c/ desconto</span>
+        <span className="block text-[11px] text-text-muted">{doContrato ? "Valor total" : "Total c/ desconto"}</span>
         <span className="block text-sm font-semibold text-text-primary tabular-nums">
           {formatCurrency(totais.valorOrcado)}
         </span>

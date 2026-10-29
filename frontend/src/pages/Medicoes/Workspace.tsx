@@ -23,7 +23,7 @@ const OS_STATUS_LABEL = { ATIVO: "Ativa", FINALIZADO: "Finalizada", CANCELADO: "
  */
 export function WorkspaceHeader({ planilha }: { planilha: PlanilhaOrcamento }) {
   const openViewer = useEntityViewer((s) => s.open);
-  const { ordemServico: os, totais, valorOs, itens } = planilha;
+  const { ordemServico: os, totais, valorOs, itens, escopoOrcamento, faltaEmpenhar } = planilha;
   const titulo = os.obra?.nome ?? os.descricaoEmpenho;
   const medido = totais.valorOrcado > 0 ? totais.valorMedido / totais.valorOrcado : 0;
 
@@ -74,12 +74,23 @@ export function WorkspaceHeader({ planilha }: { planilha: PlanilhaOrcamento }) {
 
       {itens.length > 0 && (
         <StatTiles>
+          {/* No orçamento do contrato o valor da OS é o empenhado até aqui */}
           <StatTile
-            label="Valor da OS"
+            label={escopoOrcamento === "CONTRATO" ? "Empenhado" : "Valor da OS"}
             value={valorOs !== null ? formatCurrency(valorOs) : "—"}
-            hint={valorOs !== null ? "soma dos empenhos" : "visível para a engenharia"}
+            hint={
+              valorOs === null
+                ? "visível para a engenharia"
+                : faltaEmpenhar !== null
+                  ? `falta empenhar ${formatCurrency(faltaEmpenhar)}`
+                  : "soma dos empenhos"
+            }
           />
-          <StatTile label="Orçado" value={formatCurrency(totais.valorOrcado)} hint={`${itens.length} itens`} />
+          <StatTile
+            label={escopoOrcamento === "CONTRATO" ? "Orçado (contrato)" : "Orçado"}
+            value={formatCurrency(totais.valorOrcado)}
+            hint={`${itens.length} itens`}
+          />
           <StatTile
             label="Medido"
             value={formatCurrency(totais.valorMedido)}

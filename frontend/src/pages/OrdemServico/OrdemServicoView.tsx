@@ -563,7 +563,13 @@ export function OrdemServicoView({
           <StatusPill tone={status.tone} title={status.title}>
             {status.label}
           </StatusPill>
-          {ordemServico.temOrcamento && <OrcamentoTag ordemServicoId={ordemServico.id} temOrcamento />}
+          {ordemServico.temOrcamento && (
+            <OrcamentoTag
+              ordemServicoId={ordemServico.id}
+              temOrcamento
+              doContrato={ordemServico.escopoOrcamento === "CONTRATO"}
+            />
+          )}
           <span className="truncate">
             {contrato.company.name} <span className="text-text-muted">·</span> {contrato.identificador}
           </span>

@@ -77,6 +77,8 @@ export type OrdemServicoDocumentModel = {
     // Quanto o desconto do lote abate do total com BDI (vazio sem total com BDI)
     valorDesconto: string;
     totalComBdiEDesconto: string;
+    // Orçamento do contrato: o total acima é o do contrato e a OS vale o empenhado até aqui
+    empenho: { empenhado: string; aEmpenhar: string } | null;
     bdi: string;
     desconto: string;
     dataBaseSinapi: string;
@@ -285,11 +287,20 @@ export function buildOrdemServicoDocumentModel(data: OrdemServicoDocumentData): 
   const desconto = os.desconto;
 
   // Com orçamento, o total com BDI sai dos itens e o valor final é a soma deles (preços com desconto,
-  // calculados item a item), igual ao valor da OS. OS antiga sem orçamento: total com BDI informado e
+  // calculados item a item): igual ao valor da OS no escopo da OS; no do contrato, a OS vale o
+  // empenhado e o orçamento é o total do contrato. OS antiga sem orçamento: total com BDI informado e
   // final = total × (1 − desconto). Sem total com BDI, só o valor final já gravado
   const totalComBdi = os.totalComBdi;
+  const doContrato = data.temOrcamento && os.escopoOrcamento === "CONTRATO";
+  const valorOrcado = data.itens.reduce((acc, i) => acc + valorOrcadoItem(i), 0) / 100;
   const valorFinal =
-    totalComBdi === null ? null : data.temOrcamento ? os.valor : arredondar(totalComBdi * (1 - desconto / 100));
+    totalComBdi === null
+      ? null
+      : data.temOrcamento
+        ? doContrato
+          ? valorOrcado
+          : os.valor
+        : arredondar(totalComBdi * (1 - desconto / 100));
   const orcamento =
     totalComBdi !== null && valorFinal !== null
       ? {
@@ -298,8 +309,14 @@ export function buildOrdemServicoDocumentModel(data: OrdemServicoDocumentData): 
           // Diferença dos valores já arredondados, para a conta fechar no papel
           valorDesconto: formatMoeda(arredondar(arredondar(totalComBdi) - valorFinal)),
           totalComBdiEDesconto: formatMoeda(valorFinal),
+          empenho: doContrato
+            ? {
+                empenhado: formatMoeda(os.valor),
+                aEmpenhar: formatMoeda(arredondar(Math.max(0, valorFinal - os.valor))),
+              }
+            : null,
         }
-      : { total: "", totalComBdi: "", valorDesconto: "", totalComBdiEDesconto: formatMoeda(os.valor) };
+      : { total: "", totalComBdi: "", valorDesconto: "", totalComBdiEDesconto: formatMoeda(os.valor), empenho: null };
 
   const empresa = contrato.company.name;
   const cnpj = formatCnpj(contrato.company.cnpj);

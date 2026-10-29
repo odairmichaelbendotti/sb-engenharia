@@ -145,13 +145,14 @@ const ORCAMENTO_ITEM_SELECT = {
 /**
  * OS antiga que recebeu o lote: refaz os preços do orçamento lançado só com BDI com o desconto novo,
  * com a OS travada (o orçamento e as medições escrevem com a mesma trava). Confere de novo o que o
- * use case validou: sem medição fechada e empenhos somando o novo valor.
+ * use case validou: sem medição fechada e empenhos somando o novo valor (no orçamento do contrato,
+ * sem passar dele).
  */
 async function aplicarDescontoTx(tx: Tx, id: string, desconto: number, valorEmpenhos: number) {
   await tx.$queryRaw`SELECT "id" FROM "OrdemServico" WHERE "id" = ${id} FOR UPDATE`;
   const os = await tx.ordemServico.findUniqueOrThrow({
     where: { id },
-    select: { precoBase: true, regraDesconto: true },
+    select: { precoBase: true, regraDesconto: true, escopoOrcamento: true },
   });
   const itens = await tx.ordemServicoItem.findMany({ where: { ordemServico_id: id }, select: ORCAMENTO_ITEM_SELECT });
   if (os.precoBase !== "COM_BDI" || itens.length === 0) return;
@@ -159,7 +160,8 @@ async function aplicarDescontoTx(tx: Tx, id: string, desconto: number, valorEmpe
     throw new DomainError("Exclua as medições fechadas antes de definir o lote: os preços já medidos não mudam.");
   }
   const { precos, valorOs } = aplicarDesconto(itens.map(itemComQtd), desconto, os.regraDesconto);
-  if (valorOs !== valorEmpenhos) {
+  // No orçamento do contrato os empenhos (empenhado) só não podem passar dele
+  if (os.escopoOrcamento === "CONTRATO" ? valorEmpenhos > valorOs : valorOs !== valorEmpenhos) {
     throw new DomainError("O orçamento da OS mudou durante a edição. Abra a OS de novo e salve.");
   }
   for (const preco of precos) {

@@ -147,6 +147,21 @@ describe("buildOrdemServicoDocumentModel", () => {
     expect(model.orcamento.valorDesconto).toBe("R$ 12.533,26");
   });
 
+  it("com o orçamento do contrato, o total é o orçado e a OS mostra o empenhado e o que falta", () => {
+    const item = {
+      ordem: 1, codigo: "SCE.0272", descricao: "Limpeza de poço", etapa: "CAPTAÇÃO DE ÁGUA", unidade: "UN",
+      quantidade: 100_000, quantidadeSuprimida: 0, precoUnitario: 3_801_398, precoReferencia: 3_801_398, valorTotal: null,
+    };
+    const model = buildOrdemServicoDocumentModel({
+      ...sampleData({ escopoOrcamento: "CONTRATO", valor: 20000 }, true),
+      itens: [item],
+    });
+    expect(model.orcamento.totalComBdiEDesconto).toBe("R$ 38.013,98");
+    expect(model.orcamento.empenho).toEqual({ empenhado: "R$ 20.000,00", aEmpenhar: "R$ 18.013,98" });
+    // No escopo da OS não há empenhado separado
+    expect(buildOrdemServicoDocumentModel(sampleData({}, true)).orcamento.empenho).toBeNull();
+  });
+
   it("usa o desconto copiado na OS, não o atual do lote", () => {
     const model = buildOrdemServicoDocumentModel({ ...sampleData(), lote: { numero: 4, nome: "DO", desconto: 30 } });
     expect(model.orcamento.totalComBdiEDesconto).toBe("R$ 38.011,52");

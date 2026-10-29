@@ -6,7 +6,8 @@ import { calcularPrazoCiencia } from "../../../domain/tramitacao/ciencia.js";
 import { autorDe } from "../ordem-servico-tramitacao/tramitacao-access.js";
 
 // Emite para a empresa a OS que aguardava o orçamento: a partir daqui ela vê a OS e tem o prazo de
-// ciência. Exige o orçamento lançado e os empenhos somando o valor dele (salvar o orçamento acerta)
+// ciência. Exige o orçamento lançado e os empenhos somando o valor dele (salvar o orçamento acerta);
+// no orçamento do contrato, basta haver algo empenhado, sem passar do orçamento
 export class EmitirOrdemServicoUseCase {
   constructor(private repository: IOrdemServicoRepository) {}
 
@@ -24,7 +25,13 @@ export class EmitirOrdemServicoUseCase {
       throw new DomainError("Lance o orçamento da OS antes de emiti-la.");
     }
     // OrdemServico.valor vem em reais
-    if (Math.round(os.valor * 100) !== valorOrcamento) {
+    const empenhado = Math.round(os.valor * 100);
+    if (os.escopoOrcamento === "CONTRATO") {
+      if (empenhado <= 0) throw new DomainError("Destine um valor do empenho à OS antes de emiti-la.");
+      if (empenhado > valorOrcamento) {
+        throw new DomainError("O valor empenhado na OS passa do orçamento. Ajuste os empenhos.");
+      }
+    } else if (empenhado !== valorOrcamento) {
       throw new DomainError("Os empenhos da OS precisam somar o valor do orçamento. Salve o orçamento de novo.");
     }
 
