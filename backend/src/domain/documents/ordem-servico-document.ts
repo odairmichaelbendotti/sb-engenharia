@@ -1,4 +1,6 @@
 import type { OrdemServicoUrgenciaValue } from "../entities/OrdemServico.js";
+import { fromMilesimos, quantidadeEfetiva, valorOrcadoItem } from "../medicao/medicao-calc.js";
+import { gruposPorEtapa } from "../medicao/planilha-medicao.js";
 import type { OrdemServicoDocumentData } from "../repositories/IOrdemServicoRepository.js";
 
 // Item de uma lista de opções do documento ("[ X ] 04 - DO"), com a marcada em destaque
@@ -6,6 +8,36 @@ export type DocumentOption = { texto: string; selecionado: boolean };
 
 // Fiscal do contrato designado na OS; contato = ramal e e-mail
 export type DocumentFiscal = { nome: string; contato: string };
+
+// Linha da planilha orçamentária anexa à OS; valores sem "R$" (a coluna já diz)
+export type OrcamentoDocumentLinha = {
+  item: string;
+  codigo: string;
+  descricao: string;
+  unidade: string;
+  // Quantidade efetiva (contratada − suprimida)
+  quantidade: string;
+  // Quantidade suprimida ("" sem supressão)
+  suprimido: string;
+  // Preço com BDI informado ("" quando os preços já foram lançados com desconto)
+  precoComBdi: string;
+  precoUnitario: string;
+  total: string;
+};
+
+// Faixa de etapa antes da linha `inicio` (índice em `linhas`), com o subtotal dos itens dela
+export type OrcamentoDocumentEtapa = { titulo: string; inicio: number; subtotal: string };
+
+export type OrcamentoDocumentPlanilha = {
+  linhas: OrcamentoDocumentLinha[];
+  // Só os grupos com etapa: orçamento sem etapas sai como lista única
+  etapas: OrcamentoDocumentEtapa[];
+  // Mostra a coluna do preço com BDI (orçamento lançado só com BDI)
+  comPrecoBdi: boolean;
+  total: string;
+  // Como os preços foram compostos (BDI, desconto e regra)
+  nota: string;
+};
 
 // Tudo o que o PDF mostra, já formatado. Valores vazios ficam como string vazia (OS antigas)
 export type OrdemServicoDocumentModel = {
@@ -56,6 +88,8 @@ export type OrdemServicoDocumentModel = {
   inicio: { data: string; prazo: string };
   assinaturas: { empresa: string; cnpj: string; fiscalTecnico: string };
   local: string;
+  // Planilha orçamentária lançada no sistema (anexo I); nula quando a OS não tem orçamento
+  planilha: OrcamentoDocumentPlanilha | null;
 };
 
 export const URGENCIA_LABELS: Record<OrdemServicoUrgenciaValue, string> = {
@@ -176,6 +210,60 @@ export function formatEdificacao(
   return partes.length > 0 ? partes.join(" / ") : obra.identificacaoPatrimonial;
 }
 
+const qtdFormat = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+
+function formatQtd(milesimos: number): string {
+  return qtdFormat.format(fromMilesimos(milesimos));
+}
+
+function valorTabela(centavos: number): string {
+  return numberFormat.format(centavos / 100);
+}
+
+/** Planilha orçamentária do anexo: itens na ordem, faixas de etapa com subtotal e o total. */
+export function buildOrcamentoPlanilha(
+  data: Pick<OrdemServicoDocumentData, "itens" | "regraDesconto"> & {
+    bdi: number;
+    desconto: number;
+  },
+): OrcamentoDocumentPlanilha | null {
+  if (data.itens.length === 0) return null;
+  const comPrecoBdi = data.itens.some((i) => i.precoReferencia !== null);
+  const linhas = data.itens.map(
+    (i, index): OrcamentoDocumentLinha => ({
+      item: String(index + 1),
+      codigo: i.codigo ?? "",
+      descricao: i.descricao,
+      unidade: i.unidade,
+      quantidade: formatQtd(quantidadeEfetiva(i)),
+      suprimido: i.quantidadeSuprimida > 0 ? formatQtd(i.quantidadeSuprimida) : "",
+      precoComBdi: i.precoReferencia === null ? "" : valorTabela(i.precoReferencia),
+      precoUnitario: valorTabela(i.precoUnitario),
+      total: valorTabela(valorOrcadoItem(i)),
+    }),
+  );
+
+  const etapas: OrcamentoDocumentEtapa[] = [];
+  let inicio = 0;
+  for (const grupo of gruposPorEtapa(data.itens)) {
+    if (grupo.etapa !== null) {
+      const subtotal = grupo.itens.reduce((acc, i) => acc + valorOrcadoItem(i), 0);
+      etapas.push({ titulo: grupo.etapa, inicio, subtotal: valorTabela(subtotal) });
+    }
+    inicio += grupo.itens.length;
+  }
+
+  const total = data.itens.reduce((acc, i) => acc + valorOrcadoItem(i), 0);
+  const regra =
+    data.regraDesconto === "SCOAM"
+      ? "valor do desconto e total do item truncados no centavo"
+      : "preço com desconto truncado no centavo";
+  const nota = comPrecoBdi
+    ? `Preços com BDI de ${formatPercentual(data.bdi)}; o preço unitário recebe o desconto do lote de ${formatPercentual(data.desconto)} (${regra}).`
+    : `Preços unitários com BDI de ${formatPercentual(data.bdi)} e desconto do lote de ${formatPercentual(data.desconto)}.`;
+  return { linhas, etapas, comPrecoBdi, total: valorTabela(total), nota };
+}
+
 function formatFiscal(fiscal: { nome: string; ramal: string; email: string } | null): DocumentFiscal {
   if (!fiscal) return { nome: "", contato: "" };
   const contato = [fiscal.ramal && `Ramal ${fiscal.ramal}`, fiscal.email].filter(Boolean).join(" · ");
@@ -278,5 +366,6 @@ export function buildOrdemServicoDocumentModel(data: OrdemServicoDocumentData): 
     inicio: { data: formatDataExtensa(os.dataInicio), prazo: prazoTexto },
     assinaturas: { empresa, cnpj, fiscalTecnico: data.fiscalTecnico?.nome ?? "" },
     local: `${tenant.city}${emissao ? `, ${emissao}` : ""}.`,
+    planilha: buildOrcamentoPlanilha({ itens: data.itens, regraDesconto: data.regraDesconto, bdi, desconto }),
   };
 }

@@ -1,4 +1,9 @@
-import type { DocumentOption, OrdemServicoDocumentModel } from "../../domain/documents/ordem-servico-document.js";
+import type {
+  DocumentOption,
+  OrcamentoDocumentLinha,
+  OrcamentoDocumentPlanilha,
+  OrdemServicoDocumentModel,
+} from "../../domain/documents/ordem-servico-document.js";
 import { escapeHtml, renderLetterhead } from "./document-base-html.js";
 import { embeddedFontFaces, embeddedFooterFontFace } from "./fonts.js";
 
@@ -277,6 +282,55 @@ function renderAssinaturas(m: OrdemServicoDocumentModel): string {
 </section>`;
 }
 
+function renderLinhaOrcamento(l: OrcamentoDocumentLinha, comPrecoBdi: boolean): string {
+  const codigo = l.codigo ? `<span class="code">${escapeHtml(l.codigo)}</span>` : "";
+  const suprimido = l.suprimido ? `<span class="code">−${escapeHtml(l.suprimido)} suprimido</span>` : "";
+  return `<tr>
+<td class="c">${escapeHtml(l.item)}</td>
+<td class="desc">${escapeHtml(l.descricao)}${codigo}</td>
+<td class="c">${escapeHtml(l.unidade)}</td>
+<td class="num">${escapeHtml(l.quantidade)}${suprimido}</td>
+${comPrecoBdi ? `<td class="num">${escapeHtml(l.precoComBdi)}</td>` : ""}
+<td class="num">${escapeHtml(l.precoUnitario)}</td>
+<td class="num strong">${escapeHtml(l.total)}</td>
+</tr>`;
+}
+
+// Anexo I: a planilha orçamentária lançada no sistema, em página própria
+function renderPlanilhaOrcamento(m: OrdemServicoDocumentModel, p: OrcamentoDocumentPlanilha): string {
+  const colunas = p.comPrecoBdi ? 7 : 6;
+  const etapa = (index: number) => {
+    const e = p.etapas.find((x) => x.inicio === index);
+    if (!e) return "";
+    return `<tr class="stage"><td colspan="${colunas - 1}">${escapeHtml(e.titulo)}</td><td class="num">${escapeHtml(e.subtotal)}</td></tr>`;
+  };
+  return `
+<section class="annex-sheet">
+  <p class="eyebrow">Anexo I &nbsp;·&nbsp; Ordem de Serviço ${escapeHtml(m.numero)}</p>
+  <h2 class="annex-title">Planilha orçamentária sintética</h2>
+  <table class="sheet">
+    <colgroup>
+      <col style="width:8mm" /><col /><col style="width:11mm" /><col style="width:19mm" />
+      ${p.comPrecoBdi ? '<col style="width:19mm" />' : ""}<col style="width:20mm" /><col style="width:24mm" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th class="c">Item</th><th>Descrição do serviço</th><th class="c">Un</th><th class="num">Quantidade</th>
+        ${p.comPrecoBdi ? '<th class="num">Preço c/ BDI (R$)</th>' : ""}
+        <th class="num">Preço unit. (R$)</th><th class="num">Total (R$)</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${p.linhas.map((l, index) => etapa(index) + renderLinhaOrcamento(l, p.comPrecoBdi)).join("")}
+    </tbody>
+    <tfoot>
+      <tr><td colspan="${colunas - 1}">Valor total da OS</td><td class="num">${escapeHtml(p.total)}</td></tr>
+    </tfoot>
+  </table>
+  <p class="note">${escapeHtml(p.nota)}</p>
+</section>`;
+}
+
 const STYLES = `
 @page { size: A4; }
 :root {
@@ -443,6 +497,28 @@ h3 { display: flex; align-items: baseline; margin: 3.6mm 0 1.4mm; break-after: a
 .annexes ol { list-style: none; columns: 2; column-gap: 8mm; font-size: 9.2pt; }
 .annexes li { break-inside: avoid; line-height: 1.6; }
 .annexes .rn { display: inline-block; width: 7mm; font-family: Inter, Arial, sans-serif; font-size: 8pt; font-weight: 600; color: var(--ink); }
+
+/* Anexo I: planilha orçamentária em página própria; o cabeçalho se repete e a linha não quebra no meio */
+.annex-sheet { break-before: page; }
+.annex-sheet .eyebrow { text-align: left; }
+h2.annex-title { display: block; margin-top: 1.4mm; }
+.sheet { width: 100%; border-collapse: collapse; table-layout: fixed; font-family: Inter, Arial, sans-serif; font-size: 7.6pt; font-variant-numeric: tabular-nums; }
+.sheet thead { display: table-header-group; }
+.sheet tfoot { display: table-row-group; }
+.sheet tr { break-inside: avoid; }
+.sheet th {
+  padding: 1.4mm 1.6mm; text-align: left; vertical-align: bottom; border-bottom: .5pt solid var(--ink);
+  font-size: 6.2pt; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted);
+}
+.sheet th.num { white-space: normal; }
+.sheet td { padding: 1.1mm 1.6mm; border-bottom: .5pt solid var(--hair); vertical-align: top; }
+.sheet .num { text-align: right; white-space: nowrap; }
+.sheet .c { text-align: center; }
+.sheet .desc { overflow-wrap: anywhere; text-align: left; }
+.sheet .code { display: block; font-size: 6.2pt; color: var(--faint); margin-top: .3mm; }
+.sheet td.strong { font-weight: 600; color: var(--ink); }
+.sheet tr.stage td { background: var(--hair); color: var(--ink); font-weight: 700; font-size: 7.4pt; text-transform: uppercase; letter-spacing: .02em; break-after: avoid; }
+.sheet tfoot td { border-top: .75pt solid var(--ink); border-bottom: .75pt solid var(--ink); background: var(--tint); font-weight: 700; color: var(--ink); font-size: 8.4pt; padding: 1.8mm 1.6mm; }
 `;
 
 /** Documento HTML completo da OS, autocontido (fontes e brasão embutidos), pronto para imprimir em A4. */
@@ -468,6 +544,7 @@ ${renderCondicoes(m)}
 ${renderFiscais(m)}
 ${renderInicio(m)}
 ${renderAssinaturas(m)}
+${m.planilha ? renderPlanilhaOrcamento(m, m.planilha) : ""}
 </body>
 </html>`;
 }
