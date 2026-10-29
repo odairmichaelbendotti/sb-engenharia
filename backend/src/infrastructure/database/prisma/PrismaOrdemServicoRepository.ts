@@ -19,7 +19,9 @@ import type {
   OrdemServicoVinculo,
   OrdemServicoVinculoFinanceiro,
 } from "../../../domain/repositories/IOrdemServicoRepository.js";
+import { Prisma } from "../../../generated/prisma/client.js";
 import { prisma } from "../../prisma/prisma.js";
+import { anexosFromDb } from "../../../domain/documents/anexos-os.js";
 import { colunasEmissao, registrarEmissao } from "./tramitacao-tx.js";
 import { aplicarDesconto, valorOrcadoItem } from "../../../domain/medicao/medicao-calc.js";
 import { osDaEmpresa } from "./os-escopo.js";
@@ -97,12 +99,13 @@ function withContagens<T extends { _count: { contestacoes: number; itens: number
   return { ...row, contestacoesAbertas: _count.contestacoes, temOrcamento: _count.itens > 0 };
 }
 
-// Valores monetários da OS são gravados em centavos; a API responde em reais
-function withReais<T extends { valor: number; totalComBdi: number | null }>(row: T) {
+// Linha da OS como a API devolve: valores (gravados em centavos) em reais e anexos lidos do JSON
+function fromDb<T extends { valor: number; totalComBdi: number | null; anexos: unknown }>(row: T) {
   return {
     ...row,
     valor: row.valor / 100,
     totalComBdi: row.totalComBdi === null ? null : row.totalComBdi / 100,
+    anexos: anexosFromDb(row.anexos),
   };
 }
 
@@ -122,6 +125,9 @@ function documentColumns(data: OrdemServicoDocumentFields) {
     fiscalTecnico_id: data.fiscalTecnico_id,
     fiscalAdministrativo_id: data.fiscalAdministrativo_id,
     condicoesEspeciais: data.condicoesEspeciais,
+    // null volta a ser "os seis padrão" (Prisma.DbNull grava NULL na coluna JSON)
+    anexos: data.anexos === null ? Prisma.DbNull : data.anexos,
+    comentariosTecnicos: data.comentariosTecnicos,
   };
 }
 
@@ -283,7 +289,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
       });
 
       return {
-        ...withContagens(withReais(newOrdemServico)),
+        ...withContagens(fromDb(newOrdemServico)),
         empenhos: await vinculosFinanceiros(newOrdemServico.id, newOrdemServico.empenhos),
         valorExecutado: 0,
       };
@@ -372,7 +378,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
 
       return {
         ordensServico: ordensServico.map((os) => ({
-          ...withContagens(withReais(os)),
+          ...withContagens(fromDb(os)),
           empenhos: withFinanceiro(os.id, mapVinculos(os.empenhos), totals),
           valorExecutado: (executadoCentavos.get(os.id) ?? 0) / 100,
         })),
@@ -433,7 +439,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
     try {
       const ordemServico = await prisma.ordemServico.findUnique({ where: { id } });
       if (!ordemServico) return null;
-      return withReais(ordemServico);
+      return fromDb(ordemServico);
     } catch (error) {
       throw new DomainError("Error finding ordem de serviço: " + error);
     }
@@ -505,7 +511,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
 
       const executado = await sumExecutadoPorOS([id]);
       return {
-        ...withContagens(withReais(updated)),
+        ...withContagens(fromDb(updated)),
         empenhos: await vinculosFinanceiros(id, updated.empenhos),
         valorExecutado: (executado.get(id) ?? 0) / 100,
       };
@@ -596,7 +602,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
       const { empenho, obra, lote, fiscalTecnico, fiscalAdministrativo, tenant, itens, regraDesconto, ...ordemServico } =
         row;
       return {
-        ordemServico: withReais(ordemServico),
+        ordemServico: fromDb(ordemServico),
         temOrcamento: itens.length > 0,
         itens: itens.map(itemComQtd),
         regraDesconto,
@@ -705,7 +711,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
         data: { status, updatedAt: new Date() },
       });
 
-      return withReais(updated);
+      return fromDb(updated);
     } catch (error) {
       throw new DomainError("Error updating ordem de serviço status: " + error);
     }

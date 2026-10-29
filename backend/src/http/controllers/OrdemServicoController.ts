@@ -8,7 +8,9 @@ import type { DeleteOrdemServicoUseCase } from "../../application/usecases/ordem
 import type { GenerateOrdemServicoDocumentUseCase } from "../../application/usecases/ordem-servico/GenerateOrdemServicoDocumentUseCase.js";
 import type { GetProximoNumeroOrdemServicoUseCase } from "../../application/usecases/ordem-servico/GetProximoNumeroOrdemServicoUseCase.js";
 import type { EmitirOrdemServicoUseCase } from "../../application/usecases/ordem-servico/EmitirOrdemServicoUseCase.js";
+import { parseAnexos, parseComentariosTecnicos } from "../../domain/documents/anexos-os.js";
 import { DomainError } from "../../domain/errors/DomainError.js";
+import { normalizeFreeText } from "../../domain/normalization/text-normalizers.js";
 import type { OrdemServicoEmpenhoInput, OrdemServicoUrgenciaValue } from "../../domain/entities/OrdemServico.js";
 
 const VALID_STATUSES = ["ATIVO", "FINALIZADO", "CANCELADO"];
@@ -67,6 +69,9 @@ function parseDocumentFields(body: Record<string, unknown>) {
     fiscalTecnico_id: optionalField(body, "fiscalTecnico_id"),
     fiscalAdministrativo_id: optionalField(body, "fiscalAdministrativo_id"),
     condicoesEspeciais: parseCondicoesEspeciais(body),
+    // Ausentes = undefined (a edição mantém os atuais; a criação leva os seis padrão)
+    anexos: parseAnexos(body.anexos, normalizeFreeText),
+    comentariosTecnicos: parseComentariosTecnicos(body.comentariosTecnicos, normalizeFreeText),
   };
 }
 

@@ -1,3 +1,4 @@
+import { anexosKey, type AnexoOs } from "../documents/anexos-os.js";
 import type { OrdemServicoStatusValue } from "../entities/OrdemServico.js";
 
 // A empresa tem 48 horas corridas, contadas da emissão no servidor, para dar ciência da OS
@@ -100,6 +101,8 @@ export type OrdemServicoConteudo = {
   fiscalTecnico_id: string | null;
   fiscalAdministrativo_id: string | null;
   condicoesEspeciais: string[];
+  anexos: AnexoOs[] | null;
+  comentariosTecnicos: string[];
 };
 
 function empenhosKey(empenhos: OrdemServicoConteudo["empenhos"]) {
@@ -111,9 +114,24 @@ function empenhosKey(empenhos: OrdemServicoConteudo["empenhos"]) {
 
 /** Se a edição mudou algo que a empresa precisa reconhecer de novo. */
 export function houveMudancaNoConteudo(antes: OrdemServicoConteudo, depois: OrdemServicoConteudo): boolean {
-  const { empenhos: empenhosAntes, condicoesEspeciais: condicoesAntes, ...restoAntes } = antes;
-  const { empenhos: empenhosDepois, condicoesEspeciais: condicoesDepois, ...restoDepois } = depois;
+  const {
+    empenhos: empenhosAntes,
+    condicoesEspeciais: condicoesAntes,
+    anexos: anexosAntes,
+    comentariosTecnicos: comentariosAntes,
+    ...restoAntes
+  } = antes;
+  const {
+    empenhos: empenhosDepois,
+    condicoesEspeciais: condicoesDepois,
+    anexos: anexosDepois,
+    comentariosTecnicos: comentariosDepois,
+    ...restoDepois
+  } = depois;
   if (empenhosKey(empenhosAntes) !== empenhosKey(empenhosDepois)) return true;
   if (condicoesAntes.join("\n") !== condicoesDepois.join("\n")) return true;
+  // null (os seis padrão) e os seis marcados sem observação são a mesma coisa
+  if (anexosKey(anexosAntes) !== anexosKey(anexosDepois)) return true;
+  if (comentariosAntes.join("\n") !== comentariosDepois.join("\n")) return true;
   return (Object.keys(restoAntes) as (keyof typeof restoAntes)[]).some((key) => restoAntes[key] !== restoDepois[key]);
 }

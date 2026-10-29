@@ -1,3 +1,4 @@
+import { anexosPadrao } from "../documents/anexos-os.js";
 import { describe, expect, it } from "vitest";
 import {
   calcularPrazoCiencia,
@@ -159,6 +160,8 @@ describe("houveMudancaNoConteudo", () => {
     fiscalTecnico_id: "f1",
     fiscalAdministrativo_id: "f2",
     condicoesEspeciais: ["Trabalho noturno"],
+    anexos: null,
+    comentariosTecnicos: ["Conferir prumo"],
   };
 
   it("salvar sem mudar nada não reemite (a ordem dos empenhos não importa)", () => {
@@ -173,5 +176,14 @@ describe("houveMudancaNoConteudo", () => {
     expect(houveMudancaNoConteudo(base, { ...base, empenhos: [{ empenho_id: "e1", valor: 1000.1 }] })).toBe(true);
     expect(houveMudancaNoConteudo(base, { ...base, condicoesEspeciais: [] })).toBe(true);
     expect(houveMudancaNoConteudo(base, { ...base, obra_id: null })).toBe(true);
+    expect(houveMudancaNoConteudo(base, { ...base, comentariosTecnicos: [] })).toBe(true);
+  });
+
+  it("anexos: os seis padrão sem observação equivalem à OS anterior à escolha (null)", () => {
+    expect(houveMudancaNoConteudo(base, { ...base, anexos: anexosPadrao() })).toBe(false);
+    const semCronograma = anexosPadrao().filter((a) => a.codigo !== "CRONOGRAMA");
+    expect(houveMudancaNoConteudo(base, { ...base, anexos: semCronograma })).toBe(true);
+    const comObservacao = anexosPadrao().map((a, i) => (i === 0 ? { ...a, observacao: "Revisão 2" } : a));
+    expect(houveMudancaNoConteudo(base, { ...base, anexos: comObservacao })).toBe(true);
   });
 });

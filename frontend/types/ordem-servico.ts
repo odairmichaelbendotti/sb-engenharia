@@ -110,6 +110,9 @@ export type OrdemServico = {
   fiscalAdministrativo_id: string | null;
   fiscalAdministrativo: OrdemServicoFiscal | null;
   condicoesEspeciais: string[];
+  // Anexos escolhidos; null = OS anterior à escolha, que leva os seis anexos padrão
+  anexos: AnexoOs[] | null;
+  comentariosTecnicos: string[];
   // Ciência da empresa (horário do servidor); nulos e dispensada nas OS anteriores à regra
   emitidaEm: string | null;
   cienciaPrazoAte: string | null;
@@ -161,6 +164,8 @@ export type CreateOrdemServicoPayload = {
   fiscalTecnico_id: string | null;
   fiscalAdministrativo_id: string | null;
   condicoesEspeciais: string[];
+  anexos: AnexoOs[];
+  comentariosTecnicos: string[];
 };
 
 export type OrdemServicoOption = {
@@ -172,3 +177,15 @@ export type OrdemServicoOption = {
   empenho: OrdemServicoEmpenho;
   empenhos: OrdemServicoVinculo[];
 };
+
+// Anexos da OS (catálogo em pages/OrdemServico/anexos-os.ts, espelho do backend)
+export type AnexoPadraoCodigo =
+  | "PLANILHA_SINTETICA"
+  | "PLANILHA_ANALITICA"
+  | "CRONOGRAMA"
+  | "PREMISSAS_TECNICAS"
+  | "PRODUTIVIDADE_SINAPI"
+  | "OBSERVACOES_TECNICAS";
+
+// Anexo escolhido: um da lista padrão (codigo) ou outro, só com título (codigo null)
+export type AnexoOs = { codigo: AnexoPadraoCodigo | null; titulo: string; observacao: string | null };

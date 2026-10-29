@@ -15,11 +15,14 @@ import {
   Wrench,
   ShieldCheck,
   ListChecks,
+  Paperclip,
 } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { StepForm, type FormStep } from "../../components/StepForm";
 import { getFaseEmissao } from "./ordem-servico-ciencia";
+import { AnexosStep } from "./AnexosStep";
+import { useAnexosForm } from "./anexos-os";
 import {
   Button,
   Field,
@@ -170,6 +173,7 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
   const [condicoes, setCondicoes] = useState<CondicaoForm[]>(() =>
     (ordemServico?.condicoesEspeciais ?? []).map((texto) => ({ key: nextKey.current++, texto })),
   );
+  const anexosForm = useAnexosForm(ordemServico?.anexos, ordemServico?.comentariosTecnicos);
 
   // Lista de empenhos sempre atualizada ao abrir: é dela que vêm os saldos livres
   useEffect(() => {
@@ -481,6 +485,7 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
       fiscalTecnico_id: form.fiscalTecnico_id || null,
       fiscalAdministrativo_id: form.fiscalAdministrativo_id || null,
       condicoesEspeciais: condicoes.map((c) => c.texto.trim()).filter(Boolean),
+      ...anexosForm.toPayload(),
     };
 
     try {
@@ -1059,6 +1064,13 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
           </FormSection>
         </>
       ),
+    },
+    {
+      id: "anexos",
+      label: "Anexos",
+      icon: Paperclip,
+      validate: anexosForm.validate,
+      content: <AnexosStep form={anexosForm} />,
     },
     // Situação: só na edição
     ...(ordemServico

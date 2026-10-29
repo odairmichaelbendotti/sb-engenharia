@@ -48,6 +48,8 @@ function sampleData(
       fiscalTecnico_id: "f-1",
       fiscalAdministrativo_id: "f-2",
       condicoesEspeciais: [],
+      anexos: null,
+      comentariosTecnicos: [],
       createdAt: dia("2026-09-24"),
       updatedAt: dia("2026-09-24"),
       ...overrides,
@@ -213,5 +215,61 @@ describe("planilha orçamentária do anexo", () => {
     expect(planilha.etapas).toEqual([{ titulo: "COBERTURA", inicio: 0, subtotal: "268,16" }]);
     expect(planilha.total).toBe("841,56");
     expect(planilha.nota).toContain("valor do desconto e total do item truncados");
+  });
+});
+
+describe("anexos no documento", () => {
+  const itens = [
+    {
+      ordem: 1,
+      codigo: "C1",
+      descricao: "Serviço 1",
+      etapa: null,
+      unidade: "m²",
+      quantidade: 1_000_000,
+      quantidadeSuprimida: 0,
+      precoUnitario: 1676,
+      valorTotal: null,
+      precoReferencia: 2415,
+    },
+  ];
+
+  it("OS anterior à escolha: os seis padrão, planilha no anexo I", () => {
+    const model = buildOrdemServicoDocumentModel({ ...sampleData({}, true), itens });
+    expect(model.anexos.map((a) => a.numero)).toEqual(["I", "II", "III", "IV", "V", "VI"]);
+    expect(model.anexos[0]!.titulo).toBe("Planilha Orçamentária Sintética");
+    expect(model.planilhaAnexo).toBe("I");
+    expect(model.planilha).not.toBeNull();
+  });
+
+  it("numera só os marcados; a planilha segue o número do anexo sintético", () => {
+    const model = buildOrdemServicoDocumentModel({
+      ...sampleData(
+        {
+          anexos: [
+            { codigo: "CRONOGRAMA", titulo: "Cronograma Físico-Financeiro", observacao: null },
+            { codigo: "PLANILHA_SINTETICA", titulo: "Planilha Orçamentária Sintética", observacao: "Revisão 2" },
+          ],
+          comentariosTecnicos: ["Conferir prumo"],
+        },
+        true,
+      ),
+      itens,
+    });
+    expect(model.anexos).toEqual([
+      { numero: "I", titulo: "Cronograma Físico-Financeiro", observacao: "" },
+      { numero: "II", titulo: "Planilha Orçamentária Sintética", observacao: "Revisão 2" },
+    ]);
+    expect(model.planilhaAnexo).toBe("II");
+    expect(model.comentariosTecnicos).toEqual(["Conferir prumo"]);
+  });
+
+  it("sem a planilha sintética marcada, o orçamento não vai para o PDF", () => {
+    const model = buildOrdemServicoDocumentModel({
+      ...sampleData({ anexos: [{ codigo: "CRONOGRAMA", titulo: "Cronograma Físico-Financeiro", observacao: null }] }, true),
+      itens,
+    });
+    expect(model.planilha).toBeNull();
+    expect(model.planilhaAnexo).toBe("");
   });
 });

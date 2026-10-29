@@ -50,6 +50,8 @@ function conteudoDe(os: Omit<OrdemServicoConteudo, "dataInicio" | "dataPrevisaoT
     fiscalTecnico_id: os.fiscalTecnico_id,
     fiscalAdministrativo_id: os.fiscalAdministrativo_id,
     condicoesEspeciais: os.condicoesEspeciais,
+    anexos: os.anexos,
+    comentariosTecnicos: os.comentariosTecnicos,
   };
 }
 
@@ -127,6 +129,8 @@ export class UpdateOrdemServicoUseCase {
       fiscalTecnico_id: keep(data.fiscalTecnico_id, existing.fiscalTecnico_id),
       fiscalAdministrativo_id: keep(data.fiscalAdministrativo_id, existing.fiscalAdministrativo_id),
       condicoesEspeciais: (data.condicoesEspeciais ?? existing.condicoesEspeciais).map((c) => normalizeFreeText(c)),
+      anexos: keep(data.anexos, existing.anexos),
+      comentariosTecnicos: keep(data.comentariosTecnicos, existing.comentariosTecnicos),
     });
 
     // Empenho só sai da OS se nenhuma nota fiscal desta OS foi lançada nele
@@ -237,6 +241,8 @@ export class UpdateOrdemServicoUseCase {
       fiscalTecnico_id: ordemServicoEntity.fiscalTecnico_id,
       fiscalAdministrativo_id: ordemServicoEntity.fiscalAdministrativo_id,
       condicoesEspeciais: ordemServicoEntity.condicoesEspeciais,
+      anexos: ordemServicoEntity.anexos,
+      comentariosTecnicos: ordemServicoEntity.comentariosTecnicos,
     });
   }
 }
