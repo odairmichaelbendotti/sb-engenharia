@@ -113,7 +113,7 @@ export default function MedicaoPage() {
 
   return (
     <WorkspacePage>
-      <WorkspaceHeader planilha={planilha} />
+      <WorkspaceHeader planilha={planilha} showTotals={false} />
       <HistoricoMedicoes planilha={planilha} osId={osId} atual={medicaoId} />
 
       {planilha.itens.length === 0 ? (

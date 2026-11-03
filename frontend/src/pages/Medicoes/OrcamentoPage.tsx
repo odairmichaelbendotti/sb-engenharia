@@ -21,7 +21,7 @@ export default function OrcamentoPage() {
 
   return (
     <WorkspacePage>
-      <WorkspaceHeader planilha={planilha} />
+      <WorkspaceHeader planilha={planilha} showTotals={!planilha.permissoes.editarOrcamento} />
       {planilha.permissoes.editarOrcamento ? (
         <OrcamentoEditor key={version} planilha={planilha} onSaved={reload} />
       ) : planilha.itens.length > 0 ? (

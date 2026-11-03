@@ -21,7 +21,7 @@ const OS_STATUS_LABEL = { ATIVO: "Ativa", FINALIZADO: "Finalizada", CANCELADO: "
  * Cabeçalho das telas de trabalho: volta para a lista, identifica obra · OS · empresa · contrato
  * (faixa na cor do contrato), mostra os totais e alterna entre orçamento e medições.
  */
-export function WorkspaceHeader({ planilha }: { planilha: PlanilhaOrcamento }) {
+export function WorkspaceHeader({ planilha, showTotals = true }: { planilha: PlanilhaOrcamento; showTotals?: boolean }) {
   const openViewer = useEntityViewer((s) => s.open);
   const { ordemServico: os, totais, valorOs, itens, escopoOrcamento, faltaEmpenhar } = planilha;
   const titulo = os.obra?.nome ?? os.descricaoEmpenho;
@@ -76,7 +76,7 @@ export function WorkspaceHeader({ planilha }: { planilha: PlanilhaOrcamento }) {
         </div>
       </div>
 
-      {itens.length > 0 && (
+      {showTotals && itens.length > 0 && (
         <StatTiles>
           {/* No orçamento do contrato o valor da OS é o empenhado até aqui */}
           <StatTile
@@ -96,12 +96,12 @@ export function WorkspaceHeader({ planilha }: { planilha: PlanilhaOrcamento }) {
             hint={`${itens.length} itens`}
           />
           <StatTile
-            label="Medido"
+            label="Medido em medições fechadas"
             value={formatCurrency(totais.valorMedido)}
             hint={`${percent(medido)}% do orçado${totais.valorRascunho > 0 ? ` · ${formatCurrency(totais.valorRascunho)} em rascunho` : ""}`}
           />
           <StatTile
-            label="Saldo a medir"
+            label="Saldo da OS (sem rascunhos)"
             value={totais.valorSaldo <= 0 ? "Totalmente medido" : formatCurrency(totais.valorSaldo)}
             valueTone={totais.valorSaldo <= 0 ? "success" : "default"}
           />

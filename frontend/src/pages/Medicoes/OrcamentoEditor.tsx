@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AlertTriangle, CheckCircle2, CircleMinus, ClipboardPaste, FolderPlus, Lock, Plus, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { EscopoOrcamento, OrcamentoItem, OrcamentoPayload, PlanilhaOrcamento } from "../../../types/medicao";
@@ -28,6 +28,7 @@ import {
   InlineEdit,
   Input,
   SegmentedControl,
+  StatusPill,
 } from "../../components/ui";
 import { StickyFooter } from "./Workspace";
 import { matchesItemSearch } from "./medicao-progress";
@@ -87,6 +88,11 @@ function toForm(item: OrcamentoItem, key: number): ItemForm {
 }
 
 const preenchida = (l: ItemForm) => Boolean(l.id || l.descricao || l.unidade || l.quantidade || l.preco);
+
+function camposPendentes(l: ItemForm) {
+  return [!l.descricao.trim() && "descrição", !l.unidade.trim() && "unidade",
+    (parseQuantidade(l.quantidade) ?? 0) <= 0 && "quantidade", !l.preco && "preço com BDI"].filter(Boolean);
+}
 
 const centavos = (valor: number) => Math.round(valor * 100);
 
@@ -219,6 +225,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
   const valorMuda = valorOs !== null && centavos(valorOsNovo) !== centavos(valorOs);
   const faltaEmpenhar = Math.max(0, total - somaDistribuida);
   const medidos = linhas.filter((l) => l.medido > 0).length;
+  const incompletos = linhas.filter((l) => preenchida(l) && camposPendentes(l).length > 0).length;
   const comSupressao = linhas.filter((l) => preenchida(l) && l.suprimida > 0);
   // Quanto as supressões tiram: o total da quantidade cheia (pela regra) menos o da efetiva
   const valorSuprimido = comSupressao.reduce(
@@ -478,11 +485,12 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
     const suprimido = l.suprimida > 0;
     return (
       <div key={l.key} className="rounded-lg border border-border p-2.5 lg:border-0 lg:p-0">
+        <p className="mb-2 text-xs font-semibold text-text-secondary lg:hidden">Item {index + 1}</p>
         <div className={cx("grid grid-cols-2 sm:grid-cols-4 gap-2 items-start", COLS)}>
           <span className="hidden lg:flex h-8 items-center justify-center text-xs text-text-muted tabular-nums">
             {index + 1}
           </span>
-          <InlineEdit
+          <ItemField label="Código (opcional)"><InlineEdit
             size="sm"
             aria-label={`Código do item ${index + 1}`}
             placeholder="Código"
@@ -493,10 +501,9 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
             onChange={(e) => update(l.key, { codigo: e.target.value })}
             onRevert={(codigo) => update(l.key, { codigo })}
             onBlur={() => normalizar(l.key, "codigo")}
-          />
-          <InlineEdit
+          /></ItemField>
+          <ItemField label="Descrição do serviço *" className="col-span-2 sm:col-span-3 lg:col-span-1"><InlineEdit
             size="sm"
-            className="col-span-2 sm:col-span-3 lg:col-span-1"
             aria-label={`Descrição do item ${index + 1}`}
             placeholder="Descrição do serviço (ex.: execução de reboco)"
             title={l.descricao}
@@ -506,8 +513,8 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
             onChange={(e) => update(l.key, { descricao: e.target.value })}
             onRevert={(descricao) => update(l.key, { descricao })}
             onBlur={() => normalizar(l.key, "descricao")}
-          />
-          <InlineEdit
+          /></ItemField>
+          <ItemField label="Unidade *"><InlineEdit
             size="sm"
             aria-label={`Unidade do item ${index + 1}`}
             placeholder="m²"
@@ -519,8 +526,8 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
             onChange={(e) => update(l.key, { unidade: e.target.value })}
             onRevert={(unidade) => update(l.key, { unidade })}
             onBlur={() => normalizar(l.key, "unidade")}
-          />
-          <InlineEdit
+          /></ItemField>
+          <ItemField label="Quantidade *"><InlineEdit
             size="sm"
             align="right"
             aria-label={`Quantidade do item ${index + 1}`}
@@ -535,8 +542,8 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
             invalid={invalido(l, "quantidade")}
             onChange={(e) => update(l.key, { quantidade: sanitizeDecimalInput(e.target.value) })}
             onRevert={(quantidade) => update(l.key, { quantidade })}
-          />
-          <div className="min-w-0">
+          /></ItemField>
+          <ItemField label="Preço unitário com BDI *">
             <InlineEdit
               size="sm"
               align="right"
@@ -559,7 +566,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
                 c/ desc. {formatCurrency(precoEfetivo(l))}
               </p>
             )}
-          </div>
+          </ItemField>
           <span
             className="hidden xl:flex h-8 items-center justify-end px-2.5 text-xs text-text-secondary tabular-nums truncate"
             title="Total com BDI"
@@ -567,6 +574,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
             {formatCurrency(totalBdiLinha(l))}
           </span>
           <div className="min-w-0">
+            <p className="lg:hidden mb-1 text-[11px] font-semibold text-text-secondary">Total com desconto</p>
             <span
               className="flex h-8 items-center justify-end px-2.5 text-xs font-semibold text-text-primary tabular-nums truncate"
               title="Total com desconto"
@@ -598,6 +606,9 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
             />
           </div>
         </div>
+        {preenchida(l) && camposPendentes(l).length > 0 && (
+          <p className="mt-1 lg:pl-8 text-xs text-warning-text">Falta preencher: {camposPendentes(l).join(", ")}.</p>
+        )}
         {medido && (
           <p className="mt-1 lg:pl-8 flex items-center gap-1 text-[11px] text-text-muted">
             <Lock size={11} />
@@ -618,8 +629,29 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
 
   return (
     <>
+      <div className="mb-3 space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-base font-semibold text-text-primary">{itens.length === 0 ? "Lançar orçamento" : "Editar orçamento"}</h2>
+          {dirty && <StatusPill tone="warning" size="sm">Alterações não salvas</StatusPill>}
+        </div>
+        <p className="text-xs text-text-secondary">
+          {itens.length === 0
+            ? "Cole os serviços do Excel ou preencha os itens abaixo. Depois, confira os totais e salve o orçamento."
+            : "Clique nos valores para editar. Confira os totais antes de salvar; itens já medidos mantêm o preço e a unidade."}
+        </p>
+        {itens.length === 0 && !linhas.some(preenchida) && (
+          <div className="rounded-xl border border-border bg-surface p-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-text-primary">Já tem a planilha? Comece pelo Excel.</p>
+              <p className="text-xs text-text-secondary mt-1">Copie os itens, cole e confira a prévia antes de incluir. Você também pode digitar na grade abaixo.</p>
+            </div>
+            <Button icon={ClipboardPaste} onClick={() => setColando("")}>Colar itens do Excel</Button>
+          </div>
+        )}
+      </div>
       <div className="flex flex-col 2xl:flex-row 2xl:items-center gap-2 mb-3">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
+          <span className="text-xs font-semibold text-text-secondary">Este orçamento abrange:</span>
           <SegmentedControl<EscopoOrcamento>
             label="O orçamento é"
             value={escopo}
@@ -656,6 +688,17 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
         </div>
       </div>
 
+      <div className="mb-3 rounded-lg border border-border bg-surface-muted px-3 py-2 text-xs text-text-secondary">
+        Informe o <strong className="text-text-primary">preço unitário com BDI, antes do desconto</strong>.
+        {" "}O sistema aplica o desconto de <strong className="text-text-primary">{desconto.toLocaleString("pt-BR")}%</strong> da OS automaticamente.
+        {" "}O total com desconto é o valor usado nas medições. Campos com * são obrigatórios; o código é opcional.
+        <div className="mt-2 pt-2 border-t border-border flex flex-wrap items-center gap-x-4 gap-y-1 tabular-nums">
+          <span>Total com BDI: {formatCurrency(totalComBdi)}</span>
+          <span className="font-semibold text-text-primary">Total com desconto: {formatCurrency(total)}</span>
+          <span>{contagemItens(linhas.filter(preenchida).length)}</span>
+        </div>
+      </div>
+
       <div data-orcamento className="bg-surface border border-border rounded-xl p-3 sm:p-4 space-y-3">
         <div
           className={cx(
@@ -665,10 +708,10 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
         >
           <span>#</span>
           <span>Código</span>
-          <span>Descrição do serviço</span>
-          <span>Un</span>
-          <span className="text-right">Quantidade</span>
-          <span className="text-right">Preço c/ BDI</span>
+          <span>Descrição do serviço *</span>
+          <span>Un *</span>
+          <span className="text-right">Quantidade *</span>
+          <span className="text-right">Preço c/ BDI *</span>
           <span className="hidden xl:block text-right">Total c/ BDI</span>
           <span className="text-right">Total c/ desc.</span>
           <span className="hidden 2xl:block text-right">Medido</span>
@@ -800,12 +843,13 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
       <StickyFooter
         summary={
           erro ? (
-            <p className="flex items-start gap-1.5 text-sm text-danger-text">
+            <p role="alert" className="flex items-start gap-1.5 text-sm text-danger-text">
               <AlertTriangle size={15} className="shrink-0 mt-0.5" />
               {erro.texto}
             </p>
           ) : (
             <>
+              {incompletos > 0 && <p className="text-xs text-warning-text mb-1">{incompletos} {incompletos === 1 ? "item incompleto" : "itens incompletos"}. Preencha os campos indicados para salvar.</p>}
               <p className="text-sm text-text-secondary">
                 <span className="tabular-nums">Total c/ BDI {formatCurrency(totalComBdi)}</span>
                 <span className="text-text-muted"> · </span>
@@ -918,6 +962,13 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
       {guard.dialog}
     </>
   );
+}
+
+function ItemField({ label, className, children }: { label: string; className?: string; children: ReactNode }) {
+  return <div className={cx("min-w-0", className)}>
+    <p className="lg:hidden mb-1 text-[11px] font-semibold text-text-secondary">{label}</p>
+    {children}
+  </div>;
 }
 
 interface EtapaNomeProps {

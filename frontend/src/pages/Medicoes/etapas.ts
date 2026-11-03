@@ -36,20 +36,25 @@ export function contagemItens(n: number) {
 
 /**
  * Quais etapas estão recolhidas (todas começam abertas). Com busca ou filtro, as etapas abrem
- * sozinhas para o resultado aparecer: `forcarAbertas`.
+ * sozinhas para o resultado aparecer: `forcarAbertas`. Um contexto de texto abre os grupos
+ * ao mudar o filtro/busca, mas ainda permite recolhê-los manualmente no novo resultado.
  */
-export function useEtapasRecolhidas(forcarAbertas = false) {
-  const [recolhidas, setRecolhidas] = useState<ReadonlySet<string>>(() => new Set());
-  const aberta = (key: string) => forcarAbertas || !recolhidas.has(key);
+export function useEtapasRecolhidas(forcarAbertas: boolean | string = false) {
+  const contexto = typeof forcarAbertas === "string" ? forcarAbertas : "";
+  const [estado, setEstado] = useState<{ contexto: string; recolhidas: ReadonlySet<string> }>(() => ({ contexto, recolhidas: new Set() }));
+  const recolhidas = estado.contexto === contexto ? estado.recolhidas : new Set<string>();
+  const atualizar = (update: (prev: ReadonlySet<string>) => ReadonlySet<string>) =>
+    setEstado((prev) => ({ contexto, recolhidas: update(prev.contexto === contexto ? prev.recolhidas : new Set()) }));
+  const aberta = (key: string) => forcarAbertas === true || !recolhidas.has(key);
   const alternar = (key: string) =>
-    setRecolhidas((prev) => {
+    atualizar((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
       return next;
     });
   const abrir = (key: string) =>
-    setRecolhidas((prev) => {
+    atualizar((prev) => {
       if (!prev.has(key)) return prev;
       const next = new Set(prev);
       next.delete(key);

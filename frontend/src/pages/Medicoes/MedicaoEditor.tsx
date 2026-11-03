@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import type { MedicaoDetalhe, PlanilhaOrcamento } from "../../../types/medicao";
 import { useMedicoes } from "../../store/medicoes";
 import { useUnsavedChangesGuard } from "../../hooks/useUnsavedChangesGuard";
-import { formatCurrency } from "../../utils/format-currency";
+import { formatCurrency, formatDateOnly } from "../../utils/format-currency";
 import {
   arredondaQtd,
   formatQuantidade,
@@ -15,13 +15,12 @@ import {
   valorAcumuladoItem,
 } from "../../utils/decimal";
 import { cx } from "../../utils/cx";
-import { SearchInput } from "../../components/filters/SearchInput";
 import {
   Button,
   ConfirmDialog,
   Field,
   Input,
-  SegmentedControl,
+  StatTile,
   StatusPill,
   Table,
   TableBody,
@@ -38,6 +37,8 @@ import { StickyFooter } from "./Workspace";
 import { matchesItemSearch } from "./medicao-progress";
 import { contagemItens, gruposPorEtapa, SEM_ETAPA, temEtapas, useEtapasRecolhidas } from "./etapas";
 import { SupressaoNota, SuprimidoPill } from "./supressao";
+import { MedicaoItemFilters } from "./MedicaoItemFilters";
+import { correspondeFiltroMedicao, saldoAposMedicao, type FiltroMedicao } from "./medicao-filters";
 
 const OBSERVACAO_MAX = 2000;
 
@@ -57,8 +58,6 @@ type Linha = {
   anterior: number;
   maximo: number;
 };
-
-type Filtro = "todos" | "saldo" | "nesta";
 
 interface MedicaoEditorProps {
   planilha: PlanilhaOrcamento;
@@ -97,11 +96,14 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
   const [periodoFim, setPeriodoFim] = useState(inicial.periodoFim);
   const [observacao, setObservacao] = useState(inicial.observacao);
   const [quantidades, setQuantidades] = useState<Record<string, string>>(inicial.quantidades);
-  const [filtro, setFiltro] = useState<Filtro>("todos");
+  const [filtro, setFiltro] = useState<FiltroMedicao>("pendentes");
+  // Uma linha concluída permanece enquanto tem foco: não some no meio da digitação.
+  const [linhaEmEdicao, setLinhaEmEdicao] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [saving, setSaving] = useState<"rascunho" | "fechar" | null>(null);
   const [confirmando, setConfirmando] = useState(false);
+  const [confirmandoSaldo, setConfirmandoSaldo] = useState(false);
 
   // Linhas para editar: da medição (rascunho, com o orçamento atual) ou do panorama (nova)
   const linhas: Linha[] = useMemo(() => {
@@ -142,15 +144,20 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
   const total = linhas.reduce((acc, l) => acc + valorEsta(l), 0);
   const acima = linhas.filter((l) => qtd(l.item_id) > l.maximo);
   const comQuantidade = linhas.filter((l) => qtd(l.item_id) > 0).length;
+  const saldo = (l: Linha) => saldoAposMedicao(l.maximo, qtd(l.item_id));
+  const pendentes = linhas.filter((l) => saldo(l) > 0).length;
+  const totalAnterior = linhas.reduce((acc, l) => acc + valorAcumuladoItem(l, l.anterior), 0);
+  const totalRestante = Math.round((linhas.reduce((acc, l) => acc + l.valorOrcado, 0) - totalAnterior - total) * 100) / 100;
   const visiveis = linhas.filter(
     (l) =>
-      (filtro === "saldo" ? l.maximo > 0 : filtro === "nesta" ? qtd(l.item_id) > 0 : true) &&
+      (correspondeFiltroMedicao({ saldo: saldo(l), esta: qtd(l.item_id) }, filtro) ||
+        l.item_id === linhaEmEdicao || qtd(l.item_id) > l.maximo) &&
       matchesItemSearch(l, busca),
   );
   const grupos = gruposPorEtapa(visiveis, (l) => l.etapa);
   const comEtapas = temEtapas(grupos);
   // Com busca ou filtro, as etapas abrem para o resultado aparecer
-  const etapas = useEtapasRecolhidas(busca !== "" || filtro !== "todos");
+  const etapas = useEtapasRecolhidas(`${filtro}:${busca}`);
 
   // Compara o que seria enviado com o carregado (quantidade zerada = linha ausente)
   const snapshot = (q: Record<string, string>, inicio: string, fim: string, obs: string) =>
@@ -179,6 +186,8 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
       Object.fromEntries(linhas.filter((l) => l.maximo > 0).map((l) => [l.item_id, toDecimalInput(l.maximo)])),
     );
     setErro(null);
+    setConfirmandoSaldo(false);
+    setFiltro("nesta");
   }
 
   function validar(): string | null {
@@ -202,7 +211,8 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
       const grupo = gruposPorEtapa(linhas, (l) => l.etapa).find((g) => g.itens.includes(acima[0]!));
       if (grupo) etapas.abrir(grupo.key);
       requestAnimationFrame(() => {
-        const campo = document.querySelector<HTMLInputElement>('[data-medicao] [aria-invalid="true"]');
+        const campo = Array.from(document.querySelectorAll<HTMLInputElement>('[data-medicao] [aria-invalid="true"]'))
+          .find((el) => el.getClientRects().length > 0);
         campo?.scrollIntoView({ block: "center" });
         campo?.focus();
       });
@@ -256,6 +266,24 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
   return (
     <>
       <div data-medicao className="space-y-3 pb-1">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-base font-semibold text-text-primary">
+              {detalhe ? medicaoTitulo(numero) : `Nova medição · ${String(numero).padStart(2, "0")}`}
+            </h2>
+            <StatusPill tone="warning" size="sm">{detalhe ? "Rascunho" : "Ainda não salva"}</StatusPill>
+          </div>
+          <p className="mt-1 text-xs text-text-secondary">
+            Informe apenas a quantidade executada neste período. Salve um rascunho para continuar depois ou revise e feche para consolidar.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <StatTile label="Já medido antes" value={formatCurrency(totalAnterior)} hint="Medições anteriores fechadas" />
+          <StatTile label="Nesta medição" value={formatCurrency(total)} hint={`${contagemItens(comQuantidade)} com quantidade lançada`} />
+          <StatTile label="Falta após esta medição" value={formatCurrency(totalRestante)}
+            hint={acima.length ? "Corrija as quantidades acima do saldo" : `${contagemItens(pendentes)} com saldo restante`}
+            valueTone={acima.length ? "danger" : pendentes === 0 ? "success" : "default"} />
+        </div>
         <div className="bg-surface border border-border rounded-xl p-3 sm:p-4 grid grid-cols-2 sm:grid-cols-[10rem_10rem_minmax(0,1fr)] gap-3 items-start">
           <Field label="Início do período" required>
             <Input type="date" size="sm" value={periodoInicio} onChange={(e) => setPeriodoInicio(e.target.value)} />
@@ -269,31 +297,21 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
               onChange={(e) => setPeriodoFim(e.target.value)}
             />
           </Field>
-          <Field label="Observações" hint="Saem no boletim de medição.">
+          <Field className="col-span-2 sm:col-span-1" label="Observações" hint="Saem no boletim de medição.">
             <Textarea rows={1} maxLength={OBSERVACAO_MAX} value={observacao} onChange={(e) => setObservacao(e.target.value)} />
           </Field>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-2 lg:items-center">
-          <SearchInput value={busca} onChange={setBusca} placeholder="Buscar item por código ou descrição..." />
-          <div className="flex flex-wrap items-center gap-2">
-            <SegmentedControl<Filtro>
-              label="Itens exibidos"
-              value={filtro}
-              onChange={setFiltro}
-              options={[
-                { value: "todos", label: "Todos" },
-                { value: "saldo", label: "Com saldo" },
-                { value: "nesta", label: `Nesta medição (${comQuantidade})` },
-              ]}
-            />
-            <Button variant="secondary" size="sm" onClick={medirTudo}>
-              Medir todo o saldo
-            </Button>
-          </div>
+        <MedicaoItemFilters filtro={filtro} onFiltro={(value) => { setLinhaEmEdicao(null); setFiltro(value); }}
+          busca={busca} onBusca={setBusca} pendentes={pendentes} nesta={comQuantidade} todos={linhas.length} visiveis={visiveis.length} />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-text-muted">Quantidades em cada unidade do serviço. O valor é calculado automaticamente.</p>
+          <Button variant="secondary" size="sm" disabled={!linhas.some((l) => l.maximo > 0)} onClick={() => setConfirmandoSaldo(true)}>
+            Preencher todo o saldo…
+          </Button>
         </div>
 
-        <div className="bg-surface border border-border rounded-xl overflow-hidden">
+        <div className="hidden md:block bg-surface border border-border rounded-xl overflow-hidden">
           <Table>
             <TableHead>
               <Th>Item</Th>
@@ -301,10 +319,10 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
                 Orçado
               </Th>
               <Th width="w-28" className="hidden lg:table-cell">
-                Anterior
+                Já medido
               </Th>
               <Th width="w-48">Esta medição</Th>
-              <Th width="w-32">Saldo após</Th>
+              <Th width="w-32">Falta após esta</Th>
             </TableHead>
             <TableBody>
               {grupos.map((grupo) => {
@@ -331,6 +349,8 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
                           esta={qtd(l.item_id)}
                           valorEsta={valorEsta(l)}
                           onChange={(valor) => setQuantidade(l.item_id, valor)}
+                          onFocus={() => setLinhaEmEdicao(l.item_id)}
+                          onLeave={() => setLinhaEmEdicao(null)}
                         />
                       ))}
                   </Fragment>
@@ -338,16 +358,55 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
               })}
             </TableBody>
           </Table>
-          {visiveis.length === 0 && (
-            <p className="px-4 py-6 text-center text-sm text-text-muted">Nenhum item neste filtro.</p>
-          )}
         </div>
+        <div className="md:hidden space-y-3">
+          {grupos.map((grupo) => (
+            <div key={grupo.key} className="space-y-2">
+              {comEtapas && <h3 className="text-xs font-semibold text-text-secondary">{grupo.etapa ?? SEM_ETAPA} · {contagemItens(grupo.itens.length)}</h3>}
+              {grupo.itens.map((l) => (
+                <div key={l.item_id} className="bg-surface border border-border rounded-xl p-3 space-y-3"
+                  onFocusCapture={() => setLinhaEmEdicao(l.item_id)}
+                  onBlurCapture={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setLinhaEmEdicao(null); }}>
+                  <div>
+                    <p className="text-sm font-medium text-text-primary break-words">{l.descricao}</p>
+                    <p className="text-xs text-text-muted mt-1">{[l.codigo, `${formatCurrency(l.precoUnitario)}/${l.unidade}`].filter(Boolean).join(" · ")}</p>
+                    <SupressaoNota suprimido={l.suprimido} unidade={l.unidade} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-text-secondary">
+                    <p>Orçado: <strong>{formatQuantidade(l.orcado)} {l.unidade}</strong></p>
+                    <p>Já medido: <strong>{formatQuantidade(l.anterior)} {l.unidade}</strong></p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 items-start">
+                    <div><p className="mb-1 text-xs font-semibold text-text-secondary">Nesta medição ({l.unidade})</p>
+                      <QuantidadeMedicao l={l} quantidade={quantidades[l.item_id] ?? ""} esta={qtd(l.item_id)} onChange={(v) => setQuantidade(l.item_id, v)} />
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-text-secondary">Falta após esta</p>
+                      <p className={cx("mt-1 font-semibold text-sm tabular-nums", saldo(l) < 0 ? "text-danger-text" : "text-text-primary")}>
+                        {formatQuantidade(saldo(l))} {l.unidade}
+                      </p>
+                      <p className="mt-1 text-xs text-text-muted">Valor nesta: {formatCurrency(valorEsta(l))}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+        {visiveis.length === 0 && (
+          <div className="rounded-xl border border-border bg-surface px-4 py-6 text-center space-y-2">
+            <p className="text-sm font-medium text-text-primary">
+              {busca.trim() ? "Nenhum item corresponde à busca neste filtro." : filtro === "pendentes" ? "Não há saldo restante a medir." : filtro === "nesta" ? "Nenhum item lançado nesta medição." : "Nenhum item no orçamento."}
+            </p>
+            <Button variant="secondary" size="sm" onClick={() => { setBusca(""); setFiltro("todos"); }}>Ver todos os itens</Button>
+          </div>
+        )}
       </div>
 
       <StickyFooter
         summary={
           erro ? (
-            <p className="flex items-start gap-1.5 text-sm text-danger-text">
+            <p role="alert" className="flex items-start gap-1.5 text-sm text-danger-text">
               <AlertTriangle size={15} className="shrink-0 mt-0.5" />
               {erro}
             </p>
@@ -386,10 +445,16 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
             else setConfirmando(true);
           }}
         >
-          Salvar e fechar
+          Revisar e fechar
         </Button>
       </StickyFooter>
 
+      <ConfirmDialog
+        open={confirmandoSaldo} tone="neutral" title="Preencher todo o saldo disponível?"
+        confirmLabel="Preencher todos os itens" onConfirm={medirTudo} onCancel={() => setConfirmandoSaldo(false)}>
+        Isso preenche todos os itens do orçamento com o saldo disponível antes desta medição, inclusive os que estão fora da busca ou do filtro.
+        As quantidades já digitadas serão substituídas. Nada será salvo ou fechado até você confirmar essas ações.
+      </ConfirmDialog>
       <ConfirmDialog
         open={confirmando}
         tone="success"
@@ -399,7 +464,12 @@ export function MedicaoEditor({ planilha, detalhe, onSaved, onDelete, onPdf, bai
         onConfirm={() => salvar(true)}
         onCancel={() => setConfirmando(false)}
       >
-        A medição de {formatCurrency(total)} entra no acumulado da OS e fica travada. Para corrigir depois, só a última
+        <span className="block mb-2">
+          Período: {formatDateOnly(periodoInicio)} a {formatDateOnly(periodoFim)} · {contagemItens(comQuantidade)}.
+        </span>
+        <span className="block mb-2 font-semibold">Total desta medição: {formatCurrency(total)}.</span>
+        <span className="block mb-2">Falta após esta medição: {formatCurrency(totalRestante)} em {contagemItens(pendentes)}.</span>
+        Ao confirmar, os lançamentos entram no acumulado da OS e ficam travados. Para corrigir depois, só a última
         medição fechada pode ser reaberta.
       </ConfirmDialog>
       {guard.dialog}
@@ -413,17 +483,19 @@ interface LinhaEditorProps {
   esta: number;
   valorEsta: number;
   onChange: (valor: string) => void;
+  onFocus: () => void;
+  onLeave: () => void;
 }
 
 // Item da medição em edição: quanto foi executado, até o saldo
-function LinhaEditor({ l, quantidade, esta, valorEsta, onChange }: LinhaEditorProps) {
+function LinhaEditor({ l, quantidade, esta, valorEsta, onChange, onFocus, onLeave }: LinhaEditorProps) {
   const concluido = l.maximo <= 0;
-  const suprimidoTotal = l.orcado === 0 && l.suprimido > 0;
   const excede = esta > l.maximo;
   return (
-    <Tr muted={concluido}>
+    <Tr muted={concluido} onFocusCapture={onFocus}
+      onBlurCapture={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) onLeave(); }}>
       <Td>
-        <p className="truncate text-text-primary font-medium" title={l.descricao}>
+        <p className="line-clamp-2 text-text-primary font-medium" title={l.descricao}>
           {l.descricao}
         </p>
         <p className="text-[11px] text-text-muted truncate">
@@ -440,9 +512,23 @@ function LinhaEditor({ l, quantidade, esta, valorEsta, onChange }: LinhaEditorPr
       </Td>
       <Td className="hidden lg:table-cell">{formatQuantidade(l.anterior)}</Td>
       <Td>
-        {suprimidoTotal ? (
+        <QuantidadeMedicao l={l} quantidade={quantidade} esta={esta} onChange={onChange} />
+      </Td>
+      <Td>
+        <span className={cx("block", excede ? "text-danger-text font-semibold" : "text-text-primary")}>
+          {formatQuantidade(saldoAposMedicao(l.maximo, esta))} {l.unidade}
+        </span>
+        {esta > 0 && <span className="block text-[11px] text-text-muted">Valor nesta: {formatCurrency(valorEsta)}</span>}
+      </Td>
+    </Tr>
+  );
+}
+
+function QuantidadeMedicao({ l, quantidade, esta, onChange }: Pick<LinhaEditorProps, "l" | "quantidade" | "esta" | "onChange">) {
+  const excede = esta > l.maximo;
+  return l.orcado === 0 && l.suprimido > 0 ? (
           <SuprimidoPill />
-        ) : concluido ? (
+        ) : l.maximo <= 0 ? (
           <StatusPill tone="success" size="sm">
             Concluído
           </StatusPill>
@@ -467,17 +553,9 @@ function LinhaEditor({ l, quantidade, esta, valorEsta, onChange }: LinhaEditorPr
               title="Preencher com todo o saldo do item"
               onClick={() => onChange(toDecimalInput(l.maximo))}
             >
-              máx. {formatQuantidade(l.maximo)} · medir saldo
+              Usar saldo: {formatQuantidade(l.maximo)} {l.unidade}
             </button>
+            {excede && <p className="mt-1 text-xs text-danger-text">Quantidade acima do saldo disponível.</p>}
           </div>
-        )}
-      </Td>
-      <Td>
-        <span className={cx("block", excede ? "text-danger-text font-semibold" : "text-text-primary")}>
-          {formatQuantidade(arredondaQtd(l.maximo - esta))}
-        </span>
-        {esta > 0 && <span className="block text-[11px] text-text-muted">{formatCurrency(valorEsta)}</span>}
-      </Td>
-    </Tr>
-  );
+        );
 }
