@@ -12,6 +12,7 @@ import { GenerateOrdemServicoDocumentUseCase } from "../../application/usecases/
 import { PuppeteerOrdemServicoGenerator } from "../../infrastructure/pdf/PuppeteerOrdemServicoGenerator.js";
 import { GetProximoNumeroOrdemServicoUseCase } from "../../application/usecases/ordem-servico/GetProximoNumeroOrdemServicoUseCase.js";
 import { EmitirOrdemServicoUseCase } from "../../application/usecases/ordem-servico/EmitirOrdemServicoUseCase.js";
+import { UnlinkObraOrdemServicoUseCase } from "../../application/usecases/ordem-servico/UnlinkObraOrdemServicoUseCase.js";
 import { OrdemServicoController } from "../controllers/OrdemServicoController.js";
 import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
@@ -55,6 +56,7 @@ const ordemServicoController = new OrdemServicoController(
   generateOrdemServicoDocumentUseCase,
   getProximoNumeroOrdemServicoUseCase,
   new EmitirOrdemServicoUseCase(repository),
+  new UnlinkObraOrdemServicoUseCase(repository, obraRepository),
 );
 
 const token = new TokenGenerator();
@@ -125,6 +127,14 @@ OrdemServicoRoutes.put(
   authMiddleware.handle,
   requireDomainAccess.handle("administrativo", "edit"),
   (req, res) => ordemServicoController.update(req, res),
+);
+
+// Retira a OS da obra (a obra continua cadastrada): é o passo que libera a exclusão da OS
+OrdemServicoRoutes.put(
+  "/ordem-servico/:id/desvincular-obra",
+  authMiddleware.handle,
+  requireDomainAccess.handle("administrativo", "edit"),
+  (req, res) => ordemServicoController.unlinkObra(req, res),
 );
 
 OrdemServicoRoutes.put(

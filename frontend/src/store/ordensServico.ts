@@ -17,6 +17,8 @@ type OrdensServicoState = {
   updateOrdemServico: (id: string, payload: CreateOrdemServicoPayload) => Promise<OrdemServico>;
   updateOrdemServicoStatus: (id: string, status: OrdemServicoStatus) => Promise<void>;
   deleteOrdemServico: (id: string) => Promise<void>;
+  // Retira a OS da obra (a obra continua cadastrada); é o passo que libera a exclusão
+  unlinkObra: (id: string) => Promise<void>;
   // PDF da OS preenchido com os dados cadastrados
   fetchOrdemServicoDocument: (id: string) => Promise<Blob>;
   // Número que a OS nova receberia (sem reservá-lo); `loteId` vazio = contrato sem lote
@@ -118,6 +120,28 @@ export const useOrdensServico = create<OrdensServicoState>((set) => ({
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || "Erro ao obter o número da ordem de serviço");
     return data.numero;
+  },
+
+  unlinkObra: async (id) => {
+    const response = await defaultFetch(`/ordem-servico/${id}/desvincular-obra`, {
+      method: "PUT",
+      credentials: "include",
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => null);
+      throw new Error(error?.message || "Erro ao desvincular a obra da ordem de serviço");
+    }
+    set((state) => {
+      if (!state.data) return state;
+      return {
+        data: {
+          ...state.data,
+          ordensServico: state.data.ordensServico.map((os) =>
+            os.id === id ? { ...os, obra_id: null, obra: null } : os,
+          ),
+        },
+      };
+    });
   },
 
   deleteOrdemServico: async (id) => {

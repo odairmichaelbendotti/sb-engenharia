@@ -816,6 +816,17 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
     }
   }
 
+  async unlinkObra(id: string): Promise<void> {
+    try {
+      await prisma.ordemServico.update({ where: { id }, data: { obra_id: null, updatedAt: new Date() } });
+    } catch (error: any) {
+      if (error.code === "P2025") {
+        throw new DomainError("OrdemServico not found");
+      }
+      throw new DomainError("Error unlinking obra from ordem de serviço: " + error);
+    }
+  }
+
   async delete(id: string): Promise<void> {
     const hasObra = await this.hasObraVinculada(id);
     if (hasObra) {
