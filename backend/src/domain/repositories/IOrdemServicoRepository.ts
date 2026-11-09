@@ -271,6 +271,8 @@ export interface IOrdemServicoRepository {
   /** Se já existe nota fiscal (qualquer status) lançada nesta OS. */
   hasInvoices(id: string): Promise<boolean>;
   updateStatus(id: string, status: OrdemServicoStatusValue): Promise<PersistedOrdemServico>;
+  /** Retira a OS da obra (obra_id = null); a obra continua cadastrada. */
+  unlinkObra(id: string): Promise<void>;
   delete(id: string): Promise<void>;
   hasObraVinculada(id: string): Promise<boolean>;
 }

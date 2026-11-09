@@ -15,6 +15,7 @@ import {
   Plus,
   Send,
   Trash2,
+  Unlink,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -42,6 +43,7 @@ import { OrcamentoTag } from "./OrcamentoTag";
 import { abrirOrcamento } from "./orcamento-link";
 import { FinalizeOrdemServicoDialog } from "./FinalizeOrdemServico";
 import { EmitirOrdemServicoDialog } from "./EmitirOrdemServicoDialog";
+import { UnlinkObraDialog } from "./UnlinkObraDialog";
 import { isQuitada } from "./ordem-servico-balance";
 import { ordemServicoStatusDisplay } from "./ordem-servico-display";
 import { getOrdemServicoSchedule, type OrdemServicoSchedule, type ScheduleKind, type ScheduleTone } from "./ordem-servico-schedule";
@@ -89,6 +91,7 @@ export function OrdemServicoList({ ordensServico, isLoading = false, onView, onE
   const [page, setPage] = useState(1);
   const [finalizing, setFinalizing] = useState<OrdemServico | null>(null);
   const [emitindo, setEmitindo] = useState<OrdemServico | null>(null);
+  const [unlinking, setUnlinking] = useState<OrdemServico | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(ordensServico.length / ITEMS_PER_PAGE));
   const currentPage = Math.min(page, totalPages);
@@ -214,6 +217,12 @@ export function OrdemServicoList({ ordensServico, isLoading = false, onView, onE
                         hidden: !canEditAdministrativo || !isQuitada(os),
                       },
                       {
+                        label: "Desvincular obra",
+                        icon: Unlink,
+                        onClick: () => setUnlinking(os),
+                        hidden: !canEditAdministrativo || !os.obra,
+                      },
+                      {
                         label: "Excluir",
                         icon: Trash2,
                         onClick: () => onDelete(os),
@@ -260,6 +269,7 @@ export function OrdemServicoList({ ordensServico, isLoading = false, onView, onE
 
       {finalizing && <FinalizeOrdemServicoDialog ordemServico={finalizing} open onClose={() => setFinalizing(null)} />}
       {emitindo && <EmitirOrdemServicoDialog ordemServico={emitindo} onClose={() => setEmitindo(null)} />}
+      {unlinking && <UnlinkObraDialog ordemServico={unlinking} onClose={() => setUnlinking(null)} />}
     </div>
   );
 }

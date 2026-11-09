@@ -8,6 +8,7 @@ import type { DeleteOrdemServicoUseCase } from "../../application/usecases/ordem
 import type { GenerateOrdemServicoDocumentUseCase } from "../../application/usecases/ordem-servico/GenerateOrdemServicoDocumentUseCase.js";
 import type { GetProximoNumeroOrdemServicoUseCase } from "../../application/usecases/ordem-servico/GetProximoNumeroOrdemServicoUseCase.js";
 import type { EmitirOrdemServicoUseCase } from "../../application/usecases/ordem-servico/EmitirOrdemServicoUseCase.js";
+import type { UnlinkObraOrdemServicoUseCase } from "../../application/usecases/ordem-servico/UnlinkObraOrdemServicoUseCase.js";
 import { parseAnexos, parseComentariosTecnicos } from "../../domain/documents/anexos-os.js";
 import { DomainError } from "../../domain/errors/DomainError.js";
 import { normalizeFreeText } from "../../domain/normalization/text-normalizers.js";
@@ -89,6 +90,7 @@ export class OrdemServicoController {
     private generateOrdemServicoDocument: GenerateOrdemServicoDocumentUseCase,
     private getProximoNumero: GetProximoNumeroOrdemServicoUseCase,
     private emitirOrdemServico: EmitirOrdemServicoUseCase,
+    private unlinkObraOrdemServico: UnlinkObraOrdemServicoUseCase,
   ) {}
 
   async proximoNumero(req: Request, res: Response) {
@@ -236,6 +238,21 @@ export class OrdemServicoController {
 
       await this.deleteOrdemServico.execute({ ordemServicoId: id, user });
       res.status(200).json({ message: "Ordem de serviço successfully deleted" });
+    } catch (error) {
+      if (error instanceof DomainError) return res.status(400).json({ message: error.message });
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  }
+
+  async unlinkObra(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { user } = req;
+      if (!id || Array.isArray(id)) throw new DomainError("Invalid ID");
+      if (!user) throw new DomainError("User not found");
+
+      await this.unlinkObraOrdemServico.execute({ ordemServicoId: id, user });
+      res.status(200).json({ message: "Obra unlinked from ordem de serviço" });
     } catch (error) {
       if (error instanceof DomainError) return res.status(400).json({ message: error.message });
       return res.status(500).json({ message: "Internal server error" });
