@@ -32,6 +32,12 @@ export type ObraOrdemServicoResumo = {
   dataPrevisaoTermino: Date | null;
   // OS planejada (ainda não emitida): o valor dela não entra no da obra
   aguardandoEmissao: boolean;
+  // Se a OS tem orçamento lançado (sem ele a planejada não pode ser ativada)
+  temOrcamento: boolean;
+  // Estimativa com BDI digitada (reais); nula sem estimativa
+  estimativaComBdi: number | null;
+  // Valor da OS planejada (orçado ou estimado, com desconto, em reais); nulo na emitida
+  valorPlanejado: number | null;
   // Soma das notas não canceladas lançadas nesta OS
   valorExecutado: number;
   empenhos: { empenho_id: string; numero: string }[];

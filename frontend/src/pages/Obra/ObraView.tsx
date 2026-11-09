@@ -24,6 +24,8 @@ import { usePermission } from "../../hooks/usePermission";
 import { useObras } from "../../store/obras";
 import { getOrdemServicoSchedule, type ScheduleTone } from "../OrdemServico/ordem-servico-schedule";
 import { getBalance } from "../OrdemServico/ordem-servico-balance";
+import { isPlanejada, origemPlanejado } from "../OrdemServico/os-planejada";
+import { AtivarOrdemServicoButton } from "../OrdemServico/AtivarOrdemServico";
 import { OBRA_TIPO_LABEL, getObraBalance, getObraDeadlineHint, isObraOverdue } from "./obra-display";
 import { CompleteObraDialog } from "./CompleteObraDialog";
 import {
@@ -92,10 +94,11 @@ function OrdemServicoCard({ os, obra, onOpen }: { os: ObraOrdemServico; obra: Ob
     obra: { status: obra.status, dataConclusao: obra.dataConclusao ?? null },
   });
   // OS ainda não emitida: planejada (o valor fica fora do emitido da obra)
-  const status =
-    os.status === "ATIVO" && os.aguardandoEmissao
-      ? { label: "Planejada", tone: "closed" as const }
-      : (OS_STATUS[os.status] ?? OS_STATUS.CANCELADO!);
+  const planejada = isPlanejada({ status: os.status as OrdemServicoStatus, aguardandoEmissao: os.aguardandoEmissao });
+  const origem = origemPlanejado(os);
+  const status = planejada
+    ? { label: "Planejada", tone: "closed" as const }
+    : (OS_STATUS[os.status] ?? OS_STATUS.CANCELADO!);
   const elapsed = Math.round((schedule.elapsedRatio ?? 0) * 100);
   const executado = percentOf(os.valorExecutado, os.valor);
   const showToday = schedule.kind !== "concluded" && schedule.kind !== "inactive";
@@ -116,7 +119,19 @@ function OrdemServicoCard({ os, obra, onOpen }: { os: ObraOrdemServico; obra: Ob
             {os.empenhos.length > 0 && <> · {os.empenhos.map((e) => e.numero).join(", ")}</>}
           </p>
         </div>
-        <p className="text-sm font-semibold text-text-primary tabular-nums shrink-0">{formatCurrency(os.valor)}</p>
+        {planejada ? (
+          // Planejada: o valor é o orçado ou o estimado, em tom neutro (ainda não entra no emitido)
+          <p className="shrink-0 text-right">
+            <span className="block text-sm font-semibold text-text-secondary tabular-nums">
+              {origem === "sem valor" ? "—" : formatCurrency(os.valorPlanejado ?? 0)}
+            </span>
+            <span className="block text-[11px] text-text-muted">
+              {origem === "orcado" ? "orçado" : origem === "estimado" ? "estimado" : "sem estimativa"}
+            </span>
+          </p>
+        ) : (
+          <p className="text-sm font-semibold text-text-primary tabular-nums shrink-0">{formatCurrency(os.valor)}</p>
+        )}
       </div>
 
       <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3 text-left">
@@ -150,28 +165,41 @@ function OrdemServicoCard({ os, obra, onOpen }: { os: ObraOrdemServico; obra: Ob
           )}
         </div>
 
-        <div className="min-w-0">
-          <div className="flex items-center justify-between gap-2 text-xs">
-            <span className="text-text-muted">Liquidado</span>
-            <span className={cx("font-semibold tabular-nums", executado > 100 ? "text-danger-text" : "text-text-secondary")}>
-              {executado}%
-            </span>
+        {planejada ? (
+          // Sem nota fiscal ainda: no lugar do liquidado, o que falta para ativar (o botão fica à direita)
+          <div className="min-w-0 pr-28 text-xs">
+            <span className="text-text-muted">Planejada</span>
+            <p className="mt-1 text-[11px] text-text-muted">
+              {os.temOrcamento
+                ? "Orçamento lançado: ative a OS para emiti-la à empresa."
+                : "Falta lançar o orçamento para ativar a OS."}{" "}
+              O valor fica fora do emitido da obra até lá.
+            </p>
           </div>
-          <div className="mt-2">
-            <Bar percent={executado} className={executado > 100 ? "bg-danger-text" : executado >= 100 ? "bg-success-text" : "bg-primary-500"} />
+        ) : (
+          <div className="min-w-0">
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="text-text-muted">Liquidado</span>
+              <span className={cx("font-semibold tabular-nums", executado > 100 ? "text-danger-text" : "text-text-secondary")}>
+                {executado}%
+              </span>
+            </div>
+            <div className="mt-2">
+              <Bar percent={executado} className={executado > 100 ? "bg-danger-text" : executado >= 100 ? "bg-success-text" : "bg-primary-500"} />
+            </div>
+            <p className="mt-1 text-[11px] text-text-muted tabular-nums">
+              {formatCurrency(os.valorExecutado)} de {formatCurrency(os.valor)}
+              {os.status === "ATIVO" && <> · falta {formatCurrency(getBalance(os.valor, os.valorExecutado).saldo)}</>}
+            </p>
           </div>
-          <p className="mt-1 text-[11px] text-text-muted tabular-nums">
-            {formatCurrency(os.valorExecutado)} de {formatCurrency(os.valor)}
-            {os.status === "ATIVO" && <> · falta {formatCurrency(getBalance(os.valor, os.valorExecutado).saldo)}</>}
-          </p>
-        </div>
+        )}
       </div>
     </>
   );
 
   const base = "relative block w-full rounded-lg border border-border bg-surface pl-4 pr-3.5 py-3 overflow-hidden";
   return (
-    <li>
+    <li className="relative">
       {onOpen ? (
         <button
           type="button"
@@ -186,6 +214,12 @@ function OrdemServicoCard({ os, obra, onOpen }: { os: ObraOrdemServico; obra: Ob
         </button>
       ) : (
         <div className={base}>{body}</div>
+      )}
+      {/* Fora do botão do cartão (botão dentro de botão não vale), no canto de baixo */}
+      {planejada && (
+        <div className="absolute bottom-3 right-3.5">
+          <AtivarOrdemServicoButton ordemServico={os} />
+        </div>
       )}
     </li>
   );

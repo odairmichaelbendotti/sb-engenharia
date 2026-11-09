@@ -21,6 +21,12 @@ export type ObraOrdemServico = {
   status: string;
   // OS planejada (ainda não emitida): o valor dela não entra no da obra
   aguardandoEmissao: boolean;
+  // Se a OS tem orçamento lançado (sem ele a planejada não pode ser ativada)
+  temOrcamento: boolean;
+  // Estimativa com BDI digitada; nula sem estimativa
+  estimativaComBdi: number | null;
+  // Valor da OS planejada (orçado ou estimado, com desconto); nulo na emitida
+  valorPlanejado: number | null;
   dataInicio: string | null;
   dataPrevisaoTermino: string | null;
   valorExecutado: number;

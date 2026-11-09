@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, ArrowUpRight, Calculator, Eye, FileDown, Ruler, Send } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Calculator, Eye, FileDown, PlayCircle, Ruler } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import type { MedicaoResumo, PlanilhaOrcamento } from "../../../types/medicao";
@@ -83,7 +83,7 @@ export function OrcamentoMedicoesSection({ ordemServicoId, numero }: OrcamentoMe
     setEmitindo("enviando");
     try {
       await emitirOrdemServico(ordemServicoId);
-      toast.success("OS emitida: a empresa tem 48 horas para dar ciência.");
+      toast.success("OS ativada: a empresa tem 48 horas para dar ciência.");
       // A lista traz a emissão (selo e tramitação) e esta seção recarrega a planilha
       await fetchOrdensServico().catch(() => undefined);
       reload();
@@ -136,12 +136,12 @@ export function OrcamentoMedicoesSection({ ordemServicoId, numero }: OrcamentoMe
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface-muted px-3 py-2">
           <p className="text-xs text-text-secondary">
             {itens.length === 0
-              ? "OS planejada: o valor dela fica fora do emitido até a emissão. Lance o orçamento e emita a OS para a empresa."
-              : `OS planejada com orçamento (${formatCurrency(planilha.totais.valorOrcado)}): emita para que ela conte como emitida e a empresa a veja.`}
+              ? "OS planejada: o valor dela fica fora do emitido até a emissão. Lance o orçamento e ative a OS para emiti-la à empresa."
+              : `OS planejada com orçamento (${formatCurrency(planilha.totais.valorOrcado)}): ative a OS para que ela conte como emitida e a empresa a veja.`}
           </p>
           {permissoes.emitir && (
-            <Button size="sm" icon={Send} onClick={() => setEmitindo("confirmar")}>
-              Emitir OS
+            <Button size="sm" icon={PlayCircle} onClick={() => setEmitindo("confirmar")}>
+              Ativar OS
             </Button>
           )}
         </div>
@@ -164,14 +164,14 @@ export function OrcamentoMedicoesSection({ ordemServicoId, numero }: OrcamentoMe
       <ConfirmDialog
         open={emitindo !== null}
         tone="neutral"
-        icon={Send}
-        title={`Emitir a ${numero} para a empresa?`}
-        confirmLabel="Emitir OS"
+        icon={PlayCircle}
+        title={`Ativar a ${numero}?`}
+        confirmLabel="Ativar OS"
         loading={emitindo === "enviando"}
         onConfirm={emitir}
         onCancel={() => setEmitindo(null)}
       >
-        A empresa passa a ver a OS, com o valor de {formatCurrency(planilha.totais.valorOrcado)}, e tem 48 horas
+        A OS deixa de ser planejada: a empresa passa a ver a OS, com o valor de {formatCurrency(planilha.totais.valorOrcado)}, e tem 48 horas
         para dar ciência. Depois disso, mudar o valor do orçamento reemite a OS.
       </ConfirmDialog>
     </FormSection>

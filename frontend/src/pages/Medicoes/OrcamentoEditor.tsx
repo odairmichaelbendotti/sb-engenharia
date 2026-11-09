@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { AlertTriangle, CheckCircle2, CircleMinus, ClipboardPaste, FolderPlus, Lock, Plus, Send, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CircleMinus, ClipboardPaste, FolderPlus, Lock, PlayCircle, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { EscopoOrcamento, OrcamentoItem, OrcamentoPayload, PlanilhaOrcamento } from "../../../types/medicao";
 import { useMedicoes } from "../../store/medicoes";
@@ -417,7 +417,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
         reemitida
           ? "Orçamento salvo e OS reemitida: a empresa precisa dar ciência de novo."
           : ordemServico.aguardandoEmissao
-            ? "Orçamento salvo na OS planejada. Para que ela conte como emitida, emita a OS (a emissão confere o saldo dos empenhos)."
+            ? "Orçamento salvo na OS planejada. Para que ela conte como emitida, clique em “Ativar OS” (a ativação confere o saldo dos empenhos)."
             : "Orçamento salvo",
       );
       guard.allowNextNavigation();
@@ -433,7 +433,7 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
     setEmitindo("enviando");
     try {
       await emitirOrdemServico(ordemServico.id);
-      toast.success("OS emitida: a empresa tem 48 horas para dar ciência.");
+      toast.success("OS ativada: a empresa tem 48 horas para dar ciência.");
       onSaved();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao emitir a ordem de serviço");
@@ -898,8 +898,8 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
       >
         {dirty && <span className="text-[11px] text-warning-text">Alterações não salvas</span>}
         {permissoes.emitir && !dirty && (
-          <Button variant="secondary" icon={Send} onClick={() => setEmitindo("confirmar")}>
-            Emitir OS
+          <Button variant="secondary" icon={PlayCircle} onClick={() => setEmitindo("confirmar")}>
+            Ativar OS
           </Button>
         )}
         {/* Sem edição, salvar ainda serve para acertar o valor da OS com o orçamento */}
@@ -948,16 +948,16 @@ export function OrcamentoEditor({ planilha, onSaved }: OrcamentoEditorProps) {
       <ConfirmDialog
         open={emitindo !== null}
         tone="neutral"
-        icon={Send}
-        title={`Emitir a ${ordemServico.numero} para a empresa?`}
-        confirmLabel="Emitir OS"
+        icon={PlayCircle}
+        title={`Ativar a ${ordemServico.numero}?`}
+        confirmLabel="Ativar OS"
         loading={emitindo === "enviando"}
         onConfirm={handleEmitir}
         onCancel={() => setEmitindo(null)}
       >
         {doContrato
-          ? `A empresa passa a ver a OS, com o orçamento do contrato de ${formatCurrency(total)} e ${formatCurrency(valorOs ?? somaDistribuida)} empenhados, e tem 48 horas para dar ciência. Depois disso, mudar o orçamento ou o empenhado reemite a OS.`
-          : `A empresa passa a ver a OS, com o valor de ${formatCurrency(valorOs ?? total)}, e tem 48 horas para dar ciência. Depois disso, mudar o valor do orçamento reemite a OS.`}
+          ? `A OS deixa de ser planejada: a empresa passa a ver a OS, com o orçamento do contrato de ${formatCurrency(total)} e ${formatCurrency(valorOs ?? somaDistribuida)} empenhados, e tem 48 horas para dar ciência. Depois disso, mudar o orçamento ou o empenhado reemite a OS.`
+          : `A OS deixa de ser planejada: a empresa passa a ver a OS, com o valor de ${formatCurrency(valorOs ?? total)}, e tem 48 horas para dar ciência. Depois disso, mudar o valor do orçamento reemite a OS.`}
       </ConfirmDialog>
       {guard.dialog}
     </>
