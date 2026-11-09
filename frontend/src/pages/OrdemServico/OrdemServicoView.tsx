@@ -1,5 +1,6 @@
 import { isPlanejada } from "./os-planejada";
 import { PlanejadoSection } from "./PlanejadoCell";
+import { AtivarOrdemServicoButton } from "./AtivarOrdemServico";
 import { ANEXOS_PADRAO, numeroRomano } from "./anexos-os";
 import { lazy, Suspense, useState } from "react";
 import {
@@ -585,16 +586,20 @@ export function OrdemServicoView({
       title={obra?.nome ?? empenho.description}
       editLabel="Editar OS"
       headerActions={
-        <Button
-          variant="secondary"
-          size="sm"
-          icon={FileDown}
-          loading={generating}
-          onClick={handleGenerateDocument}
-          title="Baixar a ordem de serviço preenchida em PDF"
-        >
-          <span className="hidden sm:inline">Baixar PDF</span>
-        </Button>
+        <>
+          {/* OS planejada: a ação principal do modal é ativá-la */}
+          {isPlanejada(ordemServico) && <AtivarOrdemServicoButton ordemServico={ordemServico} variant="primary" />}
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={FileDown}
+            loading={generating}
+            onClick={handleGenerateDocument}
+            title="Baixar a ordem de serviço preenchida em PDF"
+          >
+            <span className="hidden sm:inline">Baixar PDF</span>
+          </Button>
+        </>
       }
     >
       {aguardandoCiencia && ordemServico.cienciaPrazoAte && (

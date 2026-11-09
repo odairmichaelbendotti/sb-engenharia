@@ -13,7 +13,7 @@ import {
   Loader2,
   PauseCircle,
   Plus,
-  Send,
+  PlayCircle,
   Trash2,
   Unlink,
   type LucideIcon,
@@ -42,7 +42,7 @@ import {
 import { OrcamentoTag } from "./OrcamentoTag";
 import { abrirOrcamento } from "./orcamento-link";
 import { FinalizeOrdemServicoDialog } from "./FinalizeOrdemServico";
-import { EmitirOrdemServicoDialog } from "./EmitirOrdemServicoDialog";
+import { AtivarOrdemServicoButton, AtivarOrdemServicoDialog } from "./AtivarOrdemServico";
 import { UnlinkObraDialog } from "./UnlinkObraDialog";
 import { isQuitada } from "./ordem-servico-balance";
 import { ordemServicoStatusDisplay } from "./ordem-servico-display";
@@ -90,7 +90,7 @@ export function OrdemServicoList({ ordensServico, isLoading = false, onView, onE
   const fetchOrdemServicoDocument = useOrdensServico((s) => s.fetchOrdemServicoDocument);
   const [page, setPage] = useState(1);
   const [finalizing, setFinalizing] = useState<OrdemServico | null>(null);
-  const [emitindo, setEmitindo] = useState<OrdemServico | null>(null);
+  const [ativando, setAtivando] = useState<OrdemServico | null>(null);
   const [unlinking, setUnlinking] = useState<OrdemServico | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(ordensServico.length / ITEMS_PER_PAGE));
@@ -164,12 +164,21 @@ export function OrdemServicoList({ ordensServico, isLoading = false, onView, onE
                         {status.label}
                       </StatusPill>
                     </span>
+                    {isPlanejada(os) && (
+                      <span className="xl:hidden">
+                        <AtivarOrdemServicoButton ordemServico={os} />
+                      </span>
+                    )}
                   </div>
                 </Td>
                 <Td className="hidden xl:table-cell">
-                  <StatusPill tone={status.tone} title={status.title}>
-                    {status.label}
-                  </StatusPill>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <StatusPill tone={status.tone} title={status.title}>
+                      {status.label}
+                    </StatusPill>
+                    {/* Planejada: a ação de ativar fica à vista, não só no menu ⋯ */}
+                    {isPlanejada(os) && <AtivarOrdemServicoButton ordemServico={os} />}
+                  </div>
                 </Td>
                 <Td className="hidden lg:table-cell">
                   {os.dataInicio && os.dataPrevisaoTermino ? (
@@ -196,12 +205,12 @@ export function OrdemServicoList({ ordensServico, isLoading = false, onView, onE
                     items={[
                       { label: "Visualizar", icon: Eye, onClick: () => onView(os) },
                       { label: "Editar", icon: Edit2, onClick: () => onEdit(os), hidden: !canEditAdministrativo },
-                      // Atalho da OS planejada com orçamento: emitir sem abrir o orçamento
+                      // OS planejada: ativar (emitir); sem orçamento, o diálogo leva a lançá-lo
                       {
-                        label: "Emitir OS",
-                        icon: Send,
-                        onClick: () => setEmitindo(os),
-                        hidden: !canCreateOrdemServico || !isPlanejada(os) || !os.temOrcamento,
+                        label: "Ativar OS",
+                        icon: PlayCircle,
+                        onClick: () => setAtivando(os),
+                        hidden: !canCreateOrdemServico || !isPlanejada(os),
                       },
                       {
                         label: "Abrir orçamento",
@@ -268,7 +277,7 @@ export function OrdemServicoList({ ordensServico, isLoading = false, onView, onE
       />
 
       {finalizing && <FinalizeOrdemServicoDialog ordemServico={finalizing} open onClose={() => setFinalizing(null)} />}
-      {emitindo && <EmitirOrdemServicoDialog ordemServico={emitindo} onClose={() => setEmitindo(null)} />}
+      {ativando && <AtivarOrdemServicoDialog ordemServico={ativando} onClose={() => setAtivando(null)} />}
       {unlinking && <UnlinkObraDialog ordemServico={unlinking} onClose={() => setUnlinking(null)} />}
     </div>
   );

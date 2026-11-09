@@ -18,6 +18,7 @@ import type {
 import { prisma } from "../../prisma/prisma.js";
 import { osDaEmpresa, osEmitida } from "./os-escopo.js";
 import { isEmitida } from "../../../domain/ordem-servico/os-planejada.js";
+import { orcadoPorOs, planejamento } from "./os-planejamento.js";
 
 type InvoiceRow = { value: number; status: string; ordemServico_id: string | null };
 
@@ -53,6 +54,10 @@ const ORDEM_SERVICO_RESUMO_SELECT = {
   valor: true,
   status: true,
   aguardandoEmissao: true,
+  // Valor planejado da OS ainda não emitida (estimativa ou orçado)
+  estimativaComBdi: true,
+  desconto: true,
+  _count: { select: { itens: true } },
   dataInicio: true,
   dataPrevisaoTermino: true,
   empenhos: { orderBy: { createdAt: "asc" }, select: { empenho: { select: { id: true, numero: true } } } },
@@ -86,11 +91,19 @@ type OrdemServicoRow = {
   valor: number;
   status: string;
   aguardandoEmissao: boolean;
+  estimativaComBdi: number | null;
+  desconto: number;
+  _count: { itens: number };
   dataInicio: Date | null;
   dataPrevisaoTermino: Date | null;
   empenhos: { empenho: { id: string; numero: string } }[];
   empenho: { contrato: ObraOrdemServicoResumo["contrato"] };
 };
+
+// Orçado (centavos) das OS planejadas com orçamento, para o valor planejado do resumo
+function orcadoDasPlanejadas(ordensServico: Pick<OrdemServicoRow, "id" | "aguardandoEmissao" | "_count">[]) {
+  return orcadoPorOs(ordensServico.filter((os) => os.aguardandoEmissao && os._count.itens > 0).map((os) => os.id));
+}
 
 type InvoiceInfoRow = InvoiceRow & {
   id: string;
@@ -106,13 +119,20 @@ type ObraRow = Omit<PersistedObra, "valorExecutado"> & {
   invoices: InvoiceInfoRow[];
 };
 
-function mapOrdemServicoResumo(os: OrdemServicoRow, invoices: InvoiceRow[]): ObraOrdemServicoResumo {
+function mapOrdemServicoResumo(
+  os: OrdemServicoRow,
+  invoices: InvoiceRow[],
+  orcado: Map<string, number>,
+): ObraOrdemServicoResumo {
   return {
     id: os.id,
     numero: os.numero,
     valor: os.valor / 100,
     status: os.status,
     aguardandoEmissao: os.aguardandoEmissao,
+    temOrcamento: os._count.itens > 0,
+    estimativaComBdi: os.estimativaComBdi === null ? null : os.estimativaComBdi / 100,
+    valorPlanejado: planejamento(os, orcado).valorPlanejado,
     dataInicio: os.dataInicio,
     dataPrevisaoTermino: os.dataPrevisaoTermino,
     valorExecutado: sumActiveInvoicesCents(invoices, os.id) / 100,
@@ -143,7 +163,7 @@ function resumoDasOS(
   };
 }
 
-function mapObraListItem(row: ObraRow, includeInvoices: boolean): ObraListItem {
+function mapObraListItem(row: ObraRow, includeInvoices: boolean, orcado: Map<string, number>): ObraListItem {
   const { ordensServico, invoices, ...obra } = row;
   const resumo = resumoDasOS(ordensServico);
   return {
@@ -154,7 +174,7 @@ function mapObraListItem(row: ObraRow, includeInvoices: boolean): ObraListItem {
     dataPrevisaoTermino: resumo.dataPrevisaoTermino,
     valor: resumo.valorCentavos / 100,
     contrato: ordensServico[0]?.empenho.contrato ?? null,
-    ordensServico: ordensServico.map((os) => mapOrdemServicoResumo(os, invoices)),
+    ordensServico: ordensServico.map((os) => mapOrdemServicoResumo(os, invoices, orcado)),
     // Só devolvemos as notas para quem pode ver o domínio administrativo — evita
     // vazar nota fiscal pra quem só tem acesso de engenharia, mesmo que a UI já esconda
     invoices: includeInvoices ? invoices.map((invoice) => ({ ...invoice, value: invoice.value / 100 })) : [],
@@ -165,7 +185,7 @@ export class PrismaObraRepository implements IObraRepository {
   private async findListItem(id: string): Promise<ObraListItem> {
     const row = await prisma.obra.findUniqueOrThrow({ where: { id }, include: obraListInclude() });
     // Resposta de create/update vai para quem edita obras; as notas ficam fora
-    return mapObraListItem(row, false);
+    return mapObraListItem(row, false, await orcadoDasPlanejadas(row.ordensServico));
   }
 
   async create(obra: ObraEntity, ordemServicoIds: string[]): Promise<ObraListItem> {
@@ -221,7 +241,8 @@ export class PrismaObraRepository implements IObraRepository {
         prisma.obra.count({ where: { ...baseWhere, status: "CANCELADA" } }),
       ]);
 
-      const items = obras.map((o) => mapObraListItem(o, Boolean(includeInvoices)));
+      const orcado = await orcadoDasPlanejadas(obras.flatMap((o) => o.ordensServico));
+      const items = obras.map((o) => mapObraListItem(o, Boolean(includeInvoices), orcado));
 
       return {
         obras: items,
@@ -348,6 +369,7 @@ export class PrismaObraRepository implements IObraRepository {
 
       const notasAtivas = invoices.filter((invoice) => invoice.status !== "CANCELADO");
       const resumo = resumoDasOS(ordensServico);
+      const orcado = await orcadoDasPlanejadas(ordensServico);
 
       return {
         obra: { ...obra, dataInicio: resumo.dataInicio, dataPrevisaoTermino: resumo.dataPrevisaoTermino },
@@ -358,6 +380,7 @@ export class PrismaObraRepository implements IObraRepository {
               empenhos: os.empenhos.map((v) => ({ empenho: { id: v.empenho.id, numero: v.empenho.numero } })),
             },
             invoices,
+            orcado,
           ),
         ),
         empenhos: empenhosDaObra.map((e) => ({
