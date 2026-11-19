@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dadosAlteracao, dadosFiscal, fiscalizacaoEscopo, idsOrdens } from "./fiscalizacao.js";
+import { dadosAlteracao, dadosFiscal, dadosRamal, fiscalizacaoEscopo, idsOrdens } from "./fiscalizacao.js";
 import type { AuthenticatedUser } from "../@types/AuthenticatedUser.js";
 
 const user: AuthenticatedUser = { id: "u", name: "Coordenação", email: "u@example.com", role: "COORDENACAO", tenant_id: "a", approved: true };
@@ -14,10 +14,15 @@ describe("Gestão da fiscalização", () => {
       expect(() => fiscalizacaoEscopo({ ...user, role }, "a")).toThrow("permissão");
     }
   });
-  it("valida contatos, situação e normaliza o e-mail", () => {
-    expect(dadosFiscal({ nome: " Fulano ", ramal: " 123 ", email: "FISCAL@Example.com ", ativo: true }).email).toBe("fiscal@example.com");
-    expect(() => dadosFiscal({ nome: "a", ramal: "1", email: "inválido", ativo: true })).toThrow("e-mail válido");
-    expect(() => dadosFiscal({ nome: "a", ramal: "1", email: "a@b.com", ativo: "false" })).toThrow("Situação");
+  it("exige o usuário da unidade e ignora dados pessoais enviados pelo formulário", () => {
+    expect(dadosFiscal({ user_id: " u1 ", nome: "Nome adulterado", ramal: "999", email: "outro@example.com", ativo: true })).toEqual({ user_id: "u1", ativo: true });
+    expect(() => dadosFiscal({ nome: "Nome manual", ativo: true })).toThrow("Selecione um usuário");
+    expect(() => dadosFiscal({ user_id: "u1", ativo: "false" })).toThrow("Situação");
+    expect(dadosFiscal({ user_id: null, ativo: false })).toEqual({ user_id: null, ativo: false });
+  });
+  it("permite ramal opcional no perfil, limitado a 40 caracteres", () => {
+    expect(dadosRamal(" 1234 ")).toBe("1234"); expect(dadosRamal("")).toBe("");
+    expect(() => dadosRamal(1234)).toThrow("ramal"); expect(() => dadosRamal("1".repeat(41))).toThrow("ramal");
   });
   it("rejeita datas impossíveis, futuras e alterações sem justificativa", () => {
     for (const vigencia of ["2026-02-30", "2099-01-01", "inválida"]) expect(() => dadosAlteracao({ vigencia, motivo: "Portaria" })).toThrow();

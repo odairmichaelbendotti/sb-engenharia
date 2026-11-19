@@ -19,14 +19,17 @@ export class SignUpUseCase {
     tenant_id,
     email,
     password,
+    ramal,
   }: {
     name: string;
     tenant_id: string;
     email: string;
     password: string;
+    ramal?: string;
   }) {
     // Padroniza os textos antes de validar, buscar duplicados e gravar
     ({ name, email } = normalizeInput({ name, email }, USER_RULES));
+    if (ramal !== undefined && (typeof ramal !== "string" || ramal.trim().length > 40)) throw new DomainError("Ramal deve ter até 40 caracteres");
     const userExists = await this.repository.findByEmail(email);
 
     if (userExists) {
@@ -46,6 +49,7 @@ export class SignUpUseCase {
       tenant_id,
       email,
       approved: false,
+      ramal: ramal?.trim() ?? "",
       role: "USER",
       password: hashedPassword,
     });

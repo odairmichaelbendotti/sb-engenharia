@@ -6,12 +6,13 @@ export type Designacao = {
   contrato: { id: string; identificador: string };
 };
 export type Fiscal = {
-  id: string; nome: string; email: string; ramal: string; ativo: boolean; vinculos: Designacao[];
+  id: string; user_id: string | null; usuarioDisponivel: boolean; nome: string; email: string; ramal: string; ativo: boolean; vinculos: Designacao[];
 };
 export type FiscalizacaoData = {
   tenant_id: string;
   unidades: { id: string; name: string }[];
   fiscais: Fiscal[];
+  usuarios: { id: string; name: string; email: string; ramal: string; role: string }[];
   contratos: { id: string; identificador: string; status: string }[];
   ordens: { id: string; numero: string; status: string; fiscalTecnico_id: string | null; fiscalAdministrativo_id: string | null; empenho: { contrato_id: string } }[];
   historico: { id: string; acao: string; autorNome: string; autorPerfil: string; motivo: string; vigencia: string; createdAt: string;

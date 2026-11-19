@@ -30,6 +30,7 @@ export default function Fiscalizacao() {
   useEffect(() => {
     let current = true;
     fiscalizacaoRequest(`?tenant_id=${encodeURIComponent(tenant)}`).then((result: FiscalizacaoData) => {
+      if (!Array.isArray(result.usuarios)) throw new Error("A seleção de usuários da unidade requer a versão atualizada do backend. Conclua a migração e o deploy da API para usar a fiscalização.");
       if (current) { setData(result); setError(""); }
     }).catch((err: Error) => { if (current) setError(err.message); }).finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
@@ -75,15 +76,15 @@ export default function Fiscalizacao() {
       {error && <div role="alert" className="p-8 text-center space-y-3"><p className="text-danger-text">{error}</p><Button variant="secondary" onClick={() => { setLoading(true); setRevision((r) => r + 1); }}>Tentar novamente</Button></div>}
       {ready && tab === "fiscais" && <>
         <Table><TableHead><Th>Fiscal</Th><Th width="w-48" className="hidden md:table-cell">Contratos / OS</Th><Th width="w-24">Situação</Th><Th actions /></TableHead><TableBody>{fiscais.map((f) => <Tr key={f.id}>
-          <Td><p className="font-semibold">{f.nome}</p><p className="text-xs text-text-muted break-all">{f.email} · Ramal {f.ramal}</p></Td>
+          <Td><p className="font-semibold">{f.nome}</p><p className="text-xs text-text-muted break-all">{f.email}{f.ramal ? ` · Ramal ${f.ramal}` : ""}</p>{!f.user_id && <p className="text-xs text-warning-text">Associar a um usuário da unidade</p>}{f.user_id && !f.usuarioDisponivel && <p className="text-xs text-warning-text">Usuário indisponível na unidade</p>}</Td>
           <Td className="hidden md:table-cell"><p>{new Set(f.vinculos.filter((v) => v.ativo).map((v) => v.contrato_id)).size} contratos ativos</p><p className="text-xs text-text-muted">{ordensCount(f.vinculos.map((v) => v.id))} OS vinculadas</p></Td>
           <Td><Badge tone={f.ativo ? "success" : "neutral"}>{f.ativo ? "Ativo" : "Inativo"}</Badge></Td>
           <Td actions><ActionMenu label={`Ações de ${f.nome}`} items={[
             { label: "Editar fiscal", icon: Pencil, onClick: () => setAcao({ tipo: "fiscal", fiscal: f }) },
-            { label: "Vincular ao contrato", icon: Link2, hidden: !f.ativo, onClick: () => setAcao({ tipo: "vincular", fiscal: f }) },
+            { label: "Vincular ao contrato", icon: Link2, hidden: !f.ativo || !f.usuarioDisponivel, onClick: () => setAcao({ tipo: "vincular", fiscal: f }) },
           ]} /></Td>
         </Tr>)}</TableBody></Table>
-        {!fiscais.length && <p className="p-8 text-center text-sm text-text-muted">Nenhum fiscal encontrado. Cadastre uma pessoa ou ajuste os filtros.</p>}
+        {!fiscais.length && <p className="p-8 text-center text-sm text-text-muted">Nenhum fiscal encontrado. Selecione um usuário da unidade para cadastrar como fiscal ou ajuste os filtros.</p>}
       </>}
       {ready && tab === "designacoes" && <>
         <div className="px-4 pt-3 flex justify-end"><Button size="sm" variant="secondary" icon={Link2} onClick={() => setAcao({ tipo: "vincular" })}>Vincular fiscal</Button></div>

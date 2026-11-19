@@ -21,10 +21,15 @@ function texto(value: unknown, campo: string, max = 200) {
 }
 
 export function dadosFiscal(body: Record<string, unknown>) {
-  const email = texto(body.email, "o e-mail").toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new DomainError("Informe um e-mail válido.");
   if (typeof body.ativo !== "boolean") throw new DomainError("Situação do fiscal inválida.");
-  return { nome: texto(body.nome, "o nome"), ramal: texto(body.ramal, "o ramal", 40), email, ativo: body.ativo };
+  const user_id = body.user_id == null || body.user_id === "" ? null : texto(body.user_id, "o usuário da unidade");
+  if (!user_id && body.ativo) throw new DomainError("Selecione um usuário da unidade para cadastrar o fiscal.");
+  return { user_id, ativo: body.ativo };
+}
+
+export function dadosRamal(value: unknown) {
+  if (typeof value !== "string" || value.trim().length > 40) throw new DomainError("Informe um ramal de até 40 caracteres.");
+  return value.trim();
 }
 
 export function dadosAlteracao(body: Record<string, unknown>) {

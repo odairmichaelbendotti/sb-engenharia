@@ -48,6 +48,7 @@ model User {
   id        String   @id @default(uuid())
   name      String
   email     String   @unique
+  ramal     String   @default("")
   password  String
   role      UserRole @default(USER)
   approved Boolean @default(false)
@@ -61,6 +62,7 @@ model User {
   company    Company? @relation(fields: [company_id], references: [id])
 
   notificacoesLidas NotificacaoLeitura[]
+  fiscais Fiscal[]
 }
 
 model Company {
@@ -247,11 +249,14 @@ model FiscalContrato {
   @@index([contrato_id])
 }
 
-// Cadastro de pessoas por unidade, independente de conta de acesso.
+// Fiscal da unidade, vinculado ao usuário interno dessa mesma unidade.
 model Fiscal {
   id String @id @default(uuid())
   tenant_id String
   tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+  // Nulo somente em cadastros antigos ainda não associados a um usuário.
+  user_id String?
+  user User? @relation(fields: [user_id], references: [id], onDelete: Restrict)
   nome String
   email String
   ramal String
@@ -261,6 +266,7 @@ model Fiscal {
   vinculos FiscalContrato[]
 
   @@unique([tenant_id, email])
+  @@unique([tenant_id, user_id])
 }
 
 model FiscalizacaoHistorico {

@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Eye, Users as UsersIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Phone, Users as UsersIcon } from "lucide-react";
 import type { User } from "../../../types/user";
 import { ActionMenu, IconButton, Select, StatusPill, Table, TableBody, TableHead, Td, Th, Tr } from "../../components/ui";
 import { getInitials } from "../../utils/get-initial";
@@ -11,6 +11,7 @@ type UsersTableProps = {
   currentUserId: string;
   assignableRoles: User["role"][];
   onView: (user: User) => void;
+  onEditRamal: (user: User) => void;
   onRequestRoleChange: (user: User, role: User["role"]) => void;
   onPageChange: (updater: (page: number) => number) => void;
 };
@@ -22,6 +23,7 @@ export default function UsersTable({
   currentUserId,
   assignableRoles,
   onView,
+  onEditRamal,
   onRequestRoleChange,
   onPageChange,
 }: UsersTableProps) {
@@ -96,7 +98,10 @@ export default function UsersTable({
                 <Td actions>
                   <ActionMenu
                     label={`Ações do usuário ${user.name}`}
-                    items={[{ label: "Visualizar", icon: Eye, onClick: () => onView(user) }]}
+                    items={[
+                      { label: "Visualizar", icon: Eye, onClick: () => onView(user) },
+                      { label: "Editar ramal", icon: Phone, hidden: !assignableRoles.length || !user.approved || user.role === "EMPRESA" || !!user.company_id, onClick: () => onEditRamal(user) },
+                    ]}
                   />
                 </Td>
               </Tr>

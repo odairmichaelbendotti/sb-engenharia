@@ -5,6 +5,7 @@ type UserProps = {
   tenant_id: string;
   name: string;
   email: string;
+  ramal?: string;
   password: string;
   approved: boolean;
   role: "PLATFORM_ADMIN" | "MASTER" | "COORDENACAO" | "ENGENHARIA" | "ADMINISTRATIVO" | "USER" | "EMPRESA";
@@ -16,6 +17,7 @@ export class User {
   public tenant_id: string;
   public name: string;
   public readonly email: string;
+  public readonly ramal: string;
   public readonly password: string;
   public role: "PLATFORM_ADMIN" | "MASTER" | "COORDENACAO" | "ENGENHARIA" | "ADMINISTRATIVO" | "USER" | "EMPRESA";
   public approved: boolean;
@@ -30,6 +32,7 @@ export class User {
     this.tenant_id = props.tenant_id;
     this.name = props.name;
     this.email = props.email;
+    this.ramal = props.ramal ?? "";
     this.password = props.password;
     this.role = props.role ?? "USER";
     this.approved = props.approved;

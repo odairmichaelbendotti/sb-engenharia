@@ -36,6 +36,7 @@ export class AuthMiddleware {
       id: currentUser.id as string,
       name: currentUser.name,
       email: currentUser.email,
+      ramal: currentUser.ramal,
       role: currentUser.role as AuthenticatedUser["role"],
       approved: currentUser.approved,
       tenant_id: currentUser.tenant_id,

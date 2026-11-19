@@ -13,12 +13,13 @@ type UserStore = {
     email: string;
     password: string;
     tenant_id: string;
+    ramal?: string;
   }) => Promise<User>;
 };
 
 export const useUser = create<UserStore>((set) => ({
   user: null,
-  signup: async ({ name, email, password, tenant_id }) => {
+  signup: async ({ name, email, password, tenant_id, ramal }) => {
     const response = await defaultFetch(`/signup`, {
       method: "POST",
       credentials: "include",
@@ -27,6 +28,7 @@ export const useUser = create<UserStore>((set) => ({
         email,
         password,
         tenant_id,
+        ramal,
       }),
     });
 

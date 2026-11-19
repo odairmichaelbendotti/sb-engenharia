@@ -11,6 +11,7 @@ import UsersTable from "./UsersTable";
 import { ROLE_LABELS } from "./role-labels";
 import { ROLE_GUIDE_BY_ROLE } from "./role-guide";
 import { RoleGuideModal } from "./RoleGuideModal";
+import { UserRamalModal } from "./UserRamalModal";
 
 type PendingRoleChange = { user: User; role: User["role"] };
 
@@ -20,6 +21,7 @@ const Usuarios = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewingUser, setViewingUser] = useState<User | null>(null);
+  const [ramalUser, setRamalUser] = useState<User | null>(null);
   const [pendingChange, setPendingChange] = useState<PendingRoleChange | null>(
     null,
   );
@@ -105,6 +107,7 @@ const Usuarios = () => {
             currentUserId={currentUser?.id ?? ""}
             assignableRoles={assignableRoles}
             onView={setViewingUser}
+            onEditRamal={setRamalUser}
             onRequestRoleChange={(user, role) => setPendingChange({ user, role })}
             onPageChange={(updater) => loadUsers(updater(page))}
           />
@@ -129,6 +132,7 @@ const Usuarios = () => {
       </ConfirmDialog>
 
       {viewingUser && <UserViewModal user={viewingUser} onClose={() => setViewingUser(null)} />}
+      {ramalUser && <UserRamalModal user={ramalUser} onClose={() => setRamalUser(null)} onSaved={() => { setRamalUser(null); void loadUsers(page); }} />}
 
       <RoleGuideModal
         open={isGuideOpen}

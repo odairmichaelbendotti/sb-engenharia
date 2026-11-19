@@ -2,6 +2,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  ramal?: string;
   role:
     | "USER"
     | "ENGENHARIA"

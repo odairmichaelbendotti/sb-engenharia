@@ -31,19 +31,21 @@ export class UserController {
 
   async signup(req: Request, res: Response) {
     try {
-      const { name, email, password, tenant_id } = req.body;
+      const { name, email, password, tenant_id, ramal } = req.body;
 
       const { token, createdUser: user } = await this.signUpUseCase.execute({
         name,
         tenant_id,
         email,
         password,
+        ramal,
       });
 
       const userResponse = {
         id: user.id,
         name: user.name,
         email: user.email,
+        ramal: user.ramal,
         approved: user.approved,
         role: user.role,
         tenant_id: user.tenant_id,
@@ -84,6 +86,7 @@ export class UserController {
         id: user.id,
         name: user.name,
         email: user.email,
+        ramal: user.ramal,
         approved: user.approved,
         role: user.role,
         tenant_id: user.tenant_id,

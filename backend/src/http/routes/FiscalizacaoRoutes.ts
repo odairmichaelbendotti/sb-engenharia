@@ -3,7 +3,7 @@ import { AuthMiddleware } from "../middleware/AuthMiddleware.js";
 import { TokenGenerator } from "../../infrastructure/cryptography/TokenGenerator.js";
 import { PrismaUserRepository } from "../../infrastructure/database/prisma/PrismaUserRepository.js";
 import { PrismaFiscalizacaoRepository } from "../../infrastructure/database/prisma/PrismaFiscalizacaoRepository.js";
-import { dadosAlteracao, dadosFiscal, fiscalizacaoEscopo, idsOrdens, tipoFiscal } from "../../domain/fiscalizacao.js";
+import { dadosAlteracao, dadosFiscal, dadosRamal, fiscalizacaoEscopo, idsOrdens, tipoFiscal } from "../../domain/fiscalizacao.js";
 import { DomainError } from "../../domain/errors/DomainError.js";
 import { DomainAccessPolicy } from "../../domain/polices/DomainAccessPolicy.js";
 
@@ -26,6 +26,8 @@ function endpoint(run: (req: Request, tenant_id: string) => Promise<unknown>) {
 }
 
 FiscalizacaoRoutes.get("/fiscalizacao", auth.handle, endpoint((req, tenant) => repository.list(tenant, req.user)));
+FiscalizacaoRoutes.put("/fiscalizacao/usuarios/:id/ramal", auth.handle, endpoint((req, tenant) =>
+  repository.updateUserRamal(req.user, tenant, String(req.params.id), dadosRamal(req.body.ramal))));
 FiscalizacaoRoutes.post("/fiscalizacao/fiscais", auth.handle, endpoint((req, tenant) =>
   repository.save(req.user, tenant, null, dadosFiscal(req.body), dadosAlteracao(req.body))));
 FiscalizacaoRoutes.put("/fiscalizacao/fiscais/:id", auth.handle, endpoint((req, tenant) =>

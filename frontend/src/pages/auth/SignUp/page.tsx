@@ -11,6 +11,7 @@ export default function SignUp() {
   const [step, setStep] = useState<1 | 2>(1);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [ramal, setRamal] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [tenantId, setTenantId] = useState("");
@@ -86,6 +87,7 @@ export default function SignUp() {
         email,
         password,
         tenant_id: tenantId,
+        ramal,
       });
       toast.info(`${response.name.split(" ")[0]}, seja bem-vindo!`);
       navigate("/");
@@ -123,6 +125,8 @@ export default function SignUp() {
             setName={setName}
             email={email}
             setEmail={setEmail}
+            ramal={ramal}
+            setRamal={setRamal}
             password={password}
             setPassword={setPassword}
             confirmPassword={confirmPassword}

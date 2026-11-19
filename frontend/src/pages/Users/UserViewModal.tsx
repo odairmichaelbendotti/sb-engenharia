@@ -1,4 +1,4 @@
-import { Building2, Check, KeyRound, Mail, ShieldCheck, UserRound } from "lucide-react";
+import { Building2, Check, KeyRound, Mail, Phone, ShieldCheck, UserRound } from "lucide-react";
 import type { User } from "../../../types/user";
 import { getInitials } from "../../utils/get-initial";
 import {
@@ -43,6 +43,7 @@ export function UserViewModal({ user, onClose }: { user: User; onClose: () => vo
             <DetailItem icon={ShieldCheck} label="Perfil">
               {ROLE_LABELS[user.role]}
             </DetailItem>
+            <DetailItem icon={Phone} label="Ramal">{user.ramal || "Não informado"}</DetailItem>
             <DetailItem icon={user.company_id ? Building2 : KeyRound} label="Tipo de acesso">
               {user.company_id ? "Login de empresa contratada" : "Usuário da organização"}
             </DetailItem>

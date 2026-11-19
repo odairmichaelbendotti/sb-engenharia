@@ -8,6 +8,8 @@ type SignUpStepOneProps = {
   setName: (value: string) => void;
   email: string;
   setEmail: (value: string) => void;
+  ramal: string;
+  setRamal: (value: string) => void;
   password: string;
   setPassword: (value: string) => void;
   confirmPassword: string;
@@ -20,6 +22,8 @@ export default function SignUpStepOne({
   setName,
   email,
   setEmail,
+  ramal,
+  setRamal,
   password,
   setPassword,
   confirmPassword,
@@ -58,6 +62,9 @@ export default function SignUpStepOne({
           />
         </Field>
 
+        <Field label="Ramal" hint="Opcional. Será reaproveitado nas designações de fiscalização.">
+          <Input value={ramal} maxLength={40} onChange={(e) => setRamal(e.target.value)} placeholder="Ex.: 5174" />
+        </Field>
         <Field label="Senha">
           <PasswordInput value={password} onChange={setPassword} />
         </Field>
