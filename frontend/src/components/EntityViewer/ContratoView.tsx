@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { useNavigate } from "react-router";
+import { usePermission } from "../../hooks/usePermission";
 import {
   Building2,
   CalendarDays,
@@ -23,6 +25,7 @@ import { ordemServicoStatusDisplay } from "../../pages/OrdemServico/ordem-servic
 import { getOrdemServicoBalance } from "../../pages/OrdemServico/ordem-servico-balance";
 import {
   CodeTag,
+  Button,
   DetailGrid,
   DetailItem,
   FormSection,
@@ -51,6 +54,8 @@ function DocValue({ value, children }: { value: string | null | undefined; child
 }
 
 export function ContratoView({ id, ...frame }: ViewProps) {
+  const navigate = useNavigate();
+  const { canManageFiscalizacao } = usePermission();
   const { linkTo } = useViewerNav();
   const loading = useEnsureData("contratos");
   useEnsureData("empenhos");
@@ -134,6 +139,9 @@ export function ContratoView({ id, ...frame }: ViewProps) {
         </DetailGrid>
       </FormSection>
 
+      {canManageFiscalizacao && <Button variant="secondary" size="sm" icon={ShieldCheck} onClick={() => {
+        frame.onClose(); navigate(`/fiscalizacao?contrato=${id}${contrato.tenant_id ? `&unidade=${contrato.tenant_id}` : ""}`);
+      }}>Gerenciar fiscalização</Button>}
       {(contrato.lotes.length > 0 || fiscais.length > 0) && (
         <FormSection title="Lotes e fiscais" icon={ShieldCheck}>
           <DetailGrid>
@@ -154,6 +162,7 @@ export function ContratoView({ id, ...frame }: ViewProps) {
                 label={fiscal.tipo === "TECNICO" ? "Fiscal técnico" : "Fiscal administrativo"}
               >
                 {fiscal.nome}
+                {fiscal.ativo === false && <span className="block text-xs text-text-muted">Designação encerrada</span>}
                 <span className="block text-xs font-normal text-text-muted">
                   {[fiscal.ramal && `ramal ${fiscal.ramal}`, fiscal.email].filter(Boolean).join(" · ")}
                 </span>

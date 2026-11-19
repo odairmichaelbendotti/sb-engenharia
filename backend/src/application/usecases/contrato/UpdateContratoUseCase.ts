@@ -31,6 +31,7 @@ export class UpdateContratoUseCase {
       fiscais: normalizeFiscais(data.fiscais),
     };
     const canEdit = new DomainAccessPolicy().can(user.role, "administrativo", "edit");
+    if (data.fiscais.length) throw new DomainError("Altere os fiscais em Gestão → Fiscalização. Os vínculos atuais serão preservados.");
     if (!canEdit) {
       throw new DomainError("User is not authorized to perform this action");
     }

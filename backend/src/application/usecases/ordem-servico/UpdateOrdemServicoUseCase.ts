@@ -91,6 +91,10 @@ export class UpdateOrdemServicoUseCase {
     if (!existing || existing.tenant_id !== user.tenant_id) {
       throw new DomainError("OrdemServico not found");
     }
+    if ((data.fiscalTecnico_id !== undefined && data.fiscalTecnico_id !== existing.fiscalTecnico_id)
+      || (data.fiscalAdministrativo_id !== undefined && data.fiscalAdministrativo_id !== existing.fiscalAdministrativo_id)) {
+      throw new DomainError("Substitua os responsáveis em Gestão → Fiscalização para registrar o motivo e o histórico.");
+    }
 
     // O número gerado pelo sistema (com sequência) não muda; o das OS antigas ainda pode ser corrigido
     const numero = existing.sequencia !== null ? existing.numero : data.numero || existing.numero;
@@ -174,6 +178,7 @@ export class UpdateOrdemServicoUseCase {
       ordemServico: ordemServicoEntity,
       isCreate: false,
       loteAnterior: existing.lote_id,
+      fiscaisAnteriores: { tecnico: existing.fiscalTecnico_id, administrativo: existing.fiscalAdministrativo_id },
     });
     // OS antiga que recebe o lote agora: o desconto dele passa a valer na OS (depois o lote não muda)
     const loteNovo =

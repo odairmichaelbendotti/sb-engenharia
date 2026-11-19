@@ -15,6 +15,8 @@ import {
   MapPin,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router";
+import { usePermission } from "../../hooks/usePermission";
 import { toast } from "sonner";
 import { StepForm, type FormStep } from "../../components/StepForm";
 import {
@@ -39,7 +41,6 @@ import {
   type Contrato,
   type ContratoStatus,
   type CreateContratoPayload,
-  type FiscalTipo,
 } from "../../../types/contrato";
 import { createBlurNormalizer, CONTRATO_FIELD_RULES } from "../../utils/normalization/form-rules";
 
@@ -91,12 +92,6 @@ const emptyForm: FormState = {
 
 // Linhas das listas de lotes e de fiscais (a `key` só serve para o React)
 type LoteForm = { key: number; id?: string; numero: string; nome: string; desconto: string };
-type FiscalForm = { key: number; id?: string; tipo: FiscalTipo; nome: string; ramal: string; email: string };
-
-const FISCAL_TIPO_LABEL: Record<FiscalTipo, string> = {
-  TECNICO: "Técnico",
-  ADMINISTRATIVO: "Administrativo",
-};
 
 // Contrato antigo traz "A PREENCHER": o campo abre vazio para ser preenchido de verdade
 function fromStored(value: string) {
@@ -109,6 +104,8 @@ function toDateInput(d: Date | string | undefined) {
 }
 
 export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
+  const { canManageFiscalizacao } = usePermission();
+  const navigate = useNavigate();
   const { companies, listCompanies } = useCompanies();
   const { createContrato, updateContrato, updateContratoStatus, fetchContratos } = useContratos();
   const [isLoading, setIsLoading] = useState(false);
@@ -117,7 +114,6 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
   const [form, setForm] = useState<FormState>(emptyForm);
   const nextKey = useRef(0);
   const [lotes, setLotes] = useState<LoteForm[]>([]);
-  const [fiscais, setFiscais] = useState<FiscalForm[]>([]);
 
   useEffect(() => {
     if (companies.length === 0) listCompanies();
@@ -149,11 +145,9 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
           desconto: toDecimalInput(l.desconto),
         })),
       );
-      setFiscais(contrato.fiscais.map((f) => ({ key: nextKey.current++, ...f })));
     } else {
       setForm(emptyForm);
       setLotes([]);
-      setFiscais([]);
       setCurrentStatus("ATIVO");
     }
   }, [contrato]);
@@ -173,13 +167,6 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
     setLotes((prev) => [...prev, { key: nextKey.current++, numero: String(proximo), nome: "", desconto: "" }]);
   }
 
-  function updateFiscal(key: number, changes: Partial<FiscalForm>) {
-    setFiscais((prev) => prev.map((f) => (f.key === key ? { ...f, ...changes } : f)));
-  }
-
-  function addFiscal(tipo: FiscalTipo) {
-    setFiscais((prev) => [...prev, { key: nextKey.current++, tipo, nome: "", ramal: "", email: "" }]);
-  }
 
   async function handleStatusChange(status: ContratoStatus) {
     if (!contrato) return;
@@ -243,12 +230,6 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
     return buildLotes().error;
   }
 
-  function validateFiscais() {
-    if (fiscais.some((f) => !f.nome.trim() || !f.ramal.trim() || !f.email.trim())) {
-      return "Informe nome, ramal e e-mail de cada fiscal";
-    }
-    return null;
-  }
 
   async function submit() {
     const built = buildLotes();
@@ -268,7 +249,7 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
       endereco: form.endereco,
       bdi: bdiNum,
       lotes: built.lotes,
-      fiscais: fiscais.map(({ id, tipo, nome, ramal, email }) => ({ ...(id ? { id } : {}), tipo, nome, ramal, email })),
+      fiscais: [],
     };
 
     try {
@@ -511,65 +492,14 @@ export function ContratoModal({ contrato, handleClose }: ContratoModalProps) {
       id: "fiscais",
       label: "Fiscais",
       icon: ShieldCheck,
-      validate: validateFiscais,
       content: (
         <FormSection title="Fiscais do contrato" icon={ShieldCheck}>
           <p className="text-xs text-text-muted">
-            Cada ordem de serviço escolhe, entre estes, o fiscal técnico e o administrativo. Cadastre ao menos um de
-            cada tipo para poder emitir OS.
+            O cadastro e as substituições são feitos em Gestão → Fiscalização por Coordenação, Master ou Admin da Plataforma.
+            {!contrato && " Após salvar o contrato, vincule ao menos um fiscal técnico e um administrativo para cadastrar OS."}
           </p>
-          {fiscais.map((fiscal) => (
-            <div key={fiscal.key} className="rounded-lg border border-border p-3 space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <Select
-                  aria-label="Tipo do fiscal"
-                  value={fiscal.tipo}
-                  onChange={(e) => updateFiscal(fiscal.key, { tipo: e.target.value as FiscalTipo })}
-                  className="w-auto"
-                >
-                  {(Object.keys(FISCAL_TIPO_LABEL) as FiscalTipo[]).map((tipo) => (
-                    <option key={tipo} value={tipo}>
-                      Fiscal {FISCAL_TIPO_LABEL[tipo]}
-                    </option>
-                  ))}
-                </Select>
-                <IconButton
-                  icon={Trash2}
-                  label="Remover fiscal"
-                  variant="danger"
-                  onClick={() => setFiscais((prev) => prev.filter((f) => f.key !== fiscal.key))}
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-[1fr_6rem_1fr] gap-2">
-                <Input
-                  aria-label="Posto e nome do fiscal"
-                  value={fiscal.nome}
-                  onChange={(e) => updateFiscal(fiscal.key, { nome: e.target.value })}
-                  placeholder="Posto e nome (ex.: 1º SGT FLORIANO)"
-                />
-                <Input
-                  aria-label="Ramal do fiscal"
-                  value={fiscal.ramal}
-                  onChange={(e) => updateFiscal(fiscal.key, { ramal: e.target.value })}
-                  placeholder="Ramal"
-                />
-                <Input
-                  aria-label="E-mail do fiscal"
-                  type="email"
-                  value={fiscal.email}
-                  onChange={(e) => updateFiscal(fiscal.key, { email: e.target.value })}
-                  placeholder="e-mail@fab.mil.br"
-                />
-              </div>
-            </div>
-          ))}
-          <div className="flex flex-wrap gap-2">
-            {(Object.keys(FISCAL_TIPO_LABEL) as FiscalTipo[]).map((tipo) => (
-              <Button key={tipo} variant="secondary" size="sm" icon={Plus} onClick={() => addFiscal(tipo)}>
-                Fiscal {FISCAL_TIPO_LABEL[tipo].toLowerCase()}
-              </Button>
-            ))}
-          </div>
+          {contrato?.fiscais.map((f) => <p key={f.id} className="text-sm text-text-primary">{f.nome} · {f.tipo === "TECNICO" ? "Técnico" : "Administrativo"}{f.ativo === false ? " · Designação encerrada" : ""}</p>)}
+          {contrato && canManageFiscalizacao && <Button variant="secondary" icon={ShieldCheck} onClick={() => { handleClose(); navigate(`/fiscalizacao?contrato=${contrato.id}`); }}>Gerenciar fiscalização</Button>}
         </FormSection>
       ),
     },

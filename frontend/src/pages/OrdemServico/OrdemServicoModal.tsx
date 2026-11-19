@@ -19,6 +19,8 @@ import {
   Calculator,
 } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useNavigate } from "react-router";
+import { usePermission } from "../../hooks/usePermission";
 import { toast } from "sonner";
 import { StepForm, type FormStep } from "../../components/StepForm";
 import { getFaseEmissao } from "./ordem-servico-ciencia";
@@ -130,6 +132,8 @@ type VinculoForm = {
 type CondicaoForm = { key: number; texto: string };
 
 export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId = null }: OrdemServicoModalProps) {
+  const { canManageFiscalizacao } = usePermission();
+  const navigate = useNavigate();
   const {
     createOrdemServico,
     updateOrdemServico,
@@ -256,8 +260,10 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
       : descontoNovo && !loteTravadoPorMedicao && lote
         ? valorOrcamentoComDesconto(planilha.itens, lote.desconto, planilha.regraDesconto)
         : planilha.totais.valorOrcado;
-  const fiscaisTecnicos = (contratoDados?.fiscais ?? []).filter((f) => f.tipo === "TECNICO");
-  const fiscaisAdministrativos = (contratoDados?.fiscais ?? []).filter((f) => f.tipo === "ADMINISTRATIVO");
+  const fiscaisDisponiveis = (contratoDados?.fiscais ?? []).filter((f) =>
+    (f.ativo !== false && f.fiscal?.ativo !== false) || f.id === form.fiscalTecnico_id || f.id === form.fiscalAdministrativo_id);
+  const fiscaisTecnicos = fiscaisDisponiveis.filter((f) => f.tipo === "TECNICO");
+  const fiscaisAdministrativos = fiscaisDisponiveis.filter((f) => f.tipo === "ADMINISTRATIVO");
 
   // Número da OS nova: fica oculto até o contrato (e o lote, se o contrato tiver) serem escolhidos.
   // É o próximo da sequência; o número definitivo sai na criação
@@ -1078,7 +1084,7 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
                   name="fiscalTecnico_id"
                   value={form.fiscalTecnico_id}
                   onChange={handleChange}
-                  disabled={!selectedContratoId}
+                  disabled={!selectedContratoId || !!ordemServico}
                 >
                   <option value="">{selectedContratoId ? "Selecione o fiscal técnico" : "Selecione um contrato primeiro"}</option>
                   {fiscaisTecnicos.map((f) => (
@@ -1093,7 +1099,7 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
                   name="fiscalAdministrativo_id"
                   value={form.fiscalAdministrativo_id}
                   onChange={handleChange}
-                  disabled={!selectedContratoId}
+                  disabled={!selectedContratoId || !!ordemServico}
                 >
                   <option value="">
                     {selectedContratoId ? "Selecione o fiscal administrativo" : "Selecione um contrato primeiro"}
@@ -1109,9 +1115,13 @@ export function OrdemServicoModal({ ordemServico, handleClose, initialContratoId
             {selectedContratoId && contratoDados && (fiscaisTecnicos.length === 0 || fiscaisAdministrativos.length === 0) && (
               <p className="text-xs text-warning-text">
                 Este contrato não tem fiscal {fiscaisTecnicos.length === 0 ? "técnico" : "administrativo"} cadastrado:
-                cadastre em Administrativo &gt; Contratos.
+                solicite a designação em Gestão &gt; Fiscalização.
               </p>
             )}
+            {ordemServico && <p className="text-xs text-text-secondary">As substituições de fiscais são feitas em Gestão → Fiscalização, com motivo e histórico.</p>}
+            {canManageFiscalizacao && selectedContratoId && <Button variant="secondary" size="sm" icon={ShieldCheck} onClick={() => {
+              handleClose(); navigate(`/fiscalizacao?contrato=${selectedContratoId}${ordemServico ? `&os=${ordemServico.id}` : ""}`);
+            }}>Gerenciar fiscalização</Button>}
             <Field label="Fiscal setorial" required={!ordemServico}>
               <Input
                 name="fiscalSetorial"

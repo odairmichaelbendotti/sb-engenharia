@@ -23,6 +23,8 @@ export type ContratoFiscal = {
   nome: string;
   ramal: string;
   email: string;
+  ativo?: boolean;
+  fiscal?: { ativo: boolean } | null;
 };
 
 export type ContratoEmpenhoResumo = {
@@ -36,6 +38,7 @@ export type ContratoEmpenhoResumo = {
 
 export type Contrato = {
   id: string;
+  tenant_id?: string;
   identificador: string;
   descricaoCurta: string;
   valor: number;

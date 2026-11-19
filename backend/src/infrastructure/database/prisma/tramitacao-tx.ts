@@ -132,6 +132,13 @@ export function colunasEmissao(emissao: OrdemServicoEmissao) {
 
 /** Evento EMITIDA/REEMITIDA e aviso à empresa, na transação que gravou a OS. */
 export async function registrarEmissao(db: Db, ordemServico_id: string, emissao: OrdemServicoEmissao) {
+  const fiscais = await db.ordemServico.findUniqueOrThrow({ where: { id: ordemServico_id }, select: {
+    fiscalTecnico: { select: { nome: true, ramal: true, email: true } },
+    fiscalAdministrativo: { select: { nome: true, ramal: true, email: true } },
+  } });
+  await db.ordemServico.update({ where: { id: ordemServico_id }, data: {
+    fiscaisEmissao: { tecnico: fiscais.fiscalTecnico, administrativo: fiscais.fiscalAdministrativo },
+  } });
   const resumo = await loadResumo(db, ordemServico_id);
   const prazo = formatDataHora(emissao.cienciaPrazoAte);
   const reemitida = emissao.tipo === "REEMITIDA";

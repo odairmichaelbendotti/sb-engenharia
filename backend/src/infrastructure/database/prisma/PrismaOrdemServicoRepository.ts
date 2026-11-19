@@ -23,6 +23,7 @@ import { Prisma } from "../../../generated/prisma/client.js";
 import { prisma } from "../../prisma/prisma.js";
 import { anexosFromDb } from "../../../domain/documents/anexos-os.js";
 import { colunasEmissao, registrarEmissao } from "./tramitacao-tx.js";
+import { parseFiscaisEmissao } from "../../../domain/documents/fiscais-emissao.js";
 import { aplicarDesconto, formatCentavos, valorOrcadoItem } from "../../../domain/medicao/medicao-calc.js";
 import { orcadoPorOs, planejamento, type PlanejamentoRow } from "./os-planejamento.js";
 import { osDaEmpresa, osEmitida } from "./os-escopo.js";
@@ -592,7 +593,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
               id: true,
               tenant_id: true,
               lotes: { select: { id: true, numero: true, desconto: true } },
-              fiscais: { select: { id: true, tipo: true } },
+              fiscais: { select: { id: true, tipo: true, ativo: true, fiscal: { select: { ativo: true } } } },
             },
           },
         },
@@ -662,6 +663,7 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
 
       const { empenho, obra, lote, fiscalTecnico, fiscalAdministrativo, tenant, itens, regraDesconto, ...ordemServico } =
         row;
+      const fiscaisEmissao = parseFiscaisEmissao(row.fiscaisEmissao);
       return {
         ordemServico: fromDb(ordemServico),
         temOrcamento: itens.length > 0,
@@ -671,8 +673,8 @@ export class PrismaOrdemServicoRepository implements IOrdemServicoRepository {
         contrato: empenho.contrato,
         obra,
         lote,
-        fiscalTecnico,
-        fiscalAdministrativo,
+        fiscalTecnico: fiscaisEmissao ? fiscaisEmissao.tecnico : fiscalTecnico,
+        fiscalAdministrativo: fiscaisEmissao ? fiscaisEmissao.administrativo : fiscalAdministrativo,
         tenant,
       };
     } catch (error) {

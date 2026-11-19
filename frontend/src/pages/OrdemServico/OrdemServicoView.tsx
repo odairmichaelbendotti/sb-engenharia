@@ -3,6 +3,7 @@ import { PlanejadoSection } from "./PlanejadoCell";
 import { AtivarOrdemServicoButton } from "./AtivarOrdemServico";
 import { ANEXOS_PADRAO, numeroRomano } from "./anexos-os";
 import { lazy, Suspense, useState } from "react";
+import { useNavigate } from "react-router";
 import {
   ClipboardList,
   Building2,
@@ -525,7 +526,8 @@ export function OrdemServicoView({
   const fetchOrdensServico = useOrdensServico((s) => s.fetchOrdensServico);
   const fetchOrdemServicoDocument = useOrdensServico((s) => s.fetchOrdemServicoDocument);
   const fetchPendencias = useTramitacao((s) => s.fetchPendencias);
-  const { canEditAdministrativo, canViewAdministrativo, canDarCienciaOrdemServico, isEmpresaRestricted } = usePermission();
+  const { canEditAdministrativo, canViewAdministrativo, canDarCienciaOrdemServico, isEmpresaRestricted, canManageFiscalizacao } = usePermission();
+  const navigate = useNavigate();
   const { linkTo } = useViewerNav();
   const [generating, setGenerating] = useState(false);
 
@@ -700,6 +702,9 @@ export function OrdemServicoView({
 
       <FormSection title="Documento da OS" icon={FileText}>
         <DocumentSection ordemServico={ordemServico} />
+        {canManageFiscalizacao && <Button variant="secondary" size="sm" icon={ShieldCheck} onClick={() => {
+          frame.onClose(); navigate(`/fiscalizacao?contrato=${contrato.id}&os=${ordemServico.id}${ordemServico.tenant_id ? `&unidade=${ordemServico.tenant_id}` : ""}`);
+        }}>Gerenciar fiscalização</Button>}
       </FormSection>
 
       <FormSection title="Ciência e tramitação com a empresa" icon={MessagesSquare}>

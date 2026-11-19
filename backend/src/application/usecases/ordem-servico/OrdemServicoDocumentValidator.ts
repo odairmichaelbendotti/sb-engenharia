@@ -29,12 +29,14 @@ export class OrdemServicoDocumentValidator {
     ordemServico,
     isCreate,
     loteAnterior,
+    fiscaisAnteriores,
   }: {
     user: AuthenticatedUser;
     ordemServico: OrdemServicoEntity;
     isCreate: boolean;
     // Lote atual da OS na edição (um lote já definido não muda)
     loteAnterior?: string | null;
+    fiscaisAnteriores?: { tecnico: string | null; administrativo: string | null };
   }): Promise<OrdemServicoContratoDados> {
     const contrato = await this.repository.findContratoByEmpenho(ordemServico.empenhoPrincipalId);
     if (!contrato || contrato.tenant_id !== user.tenant_id) {
@@ -61,8 +63,8 @@ export class OrdemServicoDocumentValidator {
       throw new DomainError("The lote of an ordem de serviço cannot be changed");
     }
 
-    this.validateFiscal(contrato, ordemServico.fiscalTecnico_id, "TECNICO");
-    this.validateFiscal(contrato, ordemServico.fiscalAdministrativo_id, "ADMINISTRATIVO");
+    this.validateFiscal(contrato, ordemServico.fiscalTecnico_id, "TECNICO", !isCreate && ordemServico.fiscalTecnico_id === fiscaisAnteriores?.tecnico);
+    this.validateFiscal(contrato, ordemServico.fiscalAdministrativo_id, "ADMINISTRATIVO", !isCreate && ordemServico.fiscalAdministrativo_id === fiscaisAnteriores?.administrativo);
 
     return contrato;
   }
@@ -71,9 +73,10 @@ export class OrdemServicoDocumentValidator {
     contrato: OrdemServicoContratoDados,
     fiscal_id: string | null,
     tipo: "TECNICO" | "ADMINISTRATIVO",
+    manterInativo = false,
   ) {
     if (!fiscal_id) return;
-    if (!contrato.fiscais.some((f) => f.id === fiscal_id && f.tipo === tipo)) {
+    if (!contrato.fiscais.some((f) => f.id === fiscal_id && f.tipo === tipo && (manterInativo || (f.ativo !== false && f.fiscal?.ativo !== false)))) {
       throw new DomainError(`Fiscal ${tipo === "TECNICO" ? "técnico" : "administrativo"} not found in this contrato`);
     }
   }

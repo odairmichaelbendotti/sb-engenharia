@@ -26,6 +26,7 @@ export function usePermission() {
     : { engenharia: "none" as const, administrativo: "none" as const };
 
   return {
+    canManageFiscalizacao: role === "MASTER" || role === "COORDENACAO" || role === "PLATFORM_ADMIN",
     canViewAdministrativo: access.administrativo !== "none",
     canEditAdministrativo: access.administrativo === "edit",
     canViewEngenharia: access.engenharia !== "none",

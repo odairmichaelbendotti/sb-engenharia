@@ -108,7 +108,7 @@ export type OrdemServicoContratoDados = {
   id: string;
   tenant_id: string;
   lotes: { id: string; numero: number; desconto: number }[];
-  fiscais: { id: string; tipo: "TECNICO" | "ADMINISTRATIVO" }[];
+  fiscais: { id: string; tipo: "TECNICO" | "ADMINISTRATIVO"; ativo?: boolean; fiscal?: { ativo: boolean } | null }[];
 };
 
 // Tudo o que o PDF da OS precisa, já com os valores em reais

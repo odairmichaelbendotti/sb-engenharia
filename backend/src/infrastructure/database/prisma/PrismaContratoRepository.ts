@@ -270,22 +270,7 @@ export class PrismaContratoRepository implements IContratoRepository {
           }
         }
 
-        // Fiscais: as OS que usavam um fiscal removido ficam sem fiscal (onDelete SetNull)
-        const fiscaisAtuais = await tx.fiscalContrato.findMany({ where: { contrato_id: id }, select: { id: true } });
-        const fiscaisIds = new Set(fiscaisAtuais.map((f) => f.id));
-        const fiscaisMantidos = new Set(
-          contrato.fiscais.flatMap((f) => (f.id && fiscaisIds.has(f.id) ? [f.id] : [])),
-        );
-        await tx.fiscalContrato.deleteMany({
-          where: { contrato_id: id, id: { notIn: [...fiscaisMantidos] } },
-        });
-        for (const fiscal of contrato.fiscais) {
-          if (fiscal.id && fiscaisIds.has(fiscal.id)) {
-            await tx.fiscalContrato.update({ where: { id: fiscal.id }, data: fiscalData(fiscal) });
-          } else {
-            await tx.fiscalContrato.create({ data: { ...fiscalData(fiscal), contrato_id: id } });
-          }
-        }
+        // Designações são mantidas exclusivamente pela gestão de fiscalização.
 
         return tx.contrato.findUniqueOrThrow({
           where: { id },

@@ -69,6 +69,7 @@ export type OrdemServicoFiscal = {
 
 export type OrdemServico = {
   id: string;
+  tenant_id?: string;
   numero: string;
   valor: number;
   status: OrdemServicoStatus;

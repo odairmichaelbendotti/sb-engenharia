@@ -40,6 +40,8 @@ model Tenant {
   ordensServico OrdemServico[]
   companies     TenantCompany[]
   notificacoes  Notificacao[]
+  fiscais       Fiscal[]
+  fiscalizacaoHistorico FiscalizacaoHistorico[]
 }
 
 model User {
@@ -230,6 +232,11 @@ model FiscalContrato {
   nome    String
   ramal   String
   email   String
+  ativo   Boolean @default(true)
+  inicio  DateTime @default(now())
+  fim     DateTime?
+  fiscal_id String?
+  fiscal Fiscal? @relation(fields: [fiscal_id], references: [id], onDelete: Restrict)
 
   contrato_id String
   contrato    Contrato @relation(fields: [contrato_id], references: [id], onDelete: Cascade)
@@ -238,6 +245,40 @@ model FiscalContrato {
   ordensServicoAdministrativo OrdemServico[] @relation("FiscalAdministrativoOS")
 
   @@index([contrato_id])
+}
+
+// Cadastro de pessoas por unidade, independente de conta de acesso.
+model Fiscal {
+  id String @id @default(uuid())
+  tenant_id String
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+  nome String
+  email String
+  ramal String
+  ativo Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  vinculos FiscalContrato[]
+
+  @@unique([tenant_id, email])
+}
+
+model FiscalizacaoHistorico {
+  id String @id @default(uuid())
+  tenant_id String
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+  contrato_id String?
+  fiscal_id String?
+  acao String
+  autor_id String
+  autorNome String
+  autorPerfil String
+  motivo String
+  vigencia DateTime
+  dados Json
+  createdAt DateTime @default(now())
+
+  @@index([tenant_id, createdAt])
 }
 
 model Empenho {
@@ -278,6 +319,8 @@ model OrdemServico {
   status    OrdemServicoStatus @default(ATIVO)
   createdAt DateTime           @default(now())
   updatedAt DateTime           @default(now())
+  // Fiscais da última emissão. Trocas de responsáveis não reescrevem o documento emitido.
+  fiscaisEmissao Json?
 
   tenant_id String
   tenant    Tenant @relation(fields: [tenant_id], references: [id])

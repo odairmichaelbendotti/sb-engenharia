@@ -14,6 +14,7 @@ export class CreateContratoUseCase {
   ) {}
 
   async execute(input: Omit<ContratoType, "tenant_id"> & { user: AuthenticatedUser }) {
+    if (input.fiscais?.length) throw new DomainError("Cadastre e vincule os fiscais em Gestão → Fiscalização após criar o contrato.");
     // Padroniza os textos antes de validar, buscar duplicados e gravar
     const {
       user,

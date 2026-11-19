@@ -7,6 +7,7 @@ import Empresas from "./pages/Company/page";
 import Invoices from "./pages/Invoice/page";
 import Empenhos from "./pages/Empenho/page";
 import Contratos from "./pages/Contrato/page";
+import Fiscalizacao from "./pages/Fiscalizacao/page";
 import OrdensServico from "./pages/OrdemServico/page";
 import Medicoes from "./pages/Medicoes/page";
 import { MedicaoPage, OrcamentoPage } from "./pages/Medicoes";
@@ -29,6 +30,10 @@ export const router = createBrowserRouter([
       </RequireAuth>
     ),
     children: [
+      {
+        path: "/fiscalizacao",
+        element: <RequireRole allow={(p) => p.canManageFiscalizacao}><Fiscalizacao /></RequireRole>,
+      },
       {
         path: "/",
         element: <Dashboard />,

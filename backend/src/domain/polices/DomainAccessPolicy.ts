@@ -6,6 +6,7 @@ type AccessLevel = "none" | "view" | "edit";
 // Ações pontuais que não seguem a matriz de domínio (ex.: ENGENHARIA só
 // visualiza o administrativo, mas pode abrir uma Ordem de Serviço).
 export type Capability =
+  | "manageFiscalizacao"
   | "manageUsers"
   | "createCompanyAccess"
   | "createOrdemServico"
@@ -26,6 +27,7 @@ const ROLE_DOMAIN_ACCESS: Record<UserRole, Record<BusinessDomain, AccessLevel>> 
 };
 
 const CAPABILITY_ROLES: Record<Capability, readonly UserRole[]> = {
+  manageFiscalizacao: ["PLATFORM_ADMIN", "MASTER", "COORDENACAO"],
   // Aprovar/recusar cadastros e mudar roles (MASTER/COORDENACAO só na própria organização)
   manageUsers: ["PLATFORM_ADMIN", "MASTER", "COORDENACAO"],
   createCompanyAccess: ["PLATFORM_ADMIN", "MASTER", "COORDENACAO", "ADMINISTRATIVO", "ENGENHARIA"],

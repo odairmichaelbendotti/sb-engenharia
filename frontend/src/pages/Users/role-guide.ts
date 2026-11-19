@@ -192,6 +192,7 @@ export const ROLE_GUIDE_BY_ROLE = Object.fromEntries(
 ) as Record<User["role"], RoleGuide>;
 
 export const GUIDE_RULES = [
+  "Coordenação, Master e Admin da Plataforma gerenciam fiscais e designações em Gestão → Fiscalização. A edição de contratos não altera esses vínculos.",
   "Ninguém pode mudar o próprio perfil.",
   "Só é possível mudar o perfil de usuários já aprovados.",
   "Master e Coordenação só agem sobre usuários da própria unidade e não concedem nem alteram o perfil Admin da Plataforma.",
