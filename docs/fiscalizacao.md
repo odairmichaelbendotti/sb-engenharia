@@ -31,6 +31,27 @@ O SQL executa em transação, adiciona as estruturas, migra as pessoas e guarda 
 
 Depois, executar os builds e publicar as duas aplicações juntas. Clientes antigos que tentarem editar fiscais pelo cadastro de contratos ou pela edição comum de OS receberão uma mensagem direcionando à nova seção.
 
+### Diagnóstico de versão em execução
+
+`git pull` atualiza os arquivos da VPS, mas o PM2 só passa a usar o novo código após o build e o reinício. O build grava `dist/build-info.json`; o processo carrega esse registro uma vez na inicialização. `/api/health` informa `revision` e `builtAt` além da saúde do banco.
+
+O deploy confere a pasta/script do PM2, compara o commit da API com o commit publicado e testa se `/api/fiscalizacao` chega à autenticação (HTTP 401 em uma requisição sem cookie). Repete a verificação pelo domínio público já configurado em `ALLOWED_PROD_ORIGIN`, para detectar Nginx/Vercel encaminhando para outra API. Um health verde de um processo antigo não é suficiente para concluir o deploy.
+
+Se a listagem retornar `Cannot GET /api/fiscalizacao` ou HTML no lugar de JSON, executar na pasta do projeto na VPS:
+
+```bash
+pwd
+git log -1 --oneline
+grep -n FiscalizacaoRoutes backend/server.ts backend/dist/server.js
+pm2 describe sb-backend
+```
+
+O código fonte e o compilado precisam registrar a rota. O processo `sb-backend` precisa apontar para `backend/dist/server.js` nessa mesma cópia do projeto. Uma resposta 401 em JSON sem login confirma que a requisição chegou à rota; 404 em HTML indica rota ausente ou encaminhamento incorreto. A verificação completa, após o build/reinício, pode ser executada com:
+
+```bash
+node backend/scripts/verify-runtime.mjs http://127.0.0.1:PORTA_DA_API "$(git rev-parse HEAD)"
+```
+
 ## Validação
 
 ```powershell

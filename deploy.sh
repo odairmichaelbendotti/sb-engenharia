@@ -42,9 +42,14 @@ main() {
   echo "    Node $(node -v), pm2 $(pm2 -v)"
 
   step "Atualizando o código"
-  local previous
+  local previous expected_revision
   previous=$(git rev-parse --short HEAD)
-  git pull --ff-only
+  [ "$(git branch --show-current)" = "main" ] || fail "este deploy deve ser executado na branch main. Confira a pasta e a branch da VPS."
+  git diff --quiet HEAD -- backend deploy.sh ecosystem.config.cjs \
+    || fail "há alterações locais no código/schema da VPS. Revise-as antes de publicar."
+  git pull --ff-only origin main
+  expected_revision=$(git rev-parse HEAD)
+  echo "    Pasta: $(pwd -P)"
   echo "    $previous -> $(git rev-parse --short HEAD)"
 
   step "Conferindo o backend/.env"
@@ -89,10 +94,16 @@ main() {
     || fail "não consegui ler o banco do DATABASE_URL (conexão ou senha?)"
   pending=$(echo "$diff" | grep -vE '^\s*$|^--' | grep -vE "$KNOWN_SCHEMA_DRIFT" || true)
   if [ -n "$pending" ]; then
-    echo "    O banco não tem tudo o que o código novo precisa. Falta aplicar no Supabase:"
+    echo "    O banco e o schema do commit $(git rev-parse --short HEAD) são diferentes."
+    echo "    Diferenças abaixo são diagnóstico; não execute este SQL automaticamente:"
     echo "$pending" | sed 's/^/      /'
-    echo "    Aplique a migration correspondente de prisma/manual-migrations/ no SQL Editor"
-    echo "    (com backup) e rode o deploy de novo. A versão antiga continua no ar."
+    if echo "$pending" | grep -qE 'DROP TABLE|DROP COLUMN|TRUNCATE'; then
+      echo "    A comparação propõe remover dados. Confira primeiro se o código da VPS está atualizado."
+      echo "    Não remova tabelas/colunas da fiscalização para adaptar o banco a código antigo."
+    else
+      echo "    Confira e aplique a migration correspondente de prisma/manual-migrations/ (com backup)."
+    fi
+    echo "    O deploy parou antes de reiniciar a API; a versão anterior continua no ar."
     exit 1
   fi
   echo "    ok"
@@ -117,22 +128,30 @@ main() {
     exit 1
   fi
   pm2 startOrReload ecosystem.config.cjs --update-env
+  pm2 jlist | node backend/scripts/check-pm2-runtime.mjs "$(pwd -P)/backend" \
+    || fail "o processo do PM2 não corresponde a esta cópia do projeto. Confira: pm2 describe $APP_NAME"
   pm2 save >/dev/null
 
-  step "Conferindo a saúde da API e do banco"
-  local _
+  step "Conferindo o commit em execução, o banco e a rota de fiscalização"
+  local _ runtime_check public_check public_origin
+  public_origin=$(env_value ALLOWED_PROD_ORIGIN)
   for _ in $(seq 1 15); do
-    if curl -fsS "http://127.0.0.1:$port/api/health" >/dev/null 2>&1; then
-      echo "    API no ar e banco respondendo"
-      pm2 list
-      echo
-      echo "Deploy concluído ($previous -> $(git rev-parse --short HEAD))."
-      echo "Teste no site: Contratos, Ordens de Serviço, Obras e o PDF de uma OS."
-      exit 0
+    if runtime_check=$(node backend/scripts/verify-runtime.mjs "http://127.0.0.1:$port" "$expected_revision" 2>&1); then
+      if public_check=$(node backend/scripts/verify-runtime.mjs "$public_origin" "$expected_revision" 2>&1); then
+        echo "    $runtime_check"
+        echo "    Acesso público ($public_origin) confirmado no mesmo commit."
+        pm2 list
+        echo
+        echo "Deploy concluído ($previous -> $(git rev-parse --short HEAD))."
+        echo "Teste no site: Contratos, Ordens de Serviço, Obras e o PDF de uma OS."
+        exit 0
+      fi
+      runtime_check="API local atualizada, mas a verificação pelo domínio público falhou: $public_check. Confira o destino do proxy da Vercel e a porta encaminhada pelo Nginx."
     fi
     sleep 2
   done
-  echo "    A API não respondeu em /api/health. Veja: pm2 logs $APP_NAME --lines 50"
+  echo "    A verificação do backend em execução falhou: $runtime_check"
+  echo "    Veja: pm2 describe $APP_NAME; pm2 logs $APP_NAME --lines 50"
   echo "    Para voltar à versão anterior:"
   echo "      git checkout $previous && (cd backend && npm ci --include=dev && npm run build) && pm2 reload $APP_NAME"
   exit 1
